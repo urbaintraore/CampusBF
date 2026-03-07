@@ -296,6 +296,8 @@ export const MOCK_POSTS: Post[] = [
   }
 ];
 
+export const MOCK_COMMUNITY = MOCK_POSTS;
+
 export interface Message {
   id: string;
   senderId: string;

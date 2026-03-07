@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
 import { MOCK_MARKETPLACE } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -21,10 +21,14 @@ export default function Marketplace() {
   const [sellPrice, setSellPrice] = useState('');
   const [sellCategory, setSellCategory] = useState('Livres');
   const [sellDescription, setSellDescription] = useState('');
+  const [sellAddress, setSellAddress] = useState('');
+  const [sellWhatsapp, setSellWhatsapp] = useState('');
+  const [sellEmail, setSellEmail] = useState(user?.email || '');
   const [sellImage, setSellImage] = useState<string | null>(null);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categories, setCategories] = useState(['Tout', 'Livres', 'Informatique', 'Logement', 'Meubles', 'Services']);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const categories = ['Tout', 'Livres', 'Informatique', 'Logement', 'Meubles', 'Services'];
 
   const isSubscriptionActive = user?.postSubscriptionStatus === 'active' && 
     user.postSubscriptionExpiry && new Date(user.postSubscriptionExpiry) > new Date();
@@ -49,7 +53,12 @@ export default function Marketplace() {
     setSellPrice('');
     setSellCategory('Livres');
     setSellDescription('');
+    setSellAddress('');
+    setSellWhatsapp('');
+    setSellEmail(user?.email || '');
     setSellImage(null);
+    setShowNewCategoryInput(false);
+    setNewCategoryName('');
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,9 +73,17 @@ export default function Marketplace() {
   };
 
   const handlePublish = () => {
-    if (!sellTitle || !sellPrice || !sellDescription) {
-      alert('Veuillez remplir tous les champs.');
+    if (!sellTitle || !sellPrice || !sellDescription || !sellAddress || !sellWhatsapp || !sellEmail) {
+      alert('Veuillez remplir tous les champs obligatoires.');
       return;
+    }
+
+    let finalCategory = sellCategory;
+    if (showNewCategoryInput && newCategoryName.trim()) {
+      finalCategory = newCategoryName.trim();
+      if (!categories.includes(finalCategory)) {
+        setCategories([...categories, finalCategory]);
+      }
     }
 
     const newItem = {
@@ -74,7 +91,7 @@ export default function Marketplace() {
       title: sellTitle,
       description: sellDescription,
       price: parseInt(sellPrice),
-      category: sellCategory.toLowerCase().replace('é', 'e'),
+      category: finalCategory.toLowerCase().replace('é', 'e'),
       sellerId: user?.id || 'u1',
       seller: {
         id: user?.id || 'u1',
@@ -83,11 +100,13 @@ export default function Marketplace() {
         university: user?.university || '',
         major: user?.major || '',
         level: user?.level || '',
-        email: user?.email || '',
+        email: sellEmail,
+        whatsapp: sellWhatsapp,
+        address: sellAddress,
         avatarUrl: user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
         role: user?.role || 'student',
       },
-      location: 'Ouagadougou',
+      location: sellAddress,
       postedAt: new Date().toISOString().split('T')[0],
       imageUrl: sellImage || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
     };
@@ -95,6 +114,12 @@ export default function Marketplace() {
     setItems([newItem, ...items]);
     resetSellForm();
     alert('Votre annonce a été publiée avec succès !');
+  };
+
+  const handleDeleteItem = (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
+      setItems(prev => prev.filter(item => item.id !== id));
+    }
   };
 
   const handlePaymentSuccess = () => {
@@ -177,13 +202,34 @@ export default function Marketplace() {
             <div className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-gray-900 line-clamp-1">{item.title}</h3>
+                {(user?.id === item.sellerId || user?.role === 'admin') && (
+                  <button 
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Supprimer l'annonce"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
               <p className="text-emerald-700 font-bold text-lg mb-2">{item.price.toLocaleString()} CFA</p>
               <p className="text-xs text-gray-500 line-clamp-2 mb-4 h-8">{item.description}</p>
               
-              <div className="flex items-center gap-2 text-[10px] text-gray-400 mb-4">
-                <MapPin size={12} />
-                {item.location}
+              <div className="space-y-1 mb-4">
+                <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                  <MapPin size={12} />
+                  {item.location}
+                </div>
+                {item.seller.whatsapp && (
+                  <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-bold">
+                    <MessageCircle size={12} />
+                    WhatsApp: {item.seller.whatsapp}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                  <Send size={12} />
+                  {item.seller.email}
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-gray-50">
@@ -225,9 +271,9 @@ export default function Marketplace() {
               title="Abonnement Vendeur Marketplace"
             />
           ) : (
-            <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in-95">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Vendre un article</h2>
+            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 max-h-[95vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Vendre un article</h2>
                 <button onClick={resetSellForm} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <X size={20} className="text-gray-400" />
                 </button>
@@ -264,74 +310,143 @@ export default function Marketplace() {
                 </div>
               ) : (
                 <form className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-gray-700">Titre de l'annonce</label>
-                    <input 
-                      type="text" 
-                      value={sellTitle}
-                      onChange={(e) => setSellTitle(e.target.value)}
-                      placeholder="Ex: iPhone 12 Pro Max" 
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" 
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-sm font-semibold text-gray-700">Prix (CFA)</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase">Titre de l'annonce</label>
+                      <input 
+                        type="text" 
+                        value={sellTitle}
+                        onChange={(e) => setSellTitle(e.target.value)}
+                        placeholder="Ex: iPhone 12 Pro Max" 
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Prix (CFA)</label>
                       <input 
                         type="number" 
                         value={sellPrice}
                         onChange={(e) => setSellPrice(e.target.value)}
                         placeholder="0" 
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" 
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Catégorie</label>
+                      {!showNewCategoryInput ? (
+                        <div className="flex gap-2">
+                          <select 
+                            value={sellCategory}
+                            onChange={(e) => setSellCategory(e.target.value)}
+                            className="flex-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500"
+                          >
+                            {categories.filter(c => c !== 'Tout').map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                          <button 
+                            type="button"
+                            onClick={() => setShowNewCategoryInput(true)}
+                            className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200"
+                            title="Ajouter une catégorie"
+                          >
+                            <Plus size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="Nouvelle catégorie"
+                            className="flex-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => setShowNewCategoryInput(false)}
+                            className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200"
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Adresse / Lieu</label>
+                      <input 
+                        type="text" 
+                        value={sellAddress}
+                        onChange={(e) => setSellAddress(e.target.value)}
+                        placeholder="Ex: Ouagadougou, Zone 1" 
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Numéro WhatsApp</label>
+                      <input 
+                        type="text" 
+                        value={sellWhatsapp}
+                        onChange={(e) => setSellWhatsapp(e.target.value)}
+                        placeholder="Ex: +226 XX XX XX XX" 
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-semibold text-gray-700">Catégorie</label>
-                      <select 
-                        value={sellCategory}
-                        onChange={(e) => setSellCategory(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500"
+                      <label className="text-xs font-bold text-gray-500 uppercase">Email de contact</label>
+                      <input 
+                        type="email" 
+                        value={sellEmail}
+                        onChange={(e) => setSellEmail(e.target.value)}
+                        placeholder="votre@email.com" 
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Description</label>
+                      <textarea 
+                        value={sellDescription}
+                        onChange={(e) => setSellDescription(e.target.value)}
+                        placeholder="Décrivez votre article..." 
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500 h-24 resize-none"
+                      ></textarea>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Photo de l'article</label>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        onChange={handleImageChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-gray-200 rounded-xl p-2 text-center hover:border-emerald-500 transition-colors cursor-pointer overflow-hidden relative h-24 flex flex-col items-center justify-center bg-gray-50"
                       >
-                        {categories.filter(c => c !== 'Tout').map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                        {sellImage ? (
+                          <img src={sellImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <>
+                            <Plus size={20} className="mx-auto text-gray-400 mb-1" />
+                            <span className="text-[10px] text-gray-500">Ajouter une photo</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-gray-700">Description</label>
-                    <textarea 
-                      value={sellDescription}
-                      onChange={(e) => setSellDescription(e.target.value)}
-                      placeholder="Décrivez votre article..." 
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500 h-24 resize-none"
-                    ></textarea>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-gray-700">Photo de l'article</label>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      onChange={handleImageChange}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                    <div 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-emerald-500 transition-colors cursor-pointer overflow-hidden relative min-h-[100px] flex flex-col items-center justify-center"
-                    >
-                      {sellImage ? (
-                        <img src={sellImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
-                      ) : (
-                        <>
-                          <Plus size={24} className="mx-auto text-gray-400 mb-2" />
-                          <span className="text-xs text-gray-500">Ajouter une photo</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+
                   <button 
                     type="button"
                     onClick={handlePublish}
-                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
+                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100 mt-2"
                   >
                     Publier l'annonce
                   </button>

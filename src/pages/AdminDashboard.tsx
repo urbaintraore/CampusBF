@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_USERS } from '@/data/mock';
+import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY } from '@/data/mock';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const { applications, reviewApplication } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community'>('documents');
   const [userSearch, setUserSearch] = useState('');
   const [users, setUsers] = useState(MOCK_USERS);
+  
+  // Content states
+  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
+  const [marketplace, setMarketplace] = useState(MOCK_MARKETPLACE);
+  const [community, setCommunity] = useState(MOCK_COMMUNITY);
 
   const pendingApplications = applications.filter(app => app.status === 'pending');
 
@@ -62,10 +69,19 @@ export default function AdminDashboard() {
           >
             Gestion Utilisateurs
           </button>
+          <button 
+            onClick={() => setActiveTab('content')}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-bold transition-all",
+              activeTab === 'content' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Gestion Plateformes
+          </button>
         </div>
       </div>
 
-      {activeTab === 'overview' ? (
+      {activeTab === 'overview' && (
         <>
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -198,7 +214,118 @@ export default function AdminDashboard() {
             </div>
           </div>
         </>
-      ) : (
+      )}
+
+      {activeTab === 'content' && (
+        <div className="space-y-6">
+          <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
+            {[
+              { id: 'documents', label: 'Documents', icon: FileText },
+              { id: 'stages', label: 'Stages', icon: Briefcase },
+              { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
+              { id: 'community', label: 'Communauté', icon: MessageSquare },
+            ].map((tab) => (
+              <button 
+                key={tab.id}
+                onClick={() => setContentTab(tab.id as any)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                  contentTab === tab.id ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50">
+              <h2 className="font-bold text-gray-900 capitalize">Modération : {contentTab}</h2>
+            </div>
+            
+            <div className="divide-y divide-gray-50">
+              {contentTab === 'documents' && documents.map(doc => (
+                <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{doc.title}</p>
+                      <p className="text-xs text-gray-500">{doc.course} • {doc.university}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+
+              {contentTab === 'stages' && internships.map(job => (
+                <div key={job.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
+                      <Briefcase size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{job.title}</p>
+                      <p className="text-xs text-gray-500">{job.company} • {job.location}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setInternships(prev => prev.filter(i => i.id !== job.id))}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+
+              {contentTab === 'marketplace' && marketplace.map(item => (
+                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <img src={item.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{item.title}</p>
+                      <p className="text-xs text-gray-500">{item.price.toLocaleString()} CFA • {item.seller.firstName}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setMarketplace(prev => prev.filter(m => m.id !== item.id))}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+
+              {contentTab === 'community' && community.map(post => (
+                <div key={post.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <img src={post.author.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm line-clamp-1">{post.content}</p>
+                      <p className="text-xs text-gray-500">Par {post.author.firstName} • {post.likes} likes • {post.comments.length} commentaires</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setCommunity(prev => prev.filter(p => p.id !== post.id))}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'users' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h2 className="font-bold text-gray-900">Liste des Utilisateurs</h2>
