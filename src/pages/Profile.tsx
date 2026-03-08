@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import MobileMoneyPayment from '@/components/shared/MobileMoneyPayment';
+import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 
 export default function Profile() {
-  const { user, logout, updateUser, paySubscription, submitTutorApplication } = useAuth();
+  const { user, logout, updateUser, submitTutorApplication } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showExamPayment, setShowExamPayment] = useState(false);
+  const [showPremiumPayment, setShowPremiumPayment] = useState(false);
   const [showTutorForm, setShowTutorForm] = useState(false);
   const [tutorDescription, setTutorDescription] = useState('');
   const [fileSelected, setFileSelected] = useState(false);
@@ -30,12 +32,6 @@ export default function Profile() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handlePaymentSuccess = () => {
-    paySubscription();
-    setShowPayment(false);
-    alert('Votre abonnement a été renouvelé avec succès pour 3 mois !');
   };
 
   const handleTutorApply = (e: React.FormEvent) => {
@@ -207,6 +203,97 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Subscriptions Section */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
+        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+          <CreditCard className="text-indigo-600" size={20} />
+          Mes Abonnements
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Exam Subscription */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Shield size={16} className="text-blue-600" />
+                  Accès Examens
+                </p>
+                <span className={cn(
+                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
+                  user.examSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
+                  user.examSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
+                  "bg-gray-100 text-gray-500"
+                )}>
+                  {user.examSubscriptionStatus === 'active' ? 'Actif' : 
+                   user.examSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
+                </span>
+              </div>
+              {user.examSubscriptionStatus === 'active' && user.examSubscriptionExpiry && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
+                  <Calendar size={12} />
+                  Expire le {new Date(user.examSubscriptionExpiry).toLocaleDateString()}
+                </p>
+              )}
+              {user.examSubscriptionStatus === 'pending' && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Vérification du paiement en cours...
+                </p>
+              )}
+            </div>
+            {user.examSubscriptionStatus !== 'active' && user.examSubscriptionStatus !== 'pending' && (
+              <button 
+                onClick={() => setShowExamPayment(true)}
+                className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+              >
+                S'abonner (1 000 CFA / an)
+              </button>
+            )}
+          </div>
+
+          {/* Premium Subscription */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Star size={16} className="text-purple-600" />
+                  Accès Premium
+                </p>
+                <span className={cn(
+                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
+                  user.premiumSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
+                  user.premiumSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
+                  "bg-gray-100 text-gray-500"
+                )}>
+                  {user.premiumSubscriptionStatus === 'active' ? 'Actif' : 
+                   user.premiumSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mb-2">Stages, Marketplace, Communauté</p>
+              {user.premiumSubscriptionStatus === 'active' && user.premiumSubscriptionExpiry && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
+                  <Calendar size={12} />
+                  Expire le {new Date(user.premiumSubscriptionExpiry).toLocaleDateString()}
+                </p>
+              )}
+              {user.premiumSubscriptionStatus === 'pending' && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Vérification du paiement en cours...
+                </p>
+              )}
+            </div>
+            {user.premiumSubscriptionStatus !== 'active' && user.premiumSubscriptionStatus !== 'pending' && (
+              <button 
+                onClick={() => setShowPremiumPayment(true)}
+                className="mt-4 w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
+              >
+                S'abonner (5 000 CFA / mois)
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Tutor Status Section */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
@@ -235,9 +322,11 @@ export default function Profile() {
                   <CreditCard size={16} className="text-emerald-600" />
                   <span className={cn(
                     "text-sm font-bold",
-                    user.subscriptionStatus === 'active' ? "text-emerald-700" : "text-red-600"
+                    user.subscriptionStatus === 'active' ? "text-emerald-700" : 
+                    user.subscriptionStatus === 'pending' ? "text-amber-600" : "text-red-600"
                   )}>
-                    {user.subscriptionStatus === 'active' ? 'Actif (Trimestriel)' : 'Expiré'}
+                    {user.subscriptionStatus === 'active' ? 'Actif (Trimestriel)' : 
+                     user.subscriptionStatus === 'pending' ? 'En attente de vérification' : 'Expiré'}
                   </span>
                 </div>
               </div>
@@ -253,13 +342,15 @@ export default function Profile() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <button 
-                onClick={() => setShowPayment(true)}
-                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <CreditCard size={18} />
-                Renouveler l'abonnement (2 000 CFA / Trimestre)
-              </button>
+              {user.subscriptionStatus !== 'pending' && (
+                <button 
+                  onClick={() => setShowPayment(true)}
+                  className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CreditCard size={18} />
+                  Renouveler l'abonnement (5 000 CFA / Trimestre)
+                </button>
+              )}
             </div>
             <p className="text-[10px] text-gray-400 text-center italic">
               Le renouvellement prolonge votre visibilité dans la liste des répétiteurs pour une durée de 3 mois.
@@ -350,17 +441,33 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* Payment Modal */}
-      {showPayment && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <MobileMoneyPayment 
-            amount={2000} 
-            onSuccess={handlePaymentSuccess} 
-            onCancel={() => setShowPayment(false)}
-            title="Renouvellement Abonnement Répétiteur"
-          />
-        </div>
-      )}
+      {/* Payment Modals */}
+      <ManualPaymentModal 
+        isOpen={showExamPayment}
+        onClose={() => setShowExamPayment(false)}
+        type="exam"
+        amount={1000}
+        title="Abonnement Examens"
+        description="Accédez à tous les sujets d'examens pendant 360 jours."
+      />
+
+      <ManualPaymentModal 
+        isOpen={showPremiumPayment}
+        onClose={() => setShowPremiumPayment(false)}
+        type="premium"
+        amount={5000}
+        title="Abonnement Premium"
+        description="Accédez aux fonctionnalités de publication (Stages, Marketplace, Communauté) pendant 30 jours."
+      />
+
+      <ManualPaymentModal 
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        type="tutor"
+        amount={5000}
+        title="Renouvellement Abonnement Répétiteur"
+        description="Renouvelez votre abonnement pour 3 mois."
+      />
     </div>
   );
 }

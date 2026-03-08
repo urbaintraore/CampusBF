@@ -7,15 +7,37 @@ export interface User {
   level: string; // Niveau (L1, L2, etc.)
   email: string;
   phone?: string;
+  city?: string;
+  neighborhood?: string;
   avatarUrl?: string;
   role: 'student' | 'admin' | 'tutor' | 'company';
   tutorStatus?: 'none' | 'pending' | 'approved' | 'rejected';
-  subscriptionStatus?: 'none' | 'active' | 'expired';
+  subscriptionStatus?: 'none' | 'pending' | 'active' | 'expired'; // Tutor subscription
   subscriptionExpiry?: string;
-  postSubscriptionStatus?: 'none' | 'active' | 'expired';
-  postSubscriptionExpiry?: string;
-  internshipSubscriptionStatus?: 'none' | 'active' | 'expired';
-  internshipSubscriptionExpiry?: string;
+  examSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
+  examSubscriptionExpiry?: string;
+  premiumSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
+  premiumSubscriptionExpiry?: string;
+  marketplaceSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
+  marketplaceSubscriptionExpiry?: string;
+  tutorSubjects?: string[];
+  tutorHourlyRates?: {
+    college?: number;
+    lycee?: number;
+    licence?: number;
+    master?: number;
+  };
+  tutorDescription?: string;
+}
+
+export interface SubscriptionRequest {
+  id: string;
+  userId: string;
+  user: User;
+  type: 'exam' | 'premium' | 'tutor' | 'marketplace';
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 export interface TutorApplication {
@@ -26,6 +48,13 @@ export interface TutorApplication {
   documentUrl: string; // URL of the single file (diploma, transcripts, CV)
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  subjects: string[];
+  hourlyRates: {
+    college?: number;
+    lycee?: number;
+    licence?: number;
+    master?: number;
+  };
 }
 
 export interface Document {
@@ -48,7 +77,13 @@ export interface Tutor {
   userId: string;
   user: User;
   subjects: string[];
-  hourlyRate: number; // CFA
+  hourlyRate: number; // CFA - Keep for backward compatibility or display "starting from"
+  hourlyRates?: {
+    college?: number;
+    lycee?: number;
+    licence?: number;
+    master?: number;
+  };
   description: string;
   rating: number;
   reviewsCount: number;
@@ -88,6 +123,14 @@ export interface Group {
   description: string;
 }
 
+export interface Comment {
+  id: string;
+  authorId: string;
+  author: User;
+  content: string;
+  createdAt: string;
+}
+
 export interface Post {
   id: string;
   groupId: string;
@@ -95,6 +138,35 @@ export interface Post {
   author: User;
   content: string;
   likes: number;
-  comments: number;
+  likedBy: string[];
+  comments: Comment[];
+  createdAt: string;
+}
+
+export interface Ad {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl?: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: string;
+  read: boolean;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'message' | 'alert' | 'success' | 'info';
+  title: string;
+  message: string;
+  read: boolean;
   createdAt: string;
 }

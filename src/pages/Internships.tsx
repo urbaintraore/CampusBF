@@ -2,11 +2,11 @@ import React, { useState, useRef } from 'react';
 import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, AlertCircle, FileUp, Edit } from 'lucide-react';
 import { MOCK_INTERNSHIPS } from '@/data/mock';
 import { useAuth } from '@/context/AuthContext';
-import MobileMoneyPayment from '@/components/shared/MobileMoneyPayment';
+import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { cn } from '@/lib/utils';
 
 export default function Internships() {
-  const { user, payInternshipSubscription } = useAuth();
+  const { user } = useAuth();
   const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -29,7 +29,7 @@ export default function Internships() {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const isSubscriptionActive = user?.internshipSubscriptionStatus === 'active';
+  const isSubscriptionActive = user?.premiumSubscriptionStatus === 'active';
   const isAdmin = user?.role === 'admin';
 
   const handlePostInternship = () => {
@@ -47,11 +47,6 @@ export default function Internships() {
       applicationEmail: ''
     });
     setShowPostModal(true);
-  };
-
-  const handlePaymentSuccess = () => {
-    payInternshipSubscription();
-    setShowPayment(false);
   };
 
   const openApplyModal = (jobTitle: string) => {
@@ -391,16 +386,14 @@ export default function Internships() {
       )}
 
       {/* Payment Modal */}
-      {showPayment && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <MobileMoneyPayment 
-            amount={5000} 
-            onSuccess={handlePaymentSuccess} 
-            onCancel={() => setShowPayment(false)}
-            title="Abonnement Recruteur CampusBF"
-          />
-        </div>
-      )}
+      <ManualPaymentModal 
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        type="premium"
+        amount={5000}
+        title="Abonnement Recruteur CampusBF"
+        description="Accédez aux fonctionnalités de publication pendant 30 jours."
+      />
     </div>
   );
 }

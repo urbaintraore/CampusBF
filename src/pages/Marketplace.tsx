@@ -4,10 +4,10 @@ import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image 
 import { MOCK_MARKETPLACE } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import MobileMoneyPayment from '@/components/shared/MobileMoneyPayment';
+import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 
 export default function Marketplace() {
-  const { user, payPostSubscription } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState(MOCK_MARKETPLACE);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,8 +30,10 @@ export default function Marketplace() {
   const [categories, setCategories] = useState(['Tout', 'Livres', 'Informatique', 'Logement', 'Meubles', 'Services']);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isSubscriptionActive = user?.postSubscriptionStatus === 'active' && 
-    user.postSubscriptionExpiry && new Date(user.postSubscriptionExpiry) > new Date();
+  const isSubscriptionActive = (user?.premiumSubscriptionStatus === 'active' && 
+    user.premiumSubscriptionExpiry && new Date(user.premiumSubscriptionExpiry) > new Date()) ||
+    (user?.marketplaceSubscriptionStatus === 'active' && 
+    user.marketplaceSubscriptionExpiry && new Date(user.marketplaceSubscriptionExpiry) > new Date());
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -120,11 +122,6 @@ export default function Marketplace() {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
       setItems(prev => prev.filter(item => item.id !== id));
     }
-  };
-
-  const handlePaymentSuccess = () => {
-    payPostSubscription();
-    setShowPayment(false);
   };
 
   const handleContact = (sellerId: string) => {
@@ -263,52 +260,44 @@ export default function Marketplace() {
       {/* Sell Modal */}
       {showSellModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          {showPayment ? (
-            <MobileMoneyPayment 
-              amount={1000} 
-              onSuccess={handlePaymentSuccess} 
-              onCancel={() => setShowPayment(false)}
-              title="Abonnement Vendeur Marketplace"
-            />
-          ) : (
-            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 max-h-[95vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Vendre un article</h2>
-                <button onClick={resetSellForm} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <X size={20} className="text-gray-400" />
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 max-h-[95vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Vendre un article</h2>
+              <button onClick={resetSellForm} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+            
+            {!isSubscriptionActive ? (
+              <div className="space-y-6 py-4">
+                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-600">
+                  <AlertCircle size={32} />
+                </div>
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-bold text-gray-900">Abonnement requis</h3>
+                  <p className="text-sm text-gray-500">
+                    Pour vendre sur la marketplace, vous devez activer un abonnement vendeur de 30 jours.
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Durée</span>
+                    <span className="text-sm font-bold text-gray-900">30 Jours</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Prix</span>
+                    <span className="text-sm font-bold text-emerald-600">5 000 CFA</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPayment(true)}
+                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+                >
+                  <CreditCard size={18} />
+                  Payer l'abonnement (5 000 CFA)
                 </button>
               </div>
-              
-              {!isSubscriptionActive ? (
-                <div className="space-y-6 py-4">
-                  <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-600">
-                    <AlertCircle size={32} />
-                  </div>
-                  <div className="text-center space-y-2">
-                    <h3 className="text-lg font-bold text-gray-900">Abonnement requis</h3>
-                    <p className="text-sm text-gray-500">
-                      Pour vendre sur la marketplace, vous devez activer un abonnement vendeur de 30 jours.
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Durée</span>
-                      <span className="text-sm font-bold text-gray-900">30 Jours</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Prix</span>
-                      <span className="text-sm font-bold text-emerald-600">1 000 CFA</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setShowPayment(true)}
-                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
-                  >
-                    <CreditCard size={18} />
-                    Payer via Mobile Money (1 000 CFA)
-                  </button>
-                </div>
-              ) : (
+            ) : (
                 <form className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -453,9 +442,18 @@ export default function Marketplace() {
                 </form>
               )}
             </div>
-          )}
         </div>
       )}
+
+      {/* Payment Modal */}
+      <ManualPaymentModal 
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        type="marketplace"
+        amount={5000}
+        title="Abonnement Vendeur Marketplace"
+        description="Accédez aux fonctionnalités de publication pendant 30 jours."
+      />
     </div>
   );
 }

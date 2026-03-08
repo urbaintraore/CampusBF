@@ -1,40 +1,107 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Send, MoreVertical, Phone, Video } from 'lucide-react';
-import { MOCK_MESSAGES, MOCK_TUTORS, MOCK_MARKETPLACE, CURRENT_USER } from '@/data/mock';
+import { MOCK_MESSAGES, MOCK_TUTORS, MOCK_MARKETPLACE } from '@/data/mock';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { User, Message } from '@/types';
+
+interface Conversation {
+  user: User;
+  lastMessage?: Message;
+  unread: number;
+}
 
 export default function Messages() {
+  const { user: currentUser, users } = useAuth();
   const location = useLocation();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
 
+  // Initialize conversations from mock data
+  useEffect(() => {
+    // In a real app, we would fetch conversations from an API
+    // Here we build them from MOCK_MESSAGES and known contacts
+    const initialConversations: Conversation[] = [
+      {
+        user: MOCK_TUTORS[0].user,
+        lastMessage: MOCK_MESSAGES[0],
+        unread: 1,
+      },
+      {
+        user: MOCK_MARKETPLACE[0].seller,
+        lastMessage: MOCK_MESSAGES[2],
+        unread: 0,
+      }
+    ];
+    setConversations(initialConversations);
+  }, []);
+
+  // Handle URL chat parameter
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const chatId = params.get('chat');
+    
     if (chatId) {
-      setSelectedChat(chatId);
-    } else if (!selectedChat) {
-      setSelectedChat('u5'); // Default chat
+      // Check if conversation already exists
+      const existingConv = conversations.find(c => c.user.id === chatId);
+      
+      if (existingConv) {
+        setSelectedChat(chatId);
+      } else {
+        // Find user in global users list
+        const userToChat = users.find(u => u.id === chatId);
+        
+        if (userToChat) {
+          // Add new conversation
+          const newConv: Conversation = {
+            user: userToChat,
+            unread: 0
+          };
+          setConversations(prev => [...prev, newConv]);
+          setSelectedChat(chatId);
+        }
+      }
+    } else if (!selectedChat && conversations.length > 0) {
+      setSelectedChat(conversations[0].user.id);
     }
-  }, [location.search]);
+  }, [location.search, users, conversations.length]); // Removed conversations dependency to avoid loop, added length check
 
-  // Mock getting conversations from messages
-  // In a real app, this would be a distinct API call
-  const conversations = [
-    {
-      user: MOCK_TUTORS[0].user,
-      lastMessage: MOCK_MESSAGES[0],
-      unread: 1,
-    },
-    {
-      user: MOCK_MARKETPLACE[0].seller,
-      lastMessage: MOCK_MESSAGES[2],
-      unread: 0,
-    }
-  ];
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || !selectedChat || !currentUser) return;
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      senderId: currentUser.id,
+      receiverId: selectedChat,
+      content: messageInput,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setMessageInput('');
+
+    // Update last message in conversation
+    setConversations(prev => prev.map(c => {
+      if (c.user.id === selectedChat) {
+        return { ...c, lastMessage: newMessage };
+      }
+      return c;
+    }));
+  };
 
   const activeConversation = conversations.find(c => c.user.id === selectedChat);
+
+  // Filter messages for the current chat
+  const currentChatMessages = messages.filter(m => 
+    (selectedChat && currentUser && (
+      (m.senderId === selectedChat && m.receiverId === currentUser.id) || 
+      (m.senderId === currentUser.id && m.receiverId === selectedChat)
+    ))
+  );
 
   return (
     <div className="h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
@@ -69,10 +136,12 @@ export default function Messages() {
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline mb-1">
                   <h3 className="font-semibold text-gray-900 truncate">{conv.user.firstName} {conv.user.lastName}</h3>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">10:30</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                    {conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                  </span>
                 </div>
                 <p className={cn("text-sm truncate", conv.unread ? "font-semibold text-gray-900" : "text-gray-500")}>
-                  {conv.lastMessage.content}
+                  {conv.lastMessage ? conv.lastMessage.content : <span className="italic text-gray-400">Nouvelle conversation</span>}
                 </p>
               </div>
               {conv.unread > 0 && (
@@ -109,27 +178,30 @@ export default function Messages() {
 
           {/* Messages Feed */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
-            {MOCK_MESSAGES.filter(m => 
-              (m.senderId === selectedChat && m.receiverId === CURRENT_USER.id) || 
-              (m.senderId === CURRENT_USER.id && m.receiverId === selectedChat)
-            ).map((msg) => {
-              const isMe = msg.senderId === CURRENT_USER.id;
-              return (
-                <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
-                  <div className={cn(
-                    "max-w-[70%] rounded-2xl px-5 py-3 shadow-sm",
-                    isMe 
-                      ? "bg-emerald-600 text-white rounded-tr-none" 
-                      : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
-                  )}>
-                    <p className="text-sm">{msg.content}</p>
-                    <p className={cn("text-[10px] mt-1 text-right", isMe ? "text-emerald-100" : "text-gray-400")}>
-                      {msg.timestamp.split('T')[1].slice(0, 5)}
-                    </p>
+            {currentChatMessages.length > 0 ? (
+              currentChatMessages.map((msg) => {
+                const isMe = msg.senderId === currentUser?.id;
+                return (
+                  <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
+                    <div className={cn(
+                      "max-w-[70%] rounded-2xl px-5 py-3 shadow-sm",
+                      isMe 
+                        ? "bg-emerald-600 text-white rounded-tr-none" 
+                        : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
+                    )}>
+                      <p className="text-sm">{msg.content}</p>
+                      <p className={cn("text-[10px] mt-1 text-right", isMe ? "text-emerald-100" : "text-gray-400")}>
+                        {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <p>Aucun message. Commencez la discussion !</p>
+              </div>
+            )}
           </div>
 
           {/* Input Area */}
@@ -142,13 +214,15 @@ export default function Messages() {
                 placeholder="Écrivez votre message..." 
                 className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && messageInput.trim()) {
-                    // Handle send (mock)
-                    setMessageInput('');
+                  if (e.key === 'Enter') {
+                    handleSendMessage();
                   }
                 }}
               />
-              <button className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200">
+              <button 
+                onClick={handleSendMessage}
+                className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
+              >
                 <Send size={20} />
               </button>
             </div>

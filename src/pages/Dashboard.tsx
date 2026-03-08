@@ -1,9 +1,19 @@
-import React from 'react';
-import { Search, Bell, Filter } from 'lucide-react';
-import { MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_TUTORS, CURRENT_USER } from '@/data/mock';
+import React, { useState, useEffect } from 'react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_TUTORS, CURRENT_USER, MOCK_ADS } from '@/data/mock';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
+  const [currentAd, setCurrentAd] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentAd((prev) => (prev + 1) % MOCK_ADS.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Header Section */}
@@ -24,6 +34,69 @@ export default function Dashboard() {
               placeholder="Rechercher..." 
               className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 w-64"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Advertisement Carousel */}
+      <div className="relative overflow-hidden rounded-3xl bg-gray-100 h-48 md:h-64 group shadow-lg border border-gray-100">
+        {MOCK_ADS.map((ad, idx) => (
+          <div 
+            key={ad.id}
+            className={cn(
+              "absolute inset-0 transition-all duration-1000 ease-in-out",
+              idx === currentAd ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
+            )}
+          >
+            <img 
+              src={ad.imageUrl} 
+              alt={ad.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative h-full flex flex-col justify-center px-6 md:px-16">
+              <div className="bg-white/95 backdrop-blur-md p-5 md:p-8 rounded-2xl shadow-2xl border border-white/50 max-w-lg animate-in slide-in-from-left-8 duration-700">
+                <span className="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-full mb-3">
+                  Annonce Partenaire
+                </span>
+                <h2 className="text-lg md:text-2xl font-bold leading-tight mb-4 text-gray-900">
+                  {ad.title}
+                </h2>
+                <a 
+                  href={ad.linkUrl}
+                  className="inline-block px-6 py-2.5 bg-emerald-600 text-white rounded-full font-bold text-sm hover:bg-emerald-700 transition-all hover:shadow-lg active:scale-95"
+                >
+                  En savoir plus
+                </a>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {/* Carousel Controls */}
+        <div className="absolute bottom-6 right-8 flex items-center gap-4">
+          <div className="flex gap-2">
+            {MOCK_ADS.map((_, idx) => (
+              <button 
+                key={idx} 
+                onClick={() => setCurrentAd(idx)}
+                className={`w-2 h-2 rounded-full transition-all ${idx === currentAd ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50'}`}
+              ></button>
+            ))}
+          </div>
+          <div className="flex gap-1">
+            <button 
+              onClick={() => setCurrentAd((prev) => (prev - 1 + MOCK_ADS.length) % MOCK_ADS.length)}
+              className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button 
+              onClick={() => setCurrentAd((prev) => (prev + 1) % MOCK_ADS.length)}
+              className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>

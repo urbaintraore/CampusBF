@@ -1,23 +1,45 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2 } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY } from '@/data/mock';
+import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY, MOCK_ADS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
-  const { applications, reviewApplication } = useAuth();
+  const { 
+    applications, 
+    reviewApplication, 
+    subscriptionRequests, 
+    reviewSubscriptionRequest, 
+    users, 
+    updateUserRole, 
+    deleteUser 
+  } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads'>('documents');
   const [userSearch, setUserSearch] = useState('');
-  const [users, setUsers] = useState(MOCK_USERS);
   
   // Content states
   const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
   const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
   const [marketplace, setMarketplace] = useState(MOCK_MARKETPLACE);
   const [community, setCommunity] = useState(MOCK_COMMUNITY);
+  const [ads, setAds] = useState(MOCK_ADS);
+  const [showAddAdModal, setShowAddAdModal] = useState(false);
+  const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewAd({ ...newAd, imageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const pendingApplications = applications.filter(app => app.status === 'pending');
+  const pendingSubscriptions = subscriptionRequests.filter(req => req.status === 'pending');
 
   const filteredUsers = users.filter(u => 
     u.firstName.toLowerCase().includes(userSearch.toLowerCase()) || 
@@ -25,18 +47,16 @@ export default function AdminDashboard() {
     u.email.toLowerCase().includes(userSearch.toLowerCase())
   );
 
-  const toggleUserRole = (userId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        return { ...u, role: u.role === 'admin' ? 'student' : 'admin' };
-      }
-      return u;
-    }));
+  const handleToggleUserRole = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      updateUserRole(userId, user.role === 'admin' ? 'student' : 'admin');
+    }
   };
 
-  const deleteUser = (userId: string) => {
+  const handleDeleteUser = (userId: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      deleteUser(userId);
     }
   };
 
@@ -84,12 +104,13 @@ export default function AdminDashboard() {
       {activeTab === 'overview' && (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {[
               { label: 'Utilisateurs', count: users.length.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
               { label: 'Documents', count: '3,890', icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Signalements', count: '12', icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
+              { label: 'Paiements', count: pendingSubscriptions.length.toString(), icon: CreditCard, color: 'bg-indigo-50 text-indigo-700' },
             ].map((stat) => (
               <div key={stat.label} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
@@ -101,6 +122,68 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Subscription Requests Section */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-8">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                <CreditCard className="text-indigo-600" size={20} />
+                Vérification des Paiements
+              </h2>
+              <span className="text-xs font-medium bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">{pendingSubscriptions.length} en attente</span>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {pendingSubscriptions.length > 0 ? (
+                pendingSubscriptions.map((req) => (
+                  <div key={req.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col md:flex-row justify-between gap-6">
+                      <div className="flex gap-4">
+                        <img src={req.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                        <div>
+                          <h3 className="font-bold text-gray-900">{req.user.firstName} {req.user.lastName}</h3>
+                          <p className="text-xs text-gray-500 mb-2">{req.user.email} • {req.user.phone || 'Pas de numéro'}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={cn(
+                              "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
+                              req.type === 'exam' ? "bg-blue-50 text-blue-700" : 
+                              req.type === 'premium' ? "bg-purple-50 text-purple-700" : "bg-emerald-50 text-emerald-700"
+                            )}>
+                              {req.type === 'exam' ? 'Abonnement Examens' : 
+                               req.type === 'premium' ? 'Abonnement Premium' : 'Abonnement Répétiteur'}
+                            </span>
+                            <span className="text-sm font-bold text-emerald-600">{req.amount.toLocaleString()} FCFA</span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">Demande effectuée le {new Date(req.createdAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 min-w-[200px] justify-center">
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => reviewSubscriptionRequest(req.id, 'approved')}
+                            className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                          >
+                            <Check size={16} />
+                            Activer
+                          </button>
+                          <button 
+                            onClick={() => reviewSubscriptionRequest(req.id, 'rejected')}
+                            className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                          >
+                            <X size={16} />
+                            Refuser
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-12 text-center text-gray-400">
+                  <p>Aucun paiement en attente de vérification.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Tutor Applications Section */}
@@ -122,6 +205,19 @@ export default function AdminDashboard() {
                         <div>
                           <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
                           <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.user.major}</p>
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {app.subjects?.map((sub) => (
+                              <span key={sub} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] rounded-full font-bold">
+                                {sub}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 mb-2 text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
+                            {app.hourlyRates?.college && <span>Col: {app.hourlyRates.college} F</span>}
+                            {app.hourlyRates?.lycee && <span>Lyc: {app.hourlyRates.lycee} F</span>}
+                            {app.hourlyRates?.licence && <span>Lic: {app.hourlyRates.licence} F</span>}
+                            {app.hourlyRates?.master && <span>Mas: {app.hourlyRates.master} F</span>}
+                          </div>
                           <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">
                             "{app.description}"
                           </p>
@@ -224,6 +320,7 @@ export default function AdminDashboard() {
               { id: 'stages', label: 'Stages', icon: Briefcase },
               { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
               { id: 'community', label: 'Communauté', icon: MessageSquare },
+              { id: 'ads', label: 'Publicités', icon: Megaphone },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -240,8 +337,17 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-50">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center">
               <h2 className="font-bold text-gray-900 capitalize">Modération : {contentTab}</h2>
+              {contentTab === 'ads' && (
+                <button 
+                  onClick={() => setShowAddAdModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus size={16} />
+                  Nouvelle Publicité
+                </button>
+              )}
             </div>
             
             <div className="divide-y divide-gray-50">
@@ -320,6 +426,141 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               ))}
+
+              {contentTab === 'ads' && ads.map(ad => (
+                <div key={ad.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <img src={ad.imageUrl} alt="" className="w-20 h-12 rounded-lg object-cover bg-gray-100" />
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{ad.title}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
+                          ad.active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
+                        )}>
+                          {ad.active ? 'Actif' : 'Inactif'}
+                        </span>
+                        <a href={ad.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                          Lien <ExternalLink size={10} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setAds(prev => prev.map(a => a.id === ad.id ? { ...a, active: !a.active } : a))}
+                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title={ad.active ? "Désactiver" : "Activer"}
+                    >
+                      {ad.active ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                    <button 
+                      onClick={() => setAds(prev => prev.filter(a => a.id !== ad.id))}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Ad Modal */}
+      {showAddAdModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Nouvelle Publicité</h2>
+              <button onClick={() => setShowAddAdModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-gray-700">Titre de la publicité</label>
+                <input 
+                  type="text" 
+                  value={newAd.title}
+                  onChange={(e) => setNewAd({ ...newAd, title: e.target.value })}
+                  placeholder="Ex: -50% sur les fournitures" 
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-gray-700">Image de la publicité</label>
+                <div className="flex flex-col gap-3">
+                  {newAd.imageUrl && (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-200">
+                      <img src={newAd.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => setNewAd({ ...newAd, imageUrl: '' })}
+                        className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden" 
+                      id="ad-image-upload"
+                    />
+                    <label 
+                      htmlFor="ad-image-upload"
+                      className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 cursor-pointer hover:border-emerald-500 hover:text-emerald-600 transition-all"
+                    >
+                      <Upload size={18} />
+                      {newAd.imageUrl ? "Changer l'image" : "Charger une image"}
+                    </label>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                      <span className="text-xs font-bold">URL</span>
+                    </div>
+                    <input 
+                      type="text" 
+                      value={newAd.imageUrl}
+                      onChange={(e) => setNewAd({ ...newAd, imageUrl: e.target.value })}
+                      placeholder="Ou collez une URL d'image..." 
+                      className="w-full pl-12 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-gray-700">Lien de redirection</label>
+                <input 
+                  type="text" 
+                  value={newAd.linkUrl}
+                  onChange={(e) => setNewAd({ ...newAd, linkUrl: e.target.value })}
+                  placeholder="https://..." 
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-500" 
+                />
+              </div>
+              <div className="pt-4">
+                <button 
+                  onClick={() => {
+                    const ad = {
+                      id: `ad-${Date.now()}`,
+                      ...newAd,
+                      active: true,
+                      createdAt: new Date().toISOString()
+                    };
+                    setAds([ad, ...ads]);
+                    setShowAddAdModal(false);
+                    setNewAd({ title: '', imageUrl: '', linkUrl: '' });
+                  }}
+                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                >
+                  Ajouter la publicité
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -377,14 +618,14 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button 
-                          onClick={() => toggleUserRole(u.id)}
+                          onClick={() => handleToggleUserRole(u.id)}
                           title={u.role === 'admin' ? "Rétrograder en étudiant" : "Promouvoir en admin"}
                           className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                         >
                           <Shield size={18} />
                         </button>
                         <button 
-                          onClick={() => deleteUser(u.id)}
+                          onClick={() => handleDeleteUser(u.id)}
                           title="Supprimer l'utilisateur"
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >

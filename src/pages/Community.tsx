@@ -1,31 +1,38 @@
 import React, { useState, useRef } from 'react';
-import { Users, MessageSquare, Share2, CreditCard, AlertCircle, Send, X, Plus, CheckCircle2 } from 'lucide-react';
-import { MOCK_GROUPS, MOCK_POSTS } from '@/data/mock';
+import { Users, MessageSquare, Share2, AlertCircle, Send, X, Plus, CheckCircle2 } from 'lucide-react';
+import { MOCK_GROUPS, MOCK_POSTS, MOCK_USERS } from '@/data/mock';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
-import MobileMoneyPayment from '@/components/shared/MobileMoneyPayment';
 
 export default function Community() {
-  const { user, payPostSubscription } = useAuth();
-  const [showPayModal, setShowPayModal] = useState(false);
+  const { user } = useAuth();
   const [postContent, setPostContent] = useState('');
   const [groups, setGroups] = useState(MOCK_GROUPS);
   const [selectedGroupId, setSelectedGroupId] = useState(groups[0].id);
   const [posts, setPosts] = useState(MOCK_POSTS);
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>(['g1']);
+  const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState<string | null>(null);
   const [newGroupData, setNewGroupData] = useState({ name: '', description: '', type: 'university' as const });
   const [showSuccessToast, setShowSuccessToast] = useState<{show: boolean, message: string}>({ show: false, message: '' });
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
+  const [commentContent, setCommentContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Filter posts based on membership and selection
+  const visiblePosts = posts.filter(post => {
+    // If a specific group is selected, show only its posts
+    if (viewingGroupId) {
+      return post.groupId === viewingGroupId;
+    }
+    // Otherwise, show posts from all joined groups
+    return joinedGroupIds.includes(post.groupId);
+  });
 
   const handleCreatePost = () => {
     if (!user) return;
-    
-    if (user.role !== 'admin' && user.postSubscriptionStatus !== 'active') {
-      setShowPayModal(true);
-      return;
-    }
     
     if (!postContent.trim()) {
       alert('Veuillez entrer du contenu pour votre publication.');
@@ -44,13 +51,87 @@ export default function Community() {
       author: user,
       content: postContent,
       likes: 0,
-      comments: 0,
+      likedBy: [],
+      comments: [],
       createdAt: new Date().toISOString(),
     };
 
     setPosts([newPost, ...posts]);
     setPostContent('');
     showToast('Publication partagée avec succès !');
+  };
+
+  const handleGroupClick = (groupId: string) => {
+    setViewingGroupId(groupId);
+    // Also update the posting selection to match
+    if (joinedGroupIds.includes(groupId)) {
+      setSelectedGroupId(groupId);
+    }
+  };
+
+  const handleLike = (postId: string) => {
+    if (!user) return;
+    
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        const isLiked = post.likedBy?.includes(user.id);
+        return {
+          ...post,
+          likes: isLiked ? post.likes - 1 : post.likes + 1,
+          likedBy: isLiked 
+            ? post.likedBy.filter(id => id !== user.id)
+            : [...(post.likedBy || []), user.id]
+        };
+      }
+      return post;
+    }));
+  };
+
+  const handleComment = (postId: string) => {
+    if (activeCommentPostId === postId) {
+      setActiveCommentPostId(null);
+    } else {
+      setActiveCommentPostId(postId);
+      setCommentContent('');
+    }
+  };
+
+  const handleReplyToComment = (post: any, comment: any) => {
+    setActiveCommentPostId(post.id);
+    setCommentContent(`@${comment.author.firstName} ${comment.author.lastName} `);
+    // Focus will be handled by the effect or auto-focus on the input when rendered
+    setTimeout(() => {
+        const input = document.getElementById(`comment-input-${post.id}`);
+        if (input) {
+            (input as HTMLInputElement).focus();
+        }
+    }, 100);
+  };
+
+  const handleSubmitComment = (postId: string) => {
+    if (!user || !commentContent.trim()) return;
+
+    const newComment = {
+      id: `c-${Date.now()}`,
+      authorId: user.id,
+      author: user,
+      content: commentContent,
+      createdAt: new Date().toISOString(),
+    };
+
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        return {
+          ...post,
+          comments: [...(post.comments || []), newComment]
+        };
+      }
+      return post;
+    }));
+
+    setCommentContent('');
+    setActiveCommentPostId(null);
+    showToast('Commentaire ajouté !');
   };
 
   const handleJoinGroup = (groupId: string) => {
@@ -92,12 +173,6 @@ export default function Community() {
   const showToast = (message: string) => {
     setShowSuccessToast({ show: true, message });
     setTimeout(() => setShowSuccessToast({ show: false, message: '' }), 3000);
-  };
-
-  const handlePaymentSuccess = () => {
-    payPostSubscription();
-    setShowPayModal(false);
-    showToast('Abonnement activé ! Vous pouvez maintenant publier.');
   };
 
   const scrollToCreate = () => {
@@ -157,10 +232,7 @@ export default function Community() {
               />
             </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-            <p className="text-[10px] text-gray-400 italic">
-              {user?.postSubscriptionStatus === 'active' ? 'Abonnement actif' : 'Abonnement requis pour publier'}
-            </p>
+          <div className="flex items-center justify-end pt-2 border-t border-gray-50">
             <button 
               onClick={handleCreatePost}
               className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-md"
@@ -173,16 +245,32 @@ export default function Community() {
 
         {/* Posts */}
         <div className="space-y-4">
-          {posts.map((post) => {
-            const group = groups.find(g => g.id === post.groupId);
-            return (
-              <div key={post.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-100 transition-colors">
+          {visiblePosts.length === 0 ? (
+            <div className="bg-white p-8 rounded-xl border border-gray-100 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                <MessageSquare size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Aucune publication</h3>
+              <p className="text-gray-500">
+                {viewingGroupId 
+                  ? "Ce groupe n'a pas encore de publication." 
+                  : "Rejoignez des groupes pour voir les publications ici !"}
+              </p>
+            </div>
+          ) : (
+            visiblePosts.map((post) => {
+              const group = groups.find(g => g.id === post.groupId);
+              const isLiked = user && post.likedBy?.includes(user.id);
+              const showComments = activeCommentPostId === post.id;
+
+              return (
+                <div key={post.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-100 transition-colors">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <img src={post.author.avatarUrl} alt={post.author.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
                     <div>
                       <h3 className="font-bold text-gray-900 text-sm">{post.author.firstName} {post.author.lastName}</h3>
-                      <p className="text-xs text-gray-500">{post.author.major} • {post.createdAt.split('T')[0]}</p>
+                      <p className="text-xs text-gray-500">{post.author.major} • {new Date(post.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                   {group && (
@@ -192,26 +280,95 @@ export default function Community() {
                   )}
                 </div>
                 
-                <p className="text-gray-800 mb-4 leading-relaxed">
+                <p className="text-gray-800 mb-4 leading-relaxed whitespace-pre-wrap">
                   {post.content}
                 </p>
 
                 <div className="flex items-center gap-6 pt-4 border-t border-gray-50">
-                  <button className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 text-sm font-medium transition-colors group">
-                    <span className="p-1.5 rounded-full bg-gray-50 group-hover:bg-emerald-50 transition-colors">👍</span>
+                  <button 
+                    onClick={() => handleLike(post.id)}
+                    className={cn(
+                      "flex items-center gap-2 text-sm font-medium transition-colors group",
+                      isLiked ? "text-emerald-600" : "text-gray-500 hover:text-emerald-600"
+                    )}
+                  >
+                    <span className={cn(
+                      "p-1.5 rounded-full transition-colors",
+                      isLiked ? "bg-emerald-50" : "bg-gray-50 group-hover:bg-emerald-50"
+                    )}>👍</span>
                     {post.likes}
                   </button>
-                  <button className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 text-sm font-medium transition-colors group">
+                  <button 
+                    onClick={() => handleComment(post.id)}
+                    className={cn(
+                      "flex items-center gap-2 text-sm font-medium transition-colors group",
+                      showComments ? "text-emerald-600" : "text-gray-500 hover:text-emerald-600"
+                    )}
+                  >
                     <MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
-                    {post.comments}
+                    {post.comments?.length || 0}
                   </button>
                   <button className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 text-sm font-medium transition-colors ml-auto group">
                     <Share2 size={18} className="group-hover:scale-110 transition-transform" />
                   </button>
                 </div>
+
+                {/* Comments Section */}
+                {(showComments || (post.comments && post.comments.length > 0)) && (
+                  <div className="mt-4 pt-4 border-t border-gray-50 space-y-4">
+                    {post.comments?.map((comment) => (
+                      <div key={comment.id} className="flex gap-3">
+                        <img src={comment.author.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0" />
+                        <div className="bg-gray-50 rounded-2xl rounded-tl-none p-3 flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-gray-900">{comment.author.firstName} {comment.author.lastName}</span>
+                            <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                          </div>
+                          <p className="text-sm text-gray-700">{comment.content}</p>
+                          <button 
+                            onClick={() => handleReplyToComment(post, comment)}
+                            className="text-[10px] font-medium text-emerald-600 hover:text-emerald-700 mt-1"
+                          >
+                            Répondre
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {showComments && (
+                      <div className="flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+                        <img src={user?.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-emerald-100 flex-shrink-0" />
+                        <div className="flex-1 flex gap-2">
+                          <input 
+                            id={`comment-input-${post.id}`}
+                            type="text" 
+                            value={commentContent}
+                            onChange={(e) => setCommentContent(e.target.value)}
+                            placeholder="Écrivez un commentaire..." 
+                            className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmitComment(post.id);
+                              }
+                            }}
+                          />
+                          <button 
+                            onClick={() => handleSubmitComment(post.id)}
+                            disabled={!commentContent.trim()}
+                            className="p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Send size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
-          })}
+          })
+        )}
         </div>
       </div>
 
@@ -228,11 +385,43 @@ export default function Community() {
           </button>
         </div>
         <div className="space-y-3">
+          <button 
+            onClick={() => setViewingGroupId(null)}
+            className={cn(
+              "w-full p-4 rounded-xl border shadow-sm text-left transition-all flex items-center gap-3",
+              viewingGroupId === null 
+                ? "bg-emerald-50 border-emerald-200 ring-1 ring-emerald-500/20" 
+                : "bg-white border-gray-100 hover:border-emerald-100 hover:shadow-md"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-colors",
+              viewingGroupId === null ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"
+            )}>
+              <MessageSquare size={20} />
+            </div>
+            <div>
+              <h3 className={cn("font-bold text-sm", viewingGroupId === null ? "text-emerald-900" : "text-gray-900")}>Fil d'actualité</h3>
+              <p className="text-xs text-gray-500">Toutes les publications</p>
+            </div>
+          </button>
+
           {groups.map((group) => {
             const isJoined = joinedGroupIds.includes(group.id);
+            const isViewing = viewingGroupId === group.id;
+            
             return (
-              <div key={group.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                <div className="flex items-center gap-3 mb-2">
+              <div 
+                key={group.id} 
+                className={cn(
+                  "bg-white p-4 rounded-xl border shadow-sm transition-all relative group-card",
+                  isViewing ? "border-emerald-200 ring-1 ring-emerald-500/20 bg-emerald-50/30" : "border-gray-100 hover:shadow-md"
+                )}
+              >
+                <div 
+                  className="flex items-center gap-3 mb-2 cursor-pointer"
+                  onClick={() => handleGroupClick(group.id)}
+                >
                   <div className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-colors",
                     isJoined ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"
@@ -240,19 +429,33 @@ export default function Community() {
                     <Users size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm truncate">{group.name}</h3>
+                    <h3 className={cn("font-bold text-sm truncate", isViewing ? "text-emerald-900" : "text-gray-900")}>{group.name}</h3>
                     <p className="text-xs text-gray-500">{group.membersCount + (isJoined ? 1 : 0)} membres</p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 line-clamp-2 mb-3">{group.description}</p>
+                <p 
+                  className="text-xs text-gray-500 line-clamp-2 mb-3 cursor-pointer"
+                  onClick={() => handleGroupClick(group.id)}
+                >
+                  {group.description}
+                </p>
                 {isJoined ? (
                   <div className="flex gap-2">
-                    <button className="flex-1 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2">
-                      <CheckCircle2 size={14} />
-                      Membre
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMembersModal(group.id);
+                      }}
+                      className="flex-1 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Users size={14} />
+                      Membres
                     </button>
                     <button 
-                      onClick={() => handleLeaveGroup(group.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLeaveGroup(group.id);
+                      }}
                       className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                     >
                       Quitter
@@ -260,7 +463,10 @@ export default function Community() {
                   </div>
                 ) : (
                   <button 
-                    onClick={() => handleJoinGroup(group.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleJoinGroup(group.id);
+                    }}
                     className="w-full py-1.5 text-xs font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     Rejoindre
@@ -279,18 +485,6 @@ export default function Community() {
           </button>
         </div>
       </div>
-
-      {/* Payment Modal */}
-      {showPayModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <MobileMoneyPayment 
-            amount={5000} 
-            onSuccess={handlePaymentSuccess} 
-            onCancel={() => setShowPayModal(false)}
-            title="Abonnement Communauté CampusBF"
-          />
-        </div>
-      )}
 
       {/* Join Group Modal (Discovery) */}
       {showJoinModal && (
@@ -380,6 +574,37 @@ export default function Community() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Members Modal */}
+      {showMembersModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                Membres du groupe
+              </h2>
+              <button onClick={() => setShowMembersModal(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto pr-2 space-y-4 flex-1">
+              {MOCK_USERS.map((member) => (
+                <div key={member.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                  <img src={member.avatarUrl} alt={member.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-sm text-gray-900 truncate">{member.firstName} {member.lastName}</h3>
+                    <p className="text-xs text-gray-500 truncate">{member.major} • {member.level}</p>
+                  </div>
+                  {member.role === 'admin' && (
+                    <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded uppercase">
+                      Admin
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

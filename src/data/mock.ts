@@ -1,4 +1,4 @@
-import { User, Document, Tutor, Internship, MarketplaceItem, Group, Post } from '../types';
+import { User, Document, Tutor, Internship, MarketplaceItem, Group, Post, Ad, Message, Notification } from '../types';
 
 export const CURRENT_USER: User = {
   id: 'u1',
@@ -85,6 +85,11 @@ export const MOCK_APPLICATIONS: TutorApplication[] = [
     documentUrl: '#',
     status: 'pending',
     createdAt: '2024-03-05T08:00:00',
+    subjects: ['Java', 'Algorithmique', 'Base de données'],
+    hourlyRates: {
+      licence: 2500,
+      master: 3000
+    }
   }
 ];
 
@@ -145,6 +150,9 @@ export const MOCK_TUTORS: Tutor[] = [
       major: 'Mathématiques',
       level: 'Master 1',
       email: 'fatima@email.com',
+      phone: '+226 70 12 34 56',
+      city: 'Ouagadougou',
+      neighborhood: 'Gounghin',
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima',
       role: 'tutor',
     },
@@ -166,6 +174,9 @@ export const MOCK_TUTORS: Tutor[] = [
       major: 'Économie',
       level: 'Master 2',
       email: 'jean@email.com',
+      phone: '+226 76 98 76 54',
+      city: 'Ouagadougou',
+      neighborhood: 'Dassasgho',
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jean',
       role: 'tutor',
     },
@@ -291,31 +302,48 @@ export const MOCK_POSTS: Post[] = [
     },
     content: 'Salut les gars, est-ce que quelqu\'un a le cours de Java d\'hier ? J\'étais absent.',
     likes: 5,
-    comments: 2,
+    likedBy: [],
+    comments: [
+      {
+        id: 'c1',
+        authorId: 'u3',
+        author: {
+          id: 'u3',
+          firstName: 'Awa',
+          lastName: 'Traoré',
+          university: 'UTS',
+          major: 'Droit',
+          level: 'M1',
+          email: 'awa@test.com',
+          avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Awa',
+          role: 'student',
+        },
+        content: 'Oui, je te l\'envoie en PV.',
+        createdAt: '2024-03-05T09:45:00',
+      },
+      {
+        id: 'c2',
+        authorId: 'u4',
+        author: {
+          id: 'u4',
+          firstName: 'Ibrahim',
+          lastName: 'Soro',
+          university: 'UJKZ',
+          major: 'Médecine',
+          level: 'D3',
+          email: 'ibrahim@test.com',
+          avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ibrahim',
+          role: 'tutor',
+        },
+        content: 'Moi aussi je suis preneur !',
+        createdAt: '2024-03-05T10:00:00',
+      }
+    ],
     createdAt: '2024-03-05T09:30:00',
   }
 ];
 
 export const MOCK_COMMUNITY = MOCK_POSTS;
-
-export interface Message {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  timestamp: string;
-  read: boolean;
-}
-
-export interface Notification {
-  id: string;
-  userId: string;
-  type: 'message' | 'alert' | 'success' | 'info';
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-}
 
 export const MOCK_MESSAGES: Message[] = [
   {
@@ -371,5 +399,32 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     message: 'Votre cours avec Jean Kaboré commence dans 1 heure.',
     read: true,
     createdAt: '2024-03-03T14:00:00',
+  }
+];
+
+export const MOCK_ADS: Ad[] = [
+  {
+    id: 'ad1',
+    title: 'Offre Spéciale : -50% sur les fournitures chez Papyrus',
+    imageUrl: 'https://images.unsplash.com/photo-1503551723145-6c040742065b?w=800&auto=format&fit=crop&q=60',
+    linkUrl: '#',
+    active: true,
+    createdAt: '2024-03-01T10:00:00',
+  },
+  {
+    id: 'ad2',
+    title: 'Nouveau : Cours de soutien en Anglais intensif',
+    imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60',
+    linkUrl: '#',
+    active: true,
+    createdAt: '2024-03-02T11:00:00',
+  },
+  {
+    id: 'ad3',
+    title: 'Job Étudiant : Serveur pour les weekends',
+    imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=60',
+    linkUrl: '#',
+    active: true,
+    createdAt: '2024-03-03T12:00:00',
   }
 ];

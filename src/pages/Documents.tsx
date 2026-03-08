@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield } from 'lucide-react';
 import { MOCK_DOCUMENTS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 
 export default function Documents() {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ export default function Documents() {
   const [selectedYear, setSelectedYear] = useState('Toutes les années');
   const [selectedSubject, setSelectedSubject] = useState('Toutes les matières');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadUniversity, setUploadUniversity] = useState('Université Joseph Ki-Zerbo');
   const [customUniversity, setCustomUniversity] = useState('');
@@ -92,6 +94,18 @@ export default function Documents() {
   };
 
   const handleDownload = (doc: any) => {
+    // Check for subscription if it's an exam and user is a student
+    if (doc.type === 'exam' && user?.role === 'student') {
+      const isSubscribed = user.examSubscriptionStatus === 'active' && 
+                          user.examSubscriptionExpiry && 
+                          new Date(user.examSubscriptionExpiry) > new Date();
+      
+      if (!isSubscribed) {
+        setShowSubscriptionModal(true);
+        return;
+      }
+    }
+
     // For mock documents with '#' or real URLs
     if (doc.downloadUrl === '#') {
       // Create a dummy PDF for mock documents
@@ -144,6 +158,16 @@ export default function Documents() {
           </button>
         )}
       </div>
+
+      {/* Subscription Modal */}
+      <ManualPaymentModal 
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        type="exam"
+        amount={1000}
+        title="Abonnement Examens"
+        description="Accédez à tous les sujets d'examens pendant 360 jours."
+      />
 
       {/* Upload Modal */}
       {showUploadModal && (
@@ -410,7 +434,14 @@ export default function Documents() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                      {doc.type === 'exam' && user?.role === 'student' && !(user.examSubscriptionStatus === 'active' && user.examSubscriptionExpiry && new Date(user.examSubscriptionExpiry) > new Date()) && (
+                        <span className="p-1 bg-amber-50 text-amber-600 rounded-full" title="Abonnement requis">
+                          <Shield size={12} />
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md">{doc.type.toUpperCase()}</span>
                   </div>
                   

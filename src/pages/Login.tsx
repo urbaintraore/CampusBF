@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -8,16 +8,27 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent, asAdmin = false) => {
+  const handleLogin = async (e: React.FormEvent, asAdmin = false) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate network request
-    setTimeout(() => {
-      login(asAdmin);
-      setIsLoading(false);
+    setError('');
+    
+    try {
+      if (asAdmin) {
+        await login(undefined, undefined, true);
+      } else {
+        await login(email, password);
+      }
       navigate(asAdmin ? '/admin' : '/');
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Erreur de connexion');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -31,12 +42,20 @@ export default function Login() {
           <p className="text-gray-500 mt-2">Connectez-vous pour accéder à votre espace étudiant.</p>
         </div>
 
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium text-center">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={(e) => handleLogin(e, false)} className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Email étudiant</label>
             <input 
               type="email" 
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="etudiant@campusbf.bf"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
@@ -51,6 +70,8 @@ export default function Login() {
               <input 
                 type={showPassword ? "text" : "password"}
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
               />
@@ -91,7 +112,7 @@ export default function Login() {
         </button>
 
         <div className="text-center text-sm text-gray-500">
-          Pas encore de compte ? <a href="#" className="font-bold text-emerald-600 hover:underline">S'inscrire</a>
+          Pas encore de compte ? <Link to="/signup" className="font-bold text-emerald-600 hover:underline">S'inscrire</Link>
         </div>
       </div>
     </div>
