@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { MOCK_DOCUMENTS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -26,6 +26,9 @@ export default function Documents() {
   const [uploadType, setUploadType] = useState('exam');
   const [uploadYear, setUploadYear] = useState('2024');
   const [uploadSubject, setUploadSubject] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -52,7 +55,37 @@ export default function Documents() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.type === 'application/pdf') {
+        setSelectedFile(file);
+        setUploadError('');
+      } else {
+        setUploadError('Veuillez sélectionner un fichier PDF valide.');
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === 'application/pdf') {
+        setSelectedFile(file);
+        setUploadError('');
+      } else {
+        setUploadError('Veuillez sélectionner un fichier PDF valide.');
+      }
     }
   };
 
@@ -65,32 +98,51 @@ export default function Documents() {
     setUploadType('exam');
     setUploadYear('2024');
     setUploadSubject('');
+    setUploadError('');
+    setIsUploading(false);
   };
 
   const handlePublish = () => {
-    if (!uploadTitle || !uploadSubject || !selectedFile) {
-      alert('Veuillez remplir tous les champs et sélectionner un fichier.');
+    if (!uploadTitle.trim()) {
+      setUploadError('Veuillez saisir un titre pour le document.');
+      return;
+    }
+    if (!uploadSubject.trim()) {
+      setUploadError('Veuillez saisir la matière concernée.');
+      return;
+    }
+    if (uploadUniversity === 'Autre' && !customUniversity.trim()) {
+      setUploadError('Veuillez préciser le nom de l\'université.');
+      return;
+    }
+    if (!selectedFile) {
+      setUploadError('Veuillez sélectionner un fichier PDF à partager.');
       return;
     }
 
-    const newDoc = {
-      id: `d${Date.now()}`,
-      title: uploadTitle,
-      type: uploadType as any,
-      university: uploadUniversity === 'Autre' ? customUniversity : uploadUniversity,
-      major: user?.major || 'Général',
-      year: uploadYear,
-      subject: uploadSubject,
-      authorId: user?.id || 'admin',
-      downloadUrl: URL.createObjectURL(selectedFile),
-      createdAt: new Date().toISOString().split('T')[0],
-      downloads: 0,
-      likes: 0,
-      fileName: selectedFile.name
-    };
+    setIsUploading(true);
+    setUploadError('');
 
-    setDocuments([newDoc, ...documents]);
-    resetUploadForm();
+    setTimeout(() => {
+      const newDoc = {
+        id: `d${Date.now()}`,
+        title: uploadTitle,
+        type: uploadType as any,
+        university: uploadUniversity === 'Autre' ? customUniversity : uploadUniversity,
+        major: user?.major || 'Général',
+        year: uploadYear,
+        subject: uploadSubject,
+        authorId: user?.id || 'admin',
+        downloadUrl: URL.createObjectURL(selectedFile),
+        createdAt: new Date().toISOString().split('T')[0],
+        downloads: 0,
+        likes: 0,
+        fileName: selectedFile.name
+      };
+
+      setDocuments([newDoc, ...documents]);
+      resetUploadForm();
+    }, 1500);
   };
 
   const handleDownload = (doc: any) => {
@@ -172,8 +224,8 @@ export default function Documents() {
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 md:p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-2 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900">Partager un document</h2>
               <button 
                 onClick={resetUploadForm} 
@@ -184,6 +236,12 @@ export default function Documents() {
             </div>
             
             <form className="space-y-4">
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle size={18} />
+                  {uploadError}
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="text-sm font-semibold text-gray-700">Titre du document</label>
                 <input 
@@ -265,35 +323,66 @@ export default function Documents() {
                 />
                 <div 
                   onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                   className={cn(
-                    "border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer",
-                    selectedFile ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-emerald-500"
+                    "border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer relative overflow-hidden group",
+                    isDragging ? "border-emerald-500 bg-emerald-50 scale-[1.02]" : 
+                    selectedFile ? "border-emerald-500 bg-emerald-50/50" : "border-gray-200 hover:border-emerald-500 hover:bg-gray-50"
                   )}
                 >
                   {selectedFile ? (
-                    <div className="flex flex-col items-center">
-                      <FileText size={24} className="text-emerald-600 mb-2" />
-                      <span className="text-sm font-medium text-emerald-700 truncate max-w-full px-4">
+                    <div className="flex flex-col items-center animate-in zoom-in-95">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+                        <CheckCircle size={24} className="text-emerald-600" />
+                      </div>
+                      <span className="text-sm font-bold text-emerald-900 truncate max-w-full px-4 mb-1">
                         {selectedFile.name}
                       </span>
-                      <span className="text-xs text-emerald-500 mt-1">
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </span>
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                        }}
+                        className="mt-4 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        Changer de fichier
+                      </button>
                     </div>
                   ) : (
-                    <>
-                      <Plus size={24} className="mx-auto text-gray-400 mb-2" />
-                      <span className="text-xs text-gray-500">Déposer le document (PDF uniquement)</span>
-                    </>
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-emerald-100 transition-colors">
+                        <UploadCloud size={24} className="text-gray-500 group-hover:text-emerald-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 mb-1">
+                        Cliquez ou glissez-déposez
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        Fichiers PDF uniquement (Max 50 MB)
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={handlePublish}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
+                disabled={isUploading}
+                className="w-full py-3.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Publier le document
+                {isUploading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Publication en cours...
+                  </>
+                ) : (
+                  'Publier le document'
+                )}
               </button>
             </form>
           </div>
