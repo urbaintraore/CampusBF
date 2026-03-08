@@ -13,6 +13,7 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tout');
   const [showSellModal, setShowSellModal] = useState(false);
+  const [showItems, setShowItems] = useState(false);
   const [sortBy, setSortBy] = useState('date-desc');
   const [showPayment, setShowPayment] = useState(false);
 
@@ -144,117 +145,138 @@ export default function Marketplace() {
         </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text"
-            placeholder="Rechercher un article..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Trier par:</span>
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-emerald-500"
+      {!showItems ? (
+        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex flex-col items-center justify-center min-h-[400px]">
+          <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 text-emerald-600">
+            <Tag size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Découvrez les offres étudiantes</h2>
+          <p className="text-gray-500 max-w-md mx-auto mb-8">
+            Parcourez des centaines d'articles vendus par d'autres étudiants de votre campus. Des livres aux ordinateurs, trouvez ce dont vous avez besoin.
+          </p>
+          <button 
+            onClick={() => setShowItems(true)}
+            className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2 text-lg"
           >
-            <option value="date-desc">Plus récents</option>
-            <option value="date-asc">Plus anciens</option>
-            <option value="price-asc">Prix croissant</option>
-            <option value="price-desc">Prix décroissant</option>
-          </select>
+            <Search size={20} />
+            Voir les articles disponibles
+          </button>
         </div>
-        <div className="flex overflow-x-auto pb-2 md:pb-0 gap-3 no-scrollbar">
-          {categories.map((cat) => (
-            <button 
-              key={cat} 
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                "px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
-                selectedCategory === cat 
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-100" 
-                  : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-500 hover:text-emerald-600"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all group">
-            <div className="aspect-square bg-gray-200 relative overflow-hidden">
-              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-gray-900 shadow-sm">
-                {item.category.toUpperCase()}
-              </div>
+      ) : (
+        <>
+          {/* Search and Filters */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text"
+                placeholder="Rechercher un article..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
             </div>
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-gray-900 line-clamp-1">{item.title}</h3>
-                {(user?.id === item.sellerId || user?.role === 'admin') && (
-                  <button 
-                    onClick={() => handleDeleteItem(item.id)}
-                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                    title="Supprimer l'annonce"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-              <p className="text-emerald-700 font-bold text-lg mb-2">{item.price.toLocaleString()} CFA</p>
-              <p className="text-xs text-gray-500 line-clamp-2 mb-4 h-8">{item.description}</p>
-              
-              <div className="space-y-1 mb-4">
-                <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                  <MapPin size={12} />
-                  {item.location}
-                </div>
-                {item.seller.whatsapp && (
-                  <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-bold">
-                    <MessageCircle size={12} />
-                    WhatsApp: {item.seller.whatsapp}
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                  <Send size={12} />
-                  {item.seller.email}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                <div className="flex items-center gap-2">
-                  <img src={item.seller.avatarUrl} alt="" className="w-6 h-6 rounded-full bg-gray-100" />
-                  <span className="text-[10px] text-gray-600 truncate max-w-[80px]">{item.seller.firstName}</span>
-                </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Trier par:</span>
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-emerald-500"
+              >
+                <option value="date-desc">Plus récents</option>
+                <option value="date-asc">Plus anciens</option>
+                <option value="price-asc">Prix croissant</option>
+                <option value="price-desc">Prix décroissant</option>
+              </select>
+            </div>
+            <div className="flex overflow-x-auto pb-2 md:pb-0 gap-3 no-scrollbar">
+              {categories.map((cat) => (
                 <button 
-                  onClick={() => handleContact(item.seller.id)}
-                  className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg transition-colors"
+                  key={cat} 
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                    "px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                    selectedCategory === cat 
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-100" 
+                      : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-500 hover:text-emerald-600"
+                  )}
                 >
-                  <MessageCircle size={14} />
-                  Contacter
+                  {cat}
                 </button>
-              </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
 
-      {filteredItems.length === 0 && (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-            <Search size={32} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredItems.map((item) => (
+              <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all group">
+                <div className="aspect-square bg-gray-200 relative overflow-hidden">
+                  <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-gray-900 shadow-sm">
+                    {item.category.toUpperCase()}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-900 line-clamp-1">{item.title}</h3>
+                    {(user?.id === item.sellerId || user?.role === 'admin') && (
+                      <button 
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Supprimer l'annonce"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-emerald-700 font-bold text-lg mb-2">{item.price.toLocaleString()} CFA</p>
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-4 h-8">{item.description}</p>
+                  
+                  <div className="space-y-1 mb-4">
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                      <MapPin size={12} />
+                      {item.location}
+                    </div>
+                    {item.seller.whatsapp && (
+                      <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-bold">
+                        <MessageCircle size={12} />
+                        WhatsApp: {item.seller.whatsapp}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                      <Send size={12} />
+                      {item.seller.email}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                    <div className="flex items-center gap-2">
+                      <img src={item.seller.avatarUrl} alt="" className="w-6 h-6 rounded-full bg-gray-100" />
+                      <span className="text-[10px] text-gray-600 truncate max-w-[80px]">{item.seller.firstName}</span>
+                    </div>
+                    <button 
+                      onClick={() => handleContact(item.seller.id)}
+                      className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg transition-colors"
+                    >
+                      <MessageCircle size={14} />
+                      Contacter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <h3 className="text-lg font-bold text-gray-900">Aucun article trouvé</h3>
-          <p className="text-gray-500">Essayez de modifier vos filtres ou votre recherche.</p>
-        </div>
+
+          {filteredItems.length === 0 && (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                <Search size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Aucun article trouvé</h3>
+              <p className="text-gray-500">Essayez de modifier vos filtres ou votre recherche.</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Sell Modal */}

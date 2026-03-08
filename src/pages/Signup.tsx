@@ -34,7 +34,11 @@ export default function Signup() {
 
     try {
       await signup(formData);
-      navigate('/');
+      if (formData.email.toLowerCase() === 'urbain.traoreurb@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue lors de l\'inscription');
     } finally {

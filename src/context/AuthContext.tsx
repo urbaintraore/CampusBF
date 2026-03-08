@@ -98,14 +98,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        if (!email) {
-          reject(new Error('Email requis'));
+        if (!email || !password) {
+          reject(new Error('Email et mot de passe requis'));
           return;
         }
 
         const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
         
         if (foundUser) {
+          if (foundUser.email.toLowerCase() === 'urbain.traoreurb@gmail.com' && foundUser.role !== 'admin') {
+            foundUser.role = 'admin';
+            saveUsers(users.map(u => u.id === foundUser.id ? foundUser : u));
+          }
+
+          const expectedPassword = foundUser.password || (foundUser.role === 'admin' ? 'admin123' : '123456');
+          if (password !== expectedPassword) {
+            reject(new Error(foundUser.role === 'admin' ? 'Mot de passe administrateur incorrect' : 'Mot de passe incorrect (utilisez 123456 pour les comptes de test)'));
+            return;
+          }
+
           setUser(foundUser);
           localStorage.setItem('campusbf_user', JSON.stringify(foundUser));
           resolve();
@@ -119,8 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (userData: Partial<User> & { password?: string }) => {
     return new Promise<void>((resolve, reject) => {
       setTimeout(() => {
-        if (!userData.email) {
-          reject(new Error('Email requis'));
+        if (!userData.email || !userData.password) {
+          reject(new Error('Email et mot de passe requis'));
           return;
         }
 
@@ -135,10 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           firstName: userData.firstName || '',
           lastName: userData.lastName || '',
           email: userData.email,
+          password: userData.password,
           university: userData.university || '',
           major: userData.major || '',
           level: userData.level || '',
-          role: 'student',
+          role: userData.email.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
           avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
           ...userData
         };

@@ -6,6 +6,7 @@ export interface User {
   major: string; // Filière
   level: string; // Niveau (L1, L2, etc.)
   email: string;
+  password?: string;
   phone?: string;
   city?: string;
   neighborhood?: string;

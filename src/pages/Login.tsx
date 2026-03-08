@@ -12,18 +12,18 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent, asAdmin = false) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     
     try {
-      if (asAdmin) {
-        await login(undefined, undefined, true);
+      await login(email, password);
+      if (email.toLowerCase() === 'admin@campusbf.bf' || email.toLowerCase() === 'urbain.traoreurb@gmail.com') {
+        navigate('/admin');
       } else {
-        await login(email, password);
+        navigate('/');
       }
-      navigate(asAdmin ? '/admin' : '/');
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
     } finally {
@@ -48,15 +48,15 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={(e) => handleLogin(e, false)} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Email étudiant</label>
+            <label className="text-sm font-medium text-gray-700">Email</label>
             <input 
               type="email" 
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="etudiant@campusbf.bf"
+              placeholder="votre@email.com"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
           </div>
@@ -94,24 +94,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-500">Ou</span>
-          </div>
-        </div>
-
-        <button 
-          onClick={(e) => handleLogin(e, true)}
-          disabled={isLoading}
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {isLoading ? <Loader2 className="animate-spin" /> : 'Accès Administrateur (Démo)'}
-        </button>
-
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-gray-500 mt-6">
           Pas encore de compte ? <Link to="/signup" className="font-bold text-emerald-600 hover:underline">S'inscrire</Link>
         </div>
       </div>

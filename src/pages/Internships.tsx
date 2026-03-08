@@ -23,7 +23,8 @@ export default function Internships() {
     location: '',
     type: 'internship' as 'internship' | 'job',
     description: '',
-    applicationEmail: ''
+    applicationEmail: '',
+    deadline: ''
   });
 
   // Edit state
@@ -44,7 +45,8 @@ export default function Internships() {
       location: '',
       type: 'internship',
       description: '',
-      applicationEmail: ''
+      applicationEmail: '',
+      deadline: ''
     });
     setShowPostModal(true);
   };
@@ -105,7 +107,8 @@ export default function Internships() {
       location: job.location,
       type: job.type,
       description: job.description,
-      applicationEmail: job.applicationEmail || ''
+      applicationEmail: job.applicationEmail || '',
+      deadline: job.deadline || ''
     });
     setShowPostModal(true);
   };
@@ -185,6 +188,9 @@ export default function Internships() {
                   <span className="flex items-center gap-1.5"><Building2 size={16} /> {job.company}</span>
                   <span className="flex items-center gap-1.5"><MapPin size={16} /> {job.location}</span>
                   <span className="flex items-center gap-1.5"><Clock size={16} /> Publié le {job.postedAt}</span>
+                  {job.deadline && (
+                    <span className="flex items-center gap-1.5 text-amber-600 font-medium"><Clock size={16} /> Limite: {job.deadline}</span>
+                  )}
                 </div>
 
                 <p className="text-gray-600 text-sm mb-4 line-clamp-2">
@@ -350,17 +356,28 @@ export default function Internships() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Email de réception des candidatures</label>
-                    <input 
-                      type="email" 
-                      required 
-                      value={newInternship.applicationEmail}
-                      onChange={(e) => setNewInternship({ ...newInternship, applicationEmail: e.target.value })}
-                      placeholder="Ex: rh@entreprise.com" 
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
-                    />
-                    <p className="text-[10px] text-gray-400 italic">Les dossiers des étudiants seront envoyés automatiquement à cette adresse.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Email de réception des candidatures</label>
+                      <input 
+                        type="email" 
+                        required 
+                        value={newInternship.applicationEmail}
+                        onChange={(e) => setNewInternship({ ...newInternship, applicationEmail: e.target.value })}
+                        placeholder="Ex: rh@entreprise.com" 
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                      />
+                      <p className="text-[10px] text-gray-400 italic">Les dossiers des étudiants seront envoyés automatiquement à cette adresse.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Date limite de candidature (Optionnel)</label>
+                      <input 
+                        type="date" 
+                        value={newInternship.deadline}
+                        onChange={(e) => setNewInternship({ ...newInternship, deadline: e.target.value })}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">

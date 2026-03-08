@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 
@@ -20,6 +20,7 @@ export default function Profile() {
     university: user?.university || '',
     major: user?.major || '',
     level: user?.level || '',
+    avatarUrl: user?.avatarUrl || '',
   });
 
   if (!user) return null;
@@ -32,6 +33,17 @@ export default function Profile() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleTutorApply = (e: React.FormEvent) => {
@@ -82,11 +94,24 @@ export default function Profile() {
         <div className="h-32 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
         <div className="px-8 pb-8">
           <div className="relative flex justify-between items-end -mt-12 mb-6">
-            <img 
-              src={user.avatarUrl} 
-              alt={user.firstName} 
-              className="w-24 h-24 rounded-2xl border-4 border-white bg-white shadow-md"
-            />
+            <div className="relative group">
+              <img 
+                src={isEditing ? formData.avatarUrl : user.avatarUrl} 
+                alt={user.firstName} 
+                className="w-24 h-24 rounded-2xl border-4 border-white bg-white shadow-md object-cover"
+              />
+              {isEditing && (
+                <label className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="text-white" size={24} />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageChange}
+                  />
+                </label>
+              )}
+            </div>
           </div>
           
           {isEditing ? (
