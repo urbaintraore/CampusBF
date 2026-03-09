@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 
@@ -10,6 +10,8 @@ export default function Profile() {
   const [showPayment, setShowPayment] = useState(false);
   const [showExamPayment, setShowExamPayment] = useState(false);
   const [showPremiumPayment, setShowPremiumPayment] = useState(false);
+  const [showMotoRidePayment, setShowMotoRidePayment] = useState(false);
+  const [showEventPayment, setShowEventPayment] = useState(false);
   const [showTutorForm, setShowTutorForm] = useState(false);
   const [tutorDescription, setTutorDescription] = useState('');
   const [fileSelected, setFileSelected] = useState(false);
@@ -235,7 +237,7 @@ export default function Profile() {
           Mes Abonnements
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Exam Subscription */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
             <div>
@@ -313,6 +315,88 @@ export default function Profile() {
                 className="mt-4 w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
               >
                 S'abonner (5 000 CFA / mois)
+              </button>
+            )}
+          </div>
+
+          {/* MotoRide Subscription */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Bike size={16} className="text-orange-600" />
+                  Conducteur MotoRide
+                </p>
+                <span className={cn(
+                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
+                  user.motoRideSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
+                  user.motoRideSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
+                  "bg-gray-100 text-gray-500"
+                )}>
+                  {user.motoRideSubscriptionStatus === 'active' ? 'Actif' : 
+                   user.motoRideSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mb-2">Proposer des trajets sans commission</p>
+              {user.motoRideSubscriptionStatus === 'active' && user.motoRideSubscriptionExpiry && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
+                  <Calendar size={12} />
+                  Expire le {new Date(user.motoRideSubscriptionExpiry).toLocaleDateString()}
+                </p>
+              )}
+              {user.motoRideSubscriptionStatus === 'pending' && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Vérification du paiement en cours...
+                </p>
+              )}
+            </div>
+            {user.motoRideSubscriptionStatus !== 'active' && user.motoRideSubscriptionStatus !== 'pending' && (
+              <button 
+                onClick={() => setShowMotoRidePayment(true)}
+                className="mt-4 w-full py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition-colors"
+              >
+                S'abonner (2 000 CFA / mois)
+              </button>
+            )}
+          </div>
+
+          {/* Event Subscription */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Calendar size={16} className="text-indigo-600" />
+                  Événements
+                </p>
+                <span className={cn(
+                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
+                  user.eventSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
+                  user.eventSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
+                  "bg-gray-100 text-gray-500"
+                )}>
+                  {user.eventSubscriptionStatus === 'active' ? 'Actif' : 
+                   user.eventSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mb-2">Publier des conférences et activités</p>
+              {user.eventSubscriptionStatus === 'active' && user.eventSubscriptionExpiry && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
+                  <Calendar size={12} />
+                  Expire le {new Date(user.eventSubscriptionExpiry).toLocaleDateString()}
+                </p>
+              )}
+              {user.eventSubscriptionStatus === 'pending' && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Vérification du paiement en cours...
+                </p>
+              )}
+            </div>
+            {user.eventSubscriptionStatus !== 'active' && user.eventSubscriptionStatus !== 'pending' && (
+              <button 
+                onClick={() => setShowEventPayment(true)}
+                className="mt-4 w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors"
+              >
+                S'abonner (2 000 CFA / mois)
               </button>
             )}
           </div>
@@ -492,6 +576,24 @@ export default function Profile() {
         amount={5000}
         title="Renouvellement Abonnement Répétiteur"
         description="Renouvelez votre abonnement pour 3 mois."
+      />
+
+      <ManualPaymentModal 
+        isOpen={showMotoRidePayment}
+        onClose={() => setShowMotoRidePayment(false)}
+        type="motoride"
+        amount={2000}
+        title="Abonnement Conducteur MotoRide"
+        description="Devenez conducteur MotoRide pendant 30 jours. Aucune commission sur vos trajets."
+      />
+
+      <ManualPaymentModal 
+        isOpen={showEventPayment}
+        onClose={() => setShowEventPayment(false)}
+        type="event"
+        amount={2000}
+        title="Abonnement Événements"
+        description="Publiez vos conférences, soutenances et activités culturelles pendant 30 jours."
       />
     </div>
   );

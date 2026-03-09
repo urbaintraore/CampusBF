@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 interface ManualPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'exam' | 'premium' | 'tutor' | 'marketplace';
+  type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event';
   amount: number;
   title: string;
   description: string;

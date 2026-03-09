@@ -147,10 +147,14 @@ export default function AdminDashboard() {
                             <span className={cn(
                               "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
                               req.type === 'exam' ? "bg-blue-50 text-blue-700" : 
-                              req.type === 'premium' ? "bg-purple-50 text-purple-700" : "bg-emerald-50 text-emerald-700"
+                              req.type === 'premium' ? "bg-purple-50 text-purple-700" : 
+                              req.type === 'motoride' ? "bg-orange-50 text-orange-700" : 
+                              req.type === 'event' ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"
                             )}>
                               {req.type === 'exam' ? 'Abonnement Examens' : 
-                               req.type === 'premium' ? 'Abonnement Premium' : 'Abonnement Répétiteur'}
+                               req.type === 'premium' ? 'Abonnement Premium' : 
+                               req.type === 'motoride' ? 'Abonnement MotoRide' : 
+                               req.type === 'event' ? 'Abonnement Événements' : 'Abonnement Répétiteur'}
                             </span>
                             <span className="text-sm font-bold text-emerald-600">{req.amount.toLocaleString()} FCFA</span>
                           </div>

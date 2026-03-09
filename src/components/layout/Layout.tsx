@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_NOTIFICATIONS } from '@/data/mock';
@@ -21,6 +21,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Briefcase, label: 'Stages', to: '/internships' },
     { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace' },
     { icon: Users, label: 'Communauté', to: '/community' },
+    { icon: Bike, label: 'MotoRide', to: '/motoride' },
+    { icon: Calendar, label: 'Événements', to: '/events' },
   ];
 
   if (user?.role === 'admin') {

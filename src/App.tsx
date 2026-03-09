@@ -11,6 +11,8 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AdminDashboard from './pages/AdminDashboard';
+import MotoRide from './pages/MotoRide';
+import Events from './pages/Events';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Messages from './pages/Messages';
@@ -79,6 +81,16 @@ export default function App() {
         <Route path="/community" element={
           <ProtectedRoute>
             <Community />
+          </ProtectedRoute>
+        } />
+        <Route path="/motoride" element={
+          <ProtectedRoute>
+            <MotoRide />
+          </ProtectedRoute>
+        } />
+        <Route path="/events" element={
+          <ProtectedRoute>
+            <Events />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={

@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveUsers(newUsers);
   };
 
-  const submitSubscriptionRequest = (type: 'exam' | 'premium' | 'tutor' | 'marketplace', amount: number) => {
+  const submitSubscriptionRequest = (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event', amount: number) => {
     if (!user) return;
     const newRequest: SubscriptionRequest = {
       id: `sub-${Date.now()}`,
@@ -261,6 +261,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateUser({ subscriptionStatus: 'pending' });
     } else if (type === 'marketplace') {
       updateUser({ marketplaceSubscriptionStatus: 'pending' });
+    } else if (type === 'motoride') {
+      updateUser({ motoRideSubscriptionStatus: 'pending' });
+    } else if (type === 'event') {
+      updateUser({ eventSubscriptionStatus: 'pending' });
     }
   };
 
@@ -298,6 +302,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             expiry.setDate(expiry.getDate() + 30); // 30 days for marketplace
             updatedUser.marketplaceSubscriptionStatus = 'active';
             updatedUser.marketplaceSubscriptionExpiry = expiry.toISOString();
+          } else if (req.type === 'motoride') {
+            expiry.setDate(expiry.getDate() + 30); // 30 days for motoride
+            updatedUser.motoRideSubscriptionStatus = 'active';
+            updatedUser.motoRideSubscriptionExpiry = expiry.toISOString();
+          } else if (req.type === 'event') {
+            expiry.setDate(expiry.getDate() + 30); // 30 days for event
+            updatedUser.eventSubscriptionStatus = 'active';
+            updatedUser.eventSubscriptionExpiry = expiry.toISOString();
           }
         } else {
           if (req.type === 'exam') {
@@ -308,6 +320,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             updatedUser.subscriptionStatus = 'none';
           } else if (req.type === 'marketplace') {
             updatedUser.marketplaceSubscriptionStatus = 'none';
+          } else if (req.type === 'motoride') {
+            updatedUser.motoRideSubscriptionStatus = 'none';
+          } else if (req.type === 'event') {
+            updatedUser.eventSubscriptionStatus = 'none';
           }
         }
         return updatedUser;

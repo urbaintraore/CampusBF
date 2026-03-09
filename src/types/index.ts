@@ -21,6 +21,10 @@ export interface User {
   premiumSubscriptionExpiry?: string;
   marketplaceSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
   marketplaceSubscriptionExpiry?: string;
+  motoRideSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
+  motoRideSubscriptionExpiry?: string;
+  eventSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
+  eventSubscriptionExpiry?: string;
   tutorSubjects?: string[];
   tutorHourlyRates?: {
     college?: number;
@@ -35,7 +39,7 @@ export interface SubscriptionRequest {
   id: string;
   userId: string;
   user: User;
-  type: 'exam' | 'premium' | 'tutor' | 'marketplace';
+  type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event';
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
@@ -160,6 +164,21 @@ export interface Message {
   content: string;
   timestamp: string;
   read: boolean;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  type: 'conference' | 'defense' | 'competition' | 'cultural' | 'other';
+  location: string;
+  date: string;
+  time: string;
+  organizerId: string;
+  organizer: User;
+  attendees: string[]; // User IDs
+  imageUrl?: string;
+  createdAt: string;
 }
 
 export interface Notification {
