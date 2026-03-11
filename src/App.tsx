@@ -13,6 +13,7 @@ import Signup from './pages/Signup';
 import AdminDashboard from './pages/AdminDashboard';
 import MotoRide from './pages/MotoRide';
 import Events from './pages/Events';
+import Orientation from './pages/Orientation';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Messages from './pages/Messages';
@@ -91,6 +92,11 @@ export default function App() {
         <Route path="/events" element={
           <ProtectedRoute>
             <Events />
+          </ProtectedRoute>
+        } />
+        <Route path="/orientation" element={
+          <ProtectedRoute>
+            <Orientation />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={

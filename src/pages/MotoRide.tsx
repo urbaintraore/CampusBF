@@ -3,6 +3,7 @@ import { MapPin, Navigation, Clock, Users, Star, Shield, Search, Plus, Bike, Cre
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
+import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
   const { user } = useAuth();
@@ -24,7 +25,9 @@ export default function MotoRide() {
       price: 300,
       distance: '2.5 km',
       motorcycle: 'Yamaha Sirius',
-      helmetAvailable: true
+      helmetAvailable: true,
+      lat: 12.3785,
+      lng: -1.5120
     },
     {
       id: 'r2',
@@ -35,9 +38,19 @@ export default function MotoRide() {
       price: 500,
       distance: '5.2 km',
       motorcycle: 'Honda 125',
-      helmetAvailable: false
+      helmetAvailable: false,
+      lat: 12.3350,
+      lng: -1.5250
     }
   ];
+
+  const mapRides = mockRides.map(ride => ({
+    id: ride.id,
+    lat: ride.lat,
+    lng: ride.lng,
+    driverName: ride.driver.name,
+    destination: ride.destination
+  }));
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-20 md:pb-0">
@@ -234,13 +247,10 @@ export default function MotoRide() {
           )}
         </div>
 
-        {/* Sidebar / Map Placeholder */}
+        {/* Sidebar / Map Area */}
         <div className="space-y-6">
-          <div className="bg-slate-100 rounded-2xl h-64 md:h-80 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-            <MapPin size={48} className="mb-4 text-slate-300 relative z-10" />
-            <p className="font-medium relative z-10">Carte interactive</p>
-            <p className="text-xs text-center px-6 mt-2 relative z-10">La carte s'affichera ici avec les points de rencontre (UJKZ, ISIG, etc.)</p>
+          <div className="h-64 md:h-80 relative">
+            <MotoMap rides={mapRides} />
           </div>
 
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
