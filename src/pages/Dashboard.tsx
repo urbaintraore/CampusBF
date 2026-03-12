@@ -1,31 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Bell, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_TUTORS, CURRENT_USER, MOCK_ADS } from '@/data/mock';
-import { Link } from 'react-router-dom';
+import { MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_TUTORS, CURRENT_USER } from '@/data/mock';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import TeacherOnboarding from '@/components/TeacherOnboarding';
 
 export default function Dashboard() {
+  const { ads, user, notifications } = useAuth();
+  const navigate = useNavigate();
+  const activeAds = ads.filter(ad => ad.active);
   const [currentAd, setCurrentAd] = useState(0);
 
+  const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
+
   useEffect(() => {
+    if (activeAds.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentAd((prev) => (prev + 1) % MOCK_ADS.length);
+      setCurrentAd((prev) => (prev + 1) % activeAds.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [activeAds.length]);
+
+  if (user?.role === 'teacher') {
+    if (user.teacherStatus === 'pending_dossier') {
+      return <TeacherOnboarding />;
+    }
+    if (user.teacherStatus === 'pending_approval') {
+      return (
+        <div className="max-w-2xl mx-auto py-20 text-center">
+          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Dossier en cours d'examen</h2>
+          <p className="text-gray-500 text-lg">
+            Votre dossier académique a été soumis avec succès et est actuellement en cours de validation par l'administration. 
+            Vous recevrez une réponse dans un délai maximum de 72h. Dès que votre profil sera approuvé, il sera publié dans l'Annuaire des Enseignants.
+          </p>
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="space-y-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Bonjour, {CURRENT_USER.firstName} 👋</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Bonjour, {user?.firstName} 👋</h1>
           <p className="text-gray-500 mt-1">Voici ce qui se passe sur ton campus aujourd'hui.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="p-2.5 bg-white rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 relative">
+          <button 
+            onClick={() => navigate('/notifications')}
+            className="p-2.5 bg-white rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 relative"
+          >
             <Bell size={20} />
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            {unreadNotifications > 0 && (
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            )}
           </button>
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -39,67 +74,69 @@ export default function Dashboard() {
       </div>
 
       {/* Advertisement Carousel */}
-      <div className="relative overflow-hidden rounded-3xl bg-gray-100 h-48 md:h-64 group shadow-lg border border-gray-100">
-        {MOCK_ADS.map((ad, idx) => (
-          <div 
-            key={ad.id}
-            className={cn(
-              "absolute inset-0 transition-all duration-1000 ease-in-out",
-              idx === currentAd ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
-            )}
-          >
-            <img 
-              src={ad.imageUrl} 
-              alt={ad.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative h-full flex flex-col justify-center px-6 md:px-16">
-              <div className="bg-white/95 backdrop-blur-md p-5 md:p-8 rounded-2xl shadow-2xl border border-white/50 max-w-lg animate-in slide-in-from-left-8 duration-700">
-                <span className="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-full mb-3">
-                  Annonce Partenaire
-                </span>
-                <h2 className="text-lg md:text-2xl font-bold leading-tight mb-4 text-gray-900">
-                  {ad.title}
-                </h2>
-                <a 
-                  href={ad.linkUrl}
-                  className="inline-block px-6 py-2.5 bg-emerald-600 text-white rounded-full font-bold text-sm hover:bg-emerald-700 transition-all hover:shadow-lg active:scale-95"
-                >
-                  En savoir plus
-                </a>
+      {activeAds.length > 0 && (
+        <div className="relative overflow-hidden rounded-3xl bg-gray-100 h-48 md:h-64 group shadow-lg border border-gray-100">
+          {activeAds.map((ad, idx) => (
+            <div 
+              key={ad.id}
+              className={cn(
+                "absolute inset-0 transition-all duration-1000 ease-in-out",
+                idx === currentAd ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
+              )}
+            >
+              <img 
+                src={ad.imageUrl} 
+                alt={ad.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="relative h-full flex flex-col justify-center px-6 md:px-16">
+                <div className="bg-white/95 backdrop-blur-md p-5 md:p-8 rounded-2xl shadow-2xl border border-white/50 max-w-lg animate-in slide-in-from-left-8 duration-700">
+                  <span className="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-full mb-3">
+                    Annonce Partenaire
+                  </span>
+                  <h2 className="text-lg md:text-2xl font-bold leading-tight mb-4 text-gray-900">
+                    {ad.title}
+                  </h2>
+                  <a 
+                    href={ad.linkUrl}
+                    className="inline-block px-6 py-2.5 bg-emerald-600 text-white rounded-full font-bold text-sm hover:bg-emerald-700 transition-all hover:shadow-lg active:scale-95"
+                  >
+                    En savoir plus
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        
-        {/* Carousel Controls */}
-        <div className="absolute bottom-6 right-8 flex items-center gap-4">
-          <div className="flex gap-2">
-            {MOCK_ADS.map((_, idx) => (
+          ))}
+          
+          {/* Carousel Controls */}
+          <div className="absolute bottom-6 right-8 flex items-center gap-4">
+            <div className="flex gap-2">
+              {activeAds.map((_, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setCurrentAd(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${idx === currentAd ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50'}`}
+                ></button>
+              ))}
+            </div>
+            <div className="flex gap-1">
               <button 
-                key={idx} 
-                onClick={() => setCurrentAd(idx)}
-                className={`w-2 h-2 rounded-full transition-all ${idx === currentAd ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50'}`}
-              ></button>
-            ))}
-          </div>
-          <div className="flex gap-1">
-            <button 
-              onClick={() => setCurrentAd((prev) => (prev - 1 + MOCK_ADS.length) % MOCK_ADS.length)}
-              className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button 
-              onClick={() => setCurrentAd((prev) => (prev + 1) % MOCK_ADS.length)}
-              className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
+                onClick={() => setCurrentAd((prev) => (prev - 1 + activeAds.length) % activeAds.length)}
+                className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button 
+                onClick={() => setCurrentAd((prev) => (prev + 1) % activeAds.length)}
+                className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Stats / Highlights */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

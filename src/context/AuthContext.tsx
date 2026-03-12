@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest } from '@/types';
-import { CURRENT_USER, ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS } from '@/data/mock';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification } from '@/types';
+import { CURRENT_USER, ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 
 interface AuthContextType {
   user: User | null;
   users: User[];
+  ads: Ad[];
+  updateAds: (newAds: Ad[]) => void;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
   logout: () => void;
@@ -21,12 +23,19 @@ interface AuthContextType {
     }
   ) => void;
   reviewApplication: (applicationId: string, status: 'approved' | 'rejected') => void;
-  submitSubscriptionRequest: (type: 'exam' | 'premium' | 'tutor' | 'marketplace', amount: number) => void;
+  submitTeacherApplication: (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => void;
+  reviewTeacherApplication: (applicationId: string, status: 'approved' | 'rejected') => void;
+  submitSubscriptionRequest: (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => void;
   reviewSubscriptionRequest: (requestId: string, status: 'approved' | 'rejected') => void;
   updateUserRole: (userId: string, role: User['role']) => void;
   deleteUser: (userId: string) => void;
   applications: TutorApplication[];
+  teacherApplications: TeacherApplication[];
   subscriptionRequests: SubscriptionRequest[];
+  notifications: Notification[];
+  addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
+  markNotificationAsRead: (notificationId: string) => void;
+  addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -36,8 +45,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [ads, setAds] = useState<Ad[]>(MOCK_ADS);
   const [applications, setApplications] = useState<TutorApplication[]>(MOCK_APPLICATIONS);
+  const [teacherApplications, setTeacherApplications] = useState<TeacherApplication[]>([]);
   const [subscriptionRequests, setSubscriptionRequests] = useState<SubscriptionRequest[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -65,9 +77,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedApps) {
       setApplications(JSON.parse(storedApps));
     }
+    const storedTeacherApps = localStorage.getItem('campusbf_teacher_applications');
+    if (storedTeacherApps) {
+      setTeacherApplications(JSON.parse(storedTeacherApps));
+    }
     const storedSubs = localStorage.getItem('campusbf_subscriptions');
     if (storedSubs) {
       setSubscriptionRequests(JSON.parse(storedSubs));
+    }
+    const storedAds = localStorage.getItem('campusbf_ads');
+    if (storedAds) {
+      setAds(JSON.parse(storedAds));
+    } else {
+      localStorage.setItem('campusbf_ads', JSON.stringify(MOCK_ADS));
+    }
+    const storedNotifs = localStorage.getItem('campusbf_notifications');
+    if (storedNotifs) {
+      setNotifications(JSON.parse(storedNotifs));
     }
     setIsLoading(false);
   }, []);
@@ -84,6 +110,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('campusbf_user', JSON.stringify(updatedCurrentUser));
       }
     }
+  };
+
+  const updateAds = (newAds: Ad[]) => {
+    setAds(newAds);
+    localStorage.setItem('campusbf_ads', JSON.stringify(newAds));
+  };
+
+  const addNotification = (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => {
+    const newNotification: Notification = {
+      id: `notif-${Date.now()}`,
+      userId,
+      ...notification,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    const newNotifications = [newNotification, ...notifications];
+    setNotifications(newNotifications);
+    localStorage.setItem('campusbf_notifications', JSON.stringify(newNotifications));
+  };
+
+  const markNotificationAsRead = (notificationId: string) => {
+    const newNotifications = notifications.map(n => 
+      n.id === notificationId ? { ...n, read: true } : n
+    );
+    setNotifications(newNotifications);
+    localStorage.setItem('campusbf_notifications', JSON.stringify(newNotifications));
   };
 
   const login = async (email?: string, password?: string, asAdmin?: boolean) => {
@@ -238,7 +290,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveUsers(newUsers);
   };
 
-  const submitSubscriptionRequest = (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event', amount: number) => {
+  const submitTeacherApplication = (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => {
+    if (!user) return;
+    const newApp: TeacherApplication = {
+      id: `tapp-${Date.now()}`,
+      userId: user.id,
+      user: user,
+      ...data,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    const newApps = [...teacherApplications, newApp];
+    setTeacherApplications(newApps);
+    localStorage.setItem('campusbf_teacher_applications', JSON.stringify(newApps));
+    
+    updateUser({ teacherStatus: 'pending_approval' });
+
+    // Notify Admin
+    const adminUser = users.find(u => u.role === 'admin') || ADMIN_USER;
+    addNotification(adminUser.id, {
+      type: 'message',
+      title: 'Nouveau dossier Enseignant',
+      message: `${user.firstName} ${user.lastName} a soumis un dossier pour rejoindre l'annuaire des enseignants.`
+    });
+  };
+
+  const reviewTeacherApplication = (applicationId: string, status: 'approved' | 'rejected') => {
+    const app = teacherApplications.find(a => a.id === applicationId);
+    if (!app) return;
+
+    const newApps = teacherApplications.map(a => 
+      a.id === applicationId ? { ...a, status } : a
+    );
+    setTeacherApplications(newApps);
+    localStorage.setItem('campusbf_teacher_applications', JSON.stringify(newApps));
+
+    const newUsers = users.map(u => {
+      if (u.id === app.userId) {
+        const updatedUser = { ...u, teacherStatus: status };
+        if (status === 'approved') {
+          updatedUser.teacherProfile = {
+            academicRank: app.academicRank,
+            biography: app.biography,
+            yearsOfExperience: 0, // Default or could be added to form
+            languages: ['Français'],
+            specialties: app.specialties,
+            domains: app.domains,
+            publications: [],
+            courses: app.courses,
+            availability: {
+              isAvailable: true,
+              willingToTravel: false
+            }
+          };
+        }
+        return updatedUser;
+      }
+      return u;
+    });
+    saveUsers(newUsers);
+
+    // Send notification to the user
+    addNotification(app.userId, {
+      type: status === 'approved' ? 'success' : 'alert',
+      title: status === 'approved' ? 'Dossier Enseignant Accepté' : 'Dossier Enseignant Refusé',
+      message: status === 'approved' 
+        ? 'Félicitations ! Votre dossier a été validé. Vous apparaissez désormais dans l\'Annuaire des Enseignants.' 
+        : 'Malheureusement, votre dossier n\'a pas pu être validé. Veuillez contacter l\'administration pour plus de détails.'
+    });
+  };
+
+  const submitSubscriptionRequest = (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => {
     if (!user) return;
     const newRequest: SubscriptionRequest = {
       id: `sub-${Date.now()}`,
@@ -265,6 +387,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateUser({ motoRideSubscriptionStatus: 'pending' });
     } else if (type === 'event') {
       updateUser({ eventSubscriptionStatus: 'pending' });
+    } else if (type === 'institution') {
+      updateUser({ 
+        institutionProfile: {
+          ...user.institutionProfile!,
+          subscriptionStatus: 'pending'
+        }
+      });
     }
   };
 
@@ -310,6 +439,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             expiry.setDate(expiry.getDate() + 30); // 30 days for event
             updatedUser.eventSubscriptionStatus = 'active';
             updatedUser.eventSubscriptionExpiry = expiry.toISOString();
+          } else if (req.type === 'institution') {
+            expiry.setDate(expiry.getDate() + 365); // 1 year for institution
+            updatedUser.institutionProfile = {
+              ...updatedUser.institutionProfile!,
+              subscriptionStatus: 'active',
+              subscriptionExpiry: expiry.toISOString()
+            };
           }
         } else {
           if (req.type === 'exam') {
@@ -324,6 +460,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             updatedUser.motoRideSubscriptionStatus = 'none';
           } else if (req.type === 'event') {
             updatedUser.eventSubscriptionStatus = 'none';
+          } else if (req.type === 'institution') {
+            updatedUser.institutionProfile = {
+              ...updatedUser.institutionProfile!,
+              subscriptionStatus: 'none'
+            };
           }
         }
         return updatedUser;
@@ -343,22 +484,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveUsers(newUsers);
   };
 
+  const addTeacherReview = (teacherId: string, rating: number, comment: string) => {
+    if (!user) return;
+    const newUsers = users.map(u => {
+      if (u.id === teacherId && u.teacherProfile) {
+        const newReview = {
+          id: `rev-${Date.now()}`,
+          authorId: user.id,
+          authorName: `${user.firstName} ${user.lastName}`,
+          rating,
+          comment,
+          createdAt: new Date().toISOString()
+        };
+        return {
+          ...u,
+          teacherProfile: {
+            ...u.teacherProfile,
+            reviews: [...(u.teacherProfile.reviews || []), newReview]
+          }
+        };
+      }
+      return u;
+    });
+    saveUsers(newUsers);
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       users,
+      ads,
+      updateAds,
       login, 
       signup,
       logout, 
       updateUser, 
       submitTutorApplication, 
       reviewApplication, 
+      submitTeacherApplication,
+      reviewTeacherApplication,
       submitSubscriptionRequest,
       reviewSubscriptionRequest,
       updateUserRole,
       deleteUser,
       applications,
+      teacherApplications,
       subscriptionRequests,
+      notifications,
+      addNotification,
+      markNotificationAsRead,
+      addTeacherReview,
       isAuthenticated: !!user, 
       isLoading 
     }}>

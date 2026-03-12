@@ -28,6 +28,133 @@ export const ADMIN_USER: User = {
 
 import { TutorApplication } from '../types';
 
+export const MOCK_TEACHERS: User[] = [
+  {
+    id: 'teacher1',
+    firstName: 'Dr. Abdoulaye',
+    lastName: 'Diallo',
+    university: 'Université Joseph Ki-Zerbo',
+    major: 'Informatique',
+    level: 'Professeur',
+    email: 'abdoulaye.diallo@ujkz.bf',
+    phone: '+226 70 00 11 22',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Abdoulaye',
+    role: 'teacher',
+    teacherProfile: {
+      academicRank: 'Maître de Conférences',
+      biography: 'Docteur en Informatique spécialisé en Intelligence Artificielle et Machine Learning. Passionné par la transmission du savoir et la recherche appliquée aux problématiques africaines.',
+      yearsOfExperience: 12,
+      languages: ['Français', 'Anglais'],
+      specialties: ['Intelligence Artificielle', 'Machine Learning', 'Data Science'],
+      domains: ['Informatique', 'Mathématiques Appliquées'],
+      publications: [
+        { title: 'Predictive Models for Agriculture in Sahel', journal: 'African Journal of Computer Science', year: 2023, link: '#' },
+        { title: 'Machine Learning for Traffic Optimization', journal: 'IEEE Transactions', year: 2021 }
+      ],
+      courses: ['Algorithmique Avancée', 'Introduction au Machine Learning', 'Bases de données distribuées'],
+      availability: {
+        isAvailable: true,
+        availableFrom: '2024-09-01',
+        preferredContract: 'Vacation',
+        willingToTravel: true
+      },
+      reviews: [
+        {
+          id: 'rev1',
+          authorId: 'u1',
+          authorName: 'Ousmane Sankara',
+          rating: 5,
+          comment: 'Excellent professeur, très pédagogue. Ses cours de Machine Learning sont passionnants.',
+          createdAt: '2023-12-15T10:00:00Z'
+        },
+        {
+          id: 'rev2',
+          authorId: 'inst1',
+          authorName: 'IST Direction',
+          rating: 4,
+          comment: 'Collaboration très fructueuse pour nos étudiants en Master.',
+          createdAt: '2024-01-20T14:30:00Z'
+        }
+      ]
+    }
+  },
+  {
+    id: 'teacher2',
+    firstName: 'Pr. Mariam',
+    lastName: 'Kaboré',
+    university: 'Université Thomas Sankara',
+    major: 'Économie',
+    level: 'Professeur',
+    email: 'mariam.kabore@uts.bf',
+    phone: '+226 76 11 22 33',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mariam',
+    role: 'teacher',
+    teacherProfile: {
+      academicRank: 'Professeur Titulaire',
+      biography: 'Professeur titulaire en sciences économiques, experte en macroéconomie et politiques de développement.',
+      yearsOfExperience: 20,
+      languages: ['Français', 'Anglais', 'Mooré'],
+      specialties: ['Macroéconomie', 'Économie du Développement', 'Politiques Publiques'],
+      domains: ['Économie', 'Gestion'],
+      publications: [
+        { title: 'Impact of Microfinance on Rural Development', journal: 'Journal of African Economies', year: 2022, link: '#' }
+      ],
+      courses: ['Macroéconomie I', 'Économie du Développement', 'Politiques Économiques'],
+      availability: {
+        isAvailable: false,
+        willingToTravel: false
+      },
+      reviews: [
+        {
+          id: 'rev3',
+          authorId: 'u2',
+          authorName: 'Alice K.',
+          rating: 5,
+          comment: 'Une experte dans son domaine. Ses cours de macroéconomie sont très clairs.',
+          createdAt: '2024-02-10T09:15:00Z'
+        }
+      ]
+    }
+  }
+];
+
+export const MOCK_INSTITUTIONS: User[] = [
+  {
+    id: 'inst1',
+    firstName: 'Institut',
+    lastName: 'Supérieur de Technologies',
+    university: 'IST',
+    major: 'Administration',
+    level: 'Direction',
+    email: 'direction@ist.bf',
+    phone: '+226 25 33 44 55',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=IST',
+    role: 'institution',
+    institutionProfile: {
+      type: 'Institut Privé',
+      subscriptionStatus: 'active',
+      subscriptionExpiry: '2025-12-31',
+      favorites: ['teacher1']
+    }
+  },
+  {
+    id: 'inst2',
+    firstName: 'Université',
+    lastName: 'Aube Nouvelle',
+    university: 'U-AUBEN',
+    major: 'Administration',
+    level: 'Direction',
+    email: 'contact@u-auben.bf',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=UA',
+    role: 'institution',
+    institutionProfile: {
+      type: 'Université Publique',
+      subscriptionStatus: 'none',
+      favorites: []
+    }
+  }
+];
+
 export const MOCK_USERS: User[] = [
   CURRENT_USER,
   ADMIN_USER,
@@ -64,6 +191,8 @@ export const MOCK_USERS: User[] = [
     avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ibrahim',
     role: 'tutor',
   },
+  ...MOCK_TEACHERS,
+  ...MOCK_INSTITUTIONS
 ];
 
 export const MOCK_APPLICATIONS: TutorApplication[] = [

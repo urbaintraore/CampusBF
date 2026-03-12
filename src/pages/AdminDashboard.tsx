@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY, MOCK_ADS } from '@/data/mock';
+import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY } from '@/data/mock';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const { 
     applications, 
     reviewApplication, 
+    teacherApplications,
+    reviewTeacherApplication,
     subscriptionRequests, 
     reviewSubscriptionRequest, 
     users, 
     updateUserRole, 
-    deleteUser 
+    deleteUser,
+    ads,
+    updateAds
   } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers'>('documents');
   const [userSearch, setUserSearch] = useState('');
   
   // Content states
@@ -23,7 +27,6 @@ export default function AdminDashboard() {
   const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
   const [marketplace, setMarketplace] = useState(MOCK_MARKETPLACE);
   const [community, setCommunity] = useState(MOCK_COMMUNITY);
-  const [ads, setAds] = useState(MOCK_ADS);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
 
@@ -39,6 +42,8 @@ export default function AdminDashboard() {
   };
 
   const pendingApplications = applications.filter(app => app.status === 'pending');
+  const pendingTeacherApplications = teacherApplications.filter(app => app.status === 'pending');
+  const rejectedTeacherApplications = teacherApplications.filter(app => app.status === 'rejected');
   const pendingSubscriptions = subscriptionRequests.filter(req => req.status === 'pending');
 
   const filteredUsers = users.filter(u => 
@@ -110,6 +115,7 @@ export default function AdminDashboard() {
               { label: 'Documents', count: '3,890', icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Signalements', count: '12', icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
+              { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Paiements', count: pendingSubscriptions.length.toString(), icon: CreditCard, color: 'bg-indigo-50 text-indigo-700' },
             ].map((stat) => (
               <div key={stat.label} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
@@ -149,12 +155,14 @@ export default function AdminDashboard() {
                               req.type === 'exam' ? "bg-blue-50 text-blue-700" : 
                               req.type === 'premium' ? "bg-purple-50 text-purple-700" : 
                               req.type === 'motoride' ? "bg-orange-50 text-orange-700" : 
-                              req.type === 'event' ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"
+                              req.type === 'event' ? "bg-indigo-50 text-indigo-700" : 
+                              req.type === 'institution' ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
                             )}>
                               {req.type === 'exam' ? 'Abonnement Examens' : 
                                req.type === 'premium' ? 'Abonnement Premium' : 
                                req.type === 'motoride' ? 'Abonnement MotoRide' : 
-                               req.type === 'event' ? 'Abonnement Événements' : 'Abonnement Répétiteur'}
+                               req.type === 'event' ? 'Abonnement Événements' : 
+                               req.type === 'institution' ? 'Abonnement Établissement' : 'Abonnement Répétiteur'}
                             </span>
                             <span className="text-sm font-bold text-emerald-600">{req.amount.toLocaleString()} FCFA</span>
                           </div>
@@ -263,7 +271,9 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
+          {/* Teacher Applications Section - MOVED TO GESTION PLATEFORMES */}
+          
+          <div className="grid lg:grid-cols-2 gap-8 mt-8">
             {/* Recent Reports */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-gray-50 flex justify-between items-center">
@@ -325,6 +335,7 @@ export default function AdminDashboard() {
               { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
               { id: 'community', label: 'Communauté', icon: MessageSquare },
               { id: 'ads', label: 'Publicités', icon: Megaphone },
+              { id: 'teachers', label: 'Enseignants', icon: Library },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -452,14 +463,14 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => setAds(prev => prev.map(a => a.id === ad.id ? { ...a, active: !a.active } : a))}
+                      onClick={() => updateAds(ads.map(a => a.id === ad.id ? { ...a, active: !a.active } : a))}
                       className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       title={ad.active ? "Désactiver" : "Activer"}
                     >
                       {ad.active ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                     <button 
-                      onClick={() => setAds(prev => prev.filter(a => a.id !== ad.id))}
+                      onClick={() => updateAds(ads.filter(a => a.id !== ad.id))}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
@@ -467,6 +478,193 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+              {contentTab === 'teachers' && (
+                <div className="p-0">
+                  {/* Pending Applications */}
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <Library className="text-emerald-600" size={18} />
+                      Dossiers en attente de validation
+                    </h3>
+                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">{pendingTeacherApplications.length} en attente</span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {pendingTeacherApplications.length > 0 ? (
+                      pendingTeacherApplications.map((app) => (
+                        <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                              <div>
+                                <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
+                                <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.academicRank}</p>
+                                <div className="mb-2">
+                                  <span className="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] rounded-full font-bold">
+                                    Statut : En attente
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {app.specialties?.map((sub) => (
+                                    <span key={sub} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] rounded-full font-bold">
+                                      {sub}
+                                    </span>
+                                  ))}
+                                </div>
+                                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">
+                                  "{app.biography}"
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-3 min-w-[200px]">
+                              <div className="flex flex-col gap-2">
+                                <a 
+                                  href={app.cvUrl} 
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                >
+                                  <Download size={16} />
+                                  Voir CV
+                                </a>
+                                <a 
+                                  href={app.diplomaUrl} 
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                >
+                                  <Download size={16} />
+                                  Voir Diplôme
+                                </a>
+                                <a 
+                                  href={app.rankProofUrl} 
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                >
+                                  <Download size={16} />
+                                  Preuve Grade
+                                </a>
+                              </div>
+                              <div className="flex gap-2 mt-2">
+                                <button 
+                                  onClick={() => reviewTeacherApplication(app.id, 'approved')}
+                                  className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                                >
+                                  <Check size={16} />
+                                  Accepter
+                                </button>
+                                <button 
+                                  onClick={() => reviewTeacherApplication(app.id, 'rejected')}
+                                  className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                                >
+                                  <X size={16} />
+                                  Refuser
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400">
+                        <p>Aucune demande en attente pour le moment.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rejected Applications */}
+                  {rejectedTeacherApplications.length > 0 && (
+                    <>
+                      <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-red-50/30 mt-4">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                          <X className="text-red-600" size={18} />
+                          Dossiers refusés
+                        </h3>
+                        <span className="text-xs font-medium bg-red-50 text-red-700 px-2 py-1 rounded-full">{rejectedTeacherApplications.length} refusés</span>
+                      </div>
+                      <div className="divide-y divide-gray-50">
+                        {rejectedTeacherApplications.map((app) => (
+                          <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors opacity-75">
+                            <div className="flex flex-col md:flex-row justify-between gap-6">
+                              <div className="flex gap-4">
+                                <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 grayscale" />
+                                <div>
+                                  <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
+                                  <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.academicRank}</p>
+                                  <span className="px-2 py-1 bg-red-50 text-red-700 text-[10px] rounded-full font-bold">
+                                    Statut : Refusé
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center">
+                                <button 
+                                  onClick={() => reviewTeacherApplication(app.id, 'approved')}
+                                  className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-colors"
+                                >
+                                  Réévaluer (Accepter)
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Approved Teachers */}
+                  <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-gray-50/50 mt-4">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <UserCheck className="text-blue-600" size={18} />
+                      Enseignants validés (Annuaire)
+                    </h3>
+                    <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                      {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').length} actifs
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').map(teacher => (
+                      <div key={teacher.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                          <img src={teacher.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 object-cover" />
+                          <div>
+                            <h3 className="font-bold text-gray-900">{teacher.firstName} {teacher.lastName}</h3>
+                            <p className="text-xs text-gray-500 mb-1">{teacher.university} • {teacher.teacherProfile?.academicRank}</p>
+                            <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] rounded-full font-bold">
+                              Statut : Validé
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 w-full md:w-auto">
+                          <button 
+                            onClick={() => {
+                              if(confirm('Voulez-vous retirer le statut enseignant de cet utilisateur ?')) {
+                                updateUserRole(teacher.id, 'student');
+                              }
+                            }}
+                            className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors flex items-center gap-2"
+                            title="Retirer le statut enseignant"
+                          >
+                            <Ban size={16} />
+                            Rétrograder
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(teacher.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Supprimer le compte"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').length === 0 && (
+                      <div className="p-8 text-center text-gray-400">
+                        <p>Aucun enseignant validé pour le moment.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -556,7 +754,7 @@ export default function AdminDashboard() {
                       active: true,
                       createdAt: new Date().toISOString()
                     };
-                    setAds([ad, ...ads]);
+                    updateAds([ad, ...ads]);
                     setShowAddAdModal(false);
                     setNewAd({ title: '', imageUrl: '', linkUrl: '' });
                   }}

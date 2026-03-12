@@ -11,8 +11,9 @@ export interface User {
   city?: string;
   neighborhood?: string;
   avatarUrl?: string;
-  role: 'student' | 'admin' | 'tutor' | 'company';
+  role: 'student' | 'admin' | 'tutor' | 'company' | 'teacher' | 'institution';
   tutorStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  teacherStatus?: 'none' | 'pending_dossier' | 'pending_approval' | 'approved' | 'rejected';
   subscriptionStatus?: 'none' | 'pending' | 'active' | 'expired'; // Tutor subscription
   subscriptionExpiry?: string;
   examSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
@@ -33,6 +34,43 @@ export interface User {
     master?: number;
   };
   tutorDescription?: string;
+  teacherProfile?: TeacherProfile;
+  institutionProfile?: InstitutionProfile;
+}
+
+export interface TeacherReview {
+  id: string;
+  authorId: string;
+  authorName: string;
+  rating: number; // 1 to 5
+  comment: string;
+  createdAt: string;
+}
+
+export interface TeacherProfile {
+  academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre';
+  biography: string;
+  yearsOfExperience: number;
+  languages: string[];
+  specialties: string[];
+  domains: string[];
+  publications: { title: string; journal: string; year: number; link?: string }[];
+  courses: string[];
+  availability: {
+    isAvailable: boolean;
+    availableFrom?: string;
+    availableTo?: string;
+    preferredContract?: 'Vacation' | 'CDD' | 'CDI' | 'Mission';
+    willingToTravel: boolean;
+  };
+  reviews?: TeacherReview[];
+}
+
+export interface InstitutionProfile {
+  type: 'Université Publique' | 'Institut Privé' | 'École Supérieure';
+  subscriptionStatus: 'none' | 'pending' | 'active' | 'expired';
+  subscriptionExpiry?: string;
+  favorites: string[]; // Array of teacher User IDs
 }
 
 export interface SubscriptionRequest {
@@ -60,6 +98,22 @@ export interface TutorApplication {
     licence?: number;
     master?: number;
   };
+}
+
+export interface TeacherApplication {
+  id: string;
+  userId: string;
+  user: User;
+  cvUrl: string;
+  diplomaUrl: string;
+  rankProofUrl: string;
+  biography: string;
+  specialties: string[];
+  domains: string[];
+  courses: string[];
+  academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre';
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 export interface Document {

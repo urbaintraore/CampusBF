@@ -16,7 +16,6 @@ export default function Documents() {
   const [selectedYear, setSelectedYear] = useState('Toutes les années');
   const [selectedSubject, setSelectedSubject] = useState('Toutes les matières');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadUniversity, setUploadUniversity] = useState('Université Joseph Ki-Zerbo');
   const [customUniversity, setCustomUniversity] = useState('');
@@ -33,9 +32,9 @@ export default function Documents() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const filterMap: Record<string, string> = {
-    'examen': 'exam',
+    'examen corrigés': 'exam',
     'td corrigés': 'exercise',
-    'résumés': 'summary',
+    'cours et résumés de cours': 'summary',
     'mémoires': 'thesis',
   };
 
@@ -146,18 +145,6 @@ export default function Documents() {
   };
 
   const handleDownload = (doc: any) => {
-    // Check for subscription if it's an exam and user is a student
-    if (doc.type === 'exam' && user?.role === 'student') {
-      const isSubscribed = user.examSubscriptionStatus === 'active' && 
-                          user.examSubscriptionExpiry && 
-                          new Date(user.examSubscriptionExpiry) > new Date();
-      
-      if (!isSubscribed) {
-        setShowSubscriptionModal(true);
-        return;
-      }
-    }
-
     // For mock documents with '#' or real URLs
     if (doc.downloadUrl === '#') {
       // Create a dummy PDF for mock documents
@@ -211,16 +198,6 @@ export default function Documents() {
         )}
       </div>
 
-      {/* Subscription Modal */}
-      <ManualPaymentModal 
-        isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-        type="exam"
-        amount={1000}
-        title="Abonnement Examens"
-        description="Accédez à tous les sujets d'examens pendant 360 jours."
-      />
-
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -260,9 +237,9 @@ export default function Documents() {
                     onChange={(e) => setUploadType(e.target.value)}
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500"
                   >
-                    <option value="exam">Examen</option>
+                    <option value="exam">Examen Corrigés</option>
                     <option value="exercise">TD Corrigé</option>
-                    <option value="summary">Résumé</option>
+                    <option value="summary">Cours et Résumés de cours</option>
                     <option value="thesis">Mémoire</option>
                   </select>
                 </div>
@@ -492,7 +469,7 @@ export default function Documents() {
 
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
-        {['Tout', 'Examen', 'TD Corrigés', 'Résumés', 'Mémoires'].map((f) => (
+        {['Tout', 'Examen Corrigés', 'TD Corrigés', 'Cours et Résumés de cours', 'Mémoires'].map((f) => (
           <button 
             key={f}
             onClick={() => setFilter(f.toLowerCase())}
@@ -519,17 +496,12 @@ export default function Documents() {
                   doc.type === 'exam' ? "bg-red-50 text-red-600" :
                   doc.type === 'summary' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
                 )}>
-                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'RS' : 'TD'}
+                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : 'TD'}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
-                      {doc.type === 'exam' && user?.role === 'student' && !(user.examSubscriptionStatus === 'active' && user.examSubscriptionExpiry && new Date(user.examSubscriptionExpiry) > new Date()) && (
-                        <span className="p-1 bg-amber-50 text-amber-600 rounded-full" title="Abonnement requis">
-                          <Shield size={12} />
-                        </span>
-                      )}
                     </div>
                     <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md">{doc.type.toUpperCase()}</span>
                   </div>
@@ -552,7 +524,7 @@ export default function Documents() {
                       <ThumbsUp size={14} /> {doc.likes}
                     </button>
                     <div className="text-xs text-slate-400 ml-auto">
-                      Ajouté par <span className="text-slate-600 font-medium">{doc.authorId === user?.id ? `${user.firstName} ${user.lastName.charAt(0)}.` : 'Ousmane S.'}</span>
+                      Ajouté par <span className="text-slate-600 font-medium">{doc.authorId === user?.id ? `${user?.firstName} ${user?.lastName?.charAt(0)}.` : 'Admin'}</span>
                     </div>
                   </div>
                 </div>

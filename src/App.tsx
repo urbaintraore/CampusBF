@@ -14,6 +14,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import MotoRide from './pages/MotoRide';
 import Events from './pages/Events';
 import Orientation from './pages/Orientation';
+import TeachersDirectory from './pages/TeachersDirectory';
+import Notifications from './pages/Notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Messages from './pages/Messages';
@@ -97,6 +99,16 @@ export default function App() {
         <Route path="/orientation" element={
           <ProtectedRoute>
             <Orientation />
+          </ProtectedRoute>
+        } />
+        <Route path="/teachers" element={
+          <ProtectedRoute>
+            <TeachersDirectory />
+          </ProtectedRoute>
+        } />
+        <Route path="/notifications" element={
+          <ProtectedRoute>
+            <Notifications />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={

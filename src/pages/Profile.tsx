@@ -8,7 +8,6 @@ export default function Profile() {
   const { user, logout, updateUser, submitTutorApplication } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [showExamPayment, setShowExamPayment] = useState(false);
   const [showPremiumPayment, setShowPremiumPayment] = useState(false);
   const [showMotoRidePayment, setShowMotoRidePayment] = useState(false);
   const [showEventPayment, setShowEventPayment] = useState(false);
@@ -238,46 +237,6 @@ export default function Profile() {
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Exam Subscription */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Shield size={16} className="text-blue-600" />
-                  Accès Examens
-                </p>
-                <span className={cn(
-                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
-                  user.examSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
-                  user.examSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
-                  "bg-gray-100 text-gray-500"
-                )}>
-                  {user.examSubscriptionStatus === 'active' ? 'Actif' : 
-                   user.examSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
-                </span>
-              </div>
-              {user.examSubscriptionStatus === 'active' && user.examSubscriptionExpiry && (
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
-                  <Calendar size={12} />
-                  Expire le {new Date(user.examSubscriptionExpiry).toLocaleDateString()}
-                </p>
-              )}
-              {user.examSubscriptionStatus === 'pending' && (
-                <p className="text-xs text-amber-600 mt-2">
-                  Vérification du paiement en cours...
-                </p>
-              )}
-            </div>
-            {user.examSubscriptionStatus !== 'active' && user.examSubscriptionStatus !== 'pending' && (
-              <button 
-                onClick={() => setShowExamPayment(true)}
-                className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
-              >
-                S'abonner (1 000 CFA / an)
-              </button>
-            )}
-          </div>
-
           {/* Premium Subscription */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
             <div>
@@ -551,15 +510,6 @@ export default function Profile() {
       </div>
 
       {/* Payment Modals */}
-      <ManualPaymentModal 
-        isOpen={showExamPayment}
-        onClose={() => setShowExamPayment(false)}
-        type="exam"
-        amount={1000}
-        title="Abonnement Examens"
-        description="Accédez à tous les sujets d'examens pendant 360 jours."
-      />
-
       <ManualPaymentModal 
         isOpen={showPremiumPayment}
         onClose={() => setShowPremiumPayment(false)}
