@@ -220,7 +220,7 @@ export interface Message {
   read: boolean;
 }
 
-export interface Event {
+export interface CampusEvent {
   id: string;
   title: string;
   description: string;

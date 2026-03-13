@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
-import { MOCK_DOCUMENTS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
+import { db, storage } from '@/lib/firebase';
+import { 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  updateDoc, 
+  doc, 
+  increment,
+  serverTimestamp 
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function Documents() {
-  const { user } = useAuth();
-  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const { user, documents: globalDocuments } = useAuth();
+  const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +40,15 @@ export default function Documents() {
   const [uploadError, setUploadError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    const docsList = globalDocuments.map(doc => ({
+      ...doc,
+      createdAt: doc.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || 
+                 (typeof doc.createdAt === 'string' ? doc.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
+    }));
+    setDocuments(docsList);
+  }, [globalDocuments]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -101,7 +122,7 @@ export default function Documents() {
     setIsUploading(false);
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!uploadTitle.trim()) {
       setUploadError('Veuillez saisir un titre pour le document.');
       return;
@@ -122,62 +143,59 @@ export default function Documents() {
     setIsUploading(true);
     setUploadError('');
 
-    setTimeout(() => {
+    try {
+      const storageRef = ref(storage, `documents/${Date.now()}_${selectedFile.name}`);
+      await uploadBytes(storageRef, selectedFile);
+      const downloadUrl = await getDownloadURL(storageRef);
+
       const newDoc = {
-        id: `d${Date.now()}`,
         title: uploadTitle,
-        type: uploadType as any,
+        type: uploadType,
         university: uploadUniversity === 'Autre' ? customUniversity : uploadUniversity,
         major: user?.major || 'Général',
         year: uploadYear,
         subject: uploadSubject,
         authorId: user?.id || 'admin',
-        downloadUrl: URL.createObjectURL(selectedFile),
-        createdAt: new Date().toISOString().split('T')[0],
+        downloadUrl,
+        fileName: selectedFile.name,
         downloads: 0,
         likes: 0,
-        fileName: selectedFile.name
+        createdAt: serverTimestamp(),
       };
 
-      setDocuments([newDoc, ...documents]);
+      await addDoc(collection(db, 'documents'), newDoc);
       resetUploadForm();
-    }, 1500);
-  };
-
-  const handleDownload = (doc: any) => {
-    // For mock documents with '#' or real URLs
-    if (doc.downloadUrl === '#') {
-      // Create a dummy PDF for mock documents
-      const dummyContent = `Document: ${doc.title}\nUniversité: ${doc.university}\nMatière: ${doc.subject}\nType: ${doc.type}`;
-      const blob = new Blob([dummyContent], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${doc.title.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } else {
-      // For newly uploaded documents (blob URLs) or real external URLs
-      const link = document.createElement('a');
-      link.href = doc.downloadUrl;
-      link.download = doc.fileName || `${doc.title.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      alert('Document partagé avec succès !');
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      setUploadError("Erreur lors de l'envoi du document.");
+    } finally {
+      setIsUploading(false);
     }
-    
-    // Increment download count locally for feedback
-    setDocuments(prev => prev.map(d => 
-      d.id === doc.id ? { ...d, downloads: d.downloads + 1 } : d
-    ));
   };
 
-  const handleLike = (docId: string) => {
-    setDocuments(prev => prev.map(d => 
-      d.id === docId ? { ...d, likes: d.likes + 1 } : d
-    ));
+  const handleDownload = async (docData: any) => {
+    try {
+      // Increment download count in Firestore
+      await updateDoc(doc(db, 'documents', docData.id), {
+        downloads: increment(1)
+      });
+
+      // Open download URL
+      window.open(docData.downloadUrl, '_blank');
+    } catch (error) {
+      console.error("Error downloading document:", error);
+    }
+  };
+
+  const handleLike = async (docId: string) => {
+    try {
+      await updateDoc(doc(db, 'documents', docId), {
+        likes: increment(1)
+      });
+    } catch (error) {
+      console.error("Error liking document:", error);
+    }
   };
 
   return (

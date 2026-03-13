@@ -505,7 +505,7 @@ Question : ${userMsg}`
                       </tr>
                     );
                   })}
-                  {Object.values(grades).every(sem => sem.filter(g => g.name.trim() !== '' && g.grade !== '').length === 0) && (
+                  {Object.values(grades).every((sem: SubjectGrade[]) => sem.filter(g => g.name.trim() !== '' && g.grade !== '').length === 0) && (
                     <tr>
                       <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
                         Aucune note saisie pour le moment.

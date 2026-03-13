@@ -1,16 +1,28 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Users, MessageSquare, Share2, AlertCircle, Send, X, Plus, CheckCircle2 } from 'lucide-react';
-import { MOCK_GROUPS, MOCK_POSTS, MOCK_USERS } from '@/data/mock';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy, 
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove
+} from 'firebase/firestore';
+import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { Post, Comment, Group, CampusEvent } from '@/types';
 
 export default function Community() {
-  const { user } = useAuth();
+  const { user, groups, users } = useAuth();
   const [postContent, setPostContent] = useState('');
-  const [groups, setGroups] = useState(MOCK_GROUPS);
-  const [selectedGroupId, setSelectedGroupId] = useState(groups[0].id);
-  const [posts, setPosts] = useState(MOCK_POSTS);
-  const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>(['g1']);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [posts, setPosts] = useState<Post[]>([]);
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -21,17 +33,46 @@ export default function Community() {
   const [commentContent, setCommentContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Filter posts based on membership and selection
-  const visiblePosts = posts.filter(post => {
-    // If a specific group is selected, show only its posts
-    if (viewingGroupId) {
-      return post.groupId === viewingGroupId;
-    }
-    // Otherwise, show posts from all joined groups
-    return joinedGroupIds.includes(post.groupId);
-  });
+  const joinedGroupIds = user ? groups.filter(g => g.members.includes(user.id)).map(g => g.id) : [];
 
-  const handleCreatePost = () => {
+  useEffect(() => {
+    if (joinedGroupIds.length > 0 && !selectedGroupId) {
+      setSelectedGroupId(joinedGroupIds[0]);
+    }
+  }, [joinedGroupIds, selectedGroupId]);
+
+  useEffect(() => {
+    let q;
+    if (viewingGroupId) {
+      q = query(
+        collection(db, 'posts'),
+        where('groupId', '==', viewingGroupId),
+        orderBy('createdAt', 'desc')
+      );
+    } else if (joinedGroupIds.length > 0) {
+      // Firestore 'in' query limit is 10. For simplicity, we'll just fetch all if many or limit to first 10
+      q = query(
+        collection(db, 'posts'),
+        where('groupId', 'in', joinedGroupIds.slice(0, 10)),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      setPosts([]);
+      return;
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Post[];
+      setPosts(postsData);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts'));
+
+    return () => unsubscribe();
+  }, [viewingGroupId, joinedGroupIds.join(',')]);
+
+  const handleCreatePost = async () => {
     if (!user) return;
     
     if (!postContent.trim()) {
@@ -44,47 +85,46 @@ export default function Community() {
       return;
     }
 
-    const newPost = {
-      id: `p-${Date.now()}`,
-      groupId: selectedGroupId,
-      authorId: user.id,
-      author: user,
-      content: postContent,
-      likes: 0,
-      likedBy: [],
-      comments: [],
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      await addDoc(collection(db, 'posts'), {
+        groupId: selectedGroupId,
+        authorId: user.id,
+        content: postContent,
+        likes: 0,
+        likedBy: [],
+        createdAt: new Date().toISOString(), // Using ISO string for consistency with other parts
+      });
 
-    setPosts([newPost, ...posts]);
-    setPostContent('');
-    showToast('Publication partagée avec succès !');
+      setPostContent('');
+      showToast('Publication partagée avec succès !');
+    } catch (error) {
+      console.error('Error creating post:', error);
+    }
   };
 
   const handleGroupClick = (groupId: string) => {
     setViewingGroupId(groupId);
-    // Also update the posting selection to match
     if (joinedGroupIds.includes(groupId)) {
       setSelectedGroupId(groupId);
     }
   };
 
-  const handleLike = (postId: string) => {
+  const handleLike = async (postId: string) => {
     if (!user) return;
     
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        const isLiked = post.likedBy?.includes(user.id);
-        return {
-          ...post,
-          likes: isLiked ? post.likes - 1 : post.likes + 1,
-          likedBy: isLiked 
-            ? post.likedBy.filter(id => id !== user.id)
-            : [...(post.likedBy || []), user.id]
-        };
-      }
-      return post;
-    }));
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isLiked = post.likedBy?.includes(user.id);
+
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: isLiked ? post.likes - 1 : post.likes + 1,
+        likedBy: isLiked ? arrayRemove(user.id) : arrayUnion(user.id)
+      });
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
   };
 
   const handleComment = (postId: string) => {
@@ -97,9 +137,12 @@ export default function Community() {
   };
 
   const handleReplyToComment = (post: any, comment: any) => {
+    const author = users.find(u => u.id === comment.authorId);
+    if (!author) return;
+
     setActiveCommentPostId(post.id);
-    setCommentContent(`@${comment.author.firstName} ${comment.author.lastName} `);
-    // Focus will be handled by the effect or auto-focus on the input when rendered
+    setCommentContent(`@${author.firstName} ${author.lastName} `);
+    
     setTimeout(() => {
         const input = document.getElementById(`comment-input-${post.id}`);
         if (input) {
@@ -108,66 +151,69 @@ export default function Community() {
     }, 100);
   };
 
-  const handleSubmitComment = (postId: string) => {
+  const handleSubmitComment = async (postId: string) => {
     if (!user || !commentContent.trim()) return;
 
-    const newComment = {
-      id: `c-${Date.now()}`,
-      authorId: user.id,
-      author: user,
-      content: commentContent,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      await addDoc(collection(db, 'comments'), {
+        postId,
+        authorId: user.id,
+        content: commentContent,
+        createdAt: new Date().toISOString(),
+      });
 
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          comments: [...(post.comments || []), newComment]
-        };
-      }
-      return post;
-    }));
-
-    setCommentContent('');
-    setActiveCommentPostId(null);
-    showToast('Commentaire ajouté !');
-  };
-
-  const handleJoinGroup = (groupId: string) => {
-    if (joinedGroupIds.includes(groupId)) return;
-    setJoinedGroupIds([...joinedGroupIds, groupId]);
-    showToast('Vous avez rejoint le groupe !');
-  };
-
-  const handleLeaveGroup = (groupId: string) => {
-    if (!joinedGroupIds.includes(groupId)) return;
-    setJoinedGroupIds(joinedGroupIds.filter(id => id !== groupId));
-    if (selectedGroupId === groupId) {
-      const remaining = joinedGroupIds.filter(id => id !== groupId);
-      setSelectedGroupId(remaining.length > 0 ? remaining[0] : '');
+      setCommentContent('');
+      setActiveCommentPostId(null);
+      showToast('Commentaire ajouté !');
+    } catch (error) {
+      console.error('Error adding comment:', error);
     }
-    showToast('Vous avez quitté le groupe.');
   };
 
-  const handleCreateGroup = (e: React.FormEvent) => {
+  const handleJoinGroup = async (groupId: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'groups', groupId), {
+        members: arrayUnion(user.id)
+      });
+      showToast('Vous avez rejoint le groupe !');
+    } catch (error) {
+      console.error('Error joining group:', error);
+    }
+  };
+
+  const handleLeaveGroup = async (groupId: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'groups', groupId), {
+        members: arrayRemove(user.id)
+      });
+      showToast('Vous avez quitté le groupe.');
+    } catch (error) {
+      console.error('Error leaving group:', error);
+    }
+  };
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGroupData.name || !newGroupData.description) return;
+    if (!user || !newGroupData.name || !newGroupData.description) return;
 
-    const newGroup = {
-      id: `g-${Date.now()}`,
-      name: newGroupData.name,
-      description: newGroupData.description,
-      type: newGroupData.type,
-      membersCount: 1,
-    };
+    try {
+      await addDoc(collection(db, 'groups'), {
+        name: newGroupData.name,
+        description: newGroupData.description,
+        category: newGroupData.type,
+        members: [user.id],
+        createdBy: user.id,
+        createdAt: new Date().toISOString(),
+      });
 
-    setGroups([...groups, newGroup]);
-    setJoinedGroupIds([...joinedGroupIds, newGroup.id]);
-    setSelectedGroupId(newGroup.id);
-    setShowCreateModal(false);
-    setNewGroupData({ name: '', description: '', type: 'university' });
-    showToast('Groupe créé avec succès !');
+      setShowCreateModal(false);
+      setNewGroupData({ name: '', description: '', type: 'university' });
+      showToast('Groupe créé avec succès !');
+    } catch (error) {
+      console.error('Error creating group:', error);
+    }
   };
 
   const showToast = (message: string) => {
@@ -245,7 +291,7 @@ export default function Community() {
 
         {/* Posts */}
         <div className="space-y-4">
-          {visiblePosts.length === 0 ? (
+          {posts.length === 0 ? (
             <div className="bg-white p-8 rounded-xl border border-gray-100 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                 <MessageSquare size={32} />
@@ -258,19 +304,22 @@ export default function Community() {
               </p>
             </div>
           ) : (
-            visiblePosts.map((post) => {
+            posts.map((post) => {
               const group = groups.find(g => g.id === post.groupId);
+              const author = users.find(u => u.id === post.authorId);
               const isLiked = user && post.likedBy?.includes(user.id);
               const showComments = activeCommentPostId === post.id;
+
+              if (!author) return null;
 
               return (
                 <div key={post.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-100 transition-colors">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <img src={post.author.avatarUrl} alt={post.author.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
+                    <img src={author.avatarUrl} alt={author.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
                     <div>
-                      <h3 className="font-bold text-gray-900 text-sm">{post.author.firstName} {post.author.lastName}</h3>
-                      <p className="text-xs text-gray-500">{post.author.major} • {new Date(post.createdAt).toLocaleDateString()}</p>
+                      <h3 className="font-bold text-gray-900 text-sm">{author.firstName} {author.lastName}</h3>
+                      <p className="text-xs text-gray-500">{author.major} • {new Date(post.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                   {group && (
@@ -306,69 +355,49 @@ export default function Community() {
                     )}
                   >
                     <MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
-                    {post.comments?.length || 0}
+                    {/* We need to fetch comments for each post or have them in the post document */}
+                    {/* For now, let's assume we fetch them separately or they are in subcollection */}
+                    <PostComments postId={post.id} showComments={showComments} onReply={(comment) => handleReplyToComment(post, comment)} />
                   </button>
                   <button className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 text-sm font-medium transition-colors ml-auto group">
                     <Share2 size={18} className="group-hover:scale-110 transition-transform" />
                   </button>
                 </div>
 
-                {/* Comments Section */}
-                {(showComments || (post.comments && post.comments.length > 0)) && (
-                  <div className="mt-4 pt-4 border-t border-gray-50 space-y-4">
-                    {post.comments?.map((comment) => (
-                      <div key={comment.id} className="flex gap-3">
-                        <img src={comment.author.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0" />
-                        <div className="bg-gray-50 rounded-2xl rounded-tl-none p-3 flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold text-gray-900">{comment.author.firstName} {comment.author.lastName}</span>
-                            <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                          </div>
-                          <p className="text-sm text-gray-700">{comment.content}</p>
-                          <button 
-                            onClick={() => handleReplyToComment(post, comment)}
-                            className="text-[10px] font-medium text-emerald-600 hover:text-emerald-700 mt-1"
-                          >
-                            Répondre
-                          </button>
-                        </div>
+                {showComments && (
+                  <div className="mt-4 pt-4 border-t border-gray-50">
+                    <div className="flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+                      <img src={user?.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-emerald-100 flex-shrink-0" />
+                      <div className="flex-1 flex gap-2">
+                        <input 
+                          id={`comment-input-${post.id}`}
+                          type="text" 
+                          value={commentContent}
+                          onChange={(e) => setCommentContent(e.target.value)}
+                          placeholder="Écrivez un commentaire..." 
+                          className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSubmitComment(post.id);
+                            }
+                          }}
+                        />
+                        <button 
+                          onClick={() => handleSubmitComment(post.id)}
+                          disabled={!commentContent.trim()}
+                          className="p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Send size={16} />
+                        </button>
                       </div>
-                    ))}
-
-                    {showComments && (
-                      <div className="flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
-                        <img src={user?.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-emerald-100 flex-shrink-0" />
-                        <div className="flex-1 flex gap-2">
-                          <input 
-                            id={`comment-input-${post.id}`}
-                            type="text" 
-                            value={commentContent}
-                            onChange={(e) => setCommentContent(e.target.value)}
-                            placeholder="Écrivez un commentaire..." 
-                            className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSubmitComment(post.id);
-                              }
-                            }}
-                          />
-                          <button 
-                            onClick={() => handleSubmitComment(post.id)}
-                            disabled={!commentContent.trim()}
-                            className="p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <Send size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -430,7 +459,7 @@ export default function Community() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className={cn("font-bold text-sm truncate", isViewing ? "text-emerald-900" : "text-gray-900")}>{group.name}</h3>
-                    <p className="text-xs text-gray-500">{group.membersCount + (isJoined ? 1 : 0)} membres</p>
+                    <p className="text-xs text-gray-500">{group.members.length} membres</p>
                   </div>
                 </div>
                 <p 
@@ -590,7 +619,10 @@ export default function Community() {
               </button>
             </div>
             <div className="overflow-y-auto pr-2 space-y-4 flex-1">
-              {MOCK_USERS.map((member) => (
+              {users.filter(u => {
+                const group = groups.find(g => g.id === showMembersModal);
+                return group?.members.includes(u.id);
+              }).map((member) => (
                 <div key={member.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
                   <img src={member.avatarUrl} alt={member.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
                   <div className="flex-1 min-w-0">
@@ -609,5 +641,62 @@ export default function Community() {
         </div>
       )}
     </div>
+  );
+}
+
+function PostComments({ postId, showComments, onReply }: { postId: string, showComments: boolean, onReply: (comment: Comment) => void }) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const { users } = useAuth();
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'comments'),
+      where('postId', '==', postId),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const commentsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Comment[];
+      setComments(commentsData);
+    });
+
+    return () => unsubscribe();
+  }, [postId]);
+
+  if (!showComments && comments.length === 0) return <span>0</span>;
+  if (!showComments) return <span>{comments.length}</span>;
+
+  return (
+    <>
+      <span>{comments.length}</span>
+      <div className="mt-4 pt-4 border-t border-gray-50 space-y-4 w-full text-left">
+        {comments.map((comment) => {
+          const author = users.find(u => u.id === comment.authorId);
+          if (!author) return null;
+
+          return (
+            <div key={comment.id} className="flex gap-3">
+              <img src={author.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0" />
+              <div className="bg-gray-50 rounded-2xl rounded-tl-none p-3 flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-gray-900">{author.firstName} {author.lastName}</span>
+                  <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+                <p className="text-sm text-gray-700">{comment.content}</p>
+                <button 
+                  onClick={() => onReply(comment)}
+                  className="text-[10px] font-medium text-emerald-600 hover:text-emerald-700 mt-1"
+                >
+                  Répondre
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

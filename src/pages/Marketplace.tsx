@@ -1,21 +1,42 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
-import { MOCK_MARKETPLACE } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
+import { db, storage } from '@/lib/firebase';
+import { 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  deleteDoc, 
+  doc,
+  serverTimestamp 
+} from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 export default function Marketplace() {
-  const { user } = useAuth();
+  const { user, ads } = useAuth();
   const navigate = useNavigate();
-  const [items, setItems] = useState(MOCK_MARKETPLACE);
+  const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tout');
   const [showSellModal, setShowSellModal] = useState(false);
   const [showItems, setShowItems] = useState(false);
   const [sortBy, setSortBy] = useState('date-desc');
   const [showPayment, setShowPayment] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  useEffect(() => {
+    const adsList = ads.map(ad => ({
+      ...ad,
+      postedAt: ad.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || 
+                (typeof ad.createdAt === 'string' ? ad.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
+    }));
+    setItems(adsList);
+  }, [ads]);
 
   // Form states
   const [sellTitle, setSellTitle] = useState('');
@@ -75,53 +96,73 @@ export default function Marketplace() {
     }
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!sellTitle || !sellPrice || !sellDescription || !sellAddress || !sellWhatsapp || !sellEmail) {
       alert('Veuillez remplir tous les champs obligatoires.');
       return;
     }
 
-    let finalCategory = sellCategory;
-    if (showNewCategoryInput && newCategoryName.trim()) {
-      finalCategory = newCategoryName.trim();
-      if (!categories.includes(finalCategory)) {
-        setCategories([...categories, finalCategory]);
+    setIsPublishing(true);
+    try {
+      let finalCategory = sellCategory;
+      if (showNewCategoryInput && newCategoryName.trim()) {
+        finalCategory = newCategoryName.trim();
+        if (!categories.includes(finalCategory)) {
+          setCategories([...categories, finalCategory]);
+        }
       }
+
+      let imageUrl = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3';
+      
+      if (sellImage) {
+        const storageRef = ref(storage, `ads/${Date.now()}`);
+        await uploadString(storageRef, sellImage, 'data_url');
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      const newItem = {
+        title: sellTitle,
+        description: sellDescription,
+        price: parseInt(sellPrice),
+        category: finalCategory.toLowerCase().replace('é', 'e'),
+        userId: user?.id || 'anonymous',
+        seller: {
+          id: user?.id || 'anonymous',
+          firstName: user?.firstName || 'Utilisateur',
+          lastName: user?.lastName || '',
+          university: user?.university || '',
+          major: user?.major || '',
+          level: user?.level || '',
+          email: sellEmail,
+          whatsapp: sellWhatsapp,
+          address: sellAddress,
+          avatarUrl: user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+          role: user?.role || 'student',
+        },
+        location: sellAddress,
+        createdAt: serverTimestamp(),
+        imageUrl,
+      };
+
+      await addDoc(collection(db, 'ads'), newItem);
+      resetSellForm();
+      alert('Votre annonce a été publiée avec succès !');
+    } catch (error) {
+      console.error("Error publishing ad:", error);
+      alert("Erreur lors de la publication de l'annonce.");
+    } finally {
+      setIsPublishing(false);
     }
-
-    const newItem = {
-      id: `m${Date.now()}`,
-      title: sellTitle,
-      description: sellDescription,
-      price: parseInt(sellPrice),
-      category: finalCategory.toLowerCase().replace('é', 'e'),
-      sellerId: user?.id || 'u1',
-      seller: {
-        id: user?.id || 'u1',
-        firstName: user?.firstName || 'Utilisateur',
-        lastName: user?.lastName || '',
-        university: user?.university || '',
-        major: user?.major || '',
-        level: user?.level || '',
-        email: sellEmail,
-        whatsapp: sellWhatsapp,
-        address: sellAddress,
-        avatarUrl: user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
-        role: user?.role || 'student',
-      },
-      location: sellAddress,
-      postedAt: new Date().toISOString().split('T')[0],
-      imageUrl: sellImage || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-    };
-
-    setItems([newItem, ...items]);
-    resetSellForm();
-    alert('Votre annonce a été publiée avec succès !');
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
-      setItems(prev => prev.filter(item => item.id !== id));
+      try {
+        await deleteDoc(doc(db, 'ads', id));
+      } catch (error) {
+        console.error("Error deleting ad:", error);
+        alert("Erreur lors de la suppression.");
+      }
     }
   };
 
@@ -457,9 +498,10 @@ export default function Marketplace() {
                   <button 
                     type="button"
                     onClick={handlePublish}
-                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100 mt-2"
+                    disabled={isPublishing}
+                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Publier l'annonce
+                    {isPublishing ? 'Publication en cours...' : "Publier l'annonce"}
                   </button>
                 </form>
               )}

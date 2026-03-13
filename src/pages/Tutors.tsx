@@ -57,7 +57,7 @@ export default function Tutors() {
       university: u.university
     }));
 
-  const allTutors = [...realTutors, ...MOCK_TUTORS];
+  const allTutors = [...realTutors];
 
   const handleContact = (tutorUserId: string) => {
     navigate(`/messages?chat=${tutorUserId}`);

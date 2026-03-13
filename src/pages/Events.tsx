@@ -3,76 +3,30 @@ import { Calendar, MapPin, Clock, Users, Plus, Search, Filter, Shield, AlertCirc
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
-import { Event } from '@/types';
+import { CampusEvent } from '@/types';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  arrayUnion, 
+  arrayRemove 
+} from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 export default function Events() {
-  const { user } = useAuth();
+  const { user, events, users } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedEventAttendees, setSelectedEventAttendees] = useState<Event | null>(null);
+  const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-
-  const [events, setEvents] = useState<Event[]>([
-    {
-      id: 'e1',
-      title: 'Conférence sur l\'IA et l\'Éducation',
-      description: 'Une conférence passionnante sur l\'impact de l\'intelligence artificielle dans le système éducatif burkinabè.',
-      type: 'conference',
-      location: 'Amphi A600, UJKZ',
-      date: '2026-03-15',
-      time: '14:00',
-      organizerId: 'u1',
-      organizer: { firstName: 'Club', lastName: 'Informatique' } as any,
-      attendees: ['u1', 'u2', 'u3'],
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'e2',
-      title: 'Soutenance de Master - Informatique',
-      description: 'Soutenance de mémoire sur la cybersécurité des systèmes bancaires.',
-      type: 'defense',
-      location: 'Salle de conférence, ISIG',
-      date: '2026-03-18',
-      time: '09:00',
-      organizerId: 'u2',
-      organizer: { firstName: 'Moussa', lastName: 'Traoré' } as any,
-      attendees: ['u4'],
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'e3',
-      title: 'Compétition de Codage "Faso Code"',
-      description: 'Le plus grand hackathon étudiant du Burkina Faso. 24h pour coder une solution innovante.',
-      type: 'competition',
-      location: 'Espace Technologique, Ouaga 2000',
-      date: '2026-03-25',
-      time: '08:00',
-      organizerId: 'u3',
-      organizer: { firstName: 'Association', lastName: 'Étudiante' } as any,
-      attendees: ['u1', 'u5', 'u6', 'u7', 'u8'],
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'e4',
-      title: 'Nuit Culturelle Universitaire',
-      description: 'Danse, musique et théâtre. Venez découvrir les talents de nos universités.',
-      type: 'cultural',
-      location: 'CENASA',
-      date: '2026-04-02',
-      time: '19:00',
-      organizerId: 'u4',
-      organizer: { firstName: 'BDE', lastName: 'UJKZ' } as any,
-      attendees: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10'],
-      createdAt: new Date().toISOString(),
-    }
-  ]);
 
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
-    type: 'conference' as Event['type'],
+    type: 'conference' as CampusEvent['type'],
     location: '',
     date: '',
     time: ''
@@ -94,43 +48,47 @@ export default function Events() {
     return matchesSearch && matchesType;
   });
 
-  const handleRegister = (eventId: string) => {
+  const handleRegister = async (eventId: string) => {
     if (!user) return;
     
-    setEvents(prev => prev.map(event => {
-      if (event.id === eventId) {
-        if (event.attendees.includes(user.id)) {
-          return { ...event, attendees: event.attendees.filter(id => id !== user.id) };
-        }
-        return { ...event, attendees: [...event.attendees, user.id] };
-      }
-      return event;
-    }));
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const isRegistered = event.attendees.includes(user.id);
+
+    try {
+      await updateDoc(doc(db, 'events', eventId), {
+        attendees: isRegistered ? arrayRemove(user.id) : arrayUnion(user.id)
+      });
+    } catch (error) {
+      console.error('Error registering for event:', error);
+    }
   };
 
-  const handleCreateEvent = (e: React.FormEvent) => {
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const event: Event = {
-      id: `e-${Date.now()}`,
-      ...newEvent,
-      organizerId: user.id,
-      organizer: user,
-      attendees: [user.id],
-      createdAt: new Date().toISOString()
-    };
+    try {
+      await addDoc(collection(db, 'events'), {
+        ...newEvent,
+        organizerId: user.id,
+        attendees: [user.id],
+        createdAt: new Date().toISOString()
+      });
 
-    setEvents(prev => [event, ...prev]);
-    setShowCreateModal(false);
-    setNewEvent({
-      title: '',
-      description: '',
-      type: 'conference',
-      location: '',
-      date: '',
-      time: ''
-    });
+      setShowCreateModal(false);
+      setNewEvent({
+        title: '',
+        description: '',
+        type: 'conference',
+        location: '',
+        date: '',
+        time: ''
+      });
+    } catch (error) {
+      console.error('Error creating event:', error);
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -240,76 +198,84 @@ export default function Events() {
           {activeTab === 'all' ? (
             <div className="grid grid-cols-1 gap-4">
               {filteredEvents.length > 0 ? (
-                filteredEvents.map((event) => (
-                  <div key={event.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-indigo-200 transition-all group">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("p-2 rounded-lg border", getTypeColor(event.type))}>
-                          {getTypeIcon(event.type)}
-                        </div>
-                        <div>
-                          <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-1 inline-block", getTypeColor(event.type))}>
-                            {getTypeLabel(event.type)}
-                          </span>
-                          <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.title}</h3>
-                        </div>
-                      </div>
-                    </div>
+                filteredEvents.map((event) => {
+                  const organizer = users.find(u => u.id === event.organizerId);
+                  const isRegistered = user && event.attendees.includes(user.id);
+                  const isOrganizer = user && event.organizerId === user.id;
 
-                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{event.description}</p>
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Calendar size={14} className="text-indigo-500" />
-                        <span>{new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Clock size={14} className="text-indigo-500" />
-                        <span>{event.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <MapPin size={14} className="text-indigo-500" />
-                        <span className="truncate">{event.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Users size={14} className="text-indigo-500" />
-                        <span>{event.attendees.length} inscrits</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                          {event.organizer.firstName[0]}
+                  return (
+                    <div key={event.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-indigo-200 transition-all group">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("p-2 rounded-lg border", getTypeColor(event.type))}>
+                            {getTypeIcon(event.type)}
+                          </div>
+                          <div>
+                            <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-1 inline-block", getTypeColor(event.type))}>
+                              {getTypeLabel(event.type)}
+                            </span>
+                            <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.title}</h3>
+                          </div>
                         </div>
-                        <span className="text-xs text-slate-500">Par {event.organizer.firstName} {event.organizer.lastName}</span>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        {activeTab === 'organized' && (
-                          <button 
-                            onClick={() => setSelectedEventAttendees(event)}
-                            className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
-                          >
-                            <Users size={14} />
-                            Voir les inscrits
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => handleRegister(event.id)}
-                          className={cn(
-                            "px-4 py-2 text-xs font-bold rounded-lg transition-colors",
-                            user && event.attendees.includes(user.id) 
-                              ? "bg-slate-100 text-slate-600 hover:bg-slate-200" 
-                              : "bg-indigo-600 text-white hover:bg-indigo-700"
+
+                      <p className="text-sm text-slate-600 mb-4 line-clamp-2">{event.description}</p>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <Calendar size={14} className="text-indigo-500" />
+                          <span>{new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <Clock size={14} className="text-indigo-500" />
+                          <span>{event.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <MapPin size={14} className="text-indigo-500" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <Users size={14} className="text-indigo-500" />
+                          <span>{event.attendees.length} inscrits</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                            {organizer?.firstName?.[0] || '?'}
+                          </div>
+                          <span className="text-xs text-slate-500">Par {organizer?.firstName} {organizer?.lastName}</span>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          {isOrganizer && (
+                            <button 
+                              onClick={() => setSelectedEventAttendees(event)}
+                              className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+                            >
+                              <Users size={14} />
+                              Voir les inscrits
+                            </button>
                           )}
-                        >
-                          {user && event.attendees.includes(user.id) ? 'Se désinscrire' : 'S\'inscrire'}
-                        </button>
+                          {!isOrganizer && (
+                            <button 
+                              onClick={() => handleRegister(event.id)}
+                              className={cn(
+                                "px-4 py-2 text-xs font-bold rounded-lg transition-colors",
+                                isRegistered 
+                                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200" 
+                                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+                              )}
+                            >
+                              {isRegistered ? 'Se désinscrire' : 'S\'inscrire'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
                   <Calendar size={48} className="mx-auto text-slate-300 mb-4" />
@@ -525,24 +491,31 @@ export default function Events() {
             <div className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 {selectedEventAttendees.attendees.length > 0 ? (
-                  selectedEventAttendees.attendees.map((attendeeId, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                          {attendeeId === user?.id ? user.firstName[0] : 'E'}
+                  selectedEventAttendees.attendees.map((attendeeId) => {
+                    const attendee = users.find(u => u.id === attendeeId);
+                    return (
+                      <div key={attendeeId} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold overflow-hidden">
+                            {attendee?.avatarUrl ? (
+                              <img src={attendee.avatarUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              attendee?.firstName?.[0] || 'E'
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">
+                              {attendee ? `${attendee.firstName} ${attendee.lastName}` : `Étudiant #${attendeeId.slice(-4)}`}
+                            </p>
+                            <p className="text-[10px] text-slate-500">{attendee?.major || 'Étudiant'} • {attendee?.level || 'N/A'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">
-                            {attendeeId === user?.id ? `${user.firstName} ${user.lastName}` : `Étudiant #${attendeeId.slice(-4)}`}
-                          </p>
-                          <p className="text-[10px] text-slate-500">Inscrit le {new Date().toLocaleDateString()}</p>
+                        <div className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-100">
+                          CONFIRMÉ
                         </div>
                       </div>
-                      <div className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-100">
-                        CONFIRMÉ
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="text-center py-8">
                     <Users size={32} className="mx-auto text-slate-300 mb-2" />

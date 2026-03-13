@@ -1,11 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification } from '@/types';
-import { CURRENT_USER, ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent } from '@/types';
+import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
+import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut 
+} from 'firebase/auth';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  onSnapshot, 
+  collection,
+  getDocFromServer,
+  addDoc,
+  deleteDoc,
+  query,
+  where
+} from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
   users: User[];
   ads: Ad[];
+  documents: any[];
   updateAds: (newAds: Ad[]) => void;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
@@ -33,6 +54,9 @@ interface AuthContextType {
   teacherApplications: TeacherApplication[];
   subscriptionRequests: SubscriptionRequest[];
   notifications: Notification[];
+  internships: Internship[];
+  events: CampusEvent[];
+  groups: Group[];
   addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
   addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
@@ -44,196 +68,207 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [ads, setAds] = useState<Ad[]>(MOCK_ADS);
-  const [applications, setApplications] = useState<TutorApplication[]>(MOCK_APPLICATIONS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [applications, setApplications] = useState<TutorApplication[]>([]);
   const [teacherApplications, setTeacherApplications] = useState<TeacherApplication[]>([]);
   const [subscriptionRequests, setSubscriptionRequests] = useState<SubscriptionRequest[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [internships, setInternships] = useState<Internship[]>([]);
+  const [events, setEvents] = useState<CampusEvent[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check local storage or simulate session check
-    const storedUsers = localStorage.getItem('campusbf_users');
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    } else {
-      localStorage.setItem('campusbf_users', JSON.stringify(MOCK_USERS));
-    }
-
-    const storedUser = localStorage.getItem('campusbf_user');
-    if (storedUser) {
-      // Refresh user from the users list to get latest status
-      const parsedUser = JSON.parse(storedUser);
-      const foundUser = (JSON.parse(storedUsers || '[]') as User[]).find(u => u.id === parsedUser.id);
-      if (foundUser) {
-        setUser(foundUser);
-      } else {
-        setUser(parsedUser);
-      }
-    }
-
-    const storedApps = localStorage.getItem('campusbf_applications');
-    if (storedApps) {
-      setApplications(JSON.parse(storedApps));
-    }
-    const storedTeacherApps = localStorage.getItem('campusbf_teacher_applications');
-    if (storedTeacherApps) {
-      setTeacherApplications(JSON.parse(storedTeacherApps));
-    }
-    const storedSubs = localStorage.getItem('campusbf_subscriptions');
-    if (storedSubs) {
-      setSubscriptionRequests(JSON.parse(storedSubs));
-    }
-    const storedAds = localStorage.getItem('campusbf_ads');
-    if (storedAds) {
-      setAds(JSON.parse(storedAds));
-    } else {
-      localStorage.setItem('campusbf_ads', JSON.stringify(MOCK_ADS));
-    }
-    const storedNotifs = localStorage.getItem('campusbf_notifications');
-    if (storedNotifs) {
-      setNotifications(JSON.parse(storedNotifs));
-    }
-    setIsLoading(false);
-  }, []);
-
-  const saveUsers = (newUsers: User[]) => {
-    setUsers(newUsers);
-    localStorage.setItem('campusbf_users', JSON.stringify(newUsers));
-    
-    // Also update current user if it exists
-    if (user) {
-      const updatedCurrentUser = newUsers.find(u => u.id === user.id);
-      if (updatedCurrentUser) {
-        setUser(updatedCurrentUser);
-        localStorage.setItem('campusbf_user', JSON.stringify(updatedCurrentUser));
-      }
-    }
-  };
 
   const updateAds = (newAds: Ad[]) => {
     setAds(newAds);
-    localStorage.setItem('campusbf_ads', JSON.stringify(newAds));
   };
 
-  const addNotification = (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => {
-    const newNotification: Notification = {
-      id: `notif-${Date.now()}`,
-      userId,
-      ...notification,
-      read: false,
-      createdAt: new Date().toISOString(),
+  useEffect(() => {
+    // Test connection
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
     };
-    const newNotifications = [newNotification, ...notifications];
-    setNotifications(newNotifications);
-    localStorage.setItem('campusbf_notifications', JSON.stringify(newNotifications));
-  };
+    testConnection();
 
-  const markNotificationAsRead = (notificationId: string) => {
-    const newNotifications = notifications.map(n => 
-      n.id === notificationId ? { ...n, read: true } : n
-    );
-    setNotifications(newNotifications);
-    localStorage.setItem('campusbf_notifications', JSON.stringify(newNotifications));
-  };
+    let unsubscribes: (() => void)[] = [];
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Clear existing listeners when auth state changes
+      unsubscribes.forEach(unsub => unsub());
+      unsubscribes = [];
+
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+            setUser(userData);
+
+            // Start listeners only after we have the user data and role
+            
+            // Public/Authenticated lists
+            unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
+              setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'ads')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
+              setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'documents')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'internships'), (snapshot) => {
+              setInternships(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Internship)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'internships')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'events'), (snapshot) => {
+              setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'events')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'groups'), (snapshot) => {
+              setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'groups')));
+
+            // User-specific notifications
+            const qNotifs = query(collection(db, 'notifications'), where('userId', '==', firebaseUser.uid));
+            unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
+              setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'notifications')));
+
+            // Admin-only or restricted lists
+            if (userData.role === 'admin') {
+              unsubscribes.push(onSnapshot(collection(db, 'users'), (snapshot) => {
+                setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'users')));
+
+              unsubscribes.push(onSnapshot(collection(db, 'applications'), (snapshot) => {
+                setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
+
+              unsubscribes.push(onSnapshot(collection(db, 'teacherApplications'), (snapshot) => {
+                setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
+
+              unsubscribes.push(onSnapshot(collection(db, 'subscriptionRequests'), (snapshot) => {
+                setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'subscriptionRequests')));
+            } else {
+              // Non-admins see their own applications
+              const qApps = query(collection(db, 'applications'), where('userId', '==', firebaseUser.uid));
+              unsubscribes.push(onSnapshot(qApps, (snapshot) => {
+                setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
+
+              const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', firebaseUser.uid));
+              unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
+                setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
+            }
+
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+        }
+      } else {
+        setUser(null);
+        setUsers([]);
+        setAds([]);
+        setDocuments([]);
+        setApplications([]);
+        setTeacherApplications([]);
+        setSubscriptionRequests([]);
+        setNotifications([]);
+        setInternships([]);
+        setEvents([]);
+        setGroups([]);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, []);
 
   const login = async (email?: string, password?: string, asAdmin?: boolean) => {
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (asAdmin) {
-          const targetUser = ADMIN_USER;
-          const foundUser = users.find(u => u.id === targetUser.id) || targetUser;
-          setUser(foundUser);
-          localStorage.setItem('campusbf_user', JSON.stringify(foundUser));
-          resolve();
-          return;
-        }
+    if (asAdmin) {
+      // For testing purposes, we can still allow mock admin login if needed, 
+      // but ideally we use real auth.
+      setUser(ADMIN_USER);
+      return;
+    }
 
-        if (!email || !password) {
-          reject(new Error('Email et mot de passe requis'));
-          return;
-        }
+    if (!email || !password) {
+      throw new Error('Email et mot de passe requis');
+    }
 
-        const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-        
-        if (foundUser) {
-          if (foundUser.email.toLowerCase() === 'urbain.traoreurb@gmail.com' && foundUser.role !== 'admin') {
-            foundUser.role = 'admin';
-            saveUsers(users.map(u => u.id === foundUser.id ? foundUser : u));
-          }
-
-          const expectedPassword = foundUser.password || (foundUser.role === 'admin' ? 'admin123' : '123456');
-          if (password !== expectedPassword) {
-            reject(new Error(foundUser.role === 'admin' ? 'Mot de passe administrateur incorrect' : 'Mot de passe incorrect (utilisez 123456 pour les comptes de test)'));
-            return;
-          }
-
-          setUser(foundUser);
-          localStorage.setItem('campusbf_user', JSON.stringify(foundUser));
-          resolve();
-        } else {
-          reject(new Error('Utilisateur non trouvé ou mot de passe incorrect'));
-        }
-      }, 1000);
-    });
-  };
-
-  const signup = async (userData: Partial<User> & { password?: string }) => {
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (!userData.email || !userData.password) {
-          reject(new Error('Email et mot de passe requis'));
-          return;
-        }
-
-        const existingUser = users.find(u => u.email.toLowerCase() === userData.email?.toLowerCase());
-        if (existingUser) {
-          reject(new Error('Cet email est déjà utilisé'));
-          return;
-        }
-
-        const newUser: User = {
-          id: `u${Date.now()}`,
-          firstName: userData.firstName || '',
-          lastName: userData.lastName || '',
-          email: userData.email,
-          password: userData.password,
-          university: userData.university || '',
-          major: userData.major || '',
-          level: userData.level || '',
-          role: userData.email.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
-          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
-          ...userData
-        };
-
-        const newUsers = [...users, newUser];
-        saveUsers(newUsers);
-        setUser(newUser);
-        localStorage.setItem('campusbf_user', JSON.stringify(newUser));
-        resolve();
-      }, 1000);
-    });
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('campusbf_user');
-  };
-
-  const updateUser = (updatedUser: Partial<User>) => {
-    if (user) {
-      const newUser = { ...user, ...updatedUser };
-      setUser(newUser);
-      localStorage.setItem('campusbf_user', JSON.stringify(newUser));
-      
-      // Update in users list as well
-      const newUsers = users.map(u => u.id === user.id ? newUser : u);
-      saveUsers(newUsers);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      throw new Error(error.message || 'Erreur de connexion');
     }
   };
 
-  const submitTutorApplication = (
+  const signup = async (userData: Partial<User> & { password?: string }) => {
+    if (!userData.email || !userData.password) {
+      throw new Error('Email et mot de passe requis');
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      const firebaseUser = userCredential.user;
+
+      const newUser: Partial<User> = {
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        email: userData.email,
+        university: userData.university || '',
+        major: userData.major || '',
+        level: userData.level || '',
+        role: userData.email.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
+      };
+
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+      setUser({ id: firebaseUser.uid, ...newUser } as User);
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        handleFirestoreError(error, OperationType.CREATE, 'users');
+      }
+      throw new Error(error.message || 'Erreur lors de l\'inscription');
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const updateUser = async (updatedUser: Partial<User>) => {
+    if (user && user.id) {
+      try {
+        const userRef = doc(db, 'users', user.id);
+        await updateDoc(userRef, updatedUser);
+        setUser({ ...user, ...updatedUser });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `users/${user.id}`);
+      }
+    }
+  };
+
+  const submitTutorApplication = async (
     description: string, 
     documentUrl: string,
     subjects: string[],
@@ -245,268 +280,272 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   ) => {
     if (!user) return;
-    const newApp: TutorApplication = {
-      id: `app-${Date.now()}`,
-      userId: user.id,
-      user: user,
-      description,
-      documentUrl,
-      subjects,
-      hourlyRates,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-    const newApps = [...applications, newApp];
-    setApplications(newApps);
-    localStorage.setItem('campusbf_applications', JSON.stringify(newApps));
-    
-    // Update user status
-    updateUser({ tutorStatus: 'pending' });
-  };
-
-  const reviewApplication = (applicationId: string, status: 'approved' | 'rejected') => {
-    const app = applications.find(a => a.id === applicationId);
-    if (!app) return;
-
-    const newApps = applications.map(a => 
-      a.id === applicationId ? { ...a, status } : a
-    );
-    setApplications(newApps);
-    localStorage.setItem('campusbf_applications', JSON.stringify(newApps));
-
-    // Update the user who made the application
-    const newUsers = users.map(u => {
-      if (u.id === app.userId) {
-        const updatedUser = { ...u, tutorStatus: status };
-        if (status === 'approved') {
-          updatedUser.tutorSubjects = app.subjects;
-          updatedUser.tutorHourlyRates = app.hourlyRates;
-          updatedUser.tutorDescription = app.description;
-        }
-        return updatedUser;
-      }
-      return u;
-    });
-    saveUsers(newUsers);
-  };
-
-  const submitTeacherApplication = (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => {
-    if (!user) return;
-    const newApp: TeacherApplication = {
-      id: `tapp-${Date.now()}`,
-      userId: user.id,
-      user: user,
-      ...data,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-    const newApps = [...teacherApplications, newApp];
-    setTeacherApplications(newApps);
-    localStorage.setItem('campusbf_teacher_applications', JSON.stringify(newApps));
-    
-    updateUser({ teacherStatus: 'pending_approval' });
-
-    // Notify Admin
-    const adminUser = users.find(u => u.role === 'admin') || ADMIN_USER;
-    addNotification(adminUser.id, {
-      type: 'message',
-      title: 'Nouveau dossier Enseignant',
-      message: `${user.firstName} ${user.lastName} a soumis un dossier pour rejoindre l'annuaire des enseignants.`
-    });
-  };
-
-  const reviewTeacherApplication = (applicationId: string, status: 'approved' | 'rejected') => {
-    const app = teacherApplications.find(a => a.id === applicationId);
-    if (!app) return;
-
-    const newApps = teacherApplications.map(a => 
-      a.id === applicationId ? { ...a, status } : a
-    );
-    setTeacherApplications(newApps);
-    localStorage.setItem('campusbf_teacher_applications', JSON.stringify(newApps));
-
-    const newUsers = users.map(u => {
-      if (u.id === app.userId) {
-        const updatedUser = { ...u, teacherStatus: status };
-        if (status === 'approved') {
-          updatedUser.teacherProfile = {
-            academicRank: app.academicRank,
-            biography: app.biography,
-            yearsOfExperience: 0, // Default or could be added to form
-            languages: ['Français'],
-            specialties: app.specialties,
-            domains: app.domains,
-            publications: [],
-            courses: app.courses,
-            availability: {
-              isAvailable: true,
-              willingToTravel: false
-            }
-          };
-        }
-        return updatedUser;
-      }
-      return u;
-    });
-    saveUsers(newUsers);
-
-    // Send notification to the user
-    addNotification(app.userId, {
-      type: status === 'approved' ? 'success' : 'alert',
-      title: status === 'approved' ? 'Dossier Enseignant Accepté' : 'Dossier Enseignant Refusé',
-      message: status === 'approved' 
-        ? 'Félicitations ! Votre dossier a été validé. Vous apparaissez désormais dans l\'Annuaire des Enseignants.' 
-        : 'Malheureusement, votre dossier n\'a pas pu être validé. Veuillez contacter l\'administration pour plus de détails.'
-    });
-  };
-
-  const submitSubscriptionRequest = (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => {
-    if (!user) return;
-    const newRequest: SubscriptionRequest = {
-      id: `sub-${Date.now()}`,
-      userId: user.id,
-      user: user,
-      type,
-      amount,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-    const newRequests = [...subscriptionRequests, newRequest];
-    setSubscriptionRequests(newRequests);
-    localStorage.setItem('campusbf_subscriptions', JSON.stringify(newRequests));
-
-    if (type === 'exam') {
-      updateUser({ examSubscriptionStatus: 'pending' });
-    } else if (type === 'premium') {
-      updateUser({ premiumSubscriptionStatus: 'pending' });
-    } else if (type === 'tutor') {
-      updateUser({ subscriptionStatus: 'pending' });
-    } else if (type === 'marketplace') {
-      updateUser({ marketplaceSubscriptionStatus: 'pending' });
-    } else if (type === 'motoride') {
-      updateUser({ motoRideSubscriptionStatus: 'pending' });
-    } else if (type === 'event') {
-      updateUser({ eventSubscriptionStatus: 'pending' });
-    } else if (type === 'institution') {
-      updateUser({ 
-        institutionProfile: {
-          ...user.institutionProfile!,
-          subscriptionStatus: 'pending'
-        }
-      });
+    try {
+      const newApp = {
+        userId: user.id,
+        user: user,
+        description,
+        documentUrl,
+        subjects,
+        hourlyRates,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      await addDoc(collection(db, 'applications'), newApp);
+      await updateUser({ tutorStatus: 'pending' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'applications');
     }
   };
 
-  const reviewSubscriptionRequest = (requestId: string, status: 'approved' | 'rejected') => {
-    const req = subscriptionRequests.find(r => r.id === requestId);
-    if (!req) return;
+  const reviewApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
+    try {
+      const app = applications.find(a => a.id === applicationId);
+      if (!app) return;
 
-    const newRequests = subscriptionRequests.map(r => 
-      r.id === requestId ? { ...r, status } : r
-    );
-    setSubscriptionRequests(newRequests);
-    localStorage.setItem('campusbf_subscriptions', JSON.stringify(newRequests));
+      await updateDoc(doc(db, 'applications', applicationId), { status });
 
-    // Update the user who made the request
-    const newUsers = users.map(u => {
-      if (u.id === req.userId) {
-        const updatedUser = { ...u };
-        
-        if (status === 'approved') {
-          const expiry = new Date();
-          if (req.type === 'exam') {
-            expiry.setDate(expiry.getDate() + 360);
-            updatedUser.examSubscriptionStatus = 'active';
-            updatedUser.examSubscriptionExpiry = expiry.toISOString();
-          } else if (req.type === 'premium') {
-            expiry.setDate(expiry.getDate() + 30);
-            updatedUser.premiumSubscriptionStatus = 'active';
-            updatedUser.premiumSubscriptionExpiry = expiry.toISOString();
-          } else if (req.type === 'tutor') {
-            expiry.setDate(expiry.getDate() + 30); // 30 days for tutor
-            updatedUser.subscriptionStatus = 'active';
-            updatedUser.subscriptionExpiry = expiry.toISOString();
-            updatedUser.role = 'tutor'; // Promote to tutor role if approved
-          } else if (req.type === 'marketplace') {
-            expiry.setDate(expiry.getDate() + 30); // 30 days for marketplace
-            updatedUser.marketplaceSubscriptionStatus = 'active';
-            updatedUser.marketplaceSubscriptionExpiry = expiry.toISOString();
-          } else if (req.type === 'motoride') {
-            expiry.setDate(expiry.getDate() + 30); // 30 days for motoride
-            updatedUser.motoRideSubscriptionStatus = 'active';
-            updatedUser.motoRideSubscriptionExpiry = expiry.toISOString();
-          } else if (req.type === 'event') {
-            expiry.setDate(expiry.getDate() + 30); // 30 days for event
-            updatedUser.eventSubscriptionStatus = 'active';
-            updatedUser.eventSubscriptionExpiry = expiry.toISOString();
-          } else if (req.type === 'institution') {
-            expiry.setDate(expiry.getDate() + 365); // 1 year for institution
-            updatedUser.institutionProfile = {
-              ...updatedUser.institutionProfile!,
-              subscriptionStatus: 'active',
-              subscriptionExpiry: expiry.toISOString()
-            };
-          }
-        } else {
-          if (req.type === 'exam') {
-            updatedUser.examSubscriptionStatus = 'none';
-          } else if (req.type === 'premium') {
-            updatedUser.premiumSubscriptionStatus = 'none';
-          } else if (req.type === 'tutor') {
-            updatedUser.subscriptionStatus = 'none';
-          } else if (req.type === 'marketplace') {
-            updatedUser.marketplaceSubscriptionStatus = 'none';
-          } else if (req.type === 'motoride') {
-            updatedUser.motoRideSubscriptionStatus = 'none';
-          } else if (req.type === 'event') {
-            updatedUser.eventSubscriptionStatus = 'none';
-          } else if (req.type === 'institution') {
-            updatedUser.institutionProfile = {
-              ...updatedUser.institutionProfile!,
-              subscriptionStatus: 'none'
-            };
-          }
-        }
-        return updatedUser;
+      const updatedUserData: Partial<User> = { tutorStatus: status };
+      if (status === 'approved') {
+        updatedUserData.tutorSubjects = app.subjects;
+        updatedUserData.tutorHourlyRates = app.hourlyRates;
+        updatedUserData.tutorDescription = app.description;
       }
-      return u;
-    });
-    saveUsers(newUsers);
+      
+      await updateDoc(doc(db, 'users', app.userId), updatedUserData);
+
+      await addNotification(app.userId, {
+        type: status === 'approved' ? 'success' : 'alert',
+        title: status === 'approved' ? 'Demande Répétiteur Approuvée' : 'Demande Répétiteur Refusée',
+        message: status === 'approved' 
+          ? 'Votre demande pour devenir répétiteur a été acceptée.' 
+          : 'Votre demande pour devenir répétiteur a été refusée.'
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `applications/${applicationId}`);
+    }
   };
 
-  const updateUserRole = (userId: string, role: User['role']) => {
-    const newUsers = users.map(u => u.id === userId ? { ...u, role } : u);
-    saveUsers(newUsers);
-  };
-
-  const deleteUser = (userId: string) => {
-    const newUsers = users.filter(u => u.id !== userId);
-    saveUsers(newUsers);
-  };
-
-  const addTeacherReview = (teacherId: string, rating: number, comment: string) => {
+  const submitTeacherApplication = async (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => {
     if (!user) return;
-    const newUsers = users.map(u => {
-      if (u.id === teacherId && u.teacherProfile) {
-        const newReview = {
-          id: `rev-${Date.now()}`,
-          authorId: user.id,
-          authorName: `${user.firstName} ${user.lastName}`,
-          rating,
-          comment,
-          createdAt: new Date().toISOString()
-        };
-        return {
-          ...u,
-          teacherProfile: {
-            ...u.teacherProfile,
-            reviews: [...(u.teacherProfile.reviews || []), newReview]
+    try {
+      const newApp = {
+        userId: user.id,
+        user: user,
+        ...data,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      await addDoc(collection(db, 'teacherApplications'), newApp);
+      await updateUser({ teacherStatus: 'pending_approval' });
+
+      const adminUser = users.find(u => u.role === 'admin') || ADMIN_USER;
+      await addNotification(adminUser.id, {
+        type: 'message',
+        title: 'Nouveau dossier Enseignant',
+        message: `${user.firstName} ${user.lastName} a soumis un dossier pour rejoindre l'annuaire des enseignants.`
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'teacherApplications');
+    }
+  };
+
+  const reviewTeacherApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
+    try {
+      const app = teacherApplications.find(a => a.id === applicationId);
+      if (!app) return;
+
+      await updateDoc(doc(db, 'teacherApplications', applicationId), { status });
+
+      const updatedUserData: Partial<User> = { teacherStatus: status };
+      if (status === 'approved') {
+        updatedUserData.teacherProfile = {
+          academicRank: app.academicRank,
+          biography: app.biography,
+          yearsOfExperience: 0,
+          languages: ['Français'],
+          specialties: app.specialties,
+          domains: app.domains,
+          publications: [],
+          courses: app.courses,
+          availability: {
+            isAvailable: true,
+            willingToTravel: false
           }
         };
       }
-      return u;
-    });
-    saveUsers(newUsers);
+      
+      await updateDoc(doc(db, 'users', app.userId), updatedUserData);
+
+      await addNotification(app.userId, {
+        type: status === 'approved' ? 'success' : 'alert',
+        title: status === 'approved' ? 'Dossier Enseignant Accepté' : 'Dossier Enseignant Refusé',
+        message: status === 'approved' 
+          ? 'Votre dossier enseignant a été validé.' 
+          : 'Votre dossier enseignant a été refusé.'
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `teacherApplications/${applicationId}`);
+    }
+  };
+
+  const submitSubscriptionRequest = async (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => {
+    if (!user) return;
+    try {
+      const newRequest = {
+        userId: user.id,
+        user: user,
+        type,
+        amount,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      await addDoc(collection(db, 'subscriptionRequests'), newRequest);
+
+      const updateData: Partial<User> = {};
+      if (type === 'exam') updateData.examSubscriptionStatus = 'pending';
+      else if (type === 'premium') updateData.premiumSubscriptionStatus = 'pending';
+      else if (type === 'tutor') updateData.subscriptionStatus = 'pending';
+      else if (type === 'marketplace') updateData.marketplaceSubscriptionStatus = 'pending';
+      else if (type === 'motoride') updateData.motoRideSubscriptionStatus = 'pending';
+      else if (type === 'event') updateData.eventSubscriptionStatus = 'pending';
+      else if (type === 'institution') {
+        updateData.institutionProfile = {
+          ...user.institutionProfile!,
+          subscriptionStatus: 'pending'
+        };
+      }
+      await updateUser(updateData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'subscriptionRequests');
+    }
+  };
+
+  const reviewSubscriptionRequest = async (requestId: string, status: 'approved' | 'rejected') => {
+    try {
+      const req = subscriptionRequests.find(r => r.id === requestId);
+      if (!req) return;
+
+      await updateDoc(doc(db, 'subscriptionRequests', requestId), { status });
+
+      const targetUser = users.find(u => u.id === req.userId);
+      if (!targetUser) return;
+
+      const updatedUser: Partial<User> = {};
+      if (status === 'approved') {
+        const expiry = new Date();
+        if (req.type === 'exam') {
+          expiry.setDate(expiry.getDate() + 360);
+          updatedUser.examSubscriptionStatus = 'active';
+          updatedUser.examSubscriptionExpiry = expiry.toISOString();
+        } else if (req.type === 'premium') {
+          expiry.setDate(expiry.getDate() + 30);
+          updatedUser.premiumSubscriptionStatus = 'active';
+          updatedUser.premiumSubscriptionExpiry = expiry.toISOString();
+        } else if (req.type === 'tutor') {
+          expiry.setDate(expiry.getDate() + 30);
+          updatedUser.subscriptionStatus = 'active';
+          updatedUser.subscriptionExpiry = expiry.toISOString();
+          updatedUser.role = 'tutor';
+        } else if (req.type === 'marketplace') {
+          expiry.setDate(expiry.getDate() + 30);
+          updatedUser.marketplaceSubscriptionStatus = 'active';
+          updatedUser.marketplaceSubscriptionExpiry = expiry.toISOString();
+        } else if (req.type === 'motoride') {
+          expiry.setDate(expiry.getDate() + 30);
+          updatedUser.motoRideSubscriptionStatus = 'active';
+          updatedUser.motoRideSubscriptionExpiry = expiry.toISOString();
+        } else if (req.type === 'event') {
+          expiry.setDate(expiry.getDate() + 30);
+          updatedUser.eventSubscriptionStatus = 'active';
+          updatedUser.eventSubscriptionExpiry = expiry.toISOString();
+        } else if (req.type === 'institution') {
+          expiry.setDate(expiry.getDate() + 365);
+          updatedUser.institutionProfile = {
+            ...targetUser.institutionProfile!,
+            subscriptionStatus: 'active',
+            subscriptionExpiry: expiry.toISOString()
+          };
+        }
+      } else {
+        if (req.type === 'exam') updatedUser.examSubscriptionStatus = 'none';
+        else if (req.type === 'premium') updatedUser.premiumSubscriptionStatus = 'none';
+        else if (req.type === 'tutor') updatedUser.subscriptionStatus = 'none';
+        else if (req.type === 'marketplace') updatedUser.marketplaceSubscriptionStatus = 'none';
+        else if (req.type === 'motoride') updatedUser.motoRideSubscriptionStatus = 'none';
+        else if (req.type === 'event') updatedUser.eventSubscriptionStatus = 'none';
+        else if (req.type === 'institution') {
+          updatedUser.institutionProfile = {
+            ...targetUser.institutionProfile!,
+            subscriptionStatus: 'none'
+          };
+        }
+      }
+      
+      await updateDoc(doc(db, 'users', req.userId), updatedUser);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `subscriptionRequests/${requestId}`);
+    }
+  };
+
+  const updateUserRole = async (userId: string, role: User['role']) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { role });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+    }
+  };
+
+  const addNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'read' | 'createdAt'>) => {
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        ...notification,
+        userId,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'notifications');
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await updateDoc(doc(db, 'notifications', notificationId), { read: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `notifications/${notificationId}`);
+    }
+  };
+
+  const addTeacherReview = async (teacherId: string, rating: number, comment: string) => {
+    if (!user) return;
+    try {
+      const teacher = users.find(u => u.id === teacherId);
+      if (!teacher || !teacher.teacherProfile) return;
+
+      const newReview = {
+        id: `rev-${Date.now()}`,
+        authorId: user.id,
+        authorName: `${user.firstName} ${user.lastName}`,
+        rating,
+        comment,
+        createdAt: new Date().toISOString()
+      };
+
+      await updateDoc(doc(db, 'users', teacherId), {
+        'teacherProfile.reviews': [...(teacher.teacherProfile.reviews || []), newReview]
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${teacherId}`);
+    }
   };
 
   return (
@@ -514,6 +553,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, 
       users,
       ads,
+      documents,
       updateAds,
       login, 
       signup,
@@ -531,6 +571,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       teacherApplications,
       subscriptionRequests,
       notifications,
+      internships,
+      events,
+      groups,
       addNotification,
       markNotificationAsRead,
       addTeacherReview,

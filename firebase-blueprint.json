@@ -1,0 +1,174 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "university": { "type": "string" },
+        "major": { "type": "string" },
+        "level": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "tutor", "admin"] },
+        "avatarUrl": { "type": "string" },
+        "tutorStatus": { "type": "string", "enum": ["none", "pending", "approved", "rejected"] },
+        "teacherStatus": { "type": "string", "enum": ["none", "pending_approval", "approved", "rejected"] }
+      },
+      "required": ["email", "firstName", "lastName", "role"]
+    },
+    "Ad": {
+      "title": "Ad",
+      "description": "Marketplace advertisement",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "userId": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "price", "userId", "category"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Academic document",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["exam", "exercise", "summary", "thesis"] },
+        "university": { "type": "string" },
+        "major": { "type": "string" },
+        "year": { "type": "string" },
+        "subject": { "type": "string" },
+        "authorId": { "type": "string" },
+        "downloadUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "downloads": { "type": "number" },
+        "likes": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "university", "subject", "downloadUrl", "authorId"]
+    },
+    "Internship": {
+      "title": "Internship",
+      "description": "Internship or job offer",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["internship", "job"] },
+        "description": { "type": "string" },
+        "requirements": { "type": "array" },
+        "salary": { "type": "string" },
+        "deadline": { "type": "string" },
+        "postedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "company", "type", "postedBy"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "University event",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["conference", "defense", "competition", "cultural", "other"] },
+        "location": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "organizerId": { "type": "string" },
+        "attendees": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "date", "organizerId"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "Community group",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "members": { "type": "array" },
+        "createdBy": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdBy"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Community post",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "content": { "type": "string" },
+        "likes": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["groupId", "authorId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/ads/{adId}": {
+      "schema": "Ad",
+      "description": "Marketplace ads"
+    },
+    "/documents/{docId}": {
+      "schema": "Document",
+      "description": "Academic documents"
+    },
+    "/internships/{internshipId}": {
+      "schema": "Internship",
+      "description": "Internship offers"
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "University events"
+    },
+    "/groups/{groupId}": {
+      "schema": "Group",
+      "description": "Community groups"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Community posts"
+    },
+    "/comments/{commentId}": {
+      "schema": "object",
+      "description": "Post comments"
+    },
+    "/orientationProfiles/{userId}": {
+      "schema": "object",
+      "description": "User orientation profiles"
+    },
+    "/applications/{appId}": {
+      "schema": "object",
+      "description": "Tutor applications"
+    },
+    "/teacherApplications/{appId}": {
+      "schema": "object",
+      "description": "Teacher applications"
+    },
+    "/subscriptionRequests/{requestId}": {
+      "schema": "object",
+      "description": "Subscription requests"
+    },
+    "/notifications/{notifId}": {
+      "schema": "object",
+      "description": "User notifications"
+    }
+  }
+}
