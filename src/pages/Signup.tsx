@@ -7,9 +7,22 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<'student' | 'institution' | 'teacher'>('student');
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+
+  const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle();
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Erreur de connexion avec Google');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -314,6 +327,25 @@ export default function Signup() {
             {isLoading ? <Loader2 className="animate-spin" /> : 'Créer mon compte'}
           </button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Ou s'inscrire avec</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignup}
+          disabled={isLoading}
+          className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 border border-gray-200 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+          Google
+        </button>
 
         <div className="text-center text-sm text-gray-500">
           Déjà un compte ? <Link to="/login" className="font-bold text-emerald-600 hover:underline">Se connecter</Link>

@@ -205,15 +205,13 @@ export default function Documents() {
           <h1 className="text-2xl font-bold text-slate-900">Documents Universitaires</h1>
           <p className="text-slate-500 text-sm">Accédez à des milliers de ressources partagées par les étudiants.</p>
         </div>
-        {user?.role === 'admin' && (
-          <button 
-            onClick={() => setShowUploadModal(true)}
-            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center gap-2 active:scale-95"
-          >
-            <FileText size={18} />
-            Partager un document
-          </button>
-        )}
+        <button 
+          onClick={() => setShowUploadModal(true)}
+          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center gap-2 active:scale-95"
+        >
+          <FileText size={18} />
+          Partager un document
+        </button>
       </div>
 
       {/* Upload Modal */}
@@ -512,9 +510,10 @@ export default function Documents() {
                 <div className={cn(
                   "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-inner",
                   doc.type === 'exam' ? "bg-red-50 text-red-600" :
-                  doc.type === 'summary' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                  doc.type === 'summary' ? "bg-blue-50 text-blue-600" : 
+                  doc.type === 'thesis' ? "bg-amber-50 text-amber-600" : "bg-purple-50 text-purple-600"
                 )}>
-                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : 'TD'}
+                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : doc.type === 'thesis' ? 'ME' : 'TD'}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">

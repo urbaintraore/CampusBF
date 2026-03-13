@@ -4,7 +4,7 @@ import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image 
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
-import { db, storage } from '@/lib/firebase';
+import { auth, db, storage, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
   collection, 
   addDoc, 
@@ -30,11 +30,21 @@ export default function Marketplace() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
-    const adsList = ads.map(ad => ({
-      ...ad,
-      postedAt: ad.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || 
-                (typeof ad.createdAt === 'string' ? ad.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
-    }));
+    const adsList = ads.map(ad => {
+      let postedAt = '';
+      if (ad.createdAt?.toDate) {
+        postedAt = ad.createdAt.toDate().toISOString().split('T')[0];
+      } else if (typeof ad.createdAt === 'string') {
+        postedAt = ad.createdAt.split('T')[0];
+      } else {
+        postedAt = new Date().toISOString().split('T')[0];
+      }
+      
+      return {
+        ...ad,
+        postedAt
+      };
+    });
     setItems(adsList);
   }, [ads]);
 
@@ -148,7 +158,7 @@ export default function Marketplace() {
       resetSellForm();
       alert('Votre annonce a été publiée avec succès !');
     } catch (error) {
-      console.error("Error publishing ad:", error);
+      handleFirestoreError(error, OperationType.WRITE, 'ads');
       alert("Erreur lors de la publication de l'annonce.");
     } finally {
       setIsPublishing(false);
@@ -160,7 +170,7 @@ export default function Marketplace() {
       try {
         await deleteDoc(doc(db, 'ads', id));
       } catch (error) {
-        console.error("Error deleting ad:", error);
+        handleFirestoreError(error, OperationType.DELETE, `ads/${id}`);
         alert("Erreur lors de la suppression.");
       }
     }

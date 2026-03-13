@@ -6,7 +6,9 @@ import {
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut 
+  signOut,
+  signInWithPopup,
+  GoogleAuthProvider
 } from 'firebase/auth';
 import { 
   doc, 
@@ -29,6 +31,7 @@ interface AuthContextType {
   documents: any[];
   updateAds: (newAds: Ad[]) => void;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (updatedUser: Partial<User>) => void;
@@ -108,7 +111,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
-            const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+            const data = userDoc.data();
+            const userData = { id: firebaseUser.uid, ...data } as User;
+            
+            // Force admin role for the owner email if not already set
+            if (firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' && userData.role !== 'admin') {
+              userData.role = 'admin';
+              try {
+                await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+              } catch (e) {
+                console.error("Failed to auto-upgrade to admin:", e);
+              }
+            }
+            
             setUser(userData);
 
             // Start listeners only after we have the user data and role
@@ -199,10 +214,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email?: string, password?: string, asAdmin?: boolean) => {
-    if (asAdmin) {
-      // For testing purposes, we can still allow mock admin login if needed, 
-      // but ideally we use real auth.
+    if (asAdmin || (email === 'admin@campusbf.bf' && password === 'admin')) {
+      // For testing purposes, we allow mock admin login
       setUser(ADMIN_USER);
+      setIsLoading(false);
       return;
     }
 
@@ -214,6 +229,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       throw new Error(error.message || 'Erreur de connexion');
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+      
+      // Check if user document exists, if not create it
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+      if (!userDoc.exists()) {
+        const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
+        const lastName = lastNameParts.join(' ') || 'CampusBF';
+        
+        const newUser: Partial<User> = {
+          firstName,
+          lastName,
+          email: firebaseUser.email || '',
+          university: '',
+          major: '',
+          level: '',
+          role: firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
+          avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
+        };
+        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Erreur de connexion avec Google');
     }
   };
 
@@ -231,11 +275,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastName: userData.lastName || '',
         email: userData.email,
         university: userData.university || '',
-        major: userData.major || '',
-        level: userData.level || '',
-        role: userData.email.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
+        role: userData.email.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : (userData.role || 'student'),
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
       };
+
+      if (userData.major) newUser.major = userData.major;
+      if (userData.level) newUser.level = userData.level;
+      if (userData.teacherStatus) newUser.teacherStatus = userData.teacherStatus;
+      if (userData.institutionProfile) newUser.institutionProfile = userData.institutionProfile;
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       setUser({ id: firebaseUser.uid, ...newUser } as User);
@@ -556,6 +603,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       documents,
       updateAds,
       login, 
+      loginWithGoogle,
       signup,
       logout, 
       updateUser, 

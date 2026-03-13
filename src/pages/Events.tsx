@@ -10,9 +10,10 @@ import {
   updateDoc, 
   doc, 
   arrayUnion, 
-  arrayRemove 
+  arrayRemove,
+  serverTimestamp 
 } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 
 export default function Events() {
   const { user, events, users } = useAuth();
@@ -61,7 +62,7 @@ export default function Events() {
         attendees: isRegistered ? arrayRemove(user.id) : arrayUnion(user.id)
       });
     } catch (error) {
-      console.error('Error registering for event:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `events/${eventId}`);
     }
   };
 
@@ -74,7 +75,7 @@ export default function Events() {
         ...newEvent,
         organizerId: user.id,
         attendees: [user.id],
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       });
 
       setShowCreateModal(false);
@@ -87,7 +88,7 @@ export default function Events() {
         time: ''
       });
     } catch (error) {
-      console.error('Error creating event:', error);
+      handleFirestoreError(error, OperationType.WRITE, 'events');
     }
   };
 

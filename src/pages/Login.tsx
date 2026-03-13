@@ -1,16 +1,41 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle();
+      const currentUser = auth.currentUser;
+      if (currentUser?.email?.toLowerCase() === 'urbain.traoreurb@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
+      if (err.message?.includes('popup-closed-by-user')) {
+        setError('La fenêtre de connexion a été fermée. Si le problème persiste, vous pouvez utiliser le compte de test : admin@campusbf.bf / admin');
+      } else if (err.message?.includes('popup-blocked')) {
+        setError('Le popup a été bloqué. Veuillez autoriser les popups ou utiliser le compte : admin@campusbf.bf / admin');
+      } else {
+        setError(err.message || 'Erreur de connexion avec Google');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +118,25 @@ export default function Login() {
             {isLoading ? <Loader2 className="animate-spin" /> : 'Se connecter'}
           </button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Ou continuer avec</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+          className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 border border-gray-200 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+          Google
+        </button>
 
         <div className="text-center text-sm text-gray-500 mt-6">
           Pas encore de compte ? <Link to="/signup" className="font-bold text-emerald-600 hover:underline">S'inscrire</Link>

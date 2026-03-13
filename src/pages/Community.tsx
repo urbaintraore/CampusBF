@@ -92,13 +92,13 @@ export default function Community() {
         content: postContent,
         likes: 0,
         likedBy: [],
-        createdAt: new Date().toISOString(), // Using ISO string for consistency with other parts
+        createdAt: serverTimestamp(),
       });
 
       setPostContent('');
       showToast('Publication partagée avec succès !');
     } catch (error) {
-      console.error('Error creating post:', error);
+      handleFirestoreError(error, OperationType.WRITE, 'posts');
     }
   };
 
@@ -159,14 +159,14 @@ export default function Community() {
         postId,
         authorId: user.id,
         content: commentContent,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       });
 
       setCommentContent('');
       setActiveCommentPostId(null);
       showToast('Commentaire ajouté !');
     } catch (error) {
-      console.error('Error adding comment:', error);
+      handleFirestoreError(error, OperationType.WRITE, 'comments');
     }
   };
 
@@ -205,14 +205,14 @@ export default function Community() {
         category: newGroupData.type,
         members: [user.id],
         createdBy: user.id,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       });
 
       setShowCreateModal(false);
       setNewGroupData({ name: '', description: '', type: 'university' });
       showToast('Groupe créé avec succès !');
     } catch (error) {
-      console.error('Error creating group:', error);
+      handleFirestoreError(error, OperationType.WRITE, 'groups');
     }
   };
 
@@ -319,7 +319,7 @@ export default function Community() {
                     <img src={author.avatarUrl} alt={author.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
                     <div>
                       <h3 className="font-bold text-gray-900 text-sm">{author.firstName} {author.lastName}</h3>
-                      <p className="text-xs text-gray-500">{author.major} • {new Date(post.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">{author.major} • {post.createdAt?.toDate?.() ? post.createdAt.toDate().toLocaleDateString() : (typeof post.createdAt === 'string' ? new Date(post.createdAt).toLocaleDateString() : '')}</p>
                     </div>
                   </div>
                   {group && (
@@ -683,7 +683,7 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
               <div className="bg-gray-50 rounded-2xl rounded-tl-none p-3 flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-gray-900">{author.firstName} {author.lastName}</span>
-                  <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  <span className="text-[10px] text-gray-400">{comment.createdAt?.toDate?.() ? comment.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : (typeof comment.createdAt === 'string' ? new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '')}</span>
                 </div>
                 <p className="text-sm text-gray-700">{comment.content}</p>
                 <button 

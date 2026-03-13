@@ -1,19 +1,28 @@
 import React, { useState, useRef } from 'react';
 import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, AlertCircle, FileUp, Edit } from 'lucide-react';
-import { MOCK_INTERNSHIPS } from '@/data/mock';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from '@/lib/firebase';
 
 export default function Internships() {
-  const { user } = useAuth();
-  const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
+  const { user, internships } = useAuth();
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showApplySuccess, setShowApplySuccess] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
   const [applyFile, setApplyFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const applyFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state for new internship
@@ -51,51 +60,96 @@ export default function Internships() {
     setShowPostModal(true);
   };
 
-  const openApplyModal = (jobTitle: string) => {
+  const openApplyModal = (job: any) => {
     if (!user) {
       alert('Veuillez vous connecter pour postuler.');
       return;
     }
-    setSelectedJob(jobTitle);
+    setSelectedJob(job);
     setShowApplyModal(true);
   };
 
-  const handleApplySubmit = (e: React.FormEvent) => {
+  const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!applyFile) {
       alert('Veuillez charger votre dossier (CV/Lettre de motivation).');
       return;
     }
     
-    // Simulate upload and submission
-    setShowApplyModal(false);
-    setShowApplySuccess(true);
-    setApplyFile(null);
-    setTimeout(() => setShowApplySuccess(false), 3000);
-  };
+    if (!user || !selectedJob) return;
 
-  const handleSubmitInternship = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId) {
-      setInternships(prev => prev.map(item => 
-        item.id === editingId ? { ...item, ...newInternship } : item
-      ));
-      alert('Offre modifiée avec succès !');
-    } else {
-      const internship = {
-        id: `i-${Date.now()}`,
-        ...newInternship,
-        postedAt: new Date().toISOString().split('T')[0]
+    setIsSubmitting(true);
+    try {
+      // In a real app, we would upload the file to Firebase Storage first
+      // For now, we'll just create the application record
+      // We'll use a placeholder URL for the file
+      const applicationData = {
+        internshipId: selectedJob.id,
+        internshipTitle: selectedJob.title,
+        company: selectedJob.company,
+        studentId: user.uid,
+        studentName: user.displayName || 'Étudiant',
+        studentEmail: user.email,
+        status: 'pending',
+        appliedAt: serverTimestamp(),
+        resumeUrl: 'https://placeholder-url.com/resume.pdf', // Placeholder
       };
-      setInternships([internship, ...internships]);
-      alert('Offre publiée avec succès !');
+
+      await addDoc(collection(db, 'applications'), applicationData);
+
+      setShowApplyModal(false);
+      setShowApplySuccess(true);
+      setApplyFile(null);
+      setTimeout(() => setShowApplySuccess(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'applications');
+      alert('Une erreur est survenue lors de l\'envoi de votre candidature.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setShowPostModal(false);
   };
 
-  const handleDeleteInternship = (id: string) => {
+  const handleSubmitInternship = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsSubmitting(true);
+    try {
+      if (editingId) {
+        const internshipRef = doc(db, 'internships', editingId);
+        await updateDoc(internshipRef, {
+          ...newInternship,
+          updatedAt: serverTimestamp(),
+        });
+        alert('Offre modifiée avec succès !');
+      } else {
+        const internshipData = {
+          ...newInternship,
+          authorId: user.uid,
+          postedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        };
+        await addDoc(collection(db, 'internships'), internshipData);
+        alert('Offre publiée avec succès !');
+      }
+      setShowPostModal(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'internships');
+      alert('Une erreur est survenue lors de la publication.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteInternship = async (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette offre ?')) {
-      setInternships(prev => prev.filter(item => item.id !== id));
+      try {
+        await deleteDoc(doc(db, 'internships', id));
+        alert('Offre supprimée avec succès !');
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `internships/${id}`);
+        alert('Une erreur est survenue lors de la suppression.');
+      }
     }
   };
 
@@ -143,15 +197,23 @@ export default function Internships() {
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4">
           <div className="bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2">
             <CheckCircle2 size={20} />
-            <span className="font-medium">Candidature envoyée avec succès pour : {selectedJob}</span>
+            <span className="font-medium">Candidature envoyée avec succès pour : {selectedJob?.title}</span>
           </div>
         </div>
       )}
 
       <div className="grid gap-4">
-        {internships.map((job) => (
+        {internships.length === 0 ? (
+          <div className="bg-white p-12 rounded-2xl border border-dashed border-gray-200 text-center">
+            <Briefcase className="mx-auto text-gray-300 mb-4" size={48} />
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Aucune offre disponible</h3>
+            <p className="text-gray-500 max-w-xs mx-auto">
+              Il n'y a pas encore d'offres de stage ou d'emploi publiées. Revenez plus tard !
+            </p>
+          </div>
+        ) : internships.map((job) => (
           <div key={job.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative">
-            {isAdmin && (
+            {(isAdmin || user?.uid === job.authorId) && (
               <div className="absolute top-4 right-4 flex gap-2">
                 <button 
                   onClick={() => handleEditInternship(job)}
@@ -187,7 +249,7 @@ export default function Internships() {
                 <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-500 mb-4">
                   <span className="flex items-center gap-1.5"><Building2 size={16} /> {job.company}</span>
                   <span className="flex items-center gap-1.5"><MapPin size={16} /> {job.location}</span>
-                  <span className="flex items-center gap-1.5"><Clock size={16} /> Publié le {job.postedAt}</span>
+                  <span className="flex items-center gap-1.5"><Clock size={16} /> Publié le {job.postedAt?.toDate?.() ? job.postedAt.toDate().toLocaleDateString() : job.postedAt}</span>
                   {job.deadline && (
                     <span className="flex items-center gap-1.5 text-amber-600 font-medium"><Clock size={16} /> Limite: {job.deadline}</span>
                   )}
@@ -199,7 +261,7 @@ export default function Internships() {
 
                 <div className="flex items-center gap-3">
                   <button 
-                    onClick={() => openApplyModal(job.title)}
+                    onClick={() => openApplyModal(job)}
                     className="px-6 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                   >
                     Postuler
@@ -219,7 +281,7 @@ export default function Internships() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Postuler : {selectedJob}</h2>
+              <h2 className="text-xl font-bold text-gray-900">Postuler : {selectedJob?.title}</h2>
               <button onClick={() => setShowApplyModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <X size={20} />
               </button>
@@ -391,8 +453,16 @@ export default function Internships() {
                     />
                   </div>
 
-                  <button type="submit" className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2">
-                    <Send size={18} />
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Send size={18} />
+                    )}
                     {editingId ? 'Enregistrer les modifications' : 'Publier l\'offre'}
                   </button>
                 </form>

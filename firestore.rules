@@ -38,8 +38,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "urbain.traoreurb@gmail.com" && request.auth.token.email_verified == true));
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         request.auth.token.email.lower() == "urbain.traoreurb@gmail.com");
     }
 
     function isValidEmail(email) {
@@ -65,13 +66,16 @@ service cloud.firestore {
              data.firstName is string && data.firstName.size() > 0 && data.firstName.size() <= 100 &&
              data.lastName is string && data.lastName.size() > 0 && data.lastName.size() <= 100 &&
              data.email is string && isValidEmail(data.email) &&
-             data.role in ['student', 'tutor', 'admin'] &&
+             data.role in ['student', 'tutor', 'admin', 'teacher', 'institution'] &&
              (!('university' in data) || (data.university is string && data.university.size() <= 200)) &&
              (!('major' in data) || (data.major is string && data.major.size() <= 200)) &&
              (!('level' in data) || (data.level is string && data.level.size() <= 50)) &&
              (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 1000)) &&
              (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
-             (!('neighborhood' in data) || (data.neighborhood is string && data.neighborhood.size() <= 100));
+             (!('neighborhood' in data) || (data.neighborhood is string && data.neighborhood.size() <= 100)) &&
+             (!('tutorStatus' in data) || data.tutorStatus in ['none', 'pending', 'approved', 'rejected']) &&
+             (!('teacherStatus' in data) || data.teacherStatus in ['none', 'pending_approval', 'pending_dossier', 'approved', 'rejected']) &&
+             (!('institutionProfile' in data) || data.institutionProfile is map);
     }
 
     function isValidAd(data) {
@@ -125,9 +129,9 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
-                      request.resource.data.role == 'student' &&
-                      !('tutorStatus' in request.resource.data) &&
-                      !('teacherStatus' in request.resource.data);
+                      (request.resource.data.role in ['student', 'teacher', 'institution'] || (request.resource.data.role == 'admin' && request.auth.token.email.lower() == "urbain.traoreurb@gmail.com")) &&
+                      (!('tutorStatus' in request.resource.data) || request.resource.data.tutorStatus == 'none') &&
+                      (!('teacherStatus' in request.resource.data) || request.resource.data.teacherStatus == 'pending_dossier');
       allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
                       request.resource.data.role == resource.data.role &&
                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'subscriptionStatus', 'eventSubscriptionStatus'])) || isAdmin();
