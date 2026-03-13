@@ -14,21 +14,28 @@ export default function Login() {
   const [error, setError] = useState('');
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
     setError('');
+    // Start login immediately to preserve the browser's "user gesture" for popups
+    const loginPromise = loginWithGoogle();
+    setIsLoading(true);
+    
     try {
-      await loginWithGoogle();
+      await loginPromise;
       const currentUser = auth.currentUser;
-      if (currentUser?.email?.toLowerCase() === 'urbain.traoreurb@gmail.com') {
-        navigate('/admin');
-      } else {
-        navigate('/');
+      if (currentUser) {
+        if (currentUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       }
     } catch (err: any) {
       if (err.message?.includes('popup-closed-by-user')) {
         setError('La fenêtre de connexion a été fermée. Si le problème persiste, vous pouvez utiliser le compte de test : admin@campusbf.bf / admin');
       } else if (err.message?.includes('popup-blocked')) {
         setError('Le popup a été bloqué. Veuillez autoriser les popups ou utiliser le compte : admin@campusbf.bf / admin');
+      } else if (err.message?.includes('unauthorized-domain')) {
+        setError("Ce domaine n'est pas autorisé. Ajoutez-le dans la console Firebase (Authentication > Settings > Authorized domains).");
       } else {
         setError(err.message || 'Erreur de connexion avec Google');
       }

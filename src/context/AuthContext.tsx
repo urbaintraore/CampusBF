@@ -8,6 +8,8 @@ import {
   createUserWithEmailAndPassword, 
   signOut,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider
 } from 'firebase/auth';
 import { 
@@ -99,6 +101,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
     testConnection();
+
+    // Handle redirect result for Google Login on mobile/Vercel
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const firebaseUser = result.user;
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (!userDoc.exists()) {
+            const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
+            const lastName = lastNameParts.join(' ') || 'CampusBF';
+            
+            const newUser: Partial<User> = {
+              firstName,
+              lastName,
+              email: firebaseUser.email || '',
+              university: '',
+              major: '',
+              level: '',
+              role: firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
+              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
+            };
+            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+          }
+        }
+      } catch (error) {
+        console.error("Redirect auth error:", error);
+      }
+    };
+    handleRedirectResult();
 
     let unsubscribes: (() => void)[] = [];
 
@@ -226,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      await auth.authStateReady();
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       throw new Error(error.message || 'Erreur de connexion');
@@ -233,7 +266,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginWithGoogle = async () => {
+    await auth.authStateReady();
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
     try {
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
@@ -257,7 +294,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Erreur de connexion avec Google');
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.message?.includes('popup')) {
+        // Fallback to redirect on mobile/Vercel
+        await signInWithRedirect(auth, provider);
+      } else {
+        throw new Error(error.message || 'Erreur de connexion avec Google');
+      }
     }
   };
 
@@ -267,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      await auth.authStateReady();
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
       const firebaseUser = userCredential.user;
 

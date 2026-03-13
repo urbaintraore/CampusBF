@@ -12,13 +12,26 @@ export default function Signup() {
   const [error, setError] = useState('');
 
   const handleGoogleSignup = async () => {
-    setIsLoading(true);
     setError('');
+    // Start login immediately to preserve the browser's "user gesture" for popups
+    const loginPromise = loginWithGoogle();
+    setIsLoading(true);
+    
     try {
-      await loginWithGoogle();
-      navigate('/');
+      await loginPromise;
+      if (auth.currentUser) {
+        navigate('/');
+      }
     } catch (err: any) {
-      setError(err.message || 'Erreur de connexion avec Google');
+      if (err.message?.includes('popup-closed-by-user')) {
+        setError('La fenêtre a été fermée. Veuillez réessayer.');
+      } else if (err.message?.includes('popup-blocked')) {
+        setError('Le popup a été bloqué par votre navigateur. Veuillez réessayer ou autoriser les popups.');
+      } else if (err.message?.includes('unauthorized-domain')) {
+        setError("Ce domaine n'est pas autorisé. Ajoutez-le dans la console Firebase (Authentication > Settings > Authorized domains).");
+      } else {
+        setError(err.message || 'Erreur de connexion avec Google');
+      }
     } finally {
       setIsLoading(false);
     }
