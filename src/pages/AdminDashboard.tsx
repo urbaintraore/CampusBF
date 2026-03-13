@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY } from '@/data/mock';
 import { cn } from '@/lib/utils';
-import { db, storage, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function AdminDashboard() {
   const { 
@@ -18,22 +16,19 @@ export default function AdminDashboard() {
     updateUserRole, 
     deleteUser,
     ads,
-    updateAds,
-    documents,
-    internships,
-    posts,
-    deleteDocument,
-    deleteInternship,
-    deleteAd,
-    deletePost
+    updateAds
   } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
   const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers'>('documents');
   const [userSearch, setUserSearch] = useState('');
   
+  // Content states
+  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
+  const [marketplace, setMarketplace] = useState(MOCK_MARKETPLACE);
+  const [community, setCommunity] = useState(MOCK_COMMUNITY);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
-  const [isUploading, setIsUploading] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,7 +112,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {[
               { label: 'Utilisateurs', count: users.length.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
-              { label: 'Documents', count: documents.length.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Documents', count: '3,890', icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Signalements', count: '12', icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
               { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
@@ -383,11 +378,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => {
-                      if (confirm('Supprimer ce document ?')) {
-                        deleteDocument(doc.id);
-                      }
-                    }}
+                    onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={18} />
@@ -407,11 +398,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => {
-                      if (confirm('Supprimer cette offre ?')) {
-                        deleteInternship(job.id);
-                      }
-                    }}
+                    onClick={() => setInternships(prev => prev.filter(i => i.id !== job.id))}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={18} />
@@ -419,21 +406,17 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {contentTab === 'marketplace' && ads.filter(ad => !ad.active).map(item => (
+              {contentTab === 'marketplace' && marketplace.map(item => (
                 <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <img src={item.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{item.title}</p>
-                      <p className="text-xs text-gray-500">{item.price?.toLocaleString()} CFA • {item.sellerId}</p>
+                      <p className="text-xs text-gray-500">{item.price.toLocaleString()} CFA • {item.seller.firstName}</p>
                     </div>
                   </div>
                   <button 
-                    onClick={() => {
-                      if (confirm('Supprimer cette annonce ?')) {
-                        deleteAd(item.id);
-                      }
-                    }}
+                    onClick={() => setMarketplace(prev => prev.filter(m => m.id !== item.id))}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={18} />
@@ -441,30 +424,23 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {contentTab === 'community' && posts.map(post => {
-                const author = users.find(u => u.id === post.authorId);
-                return (
-                  <div key={post.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <img src={author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.authorId}`} alt="" className="w-10 h-10 rounded-full" />
-                      <div>
-                        <p className="font-bold text-gray-900 text-sm line-clamp-1">{post.content}</p>
-                        <p className="text-xs text-gray-500">Par {author?.firstName || 'Utilisateur'} • {post.likes} likes</p>
-                      </div>
+              {contentTab === 'community' && community.map(post => (
+                <div key={post.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <img src={post.author.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm line-clamp-1">{post.content}</p>
+                      <p className="text-xs text-gray-500">Par {post.author.firstName} • {post.likes} likes • {post.comments?.length || 0} commentaires</p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        if (confirm('Supprimer cette publication ?')) {
-                          deletePost(post.id);
-                        }
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
                   </div>
-                );
-              })}
+                  <button 
+                    onClick={() => setCommunity(prev => prev.filter(p => p.id !== post.id))}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
 
               {contentTab === 'ads' && ads.map(ad => (
                 <div key={ad.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
@@ -487,24 +463,14 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={async () => {
-                        try {
-                          await updateDoc(doc(db, 'ads', ad.id), { active: !ad.active });
-                        } catch (error) {
-                          handleFirestoreError(error, OperationType.UPDATE, `ads/${ad.id}`);
-                        }
-                      }}
+                      onClick={() => updateAds(ads.map(a => a.id === ad.id ? { ...a, active: !a.active } : a))}
                       className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       title={ad.active ? "Désactiver" : "Activer"}
                     >
                       {ad.active ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                     <button 
-                      onClick={() => {
-                        if (confirm('Supprimer cette publicité ?')) {
-                          deleteAd(ad.id);
-                        }
-                      }}
+                      onClick={() => updateAds(ads.filter(a => a.id !== ad.id))}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
@@ -781,27 +747,20 @@ export default function AdminDashboard() {
               </div>
               <div className="pt-4">
                 <button 
-                  disabled={isUploading}
-                  onClick={async () => {
-                    if (!newAd.title || !newAd.imageUrl) return;
-                    setIsUploading(true);
-                    try {
-                      await addDoc(collection(db, 'ads'), {
-                        ...newAd,
-                        active: true,
-                        createdAt: serverTimestamp()
-                      });
-                      setShowAddAdModal(false);
-                      setNewAd({ title: '', imageUrl: '', linkUrl: '' });
-                    } catch (error) {
-                      handleFirestoreError(error, OperationType.WRITE, 'ads');
-                    } finally {
-                      setIsUploading(false);
-                    }
+                  onClick={() => {
+                    const ad = {
+                      id: `ad-${Date.now()}`,
+                      ...newAd,
+                      active: true,
+                      createdAt: new Date().toISOString()
+                    };
+                    updateAds([ad, ...ads]);
+                    setShowAddAdModal(false);
+                    setNewAd({ title: '', imageUrl: '', linkUrl: '' });
                   }}
-                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
                 >
-                  {isUploading ? 'Chargement...' : 'Ajouter la publicité'}
+                  Ajouter la publicité
                 </button>
               </div>
             </div>

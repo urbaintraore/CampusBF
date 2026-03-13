@@ -92,13 +92,13 @@ export default function Community() {
         content: postContent,
         likes: 0,
         likedBy: [],
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(), // Using ISO string for consistency with other parts
       });
 
       setPostContent('');
       showToast('Publication partagée avec succès !');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'posts');
+      console.error('Error creating post:', error);
     }
   };
 
@@ -159,14 +159,14 @@ export default function Community() {
         postId,
         authorId: user.id,
         content: commentContent,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
 
       setCommentContent('');
       setActiveCommentPostId(null);
       showToast('Commentaire ajouté !');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'comments');
+      console.error('Error adding comment:', error);
     }
   };
 
@@ -205,14 +205,14 @@ export default function Community() {
         category: newGroupData.type,
         members: [user.id],
         createdBy: user.id,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
 
       setShowCreateModal(false);
       setNewGroupData({ name: '', description: '', type: 'university' });
       showToast('Groupe créé avec succès !');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'groups');
+      console.error('Error creating group:', error);
     }
   };
 
@@ -319,7 +319,7 @@ export default function Community() {
                     <img src={author.avatarUrl} alt={author.firstName} className="w-10 h-10 rounded-full bg-gray-100" />
                     <div>
                       <h3 className="font-bold text-gray-900 text-sm">{author.firstName} {author.lastName}</h3>
-                      <p className="text-xs text-gray-500">{author.major} • {post.createdAt?.toDate?.() ? post.createdAt.toDate().toLocaleDateString() : (typeof post.createdAt === 'string' ? new Date(post.createdAt).toLocaleDateString() : '')}</p>
+                      <p className="text-xs text-gray-500">{author.major} • {new Date(post.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                   {group && (
@@ -459,7 +459,7 @@ export default function Community() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className={cn("font-bold text-sm truncate", isViewing ? "text-emerald-900" : "text-gray-900")}>{group.name}</h3>
-                    <p className="text-xs text-gray-500">{group.members.length} membres</p>
+                    <p className="text-xs text-gray-500">{group.members?.length || 0} membres</p>
                   </div>
                 </div>
                 <p 
@@ -666,14 +666,14 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
     return () => unsubscribe();
   }, [postId]);
 
-  if (!showComments && comments.length === 0) return <span>0</span>;
-  if (!showComments) return <span>{comments.length}</span>;
+  if (!showComments && (!comments || comments.length === 0)) return <span>0</span>;
+  if (!showComments) return <span>{comments?.length || 0}</span>;
 
   return (
     <>
-      <span>{comments.length}</span>
+      <span>{comments?.length || 0}</span>
       <div className="mt-4 pt-4 border-t border-gray-50 space-y-4 w-full text-left">
-        {comments.map((comment) => {
+        {comments?.map((comment) => {
           const author = users.find(u => u.id === comment.authorId);
           if (!author) return null;
 
@@ -683,7 +683,7 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
               <div className="bg-gray-50 rounded-2xl rounded-tl-none p-3 flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-gray-900">{author.firstName} {author.lastName}</span>
-                  <span className="text-[10px] text-gray-400">{comment.createdAt?.toDate?.() ? comment.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : (typeof comment.createdAt === 'string' ? new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '')}</span>
+                  <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                 </div>
                 <p className="text-sm text-gray-700">{comment.content}</p>
                 <button 

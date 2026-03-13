@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Star, MessageCircle, Calendar, CheckCircle, X, GraduationCap, FileUp, CheckCircle2, AlertCircle, CreditCard, Phone, Mail } from 'lucide-react';
+import { MOCK_TUTORS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -8,7 +9,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { Tutor } from '@/types';
 
 export default function Tutors() {
-  const { user, tutors, submitTutorApplication } = useAuth();
+  const { user, users, submitTutorApplication } = useAuth();
   const navigate = useNavigate();
   const [selectedTutor, setSelectedTutor] = useState<string | null>(null);
   const [ratingModal, setRatingModal] = useState<string | null>(null);
@@ -40,6 +41,23 @@ export default function Tutors() {
       setFileSelected(false);
     }
   };
+
+  const realTutors: Tutor[] = users
+    .filter(u => u.tutorStatus === 'approved' && u.subscriptionStatus === 'active')
+    .map(u => ({
+      id: u.id,
+      userId: u.id,
+      user: u,
+      subjects: u.tutorSubjects || [],
+      hourlyRate: u.tutorHourlyRates?.college || 2000, // Default or fallback
+      hourlyRates: u.tutorHourlyRates,
+      description: u.tutorDescription || '',
+      rating: 5.0,
+      reviewsCount: 0,
+      university: u.university
+    }));
+
+  const allTutors = [...realTutors];
 
   const handleContact = (tutorUserId: string) => {
     navigate(`/messages?chat=${tutorUserId}`);
@@ -303,7 +321,7 @@ export default function Tutors() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tutors.map((tutor) => (
+        {allTutors.map((tutor) => (
           <div key={tutor.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-xl hover:border-emerald-200 transition-all group">
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -376,8 +394,8 @@ export default function Tutors() {
               <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                 {tutor.hourlyRates ? (() => {
                   const rates = Object.values(tutor.hourlyRates).filter(v => typeof v === 'number' && v > 0) as number[];
-                  const minRate = rates.length ? Math.min(...rates) : 0;
-                  const maxRate = rates.length ? Math.max(...rates) : 0;
+                  const minRate = rates?.length ? Math.min(...rates) : 0;
+                  const maxRate = rates?.length ? Math.max(...rates) : 0;
                   return (
                     <div className="flex flex-col">
                       <span className="font-bold text-emerald-700 text-lg">

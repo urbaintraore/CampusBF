@@ -136,7 +136,7 @@ export default function Orientation() {
       
       const gradesText = Object.entries(grades).map(([sem, subjects]) => {
         const validSubjects = (subjects as SubjectGrade[]).filter(s => s.name.trim() !== '' && s.grade !== '');
-        if (validSubjects.length === 0) return '';
+        if (!validSubjects || validSubjects.length === 0) return '';
         return `${sem} :\n${validSubjects.map(s => `- ${s.name} : ${s.grade}/20`).join('\n')}`;
       }).filter(text => text !== '').join('\n\n');
 
@@ -368,7 +368,7 @@ Question : ${userMsg}`
 
                 {/* Subjects List */}
                 <div className="p-4 space-y-3 min-h-[200px]">
-                  {grades[activeSemester].length === 0 ? (
+                  {!grades[activeSemester] || grades[activeSemester].length === 0 ? (
                     <div className="text-center py-8 text-slate-400 text-sm">
                       Aucune matière ajoutée pour le semestre {activeSemester}.
                     </div>
@@ -484,8 +484,8 @@ Question : ${userMsg}`
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].map(sem => {
-                    const semGrades = grades[sem].filter(g => g.name.trim() !== '' && g.grade !== '');
-                    if (semGrades.length === 0) return null;
+                    const semGrades = grades[sem]?.filter(g => g.name.trim() !== '' && g.grade !== '') || [];
+                    if (!semGrades || semGrades.length === 0) return null;
                     const avg = semGrades.reduce((acc, curr) => acc + Number(curr.grade), 0) / semGrades.length;
                     return (
                       <tr key={sem} className="hover:bg-slate-50 transition-colors">
@@ -505,7 +505,7 @@ Question : ${userMsg}`
                       </tr>
                     );
                   })}
-                  {Object.values(grades).every((sem: SubjectGrade[]) => sem.filter(g => g.name.trim() !== '' && g.grade !== '').length === 0) && (
+                  {Object.values(grades).every((sem: SubjectGrade[]) => !sem || sem.filter(g => g.name.trim() !== '' && g.grade !== '').length === 0) && (
                     <tr>
                       <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
                         Aucune note saisie pour le moment.

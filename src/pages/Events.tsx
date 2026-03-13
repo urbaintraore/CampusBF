@@ -10,10 +10,9 @@ import {
   updateDoc, 
   doc, 
   arrayUnion, 
-  arrayRemove,
-  serverTimestamp 
+  arrayRemove 
 } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 
 export default function Events() {
   const { user, events, users } = useAuth();
@@ -62,7 +61,7 @@ export default function Events() {
         attendees: isRegistered ? arrayRemove(user.id) : arrayUnion(user.id)
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `events/${eventId}`);
+      console.error('Error registering for event:', error);
     }
   };
 
@@ -75,7 +74,7 @@ export default function Events() {
         ...newEvent,
         organizerId: user.id,
         attendees: [user.id],
-        createdAt: serverTimestamp()
+        createdAt: new Date().toISOString()
       });
 
       setShowCreateModal(false);
@@ -88,7 +87,7 @@ export default function Events() {
         time: ''
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'events');
+      console.error('Error creating event:', error);
     }
   };
 
@@ -237,7 +236,7 @@ export default function Events() {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                           <Users size={14} className="text-indigo-500" />
-                          <span>{event.attendees.length} inscrits</span>
+                          <span>{event.attendees?.length || 0} inscrits</span>
                         </div>
                       </div>
 
@@ -491,7 +490,7 @@ export default function Events() {
             
             <div className="p-6 overflow-y-auto">
               <div className="space-y-4">
-                {selectedEventAttendees.attendees.length > 0 ? (
+                {(selectedEventAttendees.attendees?.length || 0) > 0 ? (
                   selectedEventAttendees.attendees.map((attendeeId) => {
                     const attendee = users.find(u => u.id === attendeeId);
                     return (

@@ -171,8 +171,8 @@ export default function TeachersDirectory() {
                   {teacher.teacherProfile?.specialties.slice(0, 3).map((s, i) => (
                     <span key={i} className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">{s}</span>
                   ))}
-                  {(teacher.teacherProfile?.specialties.length || 0) > 3 && (
-                    <span className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">+{teacher.teacherProfile!.specialties.length - 3}</span>
+                  {(teacher.teacherProfile?.specialties?.length || 0) > 3 && (
+                    <span className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">+{(teacher.teacherProfile?.specialties?.length || 0) - 3}</span>
                   )}
                 </div>
               </div>
@@ -184,7 +184,7 @@ export default function TeachersDirectory() {
                 </div>
                 <div className="flex items-center gap-1">
                   <BookOpen size={16} className="text-slate-400" />
-                  {teacher.teacherProfile?.publications.length} pub.
+                  {teacher.teacherProfile?.publications?.length || 0} pub.
                 </div>
                 <div className="flex items-center gap-1 text-amber-500 font-medium">
                   <Star size={16} className="fill-current" />
@@ -362,7 +362,7 @@ export default function TeachersDirectory() {
                       Publications Récentes
                     </h3>
                     <div className="space-y-3">
-                      {selectedTeacher.teacherProfile?.publications.length ? (
+                      {selectedTeacher.teacherProfile?.publications?.length ? (
                         selectedTeacher.teacherProfile.publications.map((pub, i) => (
                           <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                             <h4 className="font-bold text-slate-900 text-sm mb-1">{pub.title}</h4>
