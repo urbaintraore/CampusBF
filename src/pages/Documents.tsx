@@ -34,7 +34,7 @@ export default function Documents() {
   
   // Form states
   const [uploadTitle, setUploadTitle] = useState('');
-  const [uploadType, setUploadType] = useState('exam');
+  const [uploadType, setUploadType] = useState('thesis');
   const [uploadYear, setUploadYear] = useState('2024');
   const [uploadSubject, setUploadSubject] = useState('');
   const [uploadError, setUploadError] = useState('');
@@ -115,7 +115,7 @@ export default function Documents() {
     setUploadUniversity('Université Joseph Ki-Zerbo');
     setCustomUniversity('');
     setUploadTitle('');
-    setUploadType('exam');
+    setUploadType('thesis');
     setUploadYear('2024');
     setUploadSubject('');
     setUploadError('');
@@ -250,12 +250,9 @@ export default function Documents() {
                   <label className="text-sm font-semibold text-gray-700">Type</label>
                   <select 
                     value={uploadType}
-                    onChange={(e) => setUploadType(e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500"
+                    disabled
+                    className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl outline-none text-gray-500 cursor-not-allowed"
                   >
-                    <option value="exam">Examen Corrigés</option>
-                    <option value="exercise">TD Corrigé</option>
-                    <option value="summary">Cours et Résumés de cours</option>
                     <option value="thesis">Mémoire</option>
                   </select>
                 </div>

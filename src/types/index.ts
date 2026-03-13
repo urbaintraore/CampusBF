@@ -119,7 +119,7 @@ export interface TeacherApplication {
 export interface Document {
   id: string;
   title: string;
-  type: 'exam' | 'exercise' | 'summary'; // Sujet, TD, Résumé
+  type: 'exam' | 'exercise' | 'summary' | 'thesis'; // Sujet, TD, Résumé, Mémoire
   university: string;
   major: string;
   year: string;
