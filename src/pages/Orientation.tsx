@@ -134,7 +134,11 @@ export default function Orientation() {
     setStep(2);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("La clé API Gemini n'est pas configurée.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       
       const gradesText = Object.entries(grades).map(([sem, subjects]) => {
         const validSubjects = (subjects as SubjectGrade[]).filter(s => s.name.trim() !== '' && s.grade !== '');
@@ -238,7 +242,12 @@ export default function Orientation() {
     setIsChatLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        setChatMessages(prev => [...prev, { role: 'ai', text: 'Erreur : La clé API Gemini n\'est pas configurée.' }]);
+        return;
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const context = result ? `Profil de l'étudiant : Licence ${actualMajor} à ${university}. Compétences: ${extraSkills.join(', ')}. Masters recommandés : ${result.masters.map(m => `${m.name} (${m.type})`).join(', ')}.` : '';
       const concoursContext = `Voici la liste des concours de la fonction publique disponibles : ${JSON.stringify(CONCOURS_LIST)}. Si l'étudiant pose une question sur les concours, utilise cette liste pour lui indiquer ceux qui correspondent à son niveau (BEPC, BAC, Licence) et à sa spécialité (${actualMajor}).`;
       
