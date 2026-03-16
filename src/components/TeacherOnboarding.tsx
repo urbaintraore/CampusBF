@@ -5,6 +5,7 @@ import { Upload, Loader2, CheckCircle, FileText, GraduationCap, Award } from 'lu
 export default function TeacherOnboarding() {
   const { submitTeacherApplication } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     cvUrl: '',
     diplomaUrl: '',
@@ -53,6 +54,7 @@ export default function TeacherOnboarding() {
         academicRank: formData.academicRank
       });
       setIsLoading(false);
+      setIsSubmitted(true);
     }, 1500);
   };
 
@@ -70,131 +72,141 @@ export default function TeacherOnboarding() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Documents Section */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="text-emerald-600" size={20} />
-              Documents Requis
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer bg-gray-50 flex flex-col items-center justify-center">
-                <Upload className="mx-auto text-gray-400 mb-2" size={24} />
-                <p className="text-sm font-medium text-gray-700">CV Actualisé</p>
-                <p className="text-xs text-gray-500 mt-1 mb-2">PDF (Max 5MB)</p>
-                {fileNames.cvUrl && <p className="text-xs text-emerald-600 font-medium truncate w-full px-2">{fileNames.cvUrl}</p>}
-                <input type="file" className="hidden" accept=".pdf" onChange={(e) => handleFileChange(e, 'cvUrl')} />
-              </label>
-              <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer bg-gray-50 flex flex-col items-center justify-center">
-                <Upload className="mx-auto text-gray-400 mb-2" size={24} />
-                <p className="text-sm font-medium text-gray-700">Diplôme le plus élevé</p>
-                <p className="text-xs text-gray-500 mt-1 mb-2">PDF, JPG (Max 5MB)</p>
-                {fileNames.diplomaUrl && <p className="text-xs text-emerald-600 font-medium truncate w-full px-2">{fileNames.diplomaUrl}</p>}
-                <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={(e) => handleFileChange(e, 'diplomaUrl')} />
-              </label>
-              <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer bg-gray-50 flex flex-col items-center justify-center">
-                <Upload className="mx-auto text-gray-400 mb-2" size={24} />
-                <p className="text-sm font-medium text-gray-700">Preuve du Grade</p>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Arrêté, Attestation...</p>
-                {fileNames.rankProofUrl && <p className="text-xs text-emerald-600 font-medium truncate w-full px-2">{fileNames.rankProofUrl}</p>}
-                <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={(e) => handleFileChange(e, 'rankProofUrl')} />
-              </label>
+        {isSubmitted ? (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle size={40} />
             </div>
-            <p className="text-xs text-gray-500 italic">* Les fichiers sélectionnés seront envoyés avec votre dossier.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Dossier envoyé !</h2>
+            <p className="text-gray-500">Votre candidature a été soumise avec succès. Vous recevrez une réponse sous 72h.</p>
           </div>
-
-          {/* Academic Profile Section */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Award className="text-emerald-600" size={20} />
-              Profil Académique
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Grade Académique</label>
-                <select 
-                  name="academicRank"
-                  required
-                  value={formData.academicRank}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white"
-                >
-                  <option value="Assistant">Assistant</option>
-                  <option value="Maître Assistant">Maître Assistant</option>
-                  <option value="Maître de Conférences">Maître de Conférences</option>
-                  <option value="Professeur Titulaire">Professeur Titulaire</option>
-                  <option value="Autre">Autre</option>
-                </select>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Documents Section */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <FileText className="text-emerald-600" size={20} />
+                Documents Requis
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer bg-gray-50 flex flex-col items-center justify-center">
+                  <Upload className="mx-auto text-gray-400 mb-2" size={24} />
+                  <p className="text-sm font-medium text-gray-700">CV Actualisé</p>
+                  <p className="text-xs text-gray-500 mt-1 mb-2">PDF (Max 5MB)</p>
+                  {fileNames.cvUrl && <p className="text-xs text-emerald-600 font-medium truncate w-full px-2">{fileNames.cvUrl}</p>}
+                  <input type="file" className="hidden" accept=".pdf" onChange={(e) => handleFileChange(e, 'cvUrl')} />
+                </label>
+                <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer bg-gray-50 flex flex-col items-center justify-center">
+                  <Upload className="mx-auto text-gray-400 mb-2" size={24} />
+                  <p className="text-sm font-medium text-gray-700">Diplôme le plus élevé</p>
+                  <p className="text-xs text-gray-500 mt-1 mb-2">PDF, JPG (Max 5MB)</p>
+                  {fileNames.diplomaUrl && <p className="text-xs text-emerald-600 font-medium truncate w-full px-2">{fileNames.diplomaUrl}</p>}
+                  <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={(e) => handleFileChange(e, 'diplomaUrl')} />
+                </label>
+                <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer bg-gray-50 flex flex-col items-center justify-center">
+                  <Upload className="mx-auto text-gray-400 mb-2" size={24} />
+                  <p className="text-sm font-medium text-gray-700">Preuve du Grade</p>
+                  <p className="text-xs text-gray-500 mt-1 mb-2">Arrêté, Attestation...</p>
+                  {fileNames.rankProofUrl && <p className="text-xs text-emerald-600 font-medium truncate w-full px-2">{fileNames.rankProofUrl}</p>}
+                  <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={(e) => handleFileChange(e, 'rankProofUrl')} />
+                </label>
               </div>
+              <p className="text-xs text-gray-500 italic">* Les fichiers sélectionnés seront envoyés avec votre dossier.</p>
+            </div>
+
+            {/* Academic Profile Section */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Award className="text-emerald-600" size={20} />
+                Profil Académique
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Grade Académique</label>
+                  <select 
+                    name="academicRank"
+                    required
+                    value={formData.academicRank}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white"
+                  >
+                    <option value="Assistant">Assistant</option>
+                    <option value="Maître Assistant">Maître Assistant</option>
+                    <option value="Maître de Conférences">Maître de Conférences</option>
+                    <option value="Professeur Titulaire">Professeur Titulaire</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Domaines d'expertise (séparés par des virgules)</label>
+                  <input 
+                    type="text" 
+                    name="domains"
+                    required
+                    value={formData.domains}
+                    onChange={handleChange}
+                    placeholder="Ex: Informatique, Intelligence Artificielle"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Spécialités (séparées par des virgules)</label>
+                  <input 
+                    type="text" 
+                    name="specialties"
+                    required
+                    value={formData.specialties}
+                    onChange={handleChange}
+                    placeholder="Ex: Machine Learning, Data Science"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Matières enseignées (séparées par des virgules)</label>
+                  <input 
+                    type="text" 
+                    name="courses"
+                    required
+                    value={formData.courses}
+                    onChange={handleChange}
+                    placeholder="Ex: Algorithmique, Bases de données"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Domaines d'expertise (séparés par des virgules)</label>
-                <input 
-                  type="text" 
-                  name="domains"
+                <label className="text-sm font-medium text-gray-700">Biographie courte</label>
+                <textarea 
+                  name="biography"
                   required
-                  value={formData.domains}
+                  value={formData.biography}
                   onChange={handleChange}
-                  placeholder="Ex: Informatique, Intelligence Artificielle"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                />
+                  rows={4}
+                  placeholder="Présentez brièvement votre parcours académique et professionnel..."
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
+                ></textarea>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Spécialités (séparées par des virgules)</label>
-                <input 
-                  type="text" 
-                  name="specialties"
-                  required
-                  value={formData.specialties}
-                  onChange={handleChange}
-                  placeholder="Ex: Machine Learning, Data Science"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Matières enseignées (séparées par des virgules)</label>
-                <input 
-                  type="text" 
-                  name="courses"
-                  required
-                  value={formData.courses}
-                  onChange={handleChange}
-                  placeholder="Ex: Algorithmique, Bases de données"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Biographie courte</label>
-              <textarea 
-                name="biography"
-                required
-                value={formData.biography}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Présentez brièvement votre parcours académique et professionnel..."
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
-              ></textarea>
-            </div>
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={isLoading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isLoading ? <Loader2 className="animate-spin" /> : (
-              <>
-                <CheckCircle size={20} />
-                Soumettre mon dossier
-              </>
-            )}
-          </button>
-        </form>
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isLoading ? <Loader2 className="animate-spin" /> : (
+                <>
+                  <CheckCircle size={20} />
+                  Soumettre mon dossier
+                </>
+              )}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
