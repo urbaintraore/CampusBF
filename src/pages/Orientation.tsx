@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Compass, BookOpen, Target, Brain, Briefcase, Sparkles, Send, GraduationCap, Plus, Trash2, TrendingUp, X, Save, CheckCircle2, Filter } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { GoogleGenAI } from '@google/genai';
+import { CONCOURS_LIST } from '../data/concours';
 import { cn } from '@/lib/utils';
 
 interface AnalysisResult {
@@ -9,6 +10,7 @@ interface AnalysisResult {
   semesterAverages: { semester: string; average: number }[];
   masters: { name: string; type: 'Recherche' | 'Professionnel'; match: number; description: string; prospects: string[] }[];
   careers: { title: string; match: number; explanation: string }[];
+  concours: { title: string; level: string; requirements: string; match: number; explanation: string }[];
   improvements: string[];
 }
 
@@ -216,6 +218,9 @@ export default function Orientation() {
           { title: 'Ingénieur Logiciel', match: 85, explanation: 'Vos bonnes notes en algorithmique et vos projets pratiques correspondent parfaitement aux attentes des ESN burkinabè.' },
           { title: 'Data Analyst', match: 75, explanation: 'Votre esprit logique et vos compétences analytiques sont des atouts majeurs pour ce poste très demandé dans les banques et télécoms.' }
         ],
+        concours: [
+          { title: 'ENAREF CYCLE A', level: 'Licence', requirements: 'Licence en sciences économiques ou juridiques', match: 90, explanation: 'Votre profil correspond aux exigences de ce concours.' }
+        ],
         improvements: ['Renforcer la participation orale', 'Améliorer les notes dans les matières théoriques']
       });
     } finally {
@@ -235,13 +240,19 @@ export default function Orientation() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const context = result ? `Profil de l'étudiant : Licence ${actualMajor} à ${university}. Compétences: ${extraSkills.join(', ')}. Masters recommandés : ${result.masters.map(m => `${m.name} (${m.type})`).join(', ')}.` : '';
+      const concoursContext = `Voici la liste des concours de la fonction publique disponibles : ${JSON.stringify(CONCOURS_LIST)}. Si l'étudiant pose une question sur les concours, utilise cette liste pour lui indiquer ceux qui correspondent à son niveau (BEPC, BAC, Licence) et à sa spécialité (${actualMajor}).`;
       
       const response = await ai.models.generateContent({
         model: 'gemini-3.1-pro-preview',
         contents: `Tu es un conseiller d'orientation pour les universités du Burkina Faso. ${context} 
+${concoursContext}
+Tu as accès à internet via l'outil de recherche Google. Si l'étudiant te demande des offres d'emploi, des stages ou des opportunités actuelles, effectue une recherche web ciblée sur les sites des grandes entreprises et institutions du Burkina Faso (ex: Ministère de la fonction publique, Ministère de la défense, ONEA, SONABEL, SONABHY, Orange Burkina, Moov Africa, Telecel Faso, etc.) pour lui fournir des informations à jour.
 L'étudiant te pose une question. Réponds de manière concise, encourageante et exhaustive, en n'hésitant pas à détailler les différences entre les parcours recherche et professionnel si pertinent.
 S'il te demande comment atteindre un master ou un métier spécifique, donne-lui des conseils précis sur les compétences à développer et les actions à entreprendre.
-Question : ${userMsg}`
+Question : ${userMsg}`,
+        config: {
+          tools: [{ googleSearch: {} }]
+        }
       });
 
       if (response.text) {

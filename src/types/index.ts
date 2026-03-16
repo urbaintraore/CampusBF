@@ -113,7 +113,7 @@ export interface TeacherApplication {
   courses: string[];
   academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre';
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
+  createdAt: any;
   adminResponse?: string;
   adminResponseDate?: string;
 }

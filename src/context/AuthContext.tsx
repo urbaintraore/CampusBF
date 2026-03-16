@@ -23,7 +23,8 @@ import {
   addDoc,
   deleteDoc,
   query,
-  where
+  where,
+  serverTimestamp
 } from 'firebase/firestore';
 
 interface AuthContextType {
@@ -359,13 +360,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = async (updatedUser: Partial<User>) => {
     if (user && user.id) {
+      console.log("updateUser: Updating user", user.id, "with", updatedUser);
       try {
         const userRef = doc(db, 'users', user.id);
         await updateDoc(userRef, updatedUser);
         setUser({ ...user, ...updatedUser });
+        console.log("updateUser: User updated successfully");
       } catch (error) {
+        console.error("updateUser: Error", error);
         handleFirestoreError(error, OperationType.UPDATE, `users/${user.id}`);
       }
+    } else {
+      console.error("updateUser: No user or user.id found");
     }
   };
 
@@ -428,17 +434,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const submitTeacherApplication = async (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => {
-    if (!user) return;
+    if (!user) {
+      console.error("submitTeacherApplication: No user found");
+      return;
+    }
+    console.log("submitTeacherApplication: Starting submission for user", user.id);
     try {
       const newApp = {
         userId: user.id,
         user: user,
         ...data,
         status: 'pending',
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       };
+      console.log("submitTeacherApplication: Adding doc to teacherApplications");
       await addDoc(collection(db, 'teacherApplications'), newApp);
+      console.log("submitTeacherApplication: Updating user teacherStatus to pending_approval");
       await updateUser({ teacherStatus: 'pending_approval' });
+      console.log("submitTeacherApplication: Submission successful");
 
       const adminUser = users.find(u => u.role === 'admin') || ADMIN_USER;
       await addNotification(adminUser.id, {
@@ -447,6 +460,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         message: `${user.firstName} ${user.lastName} a soumis un dossier pour rejoindre l'annuaire des enseignants.`
       });
     } catch (error) {
+      console.error("submitTeacherApplication: Error", error);
       handleFirestoreError(error, OperationType.CREATE, 'teacherApplications');
     }
   };

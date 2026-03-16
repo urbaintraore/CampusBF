@@ -41,9 +41,8 @@ export default function TeacherOnboarding() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate upload delay
-    setTimeout(() => {
-      submitTeacherApplication({
+    try {
+      await submitTeacherApplication({
         cvUrl: formData.cvUrl || 'https://example.com/cv.pdf',
         diplomaUrl: formData.diplomaUrl || 'https://example.com/diploma.pdf',
         rankProofUrl: formData.rankProofUrl || 'https://example.com/rank.pdf',
@@ -53,9 +52,12 @@ export default function TeacherOnboarding() {
         courses: formData.courses.split(',').map(c => c.trim()),
         academicRank: formData.academicRank
       });
-      setIsLoading(false);
       setIsSubmitted(true);
-    }, 1500);
+    } catch (error) {
+      console.error("Submission failed", error);
+      alert("Erreur lors de la soumission. Veuillez réessayer.");
+    }
+    setIsLoading(false);
   };
 
   return (
