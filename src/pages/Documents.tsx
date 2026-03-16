@@ -181,8 +181,23 @@ export default function Documents() {
         downloads: increment(1)
       });
 
-      // Open download URL
-      window.open(docData.downloadUrl, '_blank');
+      // Try to force download using fetch and blob
+      try {
+        const response = await fetch(docData.downloadUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = docData.fileName || 'document.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (corsError) {
+        console.warn("CORS error, falling back to window.open", corsError);
+        // Fallback if CORS prevents fetch
+        window.open(docData.downloadUrl, '_blank');
+      }
     } catch (error) {
       console.error("Error downloading document:", error);
     }

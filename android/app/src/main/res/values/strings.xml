@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CampusBF</string>
+    <string name="title_activity_main">CampusBF</string>
+    <string name="package_name">com.campusbf.app</string>
+    <string name="custom_url_scheme">com.campusbf.app</string>
+</resources>

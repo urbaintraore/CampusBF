@@ -17,6 +17,7 @@ import Events from './pages/Events';
 import Orientation from './pages/Orientation';
 import TeachersDirectory from './pages/TeachersDirectory';
 import Notifications from './pages/Notifications';
+import Portfolio from './pages/Portfolio';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Messages from './pages/Messages';
@@ -134,6 +135,12 @@ export default function App() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/portfolio" element={
+          <ProtectedRoute>
+            <Portfolio />
           </ProtectedRoute>
         } />
         

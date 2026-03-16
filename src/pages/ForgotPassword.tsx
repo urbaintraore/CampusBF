@@ -20,7 +20,16 @@ export default function ForgotPassword() {
       await sendPasswordResetEmail(auth, email);
       setMessage('Un e-mail de réinitialisation a été envoyé à votre adresse.');
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('Aucun compte ne correspond à cette adresse e-mail.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Adresse e-mail invalide.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Trop de tentatives. Veuillez réessayer plus tard.');
+      } else {
+        setError(err.message || 'Une erreur est survenue lors de l\'envoi de l\'e-mail.');
+      }
     } finally {
       setIsLoading(false);
     }

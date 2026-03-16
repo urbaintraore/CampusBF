@@ -115,6 +115,19 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["groupId", "authorId", "content"]
+    },
+    "Portfolio": {
+      "title": "Portfolio",
+      "description": "Teacher portfolio",
+      "type": "object",
+      "properties": {
+        "teacherId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "projects": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teacherId", "title"]
     }
   },
   "firestore": {
@@ -145,6 +158,10 @@
     "/posts/{postId}": {
       "schema": "Post",
       "description": "Community posts"
+    },
+    "/portfolios/{portfolioId}": {
+      "schema": "Portfolio",
+      "description": "Teacher portfolios"
     },
     "/comments/{commentId}": {
       "schema": "object",

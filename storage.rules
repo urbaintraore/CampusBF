@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Only authenticated users can read files
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      
+      // Only the owner can write, and only PDF files up to 5MB
+      allow write: if request.auth != null && request.auth.uid == userId &&
+                   request.resource.size < 5 * 1024 * 1024 &&
+                   request.resource.contentType == 'application/pdf';
+    }
+  }
+}
