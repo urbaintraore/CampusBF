@@ -27,6 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Calendar, label: 'Événements', to: '/events' },
     { icon: Compass, label: 'Orientation', to: '/orientation' },
     { icon: User, label: 'Portfolio', to: '/portfolio' },
+    { icon: Users, label: 'Mentorat', to: '/mentorship' },
   ];
 
   if (user?.role === 'admin') {

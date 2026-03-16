@@ -135,19 +135,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubscribes: (() => void)[] = [];
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed:", firebaseUser?.email);
       // Clear existing listeners when auth state changes
       unsubscribes.forEach(unsub => unsub());
       unsubscribes = [];
 
       if (firebaseUser) {
         try {
+          console.log("Fetching user doc for:", firebaseUser.uid);
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
+            console.log("User doc exists");
             const data = userDoc.data();
             const userData = { id: firebaseUser.uid, ...data } as User;
             
             // Force admin role for the owner email if not already set
             if (firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' && userData.role !== 'admin') {
+              console.log("Forcing admin role");
               userData.role = 'admin';
               try {
                 await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
@@ -157,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             
             setUser(userData);
+            console.log("User set:", userData);
 
             // Start listeners only after we have the user data and role
             
@@ -189,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Admin-only or restricted lists
             if (userData.role === 'admin') {
+              console.log("User is admin, starting admin listeners");
               unsubscribes.push(onSnapshot(collection(db, 'users'), (snapshot) => {
                 setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'users')));
@@ -205,6 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'subscriptionRequests')));
             } else {
+              console.log("User is not admin, starting user listeners");
               // Non-admins see their own applications
               const qApps = query(collection(db, 'applications'), where('userId', '==', firebaseUser.uid));
               unsubscribes.push(onSnapshot(qApps, (snapshot) => {
@@ -218,12 +225,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
           } else {
+            console.log("User doc does not exist");
             setUser(null);
           }
         } catch (error) {
+          console.error("Error fetching user doc:", error);
           handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
         }
       } else {
+        console.log("No firebase user");
         setUser(null);
         setUsers([]);
         setAds([]);
@@ -237,6 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setGroups([]);
       }
       setIsLoading(false);
+      console.log("Auth state changed processing complete");
     });
 
     return () => {

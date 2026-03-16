@@ -18,8 +18,10 @@ import Orientation from './pages/Orientation';
 import TeachersDirectory from './pages/TeachersDirectory';
 import Notifications from './pages/Notifications';
 import Portfolio from './pages/Portfolio';
+import AlumniMentorship from './pages/AlumniMentorship';
 import { AuthProvider, useAuth } from './context/AuthContext';
-
+import { ThemeProvider } from './context/ThemeContext';
+import Chatbot from './components/Chatbot';
 import Messages from './pages/Messages';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -62,90 +64,98 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/messages" element={
-          <ProtectedRoute>
-            <Messages />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/documents" element={
-          <ProtectedRoute>
-            <Documents />
-          </ProtectedRoute>
-        } />
-        <Route path="/tutors" element={
-          <ProtectedRoute>
-            <Tutors />
-          </ProtectedRoute>
-        } />
-        <Route path="/marketplace" element={
-          <ProtectedRoute>
-            <Marketplace />
-          </ProtectedRoute>
-        } />
-        <Route path="/internships" element={
-          <ProtectedRoute>
-            <Internships />
-          </ProtectedRoute>
-        } />
-        <Route path="/community" element={
-          <ProtectedRoute>
-            <Community />
-          </ProtectedRoute>
-        } />
-        <Route path="/motoride" element={
-          <ProtectedRoute>
-            <MotoRide />
-          </ProtectedRoute>
-        } />
-        <Route path="/events" element={
-          <ProtectedRoute>
-            <Events />
-          </ProtectedRoute>
-        } />
-        <Route path="/orientation" element={
-          <ProtectedRoute>
-            <Orientation />
-          </ProtectedRoute>
-        } />
-        <Route path="/teachers" element={
-          <ProtectedRoute>
-            <TeachersDirectory />
-          </ProtectedRoute>
-        } />
-        <Route path="/notifications" element={
-          <ProtectedRoute>
-            <Notifications />
-          </ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/portfolio" element={
-          <ProtectedRoute>
-            <Portfolio />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ThemeProvider>
+        <Routes>
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/messages" element={
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/documents" element={
+            <ProtectedRoute>
+              <Documents />
+            </ProtectedRoute>
+          } />
+          <Route path="/tutors" element={
+            <ProtectedRoute>
+              <Tutors />
+            </ProtectedRoute>
+          } />
+          <Route path="/marketplace" element={
+            <ProtectedRoute>
+              <Marketplace />
+            </ProtectedRoute>
+          } />
+          <Route path="/internships" element={
+            <ProtectedRoute>
+              <Internships />
+            </ProtectedRoute>
+          } />
+          <Route path="/community" element={
+            <ProtectedRoute>
+              <Community />
+            </ProtectedRoute>
+          } />
+          <Route path="/motoride" element={
+            <ProtectedRoute>
+              <MotoRide />
+            </ProtectedRoute>
+          } />
+          <Route path="/events" element={
+            <ProtectedRoute>
+              <Events />
+            </ProtectedRoute>
+          } />
+          <Route path="/orientation" element={
+            <ProtectedRoute>
+              <Orientation />
+            </ProtectedRoute>
+          } />
+          <Route path="/teachers" element={
+            <ProtectedRoute>
+              <TeachersDirectory />
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/portfolio" element={
+            <ProtectedRoute>
+              <Portfolio />
+            </ProtectedRoute>
+          } />
+          <Route path="/mentorship" element={
+            <ProtectedRoute>
+              <AlumniMentorship />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Chatbot />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

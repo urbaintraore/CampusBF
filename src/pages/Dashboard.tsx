@@ -6,7 +6,10 @@ import { useAuth } from '@/context/AuthContext';
 import TeacherOnboarding from '@/components/TeacherOnboarding';
 
 export default function Dashboard() {
-  const { ads, user, notifications, documents, internships, groups, tutors } = useAuth();
+  const auth = useAuth();
+  console.log("Dashboard useAuth:", auth);
+  const { ads, user, notifications, documents, internships, groups, users } = auth;
+  const tutors = users.filter(u => u.role === 'tutor');
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
   const [currentAd, setCurrentAd] = useState(0);

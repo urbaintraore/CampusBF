@@ -128,7 +128,47 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["teacherId", "title"]
-    }
+    },
+    "AlumniProfile": {
+      "title": "AlumniProfile",
+      "description": "Alumni mentorship profile",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatarUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "mentorshipTopics": { "type": "array" },
+        "availability": { "type": "string" }
+      },
+      "required": ["userId", "userName", "bio"]
+    },
+    "News": {
+      "title": "News",
+      "description": "Campus news announcement",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "authorId", "createdAt"]
+    },
+    "LostAndFound": {
+      "title": "LostAndFound",
+      "description": "Lost and found item",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["lost", "found"] },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "status", "userId", "createdAt"]
+    },
   },
   "firestore": {
     "/users/{userId}": {
@@ -162,6 +202,18 @@
     "/portfolios/{portfolioId}": {
       "schema": "Portfolio",
       "description": "Teacher portfolios"
+    },
+    "/alumniProfiles/{userId}": {
+      "schema": "AlumniProfile",
+      "description": "Alumni mentorship profiles"
+    },
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "Campus news"
+    },
+    "/lostAndFound/{itemId}": {
+      "schema": "LostAndFound",
+      "description": "Lost and found items"
     },
     "/comments/{commentId}": {
       "schema": "object",

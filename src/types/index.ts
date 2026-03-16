@@ -114,6 +114,8 @@ export interface TeacherApplication {
   academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre';
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  adminResponse?: string;
+  adminResponseDate?: string;
 }
 
 export interface Document {
@@ -242,5 +244,57 @@ export interface Notification {
   title: string;
   message: string;
   read: boolean;
+  createdAt: string;
+}
+
+export interface Portfolio {
+  id: string;
+  teacherId: string;
+  title: string;
+  description: string;
+  projects: PortfolioProject[];
+  createdAt: string;
+}
+
+export interface PortfolioProject {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  link?: string;
+}
+
+export interface AlumniProfile {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatarUrl?: string;
+  bio: string;
+  mentorshipTopics: string[];
+  availability: string;
+}
+
+export interface Conversation {
+  id: string;
+  participants: string[];
+  lastMessage?: string;
+  updatedAt: string;
+}
+
+export interface News {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  createdAt: string;
+}
+
+export interface LostAndFound {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  status: 'lost' | 'found';
+  userId: string;
   createdAt: string;
 }

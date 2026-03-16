@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { Portfolio } from '../types';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Save, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function PortfolioPage() {
   const { user } = useAuth();
@@ -37,15 +39,57 @@ export default function PortfolioPage() {
       title,
       description,
       projects,
-      createdAt: serverTimestamp(),
+      createdAt: portfolio ? portfolio.createdAt : serverTimestamp(),
     };
-    await addDoc(collection(db, 'portfolios'), portfolioData);
+    
+    if (portfolio) {
+      // Update existing
+      const q = query(collection(db, 'portfolios'), where('teacherId', '==', user.id));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docRef = querySnapshot.docs[0].ref;
+        await setDoc(docRef, portfolioData, { merge: true });
+      }
+    } else {
+      // Create new
+      await addDoc(collection(db, 'portfolios'), portfolioData);
+    }
     fetchPortfolio();
+  };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text(`Portfolio de ${user?.firstName} ${user?.lastName}`, 10, 10);
+    doc.setFontSize(12);
+    doc.text(`Email: ${user?.email}`, 10, 20);
+    doc.text(`Université: ${user?.university}`, 10, 30);
+    doc.text(`Titre: ${title}`, 10, 40);
+    doc.text(`Description: ${description}`, 10, 50);
+    
+    const tableData = projects.map(p => [p.title, p.description]);
+    autoTable(doc, {
+      head: [['Projet', 'Description']],
+      body: tableData,
+      startY: 60,
+    });
+    
+    doc.save(`${user?.firstName}_${user?.lastName}_CV.pdf`);
   };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Créer votre Portfolio</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Créer votre Portfolio</h1>
+        {portfolio && (
+          <button
+            onClick={generatePDF}
+            className="bg-slate-800 text-white p-2 rounded flex items-center gap-2"
+          >
+            <FileText size={20} /> Télécharger CV (PDF)
+          </button>
+        )}
+      </div>
       <div className="space-y-4">
         <input
           type="text"
