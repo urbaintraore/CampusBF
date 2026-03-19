@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -22,6 +22,8 @@ interface RideLocation {
   lng: number;
   driverName: string;
   destination: string;
+  rating: number;
+  price: number;
 }
 
 interface MotoMapProps {
@@ -73,12 +75,19 @@ export default function MotoMap({ rides }: MotoMapProps) {
 
         {rides.map((ride) => (
           <Marker key={ride.id} position={[ride.lat, ride.lng]}>
+            <Tooltip direction="top" offset={[0, -30]} opacity={1}>
+              <div className="font-bold text-slate-900">{ride.driverName}</div>
+              <div className="text-xs text-amber-500 flex items-center gap-1">
+                ★ {ride.rating}
+              </div>
+            </Tooltip>
             <Popup>
-              <div className="p-1">
+              <div className="p-1 min-w-[120px]">
                 <h4 className="font-bold text-slate-900">{ride.driverName}</h4>
-                <p className="text-xs text-slate-500">Vers: {ride.destination}</p>
-                <button className="mt-2 w-full py-1 bg-orange-600 text-white text-[10px] font-bold rounded">
-                  Voir le trajet
+                <p className="text-xs text-slate-600 mt-1">Vers: <span className="font-medium">{ride.destination}</span></p>
+                <p className="text-xs text-orange-600 font-bold mt-1">Prix: {ride.price} FCFA</p>
+                <button className="mt-2 w-full py-1.5 bg-orange-600 hover:bg-orange-700 transition-colors text-white text-[11px] font-bold rounded">
+                  Réserver
                 </button>
               </div>
             </Popup>

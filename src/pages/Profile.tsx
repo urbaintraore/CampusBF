@@ -179,29 +179,29 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Mon Profil</h1>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Mon Profil</h1>
         {!isEditing ? (
           <button 
             onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 shadow-sm transition-colors"
+            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
           >
             <Edit size={16} />
             Modifier le profil
           </button>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsEditing(false)}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 transition-colors"
+              className="px-5 py-2.5 bg-white/50 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-white flex items-center gap-2 transition-all shadow-sm"
             >
               <X size={16} />
               Annuler
             </button>
             <button 
               onClick={handleSave}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 shadow-sm transition-colors"
+              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
             >
               <Save size={16} />
               Enregistrer
@@ -211,25 +211,30 @@ export default function Profile() {
       </div>
 
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="h-32 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
+      <div className="glass rounded-3xl border border-white/40 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+        <div className="h-40 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        </div>
         <div className="px-8 pb-8">
-          <div className="relative flex justify-between items-end -mt-12 mb-6">
+          <div className="relative flex justify-between items-end -mt-16 mb-6">
             <div className="relative group">
               <img 
                 src={isEditing ? formData.avatarUrl : user.avatarUrl} 
                 alt={user.firstName} 
                 className={cn(
-                  "w-24 h-24 rounded-2xl border-4 border-white bg-white shadow-md object-cover",
-                  isUploading && "opacity-50"
+                  "w-32 h-32 rounded-3xl border-4 border-white bg-white shadow-xl object-cover transition-all",
+                  isUploading && "opacity-50 blur-sm"
                 )}
               />
               {isEditing && (
-                <label className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                <label className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-3xl flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-300 border-4 border-transparent">
                   {isUploading ? (
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
-                    <Camera className="text-white" size={24} />
+                    <div className="flex flex-col items-center text-white">
+                      <Camera size={28} className="mb-1" />
+                      <span className="text-xs font-bold">Modifier</span>
+                    </div>
                   )}
                   <input 
                     type="file" 
@@ -244,34 +249,34 @@ export default function Profile() {
           </div>
           
           {isEditing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Prénom</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Prénom</label>
                 <input 
                   type="text" 
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Nom</label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nom</label>
                 <input 
                   type="text" 
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
             </div>
           ) : (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{user.firstName} {user.lastName}</h2>
-              <p className="text-gray-500 font-medium">{user.major} • {user.level}</p>
-              <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                <MapPin size={14} />
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">{user.firstName} {user.lastName}</h2>
+              <p className="text-slate-500 font-medium mt-1 text-lg">{user.major} • {user.level}</p>
+              <div className="flex items-center gap-2 text-sm text-slate-400 mt-2 font-medium">
+                <MapPin size={16} />
                 {user.university}
               </div>
             </div>
@@ -281,82 +286,94 @@ export default function Profile() {
 
       {/* Info Grid */}
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-          <h3 className="font-bold text-gray-900 mb-4">Coordonnées</h3>
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
-              <Mail size={16} />
-            </div>
-            <span className="text-sm">{user.email}</span>
-          </div>
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+        <div className="glass p-8 rounded-3xl border border-white/40 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '100ms' }}>
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
               <Phone size={16} />
             </div>
-            {isEditing ? (
-              <input 
-                type="text" 
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+226 00 00 00 00"
-                className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-              />
-            ) : (
-              <span className="text-sm">{user.phone || '+226 00 00 00 00'}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
-              <Building2 size={16} />
+            Coordonnées
+          </h3>
+          <div className="space-y-5">
+            <div className="flex items-center gap-4 text-slate-600">
+              <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
+                <Mail size={18} />
+              </div>
+              <span className="text-sm font-medium">{user.email}</span>
             </div>
-            {isEditing ? (
-              <input 
-                type="text" 
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                placeholder="Ville (ex: Ouagadougou)"
-                className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-              />
-            ) : (
-              <span className="text-sm">{user.city || 'Ville non renseignée'}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
-              <Map size={16} />
+            <div className="flex items-center gap-4 text-slate-600">
+              <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
+                <Phone size={18} />
+              </div>
+              {isEditing ? (
+                <input 
+                  type="text" 
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+226 00 00 00 00"
+                  className="flex-1 p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              ) : (
+                <span className="text-sm font-medium">{user.phone || '+226 00 00 00 00'}</span>
+              )}
             </div>
-            {isEditing ? (
-              <input 
-                type="text" 
-                name="neighborhood"
-                value={formData.neighborhood}
-                onChange={handleChange}
-                placeholder="Quartier (ex: Dassasgho)"
-                className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-              />
-            ) : (
-              <span className="text-sm">{user.neighborhood || 'Quartier non renseigné'}</span>
-            )}
+            <div className="flex items-center gap-4 text-slate-600">
+              <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
+                <Building2 size={18} />
+              </div>
+              {isEditing ? (
+                <input 
+                  type="text" 
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  placeholder="Ville (ex: Ouagadougou)"
+                  className="flex-1 p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              ) : (
+                <span className="text-sm font-medium">{user.city || 'Ville non renseignée'}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-slate-600">
+              <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
+                <Map size={18} />
+              </div>
+              {isEditing ? (
+                <input 
+                  type="text" 
+                  name="neighborhood"
+                  value={formData.neighborhood}
+                  onChange={handleChange}
+                  placeholder="Quartier (ex: Dassasgho)"
+                  className="flex-1 p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              ) : (
+                <span className="text-sm font-medium">{user.neighborhood || 'Quartier non renseigné'}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-          <h3 className="font-bold text-gray-900 mb-4">Cursus Académique</h3>
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+        <div className="glass p-8 rounded-3xl border border-white/40 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '150ms' }}>
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
               <BookOpen size={16} />
             </div>
+            Cursus Académique
+          </h3>
+          <div className="flex items-start gap-4 text-slate-600">
+            <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm mt-1">
+              <GraduationCap size={18} />
+            </div>
             {isEditing ? (
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-3">
                 <input 
                   type="text" 
                   name="university"
                   value={formData.university}
                   onChange={handleChange}
                   placeholder="Université"
-                  className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 />
                 <input 
                   type="text" 
@@ -364,13 +381,13 @@ export default function Profile() {
                   value={formData.major}
                   onChange={handleChange}
                   placeholder="Filière"
-                  className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 />
                 <select 
                   name="level"
                   value={formData.level}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 >
                   <option value="Licence 1">Licence 1</option>
                   <option value="Licence 2">Licence 2</option>
@@ -381,10 +398,12 @@ export default function Profile() {
                 </select>
               </div>
             ) : (
-              <div>
-                <p className="text-sm font-medium text-gray-900">{user.major}</p>
-                <p className="text-xs text-gray-500">{user.university}</p>
-                <p className="text-xs text-gray-400 mt-1">{user.level}</p>
+              <div className="bg-white/40 p-4 rounded-2xl border border-white/50 w-full">
+                <p className="text-base font-bold text-slate-900">{user.major}</p>
+                <p className="text-sm text-slate-500 font-medium mt-1">{user.university}</p>
+                <div className="inline-block mt-3 px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg uppercase tracking-wider">
+                  {user.level}
+                </div>
               </div>
             )}
           </div>

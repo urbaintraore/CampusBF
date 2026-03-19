@@ -73,10 +73,12 @@ export default function Documents() {
     return matchesFilter && matchesSearch && matchesUniversity && matchesMajor && matchesYear && matchesSubject;
   });
 
+  const isAdmin = user?.role === 'admin';
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.type === 'application/pdf') {
+      if (isAdmin || file.type === 'application/pdf') {
         setSelectedFile(file);
         setUploadError('');
       } else {
@@ -100,7 +102,7 @@ export default function Documents() {
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      if (file.type === 'application/pdf') {
+      if (isAdmin || file.type === 'application/pdf') {
         setSelectedFile(file);
         setUploadError('');
       } else {
@@ -136,7 +138,7 @@ export default function Documents() {
       return;
     }
     if (!selectedFile) {
-      setUploadError('Veuillez sélectionner un fichier PDF à partager.');
+      setUploadError('Veuillez sélectionner un fichier à partager.');
       return;
     }
 
@@ -217,12 +219,12 @@ export default function Documents() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Documents Universitaires</h1>
-          <p className="text-slate-500 text-sm">Accédez à des milliers de ressources partagées par les étudiants.</p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Documents Universitaires</h1>
+          <p className="text-slate-500 text-sm mt-1">Accédez à des milliers de ressources partagées par les étudiants.</p>
         </div>
         <button 
           onClick={() => setShowUploadModal(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center gap-2 active:scale-95"
+          className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 active:scale-95"
         >
           <FileText size={18} />
           Partager un document
@@ -231,73 +233,76 @@ export default function Documents() {
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 md:p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-2 border-b border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-900">Partager un document</h2>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white/95 backdrop-blur-xl border border-white/20 rounded-[2rem] max-w-lg w-full p-6 md:p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white/95 backdrop-blur-xl z-10 pb-4 border-b border-slate-100">
+              <h2 className="text-2xl font-display font-bold text-slate-900">Partager un document</h2>
               <button 
                 onClick={resetUploadForm} 
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
-                <X size={20} className="text-gray-400" />
+                <X size={20} className="text-slate-400" />
               </button>
             </div>
             
-            <form className="space-y-4">
+            <form className="space-y-5">
               {uploadError && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium flex items-center gap-2 animate-in fade-in">
+                <div className="bg-red-50/80 backdrop-blur-sm border border-red-100 text-red-600 p-4 rounded-2xl text-sm font-medium flex items-center gap-2 animate-in fade-in">
                   <AlertCircle size={18} />
                   {uploadError}
                 </div>
               )}
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-gray-700">Titre du document</label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700 ml-1">Titre du document</label>
                 <input 
                   type="text" 
                   value={uploadTitle}
                   onChange={(e) => setUploadTitle(e.target.value)}
                   placeholder="Ex: Algèbre Linéaire - Examen 2024" 
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" 
+                  className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-gray-700">Type</label>
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Type</label>
                   <select 
                     value={uploadType}
-                    disabled
-                    className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl outline-none text-gray-500 cursor-not-allowed"
+                    onChange={(e) => setUploadType(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
                   >
+                    <option value="exam">Examen corrigé</option>
+                    <option value="exercise">TD corrigé</option>
+                    <option value="summary">Cours et résumé</option>
                     <option value="thesis">Mémoire</option>
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-gray-700">Année</label>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Année</label>
                   <input 
                     type="text" 
                     value={uploadYear}
                     onChange={(e) => setUploadYear(e.target.value)}
                     placeholder="2024" 
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" 
+                    className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
                   />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-gray-700">Matière</label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700 ml-1">Matière</label>
                 <input 
                   type="text" 
                   value={uploadSubject}
                   onChange={(e) => setUploadSubject(e.target.value)}
                   placeholder="Ex: Mathématiques" 
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" 
+                  className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-gray-700">Université</label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700 ml-1">Université</label>
                 <select 
                   value={uploadUniversity}
                   onChange={(e) => setUploadUniversity(e.target.value)}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
                 >
                   <option value="Université Joseph Ki-Zerbo">Université Joseph Ki-Zerbo</option>
                   <option value="Université Thomas Sankara">Université Thomas Sankara</option>
@@ -306,24 +311,24 @@ export default function Documents() {
                 </select>
               </div>
               {uploadUniversity === 'Autre' && (
-                <div className="space-y-1 animate-in slide-in-from-top-1">
-                  <label className="text-sm font-semibold text-gray-700">Nom de l'université</label>
+                <div className="space-y-1.5 animate-in slide-in-from-top-1">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Nom de l'université</label>
                   <input 
                     type="text" 
                     value={customUniversity}
                     onChange={(e) => setCustomUniversity(e.target.value)}
                     placeholder="Saisissez le nom de l'université" 
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" 
+                    className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
                   />
                 </div>
               )}
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-gray-700">Fichier (PDF)</label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700 ml-1">Fichier {isAdmin ? '' : '(PDF)'}</label>
                 <input 
                   type="file" 
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".pdf"
+                  accept={isAdmin ? "*" : ".pdf"}
                   className="hidden"
                 />
                 <div 
@@ -332,20 +337,20 @@ export default function Documents() {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={cn(
-                    "border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer relative overflow-hidden group",
-                    isDragging ? "border-emerald-500 bg-emerald-50 scale-[1.02]" : 
-                    selectedFile ? "border-emerald-500 bg-emerald-50/50" : "border-gray-200 hover:border-emerald-500 hover:bg-gray-50"
+                    "border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer relative overflow-hidden group",
+                    isDragging ? "border-emerald-500 bg-emerald-50/50 scale-[1.02]" : 
+                    selectedFile ? "border-emerald-500 bg-emerald-50/30" : "border-slate-200 hover:border-emerald-400 hover:bg-slate-50/50"
                   )}
                 >
                   {selectedFile ? (
                     <div className="flex flex-col items-center animate-in zoom-in-95">
-                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 bg-emerald-100/80 rounded-full flex items-center justify-center mb-3">
                         <CheckCircle size={24} className="text-emerald-600" />
                       </div>
-                      <span className="text-sm font-bold text-emerald-900 truncate max-w-full px-4 mb-1">
+                      <span className="text-sm font-medium text-emerald-900 truncate max-w-full px-4 mb-1">
                         {selectedFile.name}
                       </span>
-                      <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-100/50 px-2.5 py-1 rounded-full">
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </span>
                       <button 
@@ -354,21 +359,21 @@ export default function Documents() {
                           e.stopPropagation();
                           setSelectedFile(null);
                         }}
-                        className="mt-4 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"
+                        className="mt-4 text-xs font-medium text-slate-500 hover:text-red-500 transition-colors"
                       >
                         Changer de fichier
                       </button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-emerald-100 transition-colors">
-                        <UploadCloud size={24} className="text-gray-500 group-hover:text-emerald-600" />
+                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-emerald-100/50 transition-colors">
+                        <UploadCloud size={24} className="text-slate-500 group-hover:text-emerald-600 transition-colors" />
                       </div>
-                      <span className="text-sm font-medium text-gray-900 mb-1">
+                      <span className="text-sm font-medium text-slate-900 mb-1">
                         Cliquez ou glissez-déposez
                       </span>
-                      <span className="text-xs text-gray-500">
-                        Fichiers PDF uniquement (Max 50 MB)
+                      <span className="text-xs text-slate-500">
+                        {isAdmin ? "Tous les types de fichiers sont acceptés (Max 50 MB)" : "Fichiers PDF uniquement (Max 50 MB)"}
                       </span>
                     </div>
                   )}
@@ -378,7 +383,7 @@ export default function Documents() {
                 type="button"
                 onClick={handlePublish}
                 disabled={isUploading}
-                className="w-full py-3.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white rounded-2xl font-medium transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
               >
                 {isUploading ? (
                   <>
@@ -395,21 +400,21 @@ export default function Documents() {
       )}
 
       {/* Advanced Search & Filters */}
-      <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/60 shadow-sm">
         <div className="relative flex items-center">
           <Search className="absolute left-4 text-slate-400" size={20} />
           <input 
             type="text" 
             placeholder="Rechercher un cours, un sujet d'examen, un auteur..." 
-            className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:outline-none text-slate-900 placeholder:text-slate-400"
+            className="w-full pl-12 pr-4 py-3.5 bg-transparent rounded-xl focus:outline-none text-slate-900 placeholder:text-slate-400"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <button 
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              "mr-2 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors",
-              showFilters ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+              "mr-2 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all",
+              showFilters ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
             )}
           >
             <SlidersHorizontal size={16} />
@@ -419,13 +424,13 @@ export default function Documents() {
         </div>
         
         {showFilters && (
-          <div className="p-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2">
+          <div className="p-5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 animate-in slide-in-from-top-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase">Université</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Université</label>
               <select 
                 value={selectedUniversity}
                 onChange={(e) => setSelectedUniversity(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les universités</option>
                 <option>Université Joseph Ki-Zerbo</option>
@@ -434,11 +439,11 @@ export default function Documents() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase">Filière</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Filière</label>
               <select 
                 value={selectedMajor}
                 onChange={(e) => setSelectedMajor(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les filières</option>
                 <option>Informatique</option>
@@ -450,11 +455,11 @@ export default function Documents() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase">Matière</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Matière</label>
               <select 
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les matières</option>
                 {subjects.map(subject => (
@@ -463,11 +468,11 @@ export default function Documents() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase">Année</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Année</label>
               <select 
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les années</option>
                 <option>2024</option>
@@ -485,7 +490,7 @@ export default function Documents() {
                   setFilter('tout');
                   setSearchQuery('');
                 }}
-                className="text-xs font-bold text-slate-400 hover:text-emerald-600 transition-colors flex items-center gap-1"
+                className="text-xs font-medium text-slate-400 hover:text-emerald-600 transition-colors flex items-center gap-1.5"
               >
                 <X size={14} />
                 Réinitialiser tous les filtres
@@ -502,10 +507,10 @@ export default function Documents() {
             key={f}
             onClick={() => setFilter(f.toLowerCase())}
             className={cn(
-              "px-4 py-2 rounded-full text-sm font-medium transition-all border",
+              "px-4 py-2 rounded-xl text-sm font-medium transition-all border",
               filter === f.toLowerCase()
-                ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200" 
-                : "bg-white text-slate-600 border-slate-200 hover:border-emerald-200 hover:text-emerald-700"
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20" 
+                : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200/60 hover:border-emerald-200 hover:text-emerald-700 hover:bg-emerald-50/50"
             )}
           >
             {f}
@@ -517,43 +522,43 @@ export default function Documents() {
       <div className="grid gap-4">
         {filteredDocuments.length > 0 ? (
           filteredDocuments.map((doc) => (
-            <div key={doc.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group flex flex-col md:flex-row gap-5">
+            <div key={doc.id} className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200/60 transition-all group flex flex-col md:flex-row gap-5">
               <div className="flex items-start gap-4 flex-1">
                 <div className={cn(
-                  "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-inner",
-                  doc.type === 'exam' ? "bg-red-50 text-red-600" :
-                  doc.type === 'summary' ? "bg-blue-50 text-blue-600" : 
-                  doc.type === 'thesis' ? "bg-amber-50 text-amber-600" : "bg-purple-50 text-purple-600"
+                  "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-display font-bold flex-shrink-0 shadow-inner ring-1 ring-inset",
+                  doc.type === 'exam' ? "bg-red-50 text-red-600 ring-red-100" :
+                  doc.type === 'summary' ? "bg-blue-50 text-blue-600 ring-blue-100" : 
+                  doc.type === 'thesis' ? "bg-amber-50 text-amber-600 ring-amber-100" : "bg-purple-50 text-purple-600 ring-purple-100"
                 )}>
                   {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : doc.type === 'thesis' ? 'ME' : 'TD'}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                      <h3 className="font-display font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
                     </div>
-                    <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md">{doc.type.toUpperCase()}</span>
+                    <span className="text-xs font-medium px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-lg border border-slate-200/60">{doc.type.toUpperCase()}</span>
                   </div>
                   
                   <div className="flex flex-wrap gap-y-2 gap-x-4 mt-2 text-sm text-slate-500">
-                    <span className="flex items-center gap-1.5"><BookOpen size={14} /> {doc.subject}</span>
-                    <span className="flex items-center gap-1.5"><Calendar size={14} /> {doc.year}</span>
-                    <span className="flex items-center gap-1.5 text-slate-400">|</span>
-                    <span>{doc.university}</span>
+                    <span className="flex items-center gap-1.5"><BookOpen size={14} className="text-slate-400" /> {doc.subject}</span>
+                    <span className="flex items-center gap-1.5"><Calendar size={14} className="text-slate-400" /> {doc.year}</span>
+                    <span className="flex items-center gap-1.5 text-slate-300">|</span>
+                    <span className="text-slate-600">{doc.university}</span>
                   </div>
                   
                   <div className="flex items-center gap-4 mt-4">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
-                      <Download size={14} /> {doc.downloads}
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                      <Download size={14} className="text-slate-400" /> {doc.downloads}
                     </div>
                     <button 
                       onClick={() => handleLike(doc.id)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded-md hover:bg-emerald-50 hover:text-emerald-600 transition-colors active:scale-90"
+                      className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-100 transition-colors active:scale-95"
                     >
-                      <ThumbsUp size={14} /> {doc.likes}
+                      <ThumbsUp size={14} className={doc.likes > 0 ? "text-emerald-500" : "text-slate-400"} /> {doc.likes}
                     </button>
-                    <div className="text-xs text-slate-400 ml-auto">
-                      Ajouté par <span className="text-slate-600 font-medium">{doc.authorId === user?.id ? `${user?.firstName} ${user?.lastName?.charAt(0)}.` : 'Admin'}</span>
+                    <div className="text-xs text-slate-400 ml-auto flex items-center gap-1.5">
+                      Ajouté par <span className="text-slate-700 font-medium bg-slate-100/50 px-2 py-0.5 rounded-md">{doc.authorId === user?.id ? `${user?.firstName} ${user?.lastName?.charAt(0)}.` : 'Admin'}</span>
                     </div>
                   </div>
                 </div>
@@ -561,7 +566,7 @@ export default function Documents() {
               <div className="flex items-center justify-end md:border-l md:border-slate-100 md:pl-5">
                 <button 
                   onClick={() => handleDownload(doc)}
-                  className="w-full md:w-auto px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full md:w-auto px-6 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Download size={18} />
                   Télécharger
@@ -570,8 +575,20 @@ export default function Documents() {
             </div>
           ))
         ) : (
-          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
-            <p className="text-slate-500">Aucun document trouvé pour cette catégorie.</p>
+          <div className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-[2rem] border border-dashed border-slate-200/60">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText size={24} className="text-slate-400" />
+            </div>
+            <p className="text-slate-500 font-medium">Aucun document trouvé pour cette catégorie.</p>
+            <button 
+              onClick={() => {
+                setFilter('tout');
+                setSearchQuery('');
+              }}
+              className="mt-4 text-sm text-emerald-600 font-medium hover:text-emerald-700 transition-colors"
+            >
+              Effacer les filtres
+            </button>
           </div>
         )}
       </div>

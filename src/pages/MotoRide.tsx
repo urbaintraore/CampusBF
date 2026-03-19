@@ -14,6 +14,7 @@ export default function MotoRide() {
   const [departure, setDeparture] = useState('');
   const [destination, setDestination] = useState('');
   const [time, setTime] = useState('');
+  const [priceSort, setPriceSort] = useState<'asc' | 'desc' | null>(null);
 
   const mockRides = [
     {
@@ -44,12 +45,27 @@ export default function MotoRide() {
     }
   ];
 
-  const mapRides = mockRides.map(ride => ({
+  let filteredRides = mockRides.filter(ride => {
+    const matchDeparture = departure ? ride.departure.toLowerCase().includes(departure.toLowerCase()) : true;
+    const matchDestination = destination ? ride.destination.toLowerCase().includes(destination.toLowerCase()) : true;
+    const matchTime = time ? ride.time === time : true;
+    return matchDeparture && matchDestination && matchTime;
+  });
+
+  if (priceSort === 'asc') {
+    filteredRides.sort((a, b) => a.price - b.price);
+  } else if (priceSort === 'desc') {
+    filteredRides.sort((a, b) => b.price - a.price);
+  }
+
+  const mapRides = filteredRides.map(ride => ({
     id: ride.id,
     lat: ride.lat,
     lng: ride.lng,
     driverName: ride.driver.name,
-    destination: ride.destination
+    destination: ride.destination,
+    rating: ride.driver.rating,
+    price: ride.price
   }));
 
   return (
@@ -190,9 +206,26 @@ export default function MotoRide() {
           {/* Results Area (Only visible when searching) */}
           {activeTab === 'search' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Trajets disponibles autour de vous</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Trajets disponibles autour de vous</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">Trier par prix:</span>
+                  <button 
+                    onClick={() => setPriceSort(priceSort === 'asc' ? null : 'asc')}
+                    className={cn("px-2.5 py-1 text-xs font-bold rounded-md transition-colors", priceSort === 'asc' ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}
+                  >
+                    Croissant
+                  </button>
+                  <button 
+                    onClick={() => setPriceSort(priceSort === 'desc' ? null : 'desc')}
+                    className={cn("px-2.5 py-1 text-xs font-bold rounded-md transition-colors", priceSort === 'desc' ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}
+                  >
+                    Décroissant
+                  </button>
+                </div>
+              </div>
               
-              {mockRides.map((ride) => (
+              {filteredRides.length > 0 ? filteredRides.map((ride) => (
                 <div key={ride.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-orange-200 transition-all cursor-pointer group">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
@@ -242,7 +275,14 @@ export default function MotoRide() {
                     Réserver
                   </button>
                 </div>
-              ))}
+              )) : (
+                <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Search size={24} className="text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 font-medium">Aucun trajet trouvé pour ces critères.</p>
+                </div>
+              )}
             </div>
           )}
         </div>

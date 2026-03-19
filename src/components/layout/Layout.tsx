@@ -37,22 +37,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900">
       {/* Mobile Header */}
-      <header className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-200">C</div>
-          <span className="font-bold text-xl text-slate-900 tracking-tight">CampusBF</span>
+          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400/50">C</div>
+          <span className="font-display font-bold text-xl text-slate-900 tracking-tight">CampusBF</span>
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => navigate('/notifications')}
-            className="p-2 text-slate-500 relative"
+            className="p-2 text-slate-500 relative hover:text-emerald-600 transition-colors"
           >
             <Bell size={24} />
             {unreadNotifications > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
             )}
           </button>
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -87,73 +87,73 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 h-screen sticky top-0 z-30">
+      <aside className="hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky top-0 z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-200">C</div>
-          <span className="font-bold text-2xl text-slate-900 tracking-tight">CampusBF</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400/50">C</div>
+          <span className="font-display font-bold text-2xl text-slate-900 tracking-tight">CampusBF</span>
         </div>
 
         <div className="px-4 mb-6">
-           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+           <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
             <input 
               type="text" 
               placeholder="Recherche rapide..." 
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-100/50 border border-slate-200/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all shadow-inner"
             />
           </div>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-2">Menu</p>
+          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-2">Menu Principal</p>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
                   isActive 
-                    ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm" 
+                    ? "bg-emerald-50/80 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-500/10" 
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 )
               }
             >
-              <item.icon size={20} className={cn("transition-colors", ({ isActive }: { isActive: boolean }) => isActive ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-600")} />
-              {item.label}
+              <item.icon size={20} className={cn("transition-colors duration-300 z-10", ({ isActive }: { isActive: boolean }) => isActive ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-600")} />
+              <span className="z-10">{item.label}</span>
               {item.label === 'Messages' && (
-                <span className="ml-auto bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">2</span>
+                <span className="ml-auto bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full z-10">2</span>
               )}
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-100">
-          <NavLink to="/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
+        <div className="p-4 border-t border-slate-200/60 bg-slate-50/50">
+          <NavLink to="/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-slate-200 transition-all group">
             <div className="relative">
               <img src={user?.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full bg-slate-200 object-cover ring-2 ring-white shadow-sm" />
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">{user?.firstName} {user?.lastName}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.university}</p>
+              <p className="text-[11px] text-slate-500 truncate font-medium">{user?.university}</p>
             </div>
           </NavLink>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto h-[calc(100vh-64px)] md:h-screen relative">
+      <main className="flex-1 overflow-y-auto h-[calc(100vh-64px)] md:h-screen relative bg-[#F8FAFC]">
         {/* Desktop Header for Notifications */}
         <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center md:hidden">
            {/* Mobile header handles this, but we might want a desktop top bar for notifications if not in sidebar */}
         </div>
 
-        <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-sm">
+        <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50">
           <div className="relative">
             <button 
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95"
+              className="p-2.5 bg-white rounded-full border border-slate-200/60 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 hover:shadow-md"
             >
               <Bell size={20} />
               {unreadNotifications > 0 && (

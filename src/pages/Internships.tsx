@@ -168,106 +168,139 @@ export default function Internships() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stages & Emplois</h1>
-          <p className="text-gray-500 text-sm">Lancez votre carrière professionnelle dès maintenant.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stages & Emplois</h1>
+          <p className="text-slate-500 mt-1">Lancez votre carrière professionnelle dès maintenant.</p>
         </div>
         <button 
           onClick={handlePostInternship}
-          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
         >
           <Plus size={18} />
-          Publier un stage
+          Publier une offre
         </button>
       </div>
 
       {/* Subscription Status Banner */}
       {user && !isSubscriptionActive && !isAdmin && (
-        <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex items-center gap-3">
-          <AlertCircle className="text-amber-600" size={20} />
-          <p className="text-sm text-amber-800">
-            Vous devez avoir un abonnement actif (5 000 CFA / 30 jours) pour publier des offres de stage.
-          </p>
+        <div className="glass border-amber-200/50 p-5 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4">
+          <div className="w-10 h-10 rounded-full bg-amber-100/50 flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="text-amber-600" size={20} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-900">Abonnement Requis</h3>
+            <p className="text-sm text-amber-800/80 mt-1">
+              Vous devez avoir un abonnement actif (5 000 CFA / 30 jours) pour publier des offres de stage.
+            </p>
+          </div>
         </div>
       )}
 
+      {/* Success Toast */}
       {showApplySuccess && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4">
-          <div className="bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2">
-            <CheckCircle2 size={20} />
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="glass bg-emerald-600/90 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/50">
+            <CheckCircle2 size={20} className="text-emerald-200" />
             <span className="font-medium">Candidature envoyée avec succès pour : {selectedJob?.title}</span>
           </div>
         </div>
       )}
 
-      <div className="grid gap-4">
+      {/* Internships List */}
+      <div className="grid gap-6">
         {internships.length === 0 ? (
-          <div className="bg-white p-12 rounded-2xl border border-dashed border-gray-200 text-center">
-            <Briefcase className="mx-auto text-gray-300 mb-4" size={48} />
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Aucune offre disponible</h3>
-            <p className="text-gray-500 max-w-xs mx-auto">
-              Il n'y a pas encore d'offres de stage ou d'emploi publiées. Revenez plus tard !
+          <div className="glass p-12 rounded-3xl text-center flex flex-col items-center justify-center min-h-[400px]">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+              <Briefcase className="text-slate-400" size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucune offre disponible</h3>
+            <p className="text-slate-500 max-w-md mx-auto">
+              Il n'y a pas encore d'offres de stage ou d'emploi publiées. Revenez plus tard ou soyez le premier à en publier une !
             </p>
           </div>
         ) : internships.map((job) => (
-          <div key={job.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative">
+          <div key={job.id} className="glass p-6 md:p-8 rounded-3xl hover:shadow-xl transition-all duration-300 group relative border border-white/40">
             {(isAdmin || user?.uid === job.authorId) && (
-              <div className="absolute top-4 right-4 flex gap-2">
+              <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => handleEditInternship(job)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors bg-white/50 backdrop-blur-sm shadow-sm"
                   title="Modifier"
                 >
                   <Edit size={16} />
                 </button>
                 <button 
                   onClick={() => handleDeleteInternship(job.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors bg-white/50 backdrop-blur-sm shadow-sm"
                   title="Supprimer"
                 >
                   <X size={16} />
                 </button>
               </div>
             )}
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="w-16 h-16 bg-gray-900 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-sm">
+            
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+              {/* Company Logo/Initial */}
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-lg shadow-slate-900/10">
                 {job.company.slice(0, 2).toUpperCase()}
               </div>
               
               <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
-                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors pr-20">{job.title}</h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium w-fit ${
-                    job.type === 'internship' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
-                  }`}>
-                    {job.type === 'internship' ? 'Stage' : 'Job Étudiant'}
-                  </span>
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase",
+                        job.type === 'internship' 
+                          ? 'bg-blue-100/50 text-blue-700 border border-blue-200/50' 
+                          : 'bg-purple-100/50 text-purple-700 border border-purple-200/50'
+                      )}>
+                        {job.type === 'internship' ? 'Stage' : 'Job Étudiant'}
+                      </span>
+                      <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                        <Clock size={14} />
+                        {job.postedAt?.toDate?.() ? job.postedAt.toDate().toLocaleDateString() : job.postedAt}
+                      </span>
+                    </div>
+                    <h3 className="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                      {job.title}
+                    </h3>
+                  </div>
                 </div>
                 
-                <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-500 mb-4">
-                  <span className="flex items-center gap-1.5"><Building2 size={16} /> {job.company}</span>
-                  <span className="flex items-center gap-1.5"><MapPin size={16} /> {job.location}</span>
-                  <span className="flex items-center gap-1.5"><Clock size={16} /> Publié le {job.postedAt?.toDate?.() ? job.postedAt.toDate().toLocaleDateString() : job.postedAt}</span>
+                <div className="flex flex-wrap gap-y-3 gap-x-6 text-sm text-slate-600 mb-6 bg-white/40 p-4 rounded-2xl border border-white/50">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Building2 size={18} className="text-slate-400" /> 
+                    {job.company}
+                  </span>
+                  <span className="flex items-center gap-2 font-medium">
+                    <MapPin size={18} className="text-slate-400" /> 
+                    {job.location}
+                  </span>
                   {job.deadline && (
-                    <span className="flex items-center gap-1.5 text-amber-600 font-medium"><Clock size={16} /> Limite: {job.deadline}</span>
+                    <span className="flex items-center gap-2 font-medium text-amber-700 bg-amber-50 px-3 py-1 rounded-lg">
+                      <Clock size={16} /> 
+                      Limite: {job.deadline}
+                    </span>
                   )}
                 </div>
 
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                <p className="text-slate-600 text-sm leading-relaxed mb-8 line-clamp-3">
                   {job.description}
                 </p>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-4">
                   <button 
                     onClick={() => openApplyModal(job)}
-                    className="px-6 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="px-8 py-3 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
                   >
-                    Postuler
+                    Postuler maintenant
                   </button>
-                  <button className="px-6 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                    En savoir plus
+                  <button className="px-8 py-3 bg-white/50 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-white transition-all hover:shadow-md">
+                    Voir les détails
                   </button>
                 </div>
               </div>
@@ -278,88 +311,128 @@ export default function Internships() {
 
       {/* Apply Modal */}
       {showApplyModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Postuler : {selectedJob?.title}</h2>
-              <button onClick={() => setShowApplyModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={20} />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowApplyModal(false)} />
+          <div className="glass relative w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 sm:p-8 border-b border-white/20">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Postuler</h2>
+                  <p className="text-slate-500 text-sm mt-1">{selectedJob?.title} chez {selectedJob?.company}</p>
+                </div>
+                <button 
+                  onClick={() => setShowApplyModal(false)} 
+                  className="p-2 hover:bg-slate-100/50 rounded-full transition-colors"
+                >
+                  <X size={20} className="text-slate-500" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleApplySubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Votre dossier (CV + Lettre de motivation)</label>
-                <input 
-                  type="file" 
-                  ref={applyFileInputRef}
-                  onChange={(e) => setApplyFile(e.target.files?.[0] || null)}
-                  accept=".pdf,.doc,.docx"
-                  className="hidden"
-                />
-                <div 
-                  onClick={() => applyFileInputRef.current?.click()}
-                  className={cn(
-                    "border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer",
-                    applyFile ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-emerald-500 hover:bg-emerald-50"
-                  )}
-                >
-                  <FileUp size={32} className={cn("mx-auto mb-2", applyFile ? "text-emerald-600" : "text-gray-400")} />
-                  <p className="text-sm font-medium text-gray-600">
-                    {applyFile ? applyFile.name : "Cliquez pour charger votre dossier"}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">Format PDF ou Word uniquement</p>
+            <div className="p-6 sm:p-8 bg-white/40">
+              <form onSubmit={handleApplySubmit} className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-slate-900">Votre dossier (CV + Lettre de motivation)</label>
+                  <input 
+                    type="file" 
+                    ref={applyFileInputRef}
+                    onChange={(e) => setApplyFile(e.target.files?.[0] || null)}
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                  />
+                  <div 
+                    onClick={() => applyFileInputRef.current?.click()}
+                    className={cn(
+                      "border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer bg-white/50",
+                      applyFile 
+                        ? "border-emerald-500 bg-emerald-50/50 shadow-inner" 
+                        : "border-slate-200 hover:border-emerald-400 hover:bg-white"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 transition-colors",
+                      applyFile ? "bg-emerald-100" : "bg-slate-100"
+                    )}>
+                      <FileUp size={28} className={cn(applyFile ? "text-emerald-600" : "text-slate-400")} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-700 mb-1">
+                      {applyFile ? applyFile.name : "Cliquez pour charger votre dossier"}
+                    </p>
+                    <p className="text-xs text-slate-500">Format PDF ou Word uniquement (Max 5MB)</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  En postulant, votre profil académique et votre dossier seront transmis directement au recruteur.
-                </p>
-              </div>
+                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 flex gap-3">
+                  <AlertCircle className="text-blue-500 flex-shrink-0" size={20} />
+                  <p className="text-xs text-blue-800 leading-relaxed">
+                    En postulant, votre profil académique et votre dossier seront transmis directement au recruteur. Assurez-vous que vos informations sont à jour.
+                  </p>
+                </div>
 
-              <button 
-                type="submit"
-                className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
-              >
-                <Send size={18} />
-                Envoyer ma candidature
-              </button>
-            </form>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting || !applyFile}
+                  className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      Envoyer ma candidature
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Post Internship Modal */}
       {showPostModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Modifier l\'offre de stage' : 'Publier une offre de stage'}</h2>
-              <button onClick={() => setShowPostModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={20} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowPostModal(false)} />
+          <div className="glass relative w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 sm:p-8 border-b border-white/20 flex items-center justify-between bg-white/40 sticky top-0 z-10">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {editingId ? 'Modifier l\'offre' : 'Publier une offre'}
+                </h2>
+                <p className="text-slate-500 text-sm mt-1">Remplissez les détails de l'offre ci-dessous.</p>
+              </div>
+              <button 
+                onClick={() => setShowPostModal(false)} 
+                className="p-2 hover:bg-slate-100/50 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-500" />
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 sm:p-8 overflow-y-auto bg-white/20">
               {!isSubscriptionActive && !isAdmin ? (
                 <div className="space-y-6">
-                  <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                    <h3 className="text-blue-900 font-bold mb-2 flex items-center gap-2">
-                      <Briefcase size={20} />
+                  <div className="bg-blue-50/80 p-8 rounded-3xl border border-blue-100/50 text-center">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Briefcase size={28} className="text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-blue-900 mb-2">
                       Abonnement Entreprise Requis
                     </h3>
-                    <p className="text-blue-700 text-sm mb-4">
-                      Pour publier des offres de stage sur CampusBF, vous devez souscrire à un abonnement de 30 jours.
+                    <p className="text-blue-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+                      Pour publier des offres de stage sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
                     </p>
-                    <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-blue-200">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Prix de l'abonnement</p>
-                        <p className="text-2xl font-black text-gray-900">5 000 CFA <span className="text-sm font-normal text-gray-400">/ 30 jours</span></p>
+                    
+                    <div className="bg-white rounded-2xl p-6 border border-blue-100 shadow-sm max-w-sm mx-auto">
+                      <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Tarif unique</p>
+                      <div className="flex items-baseline justify-center gap-1 mb-6">
+                        <span className="text-4xl font-black text-slate-900">5 000</span>
+                        <span className="text-lg font-bold text-slate-600">CFA</span>
+                        <span className="text-sm font-medium text-slate-400">/ 30 jours</span>
                       </div>
                       <button 
                         onClick={() => setShowPayment(true)}
-                        className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                        className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
                       >
                         S'abonner maintenant
                       </button>
@@ -368,49 +441,49 @@ export default function Internships() {
                 </div>
               ) : (
                 <form className="space-y-6" onSubmit={handleSubmitInternship}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Titre du poste</label>
+                      <label className="text-sm font-semibold text-slate-900">Titre du poste</label>
                       <input 
                         type="text" 
                         required 
                         value={newInternship.title}
                         onChange={(e) => setNewInternship({ ...newInternship, title: e.target.value })}
                         placeholder="Ex: Développeur Web Junior" 
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Entreprise</label>
+                      <label className="text-sm font-semibold text-slate-900">Entreprise</label>
                       <input 
                         type="text" 
                         required 
                         value={newInternship.company}
                         onChange={(e) => setNewInternship({ ...newInternship, company: e.target.value })}
                         placeholder="Nom de votre entreprise" 
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Lieu</label>
+                      <label className="text-sm font-semibold text-slate-900">Lieu</label>
                       <input 
                         type="text" 
                         required 
                         value={newInternship.location}
                         onChange={(e) => setNewInternship({ ...newInternship, location: e.target.value })}
                         placeholder="Ex: Ouagadougou, Burkina Faso" 
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Type de contrat</label>
+                      <label className="text-sm font-semibold text-slate-900">Type de contrat</label>
                       <select 
                         value={newInternship.type}
                         onChange={(e) => setNewInternship({ ...newInternship, type: e.target.value as any })}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                       >
                         <option value="internship">Stage</option>
                         <option value="job">Job Étudiant</option>
@@ -418,53 +491,55 @@ export default function Internships() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Email de réception des candidatures</label>
+                      <label className="text-sm font-semibold text-slate-900">Email de réception</label>
                       <input 
                         type="email" 
                         required 
                         value={newInternship.applicationEmail}
                         onChange={(e) => setNewInternship({ ...newInternship, applicationEmail: e.target.value })}
                         placeholder="Ex: rh@entreprise.com" 
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                       />
-                      <p className="text-[10px] text-gray-400 italic">Les dossiers des étudiants seront envoyés automatiquement à cette adresse.</p>
+                      <p className="text-[11px] text-slate-500">Les dossiers seront envoyés à cette adresse.</p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Date limite de candidature (Optionnel)</label>
+                      <label className="text-sm font-semibold text-slate-900">Date limite (Optionnel)</label>
                       <input 
                         type="date" 
                         value={newInternship.deadline}
                         onChange={(e) => setNewInternship({ ...newInternship, deadline: e.target.value })}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Description du poste</label>
+                    <label className="text-sm font-semibold text-slate-900">Description du poste</label>
                     <textarea 
                       required 
                       value={newInternship.description}
                       onChange={(e) => setNewInternship({ ...newInternship, description: e.target.value })}
                       placeholder="Décrivez les missions, les prérequis et les avantages..." 
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none h-32" 
+                      className="w-full p-4 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all h-40 resize-none" 
                     />
                   </div>
 
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <Send size={18} />
-                    )}
-                    {editingId ? 'Enregistrer les modifications' : 'Publier l\'offre'}
-                  </button>
+                  <div className="pt-4 border-t border-white/20">
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                    >
+                      {isSubmitting ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Send size={18} />
+                      )}
+                      {editingId ? 'Enregistrer les modifications' : 'Publier l\'offre'}
+                    </button>
+                  </div>
                 </form>
               )}
             </div>
@@ -484,3 +559,4 @@ export default function Internships() {
     </div>
   );
 }
+

@@ -39,26 +39,47 @@ export default function Chatbot() {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen ? (
-        <div className="w-80 h-96 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl shadow-xl flex flex-col overflow-hidden">
-          <div className="p-4 bg-emerald-600 text-white flex justify-between items-center">
-            <h3 className="font-bold">Assistant CampusBF</h3>
-            <button onClick={() => setIsOpen(false)}><X size={20} /></button>
+        <div className="w-80 md:w-96 h-[32rem] bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="p-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white flex justify-between items-center shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <MessageCircle size={16} />
+              </div>
+              <h3 className="font-display font-bold tracking-wide">Assistant CampusBF</h3>
+            </div>
+            <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1.5 rounded-full transition-colors"><X size={20} /></button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50">
             {messages.map((m, i) => (
-              <div key={i} className={`p-2 rounded-lg ${m.role === 'user' ? 'bg-emerald-100 dark:bg-emerald-900 ml-auto' : 'bg-gray-100 dark:bg-slate-700'}`}>
-                {m.content}
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`p-3.5 max-w-[85%] rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white border border-slate-200/60 text-slate-700 rounded-tl-sm'}`}>
+                  {m.content}
+                </div>
               </div>
             ))}
           </div>
-          <div className="p-2 border-t dark:border-slate-700 flex gap-2">
-            <input value={input} onChange={e => setInput(e.target.value)} className="flex-1 p-2 border dark:border-slate-700 rounded" placeholder="Votre question..." />
-            <button onClick={handleSend} className="bg-emerald-600 text-white p-2 rounded"><Send size={20} /></button>
+          <div className="p-4 bg-white border-t border-slate-200/60 flex gap-2">
+            <input 
+              value={input} 
+              onChange={e => setInput(e.target.value)} 
+              onKeyPress={e => e.key === 'Enter' && handleSend()}
+              className="flex-1 px-4 py-2.5 bg-slate-100/50 border border-slate-200/60 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all" 
+              placeholder="Posez votre question..." 
+            />
+            <button 
+              onClick={handleSend} 
+              className="bg-emerald-600 text-white p-2.5 rounded-full hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center"
+            >
+              <Send size={18} className="ml-0.5" />
+            </button>
           </div>
         </div>
       ) : (
-        <button onClick={() => setIsOpen(true)} className="bg-emerald-600 text-white p-4 rounded-full shadow-lg">
-          <MessageCircle size={24} />
+        <button 
+          onClick={() => setIsOpen(true)} 
+          className="bg-emerald-600 text-white p-4 rounded-full shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        >
+          <MessageCircle size={26} className="group-hover:animate-pulse" />
         </button>
       )}
     </div>
