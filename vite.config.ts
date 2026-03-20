@@ -9,7 +9,7 @@ export default defineConfig(({mode}) => {
   
   // AI Studio secrets are injected into process.env
   const CLOUD_NAME = process.env.VITE_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || env.VITE_CLOUDINARY_CLOUD_NAME || env.CLOUDINARY_CLOUD_NAME || '';
-  const UPLOAD_PRESET = process.env.VITE_CLOUDINARY_UPLOAD_PRESET || env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+  const UPLOAD_PRESET = process.env.VITE_CLOUDINARY_UPLOAD_PRESET || process.env.CLOUDINARY_UPLOAD_PRESET || env.VITE_CLOUDINARY_UPLOAD_PRESET || env.CLOUDINARY_UPLOAD_PRESET || '';
   const GEMINI_KEY = process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || '';
 
   console.log('--- Cloudinary Build Config ---');

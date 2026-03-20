@@ -1,4 +1,4 @@
-import { User, Document, Tutor, Internship, MarketplaceItem, Group, Post, Ad, Message, Notification } from '../types';
+import { User, Document, Tutor, Internship, MarketplaceItem, Group, Post, Ad, Message, Notification, CampusEvent, LostAndFound, News } from '../types';
 
 export const CURRENT_USER: User = {
   id: 'u1',
@@ -555,5 +555,43 @@ export const MOCK_ADS: Ad[] = [
     linkUrl: '#',
     active: true,
     createdAt: '2024-03-03T12:00:00',
+  }
+];
+
+export const MOCK_EVENTS: CampusEvent[] = [
+  {
+    id: 'e1',
+    title: 'Conférence sur l\'IA',
+    description: 'Une conférence passionnante sur l\'avenir de l\'intelligence artificielle au Burkina Faso.',
+    type: 'conference',
+    location: 'Amphi A600, UJKZ',
+    date: '2024-04-15',
+    time: '10:00',
+    organizerId: 'admin1',
+    organizer: ADMIN_USER,
+    attendees: ['u1', 'u2'],
+    createdAt: '2024-03-10T08:00:00',
+  }
+];
+
+export const MOCK_LOST_AND_FOUND: LostAndFound[] = [
+  {
+    id: 'lf1',
+    title: 'Clés trouvées',
+    description: 'Trousseau de clés trouvé près de la bibliothèque.',
+    location: 'Bibliothèque Centrale',
+    status: 'found',
+    userId: 'u1',
+    createdAt: '2024-03-12T14:00:00',
+  }
+];
+
+export const MOCK_NEWS: News[] = [
+  {
+    id: 'n1',
+    title: 'Nouveau calendrier académique',
+    content: 'Le calendrier académique pour le second semestre a été publié.',
+    authorId: 'admin1',
+    createdAt: '2024-03-15T09:00:00',
   }
 ];

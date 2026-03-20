@@ -298,3 +298,14 @@ export interface LostAndFound {
   userId: string;
   createdAt: string;
 }
+
+export interface Report {
+  id: string;
+  reportedItemId: string;
+  reportedItemType: 'post' | 'comment' | 'document' | 'internship' | 'marketplace' | 'event' | 'lostAndFound' | 'news';
+  reason: string;
+  reporterId: string;
+  reporterName: string;
+  status: 'pending' | 'resolved' | 'ignored';
+  createdAt: string;
+}

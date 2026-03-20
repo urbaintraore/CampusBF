@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent } from '@/types';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
@@ -32,7 +32,23 @@ interface AuthContextType {
   users: User[];
   ads: Ad[];
   documents: any[];
+  internships: Internship[];
+  events: CampusEvent[];
+  news: News[];
+  lostAndFound: LostAndFound[];
+  marketplace: MarketplaceItem[];
+  community: Post[];
+  reports: Report[];
   updateAds: (newAds: Ad[]) => void;
+  deleteDocument: (id: string) => Promise<void>;
+  deleteInternship: (id: string) => Promise<void>;
+  deleteMarketplaceItem: (id: string) => Promise<void>;
+  deletePost: (id: string) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  deleteNews: (id: string) => Promise<void>;
+  deleteLostAndFound: (id: string) => Promise<void>;
+  deleteReport: (id: string) => Promise<void>;
+  addReport: (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
@@ -60,8 +76,6 @@ interface AuthContextType {
   teacherApplications: TeacherApplication[];
   subscriptionRequests: SubscriptionRequest[];
   notifications: Notification[];
-  internships: Internship[];
-  events: CampusEvent[];
   groups: Group[];
   addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
@@ -77,12 +91,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
+  const [community, setCommunity] = useState<Post[]>([]);
   const [applications, setApplications] = useState<TutorApplication[]>([]);
   const [teacherApplications, setTeacherApplications] = useState<TeacherApplication[]>([]);
   const [subscriptionRequests, setSubscriptionRequests] = useState<SubscriptionRequest[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [internships, setInternships] = useState<Internship[]>([]);
   const [events, setEvents] = useState<CampusEvent[]>([]);
+  const [news, setNews] = useState<News[]>([]);
+  const [lostAndFound, setLostAndFound] = useState<LostAndFound[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -187,6 +206,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'groups')));
 
+            unsubscribes.push(onSnapshot(collection(db, 'marketplace'), (snapshot) => {
+              setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'marketplace')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'community'), (snapshot) => {
+              setCommunity(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'community')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'news'), (snapshot) => {
+              setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'news')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'lostAndFound'), (snapshot) => {
+              setLostAndFound(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LostAndFound)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'lostAndFound')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'reports'), (snapshot) => {
+              setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'reports')));
+
             // User-specific notifications
             const qNotifs = query(collection(db, 'notifications'), where('userId', '==', firebaseUser.uid));
             unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
@@ -231,7 +270,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Error fetching user doc:", error);
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          // Don't throw here to allow app to load even if user doc fetch fails
+          // handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          setUser(null);
         }
       } else {
         console.log("No firebase user");
@@ -245,6 +286,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setNotifications([]);
         setInternships([]);
         setEvents([]);
+        setNews([]);
+        setLostAndFound([]);
+        setMarketplace([]);
+        setCommunity([]);
         setGroups([]);
       }
       setIsLoading(false);
@@ -619,6 +664,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteDocument = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'documents', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `documents/${id}`);
+    }
+  };
+
+  const deleteInternship = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'internships', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `internships/${id}`);
+    }
+  };
+
+  const deleteMarketplaceItem = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'marketplace', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `marketplace/${id}`);
+    }
+  };
+
+  const deletePost = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'community', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `community/${id}`);
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'events', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
+    }
+  };
+
+  const deleteNews = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'news', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
+    }
+  };
+
+  const deleteLostAndFound = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'lostAndFound', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `lostAndFound/${id}`);
+    }
+  };
+
+  const deleteReport = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'reports', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `reports/${id}`);
+    }
+  };
+
+  const addReport = async (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => {
+    try {
+      await addDoc(collection(db, 'reports'), {
+        ...report,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'reports');
+    }
+  };
+
   const addNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'read' | 'createdAt'>) => {
     try {
       await addDoc(collection(db, 'notifications'), {
@@ -669,7 +790,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       users,
       ads,
       documents,
+      internships,
+      events,
+      news,
+      lostAndFound,
+      marketplace,
+      community,
+      reports,
       updateAds,
+      deleteDocument,
+      deleteInternship,
+      deleteMarketplaceItem,
+      deletePost,
+      deleteEvent,
+      deleteNews,
+      deleteLostAndFound,
+      deleteReport,
+      addReport,
       login, 
       loginWithGoogle,
       signup,
@@ -687,8 +824,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       teacherApplications,
       subscriptionRequests,
       notifications,
-      internships,
-      events,
       groups,
       addNotification,
       markNotificationAsRead,

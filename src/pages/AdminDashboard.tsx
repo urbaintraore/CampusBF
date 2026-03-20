@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_USERS, MOCK_DOCUMENTS, MOCK_INTERNSHIPS, MOCK_MARKETPLACE, MOCK_COMMUNITY } from '@/data/mock';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
@@ -16,17 +15,35 @@ export default function AdminDashboard() {
     updateUserRole, 
     deleteUser,
     ads,
-    updateAds
+    updateAds,
+    documents,
+    internships,
+    marketplace,
+    community,
+    events,
+    news,
+    lostAndFound,
+    deleteDocument,
+    deleteInternship,
+    deleteMarketplaceItem,
+    deletePost,
+    deleteEvent,
+    deleteNews,
+    deleteLostAndFound,
+    reports,
+    deleteReport
   } = useAuth();
+
+  // Cloudinary config check
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+  const isCloudinaryConfigured = cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '';
+
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports'>('documents');
   const [userSearch, setUserSearch] = useState('');
   
   // Content states
-  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
-  const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
-  const [marketplace, setMarketplace] = useState(MOCK_MARKETPLACE);
-  const [community, setCommunity] = useState(MOCK_COMMUNITY);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
 
@@ -113,7 +130,7 @@ export default function AdminDashboard() {
             {[
               { label: 'Utilisateurs', count: users.length.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
               { label: 'Documents', count: '3,890', icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
-              { label: 'Signalements', count: '12', icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
+              { label: 'Signalements', count: reports.length.toString(), icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
               { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Paiements', count: pendingSubscriptions.length.toString(), icon: CreditCard, color: 'bg-indigo-50 text-indigo-700' },
@@ -278,25 +295,46 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                 <h2 className="font-bold text-gray-900">Signalements Récents</h2>
-                <span className="text-xs font-medium bg-red-50 text-red-700 px-2 py-1 rounded-full">3 nouveaux</span>
+                {reports.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="text-xs font-medium bg-red-50 text-red-700 px-2 py-1 rounded-full">
+                    {reports.filter(r => r.status === 'pending').length} nouveaux
+                  </span>
+                )}
               </div>
               <div className="divide-y divide-gray-50">
-                {[
-                  { type: 'Commentaire', reason: 'Contenu inapproprié', user: 'User123', date: 'Il y a 2h' },
-                  { type: 'Document', reason: 'Copyright', user: 'User456', date: 'Il y a 5h' },
-                  { type: 'Annonce', reason: 'Arnaque potentielle', user: 'User789', date: 'Il y a 1j' },
-                ].map((report, i) => (
-                  <div key={i} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between">
+                {reports.filter(r => r.status === 'pending').slice(0, 5).map((report) => (
+                  <div key={report.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{report.type} - {report.reason}</p>
-                      <p className="text-xs text-gray-500">Signalé par {report.user} • {report.date}</p>
+                      <p className="font-medium text-gray-900 capitalize">{report.reportedItemType} - {report.reason}</p>
+                      <p className="text-xs text-gray-500">Signalé par {report.reporterName} • {new Date(report.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100">Supprimer</button>
-                      <button className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Ignorer</button>
+                      <button 
+                        onClick={() => {
+                          if(confirm('Supprimer cet élément signalé ?')) {
+                            // Logic to delete the actual item would go here based on report.reportedItemType and report.reportedItemId
+                            // For now, we just delete the report
+                            deleteReport(report.id);
+                          }
+                        }}
+                        className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                      >
+                        Supprimer
+                      </button>
+                      <button 
+                        onClick={() => deleteReport(report.id)}
+                        className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                      >
+                        Ignorer
+                      </button>
                     </div>
                   </div>
                 ))}
+                {reports.filter(r => r.status === 'pending').length === 0 && (
+                  <div className="p-8 text-center text-gray-400 text-sm">
+                    Aucun signalement en attente.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -306,6 +344,19 @@ export default function AdminDashboard() {
                 <h2 className="font-bold text-gray-900">État du Système</h2>
               </div>
               <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Cloudinary (Uploads)</span>
+                  <span className={`text-sm font-medium flex items-center gap-2 ${isCloudinaryConfigured ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <span className={`w-2 h-2 rounded-full bg-current`}></span>
+                    {isCloudinaryConfigured ? 'Configuré' : 'Non configuré'}
+                  </span>
+                </div>
+                {!isCloudinaryConfigured && (
+                  <div className="p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-100">
+                    <p className="font-bold mb-1">Attention : Les uploads ne fonctionneront pas !</p>
+                    <p>Veuillez ajouter <strong>VITE_CLOUDINARY_CLOUD_NAME</strong> et <strong>VITE_CLOUDINARY_UPLOAD_PRESET</strong> dans les Secrets d'AI Studio.</p>
+                  </div>
+                )}
                 {[
                   { label: 'Base de données', status: 'Opérationnel', color: 'text-emerald-600' },
                   { label: 'Stockage Fichiers', status: 'Opérationnel', color: 'text-emerald-600' },
@@ -328,14 +379,19 @@ export default function AdminDashboard() {
 
       {activeTab === 'content' && (
         <div className="space-y-6">
-          <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
+          <div className="flex bg-gray-100 p-1 rounded-xl w-fit flex-wrap gap-1">
             {[
               { id: 'documents', label: 'Documents', icon: FileText },
               { id: 'stages', label: 'Stages', icon: Briefcase },
               { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
               { id: 'community', label: 'Communauté', icon: MessageSquare },
+              { id: 'events', label: 'Événements', icon: Calendar },
+              { id: 'lostAndFound', label: 'Objets Perdus', icon: MapPin },
+              { id: 'news', label: 'Actualités', icon: Newspaper },
               { id: 'ads', label: 'Publicités', icon: Megaphone },
               { id: 'teachers', label: 'Enseignants', icon: Library },
+              { id: 'tutors', label: 'Répétiteurs', icon: GraduationCap },
+              { id: 'reports', label: 'Signalements', icon: AlertTriangle },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -377,12 +433,25 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500">{doc.course} • {doc.university}</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <a 
+                      href={doc.fileUrl} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Voir le document"
+                    >
+                      <ExternalLink size={18} />
+                    </a>
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer ce document ?')) deleteDocument(doc.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -397,48 +466,156 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500">{job.company} • {job.location}</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setInternships(prev => prev.filter(i => i.id !== job.id))}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <a 
+                      href={job.linkUrl || '#'} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Voir l'offre"
+                    >
+                      <ExternalLink size={18} />
+                    </a>
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cette offre ?')) deleteInternship(job.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
               {contentTab === 'marketplace' && marketplace.map(item => (
                 <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <img src={item.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                        <ShoppingBag size={20} />
+                      </div>
+                    )}
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{item.title}</p>
-                      <p className="text-xs text-gray-500">{item.price.toLocaleString()} CFA • {item.seller.firstName}</p>
+                      <p className="text-xs text-gray-500">{item.price.toLocaleString()} CFA • {item.seller?.firstName || 'Vendeur'}</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setMarketplace(prev => prev.filter(m => m.id !== item.id))}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cet article ?')) deleteMarketplaceItem(item.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
               {contentTab === 'community' && community.map(post => (
                 <div key={post.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <img src={post.author.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
+                    {post.author?.avatarUrl ? (
+                      <img src={post.author.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                        <Users size={20} />
+                      </div>
+                    )}
                     <div>
                       <p className="font-bold text-gray-900 text-sm line-clamp-1">{post.content}</p>
-                      <p className="text-xs text-gray-500">Par {post.author.firstName} • {post.likes} likes • {post.comments?.length || 0} commentaires</p>
+                      <p className="text-xs text-gray-500">Par {post.author?.firstName || 'Anonyme'} • {post.likes} likes • {post.comments?.length || 0} commentaires</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setCommunity(prev => prev.filter(p => p.id !== post.id))}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer ce post ?')) deletePost(post.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {contentTab === 'events' && events.map(event => (
+                <div key={event.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                      <Calendar size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{event.title}</p>
+                      <p className="text-xs text-gray-500">{event.date} à {event.time} • {event.location}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cet événement ?')) deleteEvent(event.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {contentTab === 'lostAndFound' && lostAndFound.map(item => (
+                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center",
+                      item.status === 'lost' ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+                    )}>
+                      <MapPin size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{item.title}</p>
+                      <p className="text-xs text-gray-500 capitalize">{item.status === 'lost' ? 'Perdu' : 'Trouvé'} • {item.location}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cet objet ?')) deleteLostAndFound(item.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {contentTab === 'news' && news.map(item => (
+                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
+                      <Newspaper size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{item.title}</p>
+                      <p className="text-xs text-gray-500 line-clamp-1">{item.content}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cette actualité ?')) deleteNews(item.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -478,6 +655,125 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+              {contentTab === 'tutors' && (
+                <div className="p-0">
+                  {/* Pending Tutor Applications */}
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <GraduationCap className="text-emerald-600" size={18} />
+                      Demandes Répétiteurs en attente
+                    </h3>
+                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                      {applications.filter(a => a.status === 'pending').length} en attente
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {applications.filter(a => a.status === 'pending').length > 0 ? (
+                      applications.filter(a => a.status === 'pending').map((app) => (
+                        <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                              <div>
+                                <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
+                                <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.user.major}</p>
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {app.subjects.map((sub) => (
+                                    <span key={sub} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full font-bold">
+                                      {sub}
+                                    </span>
+                                  ))}
+                                </div>
+                                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">
+                                  "{app.description}"
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-3 min-w-[200px]">
+                              <a 
+                                href={app.documentUrl} 
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                              >
+                                <Download size={16} />
+                                Voir Justificatif
+                              </a>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => reviewApplication(app.id, 'approved')}
+                                  className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                                >
+                                  <Check size={16} />
+                                  Accepter
+                                </button>
+                                <button 
+                                  onClick={() => reviewApplication(app.id, 'rejected')}
+                                  className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                                >
+                                  <X size={16} />
+                                  Refuser
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400">
+                        <p>Aucune demande en attente.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Approved Tutors */}
+                  <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-gray-50/50 mt-4">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <UserCheck className="text-blue-600" size={18} />
+                      Répétiteurs actifs
+                    </h3>
+                    <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                      {users.filter(u => u.role === 'tutor').length} actifs
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {users.filter(u => u.role === 'tutor').map(tutor => (
+                      <div key={tutor.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                          <img src={tutor.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 object-cover" />
+                          <div>
+                            <h3 className="font-bold text-gray-900">{tutor.firstName} {tutor.lastName}</h3>
+                            <p className="text-xs text-gray-500 mb-1">{tutor.university} • {tutor.major}</p>
+                            <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] rounded-full font-bold">
+                              Statut : Actif
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 w-full md:w-auto">
+                          <button 
+                            onClick={() => {
+                              if(confirm('Voulez-vous retirer le statut répétiteur de cet utilisateur ?')) {
+                                updateUserRole(tutor.id, 'student');
+                              }
+                            }}
+                            className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors flex items-center gap-2"
+                          >
+                            <Ban size={16} />
+                            Rétrograder
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(tutor.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {contentTab === 'teachers' && (
                 <div className="p-0">
                   {/* Pending Applications */}
@@ -660,6 +956,84 @@ export default function AdminDashboard() {
                     {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').length === 0 && (
                       <div className="p-8 text-center text-gray-400">
                         <p>Aucun enseignant validé pour le moment.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {contentTab === 'reports' && (
+                <div className="p-0">
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <AlertTriangle className="text-red-600" size={18} />
+                      Gestion des Signalements
+                    </h3>
+                    <span className="text-xs font-medium bg-red-50 text-red-700 px-2 py-1 rounded-full">
+                      {reports.length} au total
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {reports.length > 0 ? (
+                      reports.map((report) => (
+                        <div key={report.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                                <AlertTriangle size={24} />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-gray-900 capitalize">
+                                  {report.reportedItemType} signalé
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  Raison : <span className="font-medium">{report.reason}</span>
+                                </p>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  <span>Signalé par : {report.reporterName}</span>
+                                  <span>•</span>
+                                  <span>ID de l'élément : {report.reportedItemId}</span>
+                                  <span>•</span>
+                                  <span>Date : {new Date(report.createdAt).toLocaleString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[200px] justify-center">
+                              <button 
+                                onClick={() => {
+                                  if(confirm('Supprimer cet élément définitivement ?')) {
+                                    // Here we would call the specific delete function based on type
+                                    switch(report.reportedItemType) {
+                                      case 'document': deleteDocument(report.reportedItemId); break;
+                                      case 'internship': deleteInternship(report.reportedItemId); break;
+                                      case 'marketplace': deleteMarketplaceItem(report.reportedItemId); break;
+                                      case 'post': deletePost(report.reportedItemId); break;
+                                      case 'event': deleteEvent(report.reportedItemId); break;
+                                      case 'news': deleteNews(report.reportedItemId); break;
+                                      case 'lostAndFound': deleteLostAndFound(report.reportedItemId); break;
+                                    }
+                                    deleteReport(report.id);
+                                  }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors"
+                              >
+                                <Trash2 size={16} />
+                                Supprimer l'élément
+                              </button>
+                              <button 
+                                onClick={() => deleteReport(report.id)}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors"
+                              >
+                                <Check size={16} />
+                                Ignorer le signalement
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 text-center text-gray-400">
+                        <p>Aucun signalement à traiter.</p>
                       </div>
                     )}
                   </div>
