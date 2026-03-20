@@ -175,7 +175,7 @@ export default function Documents() {
         subject: uploadSubject,
         authorId: user?.id || 'admin',
         downloadUrl,
-        fileName: fileName,
+        ...(fileName && { fileName }),
         downloads: 0,
         likes: 0,
         createdAt: serverTimestamp(),

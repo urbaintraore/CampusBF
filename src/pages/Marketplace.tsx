@@ -175,7 +175,7 @@ export default function Marketplace() {
       resetSellForm();
       alert('Votre annonce a été publiée avec succès !');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'ads');
+      console.error("Error publishing ad:", error);
       alert("Erreur lors de la publication de l'annonce.");
     } finally {
       setIsPublishing(false);
