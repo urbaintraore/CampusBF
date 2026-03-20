@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
+import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
@@ -125,9 +125,26 @@ export default function Marketplace() {
       let imageUrl = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3';
       
       if (sellImage) {
-        const storageRef = ref(storage, `ads/${Date.now()}`);
-        await uploadString(storageRef, sellImage, 'data_url');
-        imageUrl = await getDownloadURL(storageRef);
+        // Convert base64 to blob
+        const res = await fetch(sellImage);
+        const blob = await res.blob();
+        const file = new File([blob], `ad-image-${Date.now()}.jpg`, { type: blob.type });
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json();
+          throw new Error(errorData.error || "Erreur lors de l'upload de l'image");
+        }
+
+        const data = await uploadRes.json();
+        imageUrl = data.url;
       }
 
       const newItem = {

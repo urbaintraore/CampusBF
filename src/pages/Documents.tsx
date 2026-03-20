@@ -146,9 +146,25 @@ export default function Documents() {
     setUploadError('');
 
     try {
-      const storageRef = ref(storage, `documents/${Date.now()}_${selectedFile.name}`);
-      await uploadBytes(storageRef, selectedFile);
-      const downloadUrl = await getDownloadURL(storageRef);
+      console.log("Starting upload process to Cloudflare R2...");
+      
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de l'upload");
+      }
+
+      const data = await response.json();
+      const downloadUrl = data.url;
+      const fileName = data.fileName;
+      console.log("Download URL obtained:", downloadUrl);
 
       const newDoc = {
         title: uploadTitle,
@@ -159,18 +175,21 @@ export default function Documents() {
         subject: uploadSubject,
         authorId: user?.id || 'admin',
         downloadUrl,
-        fileName: selectedFile.name,
+        fileName: fileName,
         downloads: 0,
         likes: 0,
         createdAt: serverTimestamp(),
       };
 
+      console.log("Adding document to Firestore...", newDoc);
       await addDoc(collection(db, 'documents'), newDoc);
+      console.log("Document added successfully.");
+      
       resetUploadForm();
       alert('Document partagé avec succès !');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading document:", error);
-      setUploadError("Erreur lors de l'envoi du document.");
+      setUploadError(`Erreur: ${error.message || "Erreur lors de l'envoi du document."}`);
     } finally {
       setIsUploading(false);
     }
