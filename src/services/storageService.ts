@@ -8,8 +8,8 @@ import { storage } from '@/lib/firebase';
  * @returns Promise with the secure download URL and original filename
  */
 export const uploadFile = async (file: File | Blob): Promise<{ url: string, fileName: string }> => {
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  const cloudName = (process.env as any).VITE_CLOUDINARY_CLOUD_NAME || (import.meta as any).env?.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = (process.env as any).VITE_CLOUDINARY_UPLOAD_PRESET || (import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   // Determine filename
   let fileName = 'document.pdf';
