@@ -16,6 +16,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
   const { user, ads } = useAuth();
@@ -130,32 +131,8 @@ export default function Marketplace() {
         const blob = await res.blob();
         const file = new File([blob], `ad-image-${Date.now()}.jpg`, { type: blob.type });
 
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          let errorMessage = "Erreur lors de l'upload de l'image";
-          try {
-            const errorData = await uploadRes.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (e) {
-            errorMessage = `Erreur serveur (${uploadRes.status}): ${uploadRes.statusText}`;
-          }
-          throw new Error(errorMessage);
-        }
-
-        let data;
-        try {
-          data = await uploadRes.json();
-        } catch (e) {
-          throw new Error("Réponse invalide du serveur");
-        }
-        imageUrl = data.url;
+        const { url } = await uploadFile(file);
+        imageUrl = url;
       }
 
       const newItem = {

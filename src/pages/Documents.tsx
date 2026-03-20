@@ -16,6 +16,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
   const { user, documents: globalDocuments } = useAuth();
@@ -146,36 +147,9 @@ export default function Documents() {
     setUploadError('');
 
     try {
-      console.log("Starting upload process to Cloudflare R2...");
+      console.log("Starting upload process to Cloudinary...");
       
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        let errorMessage = "Erreur lors de l'upload";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorMessage = `Erreur serveur (${response.status}): ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      let data;
-      try {
-        data = await response.json();
-      } catch (e) {
-        throw new Error("Réponse invalide du serveur");
-      }
-      const downloadUrl = data.url;
-      const fileName = data.fileName;
+      const { url: downloadUrl, fileName } = await uploadFile(selectedFile);
       console.log("Download URL obtained:", downloadUrl);
 
       const newDoc = {

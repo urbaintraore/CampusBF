@@ -62,7 +62,7 @@ export default function Profile() {
     if (file && user) {
       try {
         setIsUploading(true);
-        const downloadUrl = await uploadFile(file, `avatars/${user.id}`);
+        const { url: downloadUrl } = await uploadFile(file);
         setFormData(prev => ({ ...prev, avatarUrl: downloadUrl }));
         // Update user immediately for avatar
         await updateUser({ avatarUrl: downloadUrl });
@@ -80,7 +80,7 @@ export default function Profile() {
     if (tutorDescription && fileSelected && user) {
       try {
         setIsUploading(true);
-        const downloadUrl = await uploadFile(fileSelected, `applications/tutor/${user.id}_${Date.now()}`);
+        const { url: downloadUrl } = await uploadFile(fileSelected);
         submitTutorApplication(
           tutorDescription, 
           downloadUrl,
@@ -112,9 +112,9 @@ export default function Profile() {
     if (user && teacherFiles.cv && teacherFiles.diploma && teacherFiles.rankProof) {
       try {
         setIsUploading(true);
-        const cvUrl = await uploadFile(teacherFiles.cv, `teachers/cv/${user.id}_${Date.now()}`);
-        const diplomaUrl = await uploadFile(teacherFiles.diploma, `teachers/diploma/${user.id}_${Date.now()}`);
-        const rankProofUrl = await uploadFile(teacherFiles.rankProof, `teachers/rank/${user.id}_${Date.now()}`);
+        const { url: cvUrl } = await uploadFile(teacherFiles.cv);
+        const { url: diplomaUrl } = await uploadFile(teacherFiles.diploma);
+        const { url: rankProofUrl } = await uploadFile(teacherFiles.rankProof);
         
         submitTeacherApplication({
           cvUrl,
