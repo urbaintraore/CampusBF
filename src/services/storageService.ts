@@ -45,11 +45,17 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
 
     console.log(`[StorageService] Envoi vers Cloudinary: ${url}`);
     
+    // Add timeout to fetch
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       console.log(`[StorageService] Réponse Cloudinary reçue: ${response.status} ${response.statusText}`);
 
@@ -71,8 +77,13 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
       const errorText = await response.text();
       console.warn(`[StorageService] Échec Cloudinary (${response.status}):`, errorText);
       // Fall through to Firebase Storage
-    } catch (error) {
-      console.warn("[StorageService] Erreur Cloudinary, tentative avec Firebase Storage:", error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        console.warn("[StorageService] Timeout Cloudinary, tentative avec Firebase Storage.");
+      } else {
+        console.warn("[StorageService] Erreur Cloudinary, tentative avec Firebase Storage:", error);
+      }
       // Fall through to Firebase Storage
     }
   }
@@ -90,7 +101,7 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
       fileName
     };
   } catch (firebaseError: any) {
-    console.error("[StorageService] Erreur Firebase Storage:", firebaseError);
+    console.error("[StorageService] Erreur Firebase Storage:", firebaseError.message, firebaseError);
     
     // Last resort dummy fallback (only if everything fails)
     console.log("[StorageService] Utilisation du fallback dummy en dernier recours.");
