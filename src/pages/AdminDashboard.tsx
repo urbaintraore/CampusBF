@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +31,9 @@ export default function AdminDashboard() {
     deleteNews,
     deleteLostAndFound,
     reports,
-    deleteReport
+    deleteReport,
+    motoRides,
+    deleteMotoRide
   } = useAuth();
 
   // Cloudinary config check
@@ -40,7 +42,7 @@ export default function AdminDashboard() {
   const isCloudinaryConfigured = cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '';
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments'>('documents');
   const [userSearch, setUserSearch] = useState('');
   
   // Content states
@@ -392,6 +394,8 @@ export default function AdminDashboard() {
               { id: 'teachers', label: 'Enseignants', icon: Library },
               { id: 'tutors', label: 'Répétiteurs', icon: GraduationCap },
               { id: 'reports', label: 'Signalements', icon: AlertTriangle },
+              { id: 'motoRide', label: 'MotoRide', icon: Bike },
+              { id: 'payments', label: 'Paiements', icon: CreditCard },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -430,12 +434,12 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{doc.title}</p>
-                      <p className="text-xs text-gray-500">{doc.course} • {doc.university}</p>
+                      <p className="text-xs text-gray-500">{doc.subject} • {doc.university}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <a 
-                      href={doc.fileUrl} 
+                      href={doc.downloadUrl} 
                       target="_blank" 
                       rel="noreferrer"
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1034,6 +1038,124 @@ export default function AdminDashboard() {
                     ) : (
                       <div className="p-12 text-center text-gray-400">
                         <p>Aucun signalement à traiter.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {contentTab === 'motoRide' && (
+                <div className="p-0">
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <Bike className="text-orange-600" size={18} />
+                      Gestion des Trajets MotoRide
+                    </h3>
+                    <span className="text-xs font-medium bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
+                      {motoRides.length} trajets
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {motoRides.length > 0 ? (
+                      motoRides.map((ride) => (
+                        <div key={ride.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center">
+                              <Bike size={20} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 text-sm">{ride.departure} → {ride.destination}</p>
+                              <p className="text-xs text-gray-500">Par {ride.driverName} • {ride.price} FCFA • {ride.time}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => {
+                                if(confirm('Supprimer ce trajet ?')) deleteMotoRide(ride.id);
+                              }}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400">
+                        <p>Aucun trajet publié pour le moment.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {contentTab === 'payments' && (
+                <div className="p-0">
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <CreditCard className="text-indigo-600" size={18} />
+                      Gestion des Paiements & Abonnements
+                    </h3>
+                    <span className="text-xs font-medium bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">
+                      {subscriptionRequests.length} au total
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {subscriptionRequests.length > 0 ? (
+                      subscriptionRequests.map((req) => (
+                        <div key={req.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-10 h-10 rounded-lg flex items-center justify-center",
+                              req.status === 'pending' ? "bg-amber-50 text-amber-600" : 
+                              req.status === 'approved' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                            )}>
+                              <CreditCard size={20} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 text-sm">
+                                {req.type === 'motoride' ? 'Abonnement MotoRide' : 
+                                 req.type === 'premium' ? 'Abonnement Premium' : 
+                                 req.type === 'tutor' ? 'Abonnement Répétiteur' : 
+                                 req.type === 'marketplace' ? 'Abonnement Marketplace' : 'Abonnement'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Par {req.user?.firstName} {req.user?.lastName} • {req.amount} FCFA • {new Date(req.createdAt).toLocaleDateString()}
+                              </p>
+                              <span className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase",
+                                req.status === 'pending' ? "bg-amber-100 text-amber-700" : 
+                                req.status === 'approved' ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                              )}>
+                                {req.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {req.status === 'pending' && (
+                              <>
+                                <button 
+                                  onClick={() => reviewSubscriptionRequest(req.id, 'approved')}
+                                  className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                  title="Approuver"
+                                >
+                                  <Check size={18} />
+                                </button>
+                                <button 
+                                  onClick={() => reviewSubscriptionRequest(req.id, 'rejected')}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Rejeter"
+                                >
+                                  <X size={18} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400">
+                        <p>Aucune demande de paiement pour le moment.</p>
                       </div>
                     )}
                   </div>

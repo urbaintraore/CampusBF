@@ -147,10 +147,13 @@ export default function Documents() {
     setUploadError('');
 
     try {
-      console.log("Starting upload process to Cloudinary...");
+      console.log(`[Documents] Début de l'upload: ${selectedFile.name} (${selectedFile.size} octets)`);
       
       const { url: downloadUrl, fileName } = await uploadFile(selectedFile);
-      console.log("Download URL obtained:", downloadUrl);
+      console.log("[Documents] Upload réussi, URL:", downloadUrl);
+      if (!downloadUrl) {
+        throw new Error("L'URL de téléchargement n'a pas été générée.");
+      }
 
       const newDoc = {
         title: uploadTitle,
@@ -161,15 +164,15 @@ export default function Documents() {
         subject: uploadSubject,
         authorId: user?.id || 'admin',
         downloadUrl,
-        ...(fileName && { fileName }),
+        fileName: fileName || selectedFile.name,
         downloads: 0,
         likes: 0,
         createdAt: serverTimestamp(),
       };
 
-      console.log("Adding document to Firestore...", newDoc);
+      console.log("[Documents] Ajout à Firestore:", newDoc);
       await addDoc(collection(db, 'documents'), newDoc);
-      console.log("Document added successfully.");
+      console.log("[Documents] Document ajouté avec succès.");
       
       resetUploadForm();
       alert('Document partagé avec succès !');
@@ -182,7 +185,15 @@ export default function Documents() {
   };
 
   const handleDownload = async (docData: any) => {
+    if (!docData.downloadUrl) {
+      console.error("[Documents] URL de téléchargement manquante.");
+      alert("Erreur: URL de téléchargement manquante.");
+      return;
+    }
+
     try {
+      console.log("[Documents] Tentative de téléchargement:", docData.downloadUrl);
+      
       // Increment download count in Firestore
       await updateDoc(doc(db, 'documents', docData.id), {
         downloads: increment(1)
@@ -190,23 +201,59 @@ export default function Documents() {
 
       // Try to force download using fetch and blob
       try {
-        const response = await fetch(docData.downloadUrl);
+        const response = await fetch(docData.downloadUrl, {
+          mode: 'cors',
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const blob = await response.blob();
+        console.log(`[Documents] Blob reçu: ${blob.size} octets, type: ${blob.type}`);
+        
+        // If blob is too small, it might be an error page or empty
+        if (blob.size < 100) {
+          console.warn("[Documents] Le blob est suspectement petit:", blob.size);
+        }
+        
+        if (blob.size === 0) {
+          throw new Error("Le fichier téléchargé est vide.");
+        }
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = docData.fileName || 'document.pdf';
+        a.download = docData.fileName || `${docData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-      } catch (corsError) {
-        console.warn("CORS error, falling back to window.open", corsError);
-        // Fallback if CORS prevents fetch
-        window.open(docData.downloadUrl, '_blank');
+        
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      } catch (corsError: any) {
+        console.warn("[Documents] Échec du téléchargement direct (CORS ou autre), fallback vers window.open:", corsError.message);
+        
+        // Fallback: open in new tab
+        let downloadUrl = docData.downloadUrl;
+        
+        // For Cloudinary, we can try to force attachment if it's a Cloudinary URL
+        if (downloadUrl.includes('cloudinary.com')) {
+          if (!downloadUrl.includes('fl_attachment')) {
+            downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+          }
+        }
+        
+        const win = window.open(downloadUrl, '_blank');
+        if (!win) {
+          // If popup blocked, use location.href
+          window.location.href = downloadUrl;
+        }
       }
-    } catch (error) {
-      console.error("Error downloading document:", error);
+    } catch (error: any) {
+      console.error("[Documents] Erreur lors du téléchargement:", error);
+      alert(`Erreur lors du téléchargement: ${error.message || "Inconnue"}`);
     }
   };
 

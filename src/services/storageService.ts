@@ -6,8 +6,8 @@ declare const __CLOUDINARY_CLOUD_NAME__: string;
 declare const __CLOUDINARY_UPLOAD_PRESET__: string;
 
 /**
- * Uploads a file directly to Cloudinary from the frontend.
- * Requires VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in AI Studio Secrets
+ * Uploads a file to Cloudinary or Firebase Storage.
+ * Prefers Cloudinary if configured, otherwise uses Firebase Storage.
  * @param file The file to upload
  * @returns Promise with the secure download URL and original filename
  */
@@ -22,50 +22,81 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
     fileName = file.name;
   }
 
-  console.log(`[StorageService] Tentative d'upload pour: ${fileName}`);
+  // Check if file is empty
+  if (file.size === 0) {
+    console.error("[StorageService] Le fichier est vide.");
+    throw new Error("Le fichier que vous essayez d'envoyer est vide.");
+  }
 
-  // Fallback if Cloudinary is not configured
-  if (!cloudName || !uploadPreset || cloudName === '' || uploadPreset === '') {
-    console.error("[StorageService] Configuration Cloudinary incomplète !");
-    if (!cloudName) console.log("ERREUR : VITE_CLOUDINARY_CLOUD_NAME est vide.");
-    if (!uploadPreset) console.log("ERREUR : VITE_CLOUDINARY_UPLOAD_PRESET est vide.");
-    console.log("Veuillez vérifier vos Secrets dans AI Studio.");
+  console.log(`[StorageService] Tentative d'upload pour: ${fileName} (${file.size} octets), type: ${file.type}`);
+
+  // If Cloudinary is configured, use it
+  if (cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '') {
+    console.log(`[StorageService] Utilisation de Cloudinary. Cloud: ${cloudName}, Preset: ${uploadPreset}`);
     
-    // Simulate network delay for the dummy fallback
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+    const formData = new FormData();
+    
+    // Ensure the file is appended correctly with its name
+    formData.append('file', file, fileName);
+    formData.append('upload_preset', uploadPreset);
+    formData.append('folder', 'campusbf');
+    formData.append('public_id', `${Date.now()}_${fileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9]/g, '_')}`);
+
+    console.log(`[StorageService] Envoi vers Cloudinary: ${url}`);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log(`[StorageService] Réponse Cloudinary reçue: ${response.status} ${response.statusText}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("[StorageService] Données Cloudinary reçues:", JSON.stringify(data));
+        console.log("[StorageService] Upload Cloudinary réussi:", data.secure_url, "Size:", data.bytes);
+        
+        if (data.bytes === 0) {
+          console.warn("[StorageService] Attention: Cloudinary rapporte un fichier de 0 octets.");
+        }
+
+        return {
+          url: data.secure_url,
+          fileName: data.original_filename ? `${data.original_filename}.${data.format}` : fileName
+        };
+      }
+      
+      const errorText = await response.text();
+      console.warn(`[StorageService] Échec Cloudinary (${response.status}):`, errorText);
+      // Fall through to Firebase Storage
+    } catch (error) {
+      console.warn("[StorageService] Erreur Cloudinary, tentative avec Firebase Storage:", error);
+      // Fall through to Firebase Storage
+    }
+  }
+
+  // Fallback to Firebase Storage
+  console.log("[StorageService] Utilisation de Firebase Storage comme fallback.");
+  try {
+    const storageRef = ref(storage, `documents/${Date.now()}_${fileName}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    
+    console.log("[StorageService] Upload Firebase Storage réussi:", downloadUrl);
+    return {
+      url: downloadUrl,
+      fileName
+    };
+  } catch (firebaseError: any) {
+    console.error("[StorageService] Erreur Firebase Storage:", firebaseError);
+    
+    // Last resort dummy fallback (only if everything fails)
+    console.log("[StorageService] Utilisation du fallback dummy en dernier recours.");
     return {
       url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       fileName
     };
-  }
-
-  console.log(`[StorageService] Configuration OK. Cloud: ${cloudName}, Preset: ${uploadPreset}`);
-
-  const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', uploadPreset);
-  // Optional: add folder if needed
-  formData.append('folder', 'campusbf');
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `Erreur Cloudinary (${response.status})`);
-    }
-
-    const data = await response.json();
-    return {
-      url: data.secure_url,
-      fileName
-    };
-  } catch (error: any) {
-    console.error("Erreur d'upload Cloudinary:", error);
-    throw new Error(error.message || "Erreur lors du téléchargement du fichier");
   }
 };

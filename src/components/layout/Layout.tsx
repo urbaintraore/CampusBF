@@ -36,8 +36,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900">
+      {/* Admin Banner */}
+      {user?.role === 'admin' && (
+        <div className="bg-emerald-600 text-white px-4 py-1.5 text-[10px] md:text-xs font-medium flex items-center justify-between fixed top-0 left-0 right-0 z-[100] shadow-md">
+          <div className="flex items-center gap-2">
+            <Shield size={12} className="animate-pulse" />
+            <span className="font-bold uppercase tracking-wider">Mode Administrateur</span>
+            <span className="opacity-40">|</span>
+            <span className="hidden sm:inline">URL Actuelle:</span>
+            <code className="bg-emerald-700 px-1.5 py-0.5 rounded text-[10px]">{window.location.origin}</code>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden lg:inline opacity-90 italic">Note: Les domaines campusbf.com doivent être configurés dans Cloud Run.</span>
+            <a href="https://console.cloud.google.com/run" target="_blank" rel="noreferrer" className="bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded transition-colors flex items-center gap-1">
+              Console Cloud
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Header */}
-      <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+      <header className={cn(
+        "md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky z-50 shadow-sm",
+        user?.role === 'admin' ? "top-[32px]" : "top-0"
+      )}>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400/50">C</div>
           <span className="font-display font-bold text-xl text-slate-900 tracking-tight">CampusBF</span>
@@ -49,7 +71,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Bell size={24} />
             {unreadNotifications > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
             )}
           </button>
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
@@ -60,7 +82,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-white pt-20 px-4 animate-in slide-in-from-top-10 duration-200">
+        <div className={cn(
+          "md:hidden fixed inset-0 z-40 bg-white px-4 animate-in slide-in-from-top-10 duration-200 overflow-y-auto pb-10",
+          user?.role === 'admin' ? "pt-[80px]" : "pt-20"
+        )}>
           <nav className="flex flex-col gap-2">
             {navItems.map((item) => (
               <NavLink
@@ -87,7 +112,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky top-0 z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside className={cn(
+        "hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
+        user?.role === 'admin' ? "top-[32px]" : "top-0"
+      )}>
         <div className="p-6 flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400/50">C</div>
           <span className="font-display font-bold text-2xl text-slate-900 tracking-tight">CampusBF</span>
@@ -119,7 +147,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )
               }
             >
-              <item.icon size={20} className={cn("transition-colors duration-300 z-10", ({ isActive }: { isActive: boolean }) => isActive ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-600")} />
+              <item.icon size={20} className="transition-colors duration-300 z-10" />
               <span className="z-10">{item.label}</span>
               {item.label === 'Messages' && (
                 <span className="ml-auto bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full z-10">2</span>
@@ -128,7 +156,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-200/60 bg-slate-50/50">
+        <div className="p-4 border-t border-slate-200/60 bg-slate-50/50 space-y-2">
           <NavLink to="/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-slate-200 transition-all group">
             <div className="relative">
               <img src={user?.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full bg-slate-200 object-cover ring-2 ring-white shadow-sm" />
@@ -139,16 +167,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <p className="text-[11px] text-slate-500 truncate font-medium">{user?.university}</p>
             </div>
           </NavLink>
+          <button 
+            onClick={logout}
+            className="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all group"
+          >
+            <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
+            <span className="text-sm font-semibold">Déconnexion</span>
+          </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto h-[calc(100vh-64px)] md:h-screen relative bg-[#F8FAFC]">
-        {/* Desktop Header for Notifications */}
-        <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center md:hidden">
-           {/* Mobile header handles this, but we might want a desktop top bar for notifications if not in sidebar */}
-        </div>
-
+      <main className={cn(
+        "flex-1 overflow-y-auto relative bg-[#F8FAFC]",
+        user?.role === 'admin' ? "h-[calc(100vh-64px-32px)] md:h-[calc(100vh-32px)] mt-[32px]" : "h-[calc(100vh-64px)] md:h-screen"
+      )}>
         <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50">
           <div className="relative">
             <button 

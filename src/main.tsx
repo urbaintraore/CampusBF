@@ -5,11 +5,14 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
+// Service worker registration removed to prevent caching issues in development
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
   });
 }
+*/
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

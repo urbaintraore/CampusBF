@@ -45,6 +45,11 @@ export default function Profile() {
     avatarUrl: user?.avatarUrl || '',
   });
 
+  // Cloudinary config check
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+  const isCloudinaryConfigured = Boolean(cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '');
+
   if (!user) return null;
 
   const handleSave = () => {
@@ -218,6 +223,11 @@ export default function Profile() {
         <div className="px-8 pb-8">
           <div className="relative flex justify-between items-end -mt-16 mb-6">
             <div className="relative group">
+              {!isCloudinaryConfigured && isEditing && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded-xl text-[10px] leading-tight z-10 shadow-lg">
+                  Stockage non configuré. L'admin doit ajouter les clés Cloudinary.
+                </div>
+              )}
               <img 
                 src={isEditing ? formData.avatarUrl : user.avatarUrl} 
                 alt={user.firstName} 
@@ -227,7 +237,10 @@ export default function Profile() {
                 )}
               />
               {isEditing && (
-                <label className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-3xl flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-300 border-4 border-transparent">
+                <label className={cn(
+                  "absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-3xl flex items-center justify-center transition-all duration-300 border-4 border-transparent",
+                  isCloudinaryConfigured ? "cursor-pointer opacity-0 group-hover:opacity-100" : "cursor-not-allowed opacity-40"
+                )}>
                   {isUploading ? (
                     <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
@@ -241,7 +254,7 @@ export default function Profile() {
                     accept="image/*" 
                     className="hidden" 
                     onChange={handleImageChange}
-                    disabled={isUploading}
+                    disabled={isUploading || !isCloudinaryConfigured}
                   />
                 </label>
               )}

@@ -309,3 +309,21 @@ export interface Report {
   status: 'pending' | 'resolved' | 'ignored';
   createdAt: string;
 }
+
+export interface MotoRide {
+  id: string;
+  driverId: string;
+  driverName: string;
+  driverAvatar?: string;
+  driverRating: number;
+  departure: string;
+  destination: string;
+  time: string;
+  price: number;
+  distance: string;
+  motorcycle: string;
+  helmetAvailable: boolean;
+  lat: number;
+  lng: number;
+  createdAt: string;
+}

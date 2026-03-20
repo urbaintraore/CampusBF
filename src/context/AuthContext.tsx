@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post } from '@/types';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
@@ -39,6 +39,7 @@ interface AuthContextType {
   marketplace: MarketplaceItem[];
   community: Post[];
   reports: Report[];
+  motoRides: MotoRide[];
   updateAds: (newAds: Ad[]) => void;
   deleteDocument: (id: string) => Promise<void>;
   deleteInternship: (id: string) => Promise<void>;
@@ -48,7 +49,9 @@ interface AuthContextType {
   deleteNews: (id: string) => Promise<void>;
   deleteLostAndFound: (id: string) => Promise<void>;
   deleteReport: (id: string) => Promise<void>;
+  deleteMotoRide: (id: string) => Promise<void>;
   addReport: (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => Promise<void>;
+  addMotoRide: (ride: Omit<MotoRide, 'id' | 'createdAt'>) => Promise<void>;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
@@ -102,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [news, setNews] = useState<News[]>([]);
   const [lostAndFound, setLostAndFound] = useState<LostAndFound[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [motoRides, setMotoRides] = useState<MotoRide[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -728,6 +732,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteMotoRide = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'motoRides', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `motoRides/${id}`);
+    }
+  };
+
   const addReport = async (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => {
     try {
       await addDoc(collection(db, 'reports'), {
@@ -737,6 +749,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'reports');
+    }
+  };
+
+  const addMotoRide = async (ride: Omit<MotoRide, 'id' | 'createdAt'>) => {
+    try {
+      await addDoc(collection(db, 'motoRides'), {
+        ...ride,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'motoRides');
     }
   };
 
@@ -797,6 +820,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       marketplace,
       community,
       reports,
+      motoRides,
       updateAds,
       deleteDocument,
       deleteInternship,
@@ -806,7 +830,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteNews,
       deleteLostAndFound,
       deleteReport,
+      deleteMotoRide,
       addReport,
+      addMotoRide,
       login, 
       loginWithGoogle,
       signup,
