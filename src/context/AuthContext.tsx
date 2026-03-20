@@ -42,6 +42,8 @@ interface AuthContextType {
   motoRides: MotoRide[];
   updateAds: (newAds: Ad[]) => void;
   deleteDocument: (id: string) => Promise<void>;
+  updateDocument: (id: string, data: Partial<any>) => Promise<void>;
+  addDocument: (data: any) => Promise<void>;
   deleteInternship: (id: string) => Promise<void>;
   deleteMarketplaceItem: (id: string) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
@@ -676,6 +678,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateDocument = async (id: string, data: Partial<any>) => {
+    try {
+      await updateDoc(doc(db, 'documents', id), data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `documents/${id}`);
+    }
+  };
+
+  const addDocument = async (data: any) => {
+    try {
+      await addDoc(collection(db, 'documents'), {
+        ...data,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'documents');
+    }
+  };
+
   const deleteInternship = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'internships', id));
@@ -823,6 +844,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       motoRides,
       updateAds,
       deleteDocument,
+    updateDocument,
+    addDocument,
       deleteInternship,
       deleteMarketplaceItem,
       deletePost,

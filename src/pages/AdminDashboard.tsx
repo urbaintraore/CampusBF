@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { DocumentModal } from '@/components/DocumentModal';
 
 export default function AdminDashboard() {
   const { 
@@ -17,6 +18,8 @@ export default function AdminDashboard() {
     ads,
     updateAds,
     documents,
+    updateDocument,
+    addDocument,
     internships,
     marketplace,
     community,
@@ -48,6 +51,18 @@ export default function AdminDashboard() {
   // Content states
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<any>(null);
+
+  const handleSaveDocument = async (data: any) => {
+    if (editingDoc) {
+      await updateDocument(editingDoc.id, data);
+    } else {
+      await addDocument(data);
+    }
+    setIsDocModalOpen(false);
+    setEditingDoc(null);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -423,6 +438,15 @@ export default function AdminDashboard() {
                   Nouvelle Publicité
                 </button>
               )}
+              {contentTab === 'documents' && (
+                <button 
+                  onClick={() => { setEditingDoc(null); setIsDocModalOpen(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus size={16} />
+                  Ajouter un document
+                </button>
+              )}
             </div>
             
             <div className="divide-y divide-gray-50">
@@ -438,6 +462,13 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => { setEditingDoc(doc); setIsDocModalOpen(true); }}
+                      className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Modifier"
+                    >
+                      <Edit2 size={18} />
+                    </button>
                     <a 
                       href={doc.downloadUrl} 
                       target="_blank" 
@@ -448,10 +479,9 @@ export default function AdminDashboard() {
                       <ExternalLink size={18} />
                     </a>
                     <button 
-                      onClick={() => {
-                        if(confirm('Supprimer ce document ?')) deleteDocument(doc.id);
-                      }}
+                      onClick={() => deleteDocument(doc.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Supprimer"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -1338,6 +1368,12 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      <DocumentModal 
+        isOpen={isDocModalOpen} 
+        onClose={() => setIsDocModalOpen(false)} 
+        onSave={handleSaveDocument}
+        document={editingDoc}
+      />
     </div>
   );
 }
