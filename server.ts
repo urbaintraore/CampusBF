@@ -14,14 +14,28 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Configuration de multer pour stocker le fichier en mémoire
-const upload = multer({ storage: multer.memoryStorage() });
+// Configuration de multer pour stocker le fichier en mémoire avec une limite de 10MB
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+  }
+});
 
 // Route d'upload vers Cloudinary
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post('/api/upload', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ error: `Erreur d'upload: ${err.message}` });
+    } else if (err) {
+      return res.status(500).json({ error: `Erreur serveur: ${err.message}` });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Aucun fichier fourni' });
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ error: 'Aucun fichier fourni ou fichier invalide' });
     }
 
     // Récupération des variables d'environnement (à configurer dans les Secrets AI Studio)
@@ -54,13 +68,25 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       (error, result) => {
         if (error || !result) {
           console.error('Erreur upload Cloudinary:', error);
-          return res.status(500).json({ error: "Erreur lors de l'upload vers Cloudinary" });
+          if (!res.headersSent) {
+            return res.status(500).json({ error: "Erreur lors de l'upload vers Cloudinary" });
+          }
+          return;
         }
         
         // Renvoie l'URL sécurisée générée par Cloudinary
-        res.json({ success: true, url: result.secure_url, fileName: req.file?.originalname });
+        if (!res.headersSent) {
+          res.json({ success: true, url: result.secure_url, fileName: req.file?.originalname });
+        }
       }
     );
+
+    uploadStream.on('error', (err) => {
+      console.error('Stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Erreur de stream lors de l'upload" });
+      }
+    });
 
     // Envoi du buffer du fichier dans le stream Cloudinary
     uploadStream.end(req.file.buffer);

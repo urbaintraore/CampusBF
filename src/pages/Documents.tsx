@@ -157,11 +157,23 @@ export default function Documents() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de l'upload");
+        let errorMessage = "Erreur lors de l'upload";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMessage = `Erreur serveur (${response.status}): ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error("Réponse invalide du serveur");
+      }
       const downloadUrl = data.url;
       const fileName = data.fileName;
       console.log("Download URL obtained:", downloadUrl);

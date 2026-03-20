@@ -27,9 +27,14 @@ export const uploadFile = async (file: File | Blob, path: string): Promise<strin
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Erreur lors de l'upload du fichier");
+    throw new Error(errorData.error || `Erreur serveur (${response.status}): ${response.statusText}`);
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    throw new Error("Réponse invalide du serveur");
+  }
   return data.url;
 };

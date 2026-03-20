@@ -139,11 +139,22 @@ export default function Marketplace() {
         });
 
         if (!uploadRes.ok) {
-          const errorData = await uploadRes.json();
-          throw new Error(errorData.error || "Erreur lors de l'upload de l'image");
+          let errorMessage = "Erreur lors de l'upload de l'image";
+          try {
+            const errorData = await uploadRes.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            errorMessage = `Erreur serveur (${uploadRes.status}): ${uploadRes.statusText}`;
+          }
+          throw new Error(errorMessage);
         }
 
-        const data = await uploadRes.json();
+        let data;
+        try {
+          data = await uploadRes.json();
+        } catch (e) {
+          throw new Error("Réponse invalide du serveur");
+        }
         imageUrl = data.url;
       }
 
