@@ -209,6 +209,8 @@ export default function Documents() {
         }
       }
       
+      console.log("[Documents] URL finale pour téléchargement :", downloadUrl);
+      
       const win = window.open(downloadUrl, '_blank');
       if (!win) {
         window.location.href = downloadUrl;
