@@ -14,6 +14,11 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Configuration de multer pour stocker le fichier en mémoire avec une limite de 10MB
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -23,7 +28,7 @@ const upload = multer({
 });
 
 // Route d'upload vers Cloudinary
-app.post('/api/upload', (req, res, next) => {
+app.post(['/api/upload', '/api/upload/'], (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ error: `Erreur d'upload: ${err.message}` });
