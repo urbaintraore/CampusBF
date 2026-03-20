@@ -1,15 +1,20 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 
+// Declare global variables injected by Vite define
+declare const __CLOUDINARY_CLOUD_NAME__: string;
+declare const __CLOUDINARY_UPLOAD_PRESET__: string;
+
 /**
  * Uploads a file directly to Cloudinary from the frontend.
- * Requires VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in .env
+ * Requires VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in AI Studio Secrets
  * @param file The file to upload
  * @returns Promise with the secure download URL and original filename
  */
 export const uploadFile = async (file: File | Blob): Promise<{ url: string, fileName: string }> => {
-  const cloudName = (process.env as any).VITE_CLOUDINARY_CLOUD_NAME || (import.meta as any).env?.VITE_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = (process.env as any).VITE_CLOUDINARY_UPLOAD_PRESET || (import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET;
+  // Access variables defined in vite.config.ts
+  const cloudName = typeof __CLOUDINARY_CLOUD_NAME__ !== 'undefined' ? __CLOUDINARY_CLOUD_NAME__ : '';
+  const uploadPreset = typeof __CLOUDINARY_UPLOAD_PRESET__ !== 'undefined' ? __CLOUDINARY_UPLOAD_PRESET__ : '';
 
   // Determine filename
   let fileName = 'document.pdf';
@@ -17,16 +22,24 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
     fileName = file.name;
   }
 
+  console.log(`[StorageService] Tentative d'upload pour: ${fileName}`);
+
   // Fallback if Cloudinary is not configured
-  if (!cloudName || !uploadPreset) {
-    console.warn("Configuration Cloudinary manquante (VITE_CLOUDINARY_CLOUD_NAME ou VITE_CLOUDINARY_UPLOAD_PRESET). Utilisation d'une URL simulée.");
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  if (!cloudName || !uploadPreset || cloudName === '' || uploadPreset === '') {
+    console.error("[StorageService] Configuration Cloudinary incomplète !");
+    if (!cloudName) console.log("ERREUR : VITE_CLOUDINARY_CLOUD_NAME est vide.");
+    if (!uploadPreset) console.log("ERREUR : VITE_CLOUDINARY_UPLOAD_PRESET est vide.");
+    console.log("Veuillez vérifier vos Secrets dans AI Studio.");
+    
+    // Simulate network delay for the dummy fallback
+    await new Promise(resolve => setTimeout(resolve, 800));
     return {
       url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       fileName
     };
   }
+
+  console.log(`[StorageService] Configuration OK. Cloud: ${cloudName}, Preset: ${uploadPreset}`);
 
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
   const formData = new FormData();
