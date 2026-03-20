@@ -199,57 +199,19 @@ export default function Documents() {
         downloads: increment(1)
       });
 
-      // Try to force download using fetch and blob
-      try {
-        const response = await fetch(docData.downloadUrl, {
-          mode: 'cors',
-          cache: 'no-cache'
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const blob = await response.blob();
-        console.log(`[Documents] Blob reçu: ${blob.size} octets, type: ${blob.type}`);
-        
-        // If blob is too small, it might be an error page or empty
-        if (blob.size < 100) {
-          console.warn("[Documents] Le blob est suspectement petit:", blob.size);
+      // Try to force download using window.open
+      let downloadUrl = docData.downloadUrl;
+      
+      // For Cloudinary, try to force attachment
+      if (downloadUrl.includes('cloudinary.com')) {
+        if (!downloadUrl.includes('fl_attachment')) {
+          downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
         }
-        
-        if (blob.size === 0) {
-          throw new Error("Le fichier téléchargé est vide.");
-        }
-        
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = docData.fileName || `${docData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        setTimeout(() => {
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        }, 100);
-      } catch (corsError: any) {
-        console.warn("[Documents] Échec du téléchargement direct (CORS ou autre), fallback vers window.open:", corsError.message);
-        
-        // Fallback: open in new tab
-        let downloadUrl = docData.downloadUrl;
-        
-        // For Cloudinary, we can try to force attachment if it's a Cloudinary URL
-        if (downloadUrl.includes('cloudinary.com')) {
-          if (!downloadUrl.includes('fl_attachment')) {
-            downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
-          }
-        }
-        
-        const win = window.open(downloadUrl, '_blank');
-        if (!win) {
-          // If popup blocked, use location.href
-          window.location.href = downloadUrl;
-        }
+      }
+      
+      const win = window.open(downloadUrl, '_blank');
+      if (!win) {
+        window.location.href = downloadUrl;
       }
     } catch (error: any) {
       console.error("[Documents] Erreur lors du téléchargement:", error);
