@@ -1,14 +1,34 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Only authenticated users can read files
-    match /users/{userId}/{allPaths=**} {
+    // Allow read access to all authenticated users for all files
+    match /{allPaths=**} {
       allow read: if request.auth != null;
-      
-      // Only the owner can write, and only PDF files up to 5MB
-      allow write: if request.auth != null && request.auth.uid == userId &&
-                   request.resource.size < 5 * 1024 * 1024 &&
-                   request.resource.contentType == 'application/pdf';
+    }
+
+    // User specific files
+    match /users/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Documents
+    match /documents/{documentId} {
+      allow write: if request.auth != null;
+    }
+
+    // Ads
+    match /ads/{adId} {
+      allow write: if request.auth != null;
+    }
+
+    // Portfolios
+    match /portfolios/{portfolioId} {
+      allow write: if request.auth != null;
+    }
+    
+    // Applications
+    match /applications/{appId} {
+      allow write: if request.auth != null;
     }
   }
 }
