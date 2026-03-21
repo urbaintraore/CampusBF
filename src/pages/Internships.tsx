@@ -32,7 +32,8 @@ export default function Internships() {
     location: '',
     type: 'internship' as 'internship' | 'job',
     description: '',
-    applicationEmail: '',
+    applicationMethod: 'email' as 'email' | 'url',
+    applicationValue: '',
     deadline: ''
   });
 
@@ -54,7 +55,8 @@ export default function Internships() {
       location: '',
       type: 'internship',
       description: '',
-      applicationEmail: '',
+      applicationMethod: 'email',
+      applicationValue: '',
       deadline: ''
     });
     setShowPostModal(true);
@@ -118,13 +120,27 @@ export default function Internships() {
       if (editingId) {
         const internshipRef = doc(db, 'internships', editingId);
         await updateDoc(internshipRef, {
-          ...newInternship,
+          title: newInternship.title,
+          company: newInternship.company,
+          location: newInternship.location,
+          type: newInternship.type,
+          description: newInternship.description,
+          applicationMethod: newInternship.applicationMethod,
+          applicationValue: newInternship.applicationValue,
+          deadline: newInternship.deadline,
           updatedAt: serverTimestamp(),
         });
         alert('Offre modifiée avec succès !');
       } else {
         const internshipData = {
-          ...newInternship,
+          title: newInternship.title,
+          company: newInternship.company,
+          location: newInternship.location,
+          type: newInternship.type,
+          description: newInternship.description,
+          applicationMethod: newInternship.applicationMethod,
+          applicationValue: newInternship.applicationValue,
+          deadline: newInternship.deadline,
           authorId: user.uid,
           postedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
@@ -161,7 +177,8 @@ export default function Internships() {
       location: job.location,
       type: job.type,
       description: job.description,
-      applicationEmail: job.applicationEmail || '',
+      applicationMethod: job.applicationMethod || 'email',
+      applicationValue: job.applicationValue || job.applicationEmail || '',
       deadline: job.deadline || ''
     });
     setShowPostModal(true);
@@ -280,6 +297,11 @@ export default function Internships() {
                     <MapPin size={18} className="text-slate-400" /> 
                     {job.location}
                   </span>
+                  {job.applicationValue && (
+                    <span className="flex items-center gap-2 font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">
+                      {job.applicationMethod === 'url' ? 'Site web' : 'Email'}: {job.applicationValue}
+                    </span>
+                  )}
                   {job.deadline && (
                     <span className="flex items-center gap-2 font-medium text-amber-700 bg-amber-50 px-3 py-1 rounded-lg">
                       <Clock size={16} /> 
@@ -491,28 +513,41 @@ export default function Internships() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-900">Email de réception</label>
+                      <label className="text-sm font-semibold text-slate-900">Mode de réception</label>
+                      <select 
+                        value={newInternship.applicationMethod || 'email'}
+                        onChange={(e) => setNewInternship({ ...newInternship, applicationMethod: e.target.value as 'email' | 'url', applicationValue: '' })}
+                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                      >
+                        <option value="email">Email</option>
+                        <option value="url">Lien web</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <label className="text-sm font-semibold text-slate-900">
+                        {newInternship.applicationMethod === 'url' ? 'Lien du site web' : 'Email de réception'}
+                      </label>
                       <input 
-                        type="email" 
+                        type={newInternship.applicationMethod === 'url' ? 'url' : 'email'}
                         required 
-                        value={newInternship.applicationEmail}
-                        onChange={(e) => setNewInternship({ ...newInternship, applicationEmail: e.target.value })}
-                        placeholder="Ex: rh@entreprise.com" 
-                        className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
-                      />
-                      <p className="text-[11px] text-slate-500">Les dossiers seront envoyés à cette adresse.</p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-900">Date limite (Optionnel)</label>
-                      <input 
-                        type="date" 
-                        value={newInternship.deadline}
-                        onChange={(e) => setNewInternship({ ...newInternship, deadline: e.target.value })}
+                        value={newInternship.applicationValue || ''}
+                        onChange={(e) => setNewInternship({ ...newInternship, applicationValue: e.target.value })}
+                        placeholder={newInternship.applicationMethod === 'url' ? 'Ex: https://entreprise.com/jobs' : 'Ex: rh@entreprise.com'}
                         className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                       />
                     </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-900">Date limite (Optionnel)</label>
+                    <input 
+                      type="date" 
+                      value={newInternship.deadline}
+                      onChange={(e) => setNewInternship({ ...newInternship, deadline: e.target.value })}
+                      className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
+                    />
                   </div>
 
                   <div className="space-y-2">
