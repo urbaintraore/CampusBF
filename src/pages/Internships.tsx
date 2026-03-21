@@ -89,7 +89,7 @@ export default function Internships() {
         internshipId: selectedJob.id,
         internshipTitle: selectedJob.title,
         company: selectedJob.company,
-        studentId: user.uid,
+        studentId: user.id,
         studentName: user.displayName || 'Étudiant',
         studentEmail: user.email,
         status: 'pending',
@@ -141,7 +141,7 @@ export default function Internships() {
           applicationMethod: newInternship.applicationMethod,
           applicationValue: newInternship.applicationValue,
           deadline: newInternship.deadline,
-          authorId: user.uid,
+          authorId: user.id,
           postedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
         };
