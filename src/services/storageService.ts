@@ -21,9 +21,12 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
   console.log(`[StorageService] Tentative d'upload vers Supabase Storage pour: ${fileName} (${file.size} octets)`);
 
   try {
-    const filePath = `documents/${Date.now()}_${fileName}`;
+    // Sanitize filename: remove spaces and special characters
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const filePath = `documents/${Date.now()}_${sanitizedFileName}`;
+    
     const { data, error } = await supabase.storage
-      .from('documents') // Assurez-vous d'avoir un bucket nommé 'documents' dans Supabase
+      .from('documents')
       .upload(filePath, file);
 
     if (error) {
