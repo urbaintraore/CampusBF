@@ -16,11 +16,7 @@ export default function Chatbot() {
     setInput('');
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        setMessages(prev => [...prev, { role: 'bot', content: 'Erreur : La clé API Gemini n\'est pas configurée.' }]);
-        return;
-      }
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'AI_STUDIO_DEFAULT';
       
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({

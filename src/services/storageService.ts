@@ -21,8 +21,12 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
   console.log(`[StorageService] Tentative d'upload vers Supabase Storage pour: ${fileName} (${file.size} octets)`);
 
   try {
-    // Sanitize filename: remove spaces and special characters
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    // Sanitize filename: remove spaces, special characters, and normalize accented characters
+    const sanitizedFileName = fileName
+      .normalize('NFD') // Normalize to NFD form to separate accents
+      .replace(/[\u0300-\u036f]/g, '') // Remove accent marks
+      .replace(/[^a-zA-Z0-9.\-_]/g, '_'); // Replace remaining special chars with underscore
+      
     const filePath = `documents/${Date.now()}_${sanitizedFileName}`;
     
     const { data, error } = await supabase.storage
