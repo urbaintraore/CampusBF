@@ -1,10 +1,9 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 /**
- * Uploads a file to Firebase Storage.
+ * Uploads a file to Supabase Storage.
  * @param file The file to upload
- * @returns Promise with the secure download URL and original filename
+ * @returns Promise with the public download URL and original filename
  */
 export const uploadFile = async (file: File | Blob): Promise<{ url: string, fileName: string }> => {
   // Determine filename
@@ -19,20 +18,29 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
     throw new Error("Le fichier que vous essayez d'envoyer est vide.");
   }
 
-  console.log(`[StorageService] Tentative d'upload vers Firebase Storage pour: ${fileName} (${file.size} octets)`);
+  console.log(`[StorageService] Tentative d'upload vers Supabase Storage pour: ${fileName} (${file.size} octets)`);
 
   try {
-    const storageRef = ref(storage, `documents/${Date.now()}_${fileName}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadUrl = await getDownloadURL(snapshot.ref);
+    const filePath = `documents/${Date.now()}_${fileName}`;
+    const { data, error } = await supabase.storage
+      .from('documents') // Assurez-vous d'avoir un bucket nommé 'documents' dans Supabase
+      .upload(filePath, file);
+
+    if (error) {
+      throw error;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath);
     
-    console.log("[StorageService] Upload Firebase Storage réussi:", downloadUrl);
+    console.log("[StorageService] Upload Supabase Storage réussi:", publicUrlData.publicUrl);
     return {
-      url: downloadUrl,
+      url: publicUrlData.publicUrl,
       fileName
     };
-  } catch (firebaseError: any) {
-    console.error("[StorageService] Erreur Firebase Storage:", firebaseError.message, firebaseError);
-    throw new Error("Erreur lors de l'upload du fichier sur Firebase Storage.");
+  } catch (supabaseError: any) {
+    console.error("[StorageService] Erreur Supabase Storage:", supabaseError.message, supabaseError);
+    throw new Error("Erreur lors de l'upload du fichier sur Supabase Storage.");
   }
 };
