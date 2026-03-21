@@ -202,13 +202,6 @@ export default function Documents() {
       // Try to force download using window.open
       let downloadUrl = docData.downloadUrl;
       
-      // For Cloudinary, try to force attachment
-      if (downloadUrl.includes('cloudinary.com')) {
-        if (!downloadUrl.includes('fl_attachment')) {
-          downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
-        }
-      }
-      
       console.log("[Documents] URL finale pour téléchargement :", downloadUrl);
       
       const win = window.open(downloadUrl, '_blank');
