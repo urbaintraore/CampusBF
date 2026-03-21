@@ -30,7 +30,7 @@ export default function Internships() {
     title: '',
     company: '',
     location: '',
-    type: 'internship' as 'internship' | 'job',
+    type: 'internship' as 'internship' | 'job' | 'employment',
     description: '',
     applicationMethod: 'email' as 'email' | 'url',
     applicationValue: '',
@@ -40,7 +40,7 @@ export default function Internships() {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const isSubscriptionActive = user?.premiumSubscriptionStatus === 'active';
+  const isSubscriptionActive = user?.subscriptionStatus === 'active';
   const isAdmin = user?.role === 'admin';
 
   const handlePostInternship = () => {
@@ -509,6 +509,7 @@ export default function Internships() {
                       >
                         <option value="internship">Stage</option>
                         <option value="job">Job Étudiant</option>
+                        <option value="employment">Emploi</option>
                       </select>
                     </div>
                   </div>
