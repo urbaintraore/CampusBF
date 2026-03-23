@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, AlertCircle, FileUp, Edit } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, AlertCircle, FileUp, Edit, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,66 @@ export default function Internships() {
     applicationValue: '',
     deadline: ''
   });
+
+  // Search and Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('date'); // 'date' or 'relevance'
+
+  // Filtered and sorted internships
+  const filteredInternships = useMemo(() => {
+    let result = [...internships];
+
+    // Search by company name or title
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(job => 
+        job.company.toLowerCase().includes(query) || 
+        job.title.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by type
+    if (typeFilter !== 'all') {
+      result = result.filter(job => job.type === typeFilter);
+    }
+
+    // Filter by location
+    if (locationFilter !== 'all') {
+      result = result.filter(job => job.location.toLowerCase().includes(locationFilter.toLowerCase()));
+    }
+
+    // Sort
+    if (sortBy === 'date') {
+      result.sort((a, b) => {
+        const dateA = a.postedAt?.toDate?.() || new Date(0);
+        const dateB = b.postedAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+    } else if (sortBy === 'relevance') {
+      // Simple relevance: title matches query better
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        result.sort((a, b) => {
+          const aTitleMatch = a.title.toLowerCase().includes(query) ? 1 : 0;
+          const bTitleMatch = b.title.toLowerCase().includes(query) ? 1 : 0;
+          return bTitleMatch - aTitleMatch;
+        });
+      }
+    }
+
+    return result;
+  }, [internships, searchQuery, typeFilter, locationFilter, sortBy]);
+
+  // Get unique locations for filter
+  const locations = useMemo(() => {
+    const locs = new Set<string>();
+    internships.forEach(job => {
+      if (job.location) locs.add(job.location);
+    });
+    return Array.from(locs).sort();
+  }, [internships]);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -201,6 +261,61 @@ export default function Internships() {
         </button>
       </div>
 
+      {/* Search and Filters */}
+      <div className="glass p-6 rounded-3xl space-y-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input 
+              type="text"
+              placeholder="Rechercher par entreprise ou titre de poste..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+            />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <select 
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="pl-10 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[140px]"
+              >
+                <option value="all">Tous les types</option>
+                <option value="internship">Stage</option>
+                <option value="job">Job Étudiant</option>
+                <option value="employment">Emploi</option>
+              </select>
+            </div>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <select 
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="pl-10 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[140px]"
+              >
+                <option value="all">Toutes les villes</option>
+                {locations.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="pl-10 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[140px]"
+              >
+                <option value="date">Plus récent</option>
+                <option value="relevance">Pertinence</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Subscription Status Banner */}
       {user && !isSubscriptionActive && !isAdmin && (
         <div className="glass border-amber-200/50 p-5 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4">
@@ -228,17 +343,19 @@ export default function Internships() {
 
       {/* Internships List */}
       <div className="grid gap-6">
-        {internships.length === 0 ? (
+        {filteredInternships.length === 0 ? (
           <div className="glass p-12 rounded-3xl text-center flex flex-col items-center justify-center min-h-[400px]">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
               <Briefcase className="text-slate-400" size={32} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucune offre disponible</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucune offre trouvée</h3>
             <p className="text-slate-500 max-w-md mx-auto">
-              Il n'y a pas encore d'offres de stage ou d'emploi publiées. Revenez plus tard ou soyez le premier à en publier une !
+              {searchQuery || typeFilter !== 'all' || locationFilter !== 'all' 
+                ? "Aucune offre ne correspond à vos critères de recherche. Essayez de modifier vos filtres."
+                : "Il n'y a pas encore d'offres de stage ou d'emploi publiées. Revenez plus tard ou soyez le premier à en publier une !"}
             </p>
           </div>
-        ) : internships.map((job) => (
+        ) : filteredInternships.map((job) => (
           <div key={job.id} className="glass p-6 md:p-8 rounded-3xl hover:shadow-xl transition-all duration-300 group relative border border-white/40">
             {(isAdmin || user?.uid === job.authorId) && (
               <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -231,13 +231,15 @@ export default function Documents() {
           <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Documents Universitaires</h1>
           <p className="text-slate-500 text-sm mt-1">Accédez à des milliers de ressources partagées par les étudiants.</p>
         </div>
-        <button 
-          onClick={() => setShowUploadModal(true)}
-          className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 active:scale-95"
-        >
-          <FileText size={18} />
-          Partager un document
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => setShowUploadModal(true)}
+            className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 active:scale-95"
+          >
+            <FileText size={18} />
+            Partager un document
+          </button>
+        )}
       </div>
 
       {/* Upload Modal */}

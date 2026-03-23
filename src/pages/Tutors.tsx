@@ -10,6 +10,7 @@ import { Tutor } from '@/types';
 
 export default function Tutors() {
   const { user, users, submitTutorApplication } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const [selectedTutor, setSelectedTutor] = useState<string | null>(null);
   const [ratingModal, setRatingModal] = useState<string | null>(null);
@@ -43,7 +44,10 @@ export default function Tutors() {
   };
 
   const realTutors: Tutor[] = users
-    .filter(u => u.tutorStatus === 'approved' && u.subscriptionStatus === 'active')
+    .filter(u => {
+      if (isAdmin) return u.tutorStatus && u.tutorStatus !== 'none';
+      return u.tutorStatus === 'approved' && u.subscriptionStatus === 'active';
+    })
     .map(u => ({
       id: u.id,
       userId: u.id,
@@ -350,7 +354,20 @@ export default function Tutors() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{tutor.user.firstName} {tutor.user.lastName}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{tutor.user.firstName} {tutor.user.lastName}</h3>
+                    {isAdmin && (
+                      <span className={cn(
+                        "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
+                        tutor.user.tutorStatus === 'approved' ? "bg-emerald-100 text-emerald-700" :
+                        tutor.user.tutorStatus === 'pending' ? "bg-amber-100 text-amber-700" :
+                        "bg-red-100 text-red-700"
+                      )}>
+                        {tutor.user.tutorStatus === 'approved' ? 'Approuvé' :
+                         tutor.user.tutorStatus === 'pending' ? 'En attente' : 'Refusé'}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-500 font-medium">{tutor.user.major}</p>
                 </div>
               </div>

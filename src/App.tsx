@@ -22,6 +22,7 @@ import AlumniMentorship from './pages/AlumniMentorship';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Chatbot from './components/Chatbot';
+import { SubscriptionNotification } from './components/SubscriptionNotification';
 import Messages from './pages/Messages';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -155,6 +156,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Chatbot />
+        <SubscriptionNotification />
       </ThemeProvider>
     </AuthProvider>
   );
