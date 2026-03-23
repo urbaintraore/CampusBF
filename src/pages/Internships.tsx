@@ -41,6 +41,7 @@ export default function Internships() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [showExpired, setShowExpired] = useState(true);
   const [sortBy, setSortBy] = useState('date'); // 'date' or 'relevance'
 
   // Filtered and sorted internships
@@ -64,6 +65,12 @@ export default function Internships() {
     // Filter by location
     if (locationFilter !== 'all') {
       result = result.filter(job => job.location.toLowerCase().includes(locationFilter.toLowerCase()));
+    }
+
+    // Filter by deadline (expired)
+    if (!showExpired) {
+      const today = new Date().toISOString().split('T')[0];
+      result = result.filter(job => !job.deadline || job.deadline >= today);
     }
 
     // Sort
@@ -311,6 +318,18 @@ export default function Internships() {
                 <option value="date">Plus récent</option>
                 <option value="relevance">Pertinence</option>
               </select>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl">
+              <input 
+                type="checkbox"
+                id="showExpired"
+                checked={showExpired}
+                onChange={(e) => setShowExpired(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+              />
+              <label htmlFor="showExpired" className="text-sm font-medium text-slate-700 cursor-pointer">
+                Afficher les offres expirées
+              </label>
             </div>
           </div>
         </div>

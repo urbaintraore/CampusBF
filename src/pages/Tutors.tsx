@@ -356,7 +356,7 @@ export default function Tutors() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{tutor.user.firstName} {tutor.user.lastName}</h3>
-                    {isAdmin && (
+                    {(isAdmin || user?.id === tutor.user.id) && (
                       <span className={cn(
                         "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
                         tutor.user.tutorStatus === 'approved' ? "bg-emerald-100 text-emerald-700" :
