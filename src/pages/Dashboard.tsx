@@ -56,20 +56,53 @@ export default function Dashboard() {
 
       {/* Advertisement Carousel */}
       {activeAds.length > 0 && (
-        <div className="relative overflow-hidden rounded-[2rem] bg-slate-100 h-56 md:h-72 shadow-lg border border-slate-200/50">
-          <div className="absolute inset-0">
-            <img 
-              src={activeAds[0].imageUrl} 
-              alt={activeAds[0].title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-transparent"></div>
-            <div className="relative h-full flex flex-col justify-center px-8 md:px-16">
-              <div className="glass p-6 md:p-8 rounded-3xl max-w-lg">
-                <h2 className="text-xl md:text-3xl font-display font-bold leading-tight mb-5 text-white">
-                  {activeAds[0].title}
-                </h2>
+        <div className="relative overflow-hidden rounded-[2rem] bg-slate-100 h-56 md:h-72 group shadow-lg border border-slate-200/50">
+          {activeAds.map((ad, idx) => (
+            <div 
+              key={ad.id}
+              className="absolute inset-0 transition-transform duration-700 ease-in-out"
+              style={{ transform: `translateX(${(idx - currentAd) * 100}%)` }}
+            >
+              <img 
+                src={ad.imageUrl} 
+                alt={ad.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-transparent"></div>
+              <div className="relative h-full flex flex-col justify-center px-8 md:px-16">
+                <div className="glass p-6 md:p-8 rounded-3xl max-w-lg">
+                  <h2 className="text-xl md:text-3xl font-display font-bold leading-tight mb-5 text-white">
+                    {ad.title}
+                  </h2>
+                </div>
               </div>
+            </div>
+          ))}
+          
+          {/* Carousel Controls */}
+          <div className="absolute bottom-6 right-8 flex items-center gap-4">
+            <div className="flex gap-2">
+              {activeAds.map((_, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setCurrentAd(idx)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === currentAd ? 'bg-white w-8' : 'bg-white/30 hover:bg-white/60'}`}
+                ></button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentAd((prev) => (prev - 1 + activeAds.length) % activeAds.length)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-all border border-white/10"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button 
+                onClick={() => setCurrentAd((prev) => (prev + 1) % activeAds.length)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-all border border-white/10"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
         </div>
