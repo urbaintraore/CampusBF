@@ -25,29 +25,7 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, [activeAds.length]);
 
-  if (user?.role === 'teacher') {
-    if (user.teacherStatus === 'pending_dossier') {
-      return <TeacherOnboarding />;
-    }
-    if (user.teacherStatus === 'pending_approval') {
-      return (
-        <div className="max-w-2xl mx-auto py-20 text-center">
-          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Dossier en cours d'examen</h2>
-          <p className="text-gray-500 text-lg">
-            Votre dossier académique a été soumis avec succès et est actuellement en cours de validation par l'administration. 
-            Vous recevrez une réponse dans un délai maximum de 72h. Dès que votre profil sera approuvé, il sera publié dans l'Annuaire des Enseignants.
-          </p>
-        </div>
-      );
-    }
-  }
-
-  return (
+  const headerSection = (
     <div className="space-y-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -96,6 +74,42 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+
+  if (user?.role === 'teacher') {
+    if (user.teacherStatus === 'pending_dossier') {
+      return (
+        <div className="space-y-8">
+          {headerSection}
+          <TeacherOnboarding />
+        </div>
+      );
+    }
+    if (user.teacherStatus === 'pending_approval') {
+      return (
+        <div className="space-y-8">
+          {headerSection}
+          <div className="max-w-2xl mx-auto py-20 text-center">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Dossier en cours d'examen</h2>
+            <p className="text-gray-500 text-lg">
+              Votre dossier académique a été soumis avec succès et est actuellement en cours de validation par l'administration. 
+              Vous recevrez une réponse dans un délai maximum de 72h. Dès que votre profil sera approuvé, il sera publié dans l'Annuaire des Enseignants.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+      {headerSection}
 
       {/* Quick Stats / Highlights */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
