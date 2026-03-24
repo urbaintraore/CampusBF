@@ -227,8 +227,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         // Listener pour les publicités (accessible à tous les utilisateurs authentifiés)
         unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
+          console.log("Ads snapshot received, count:", snapshot.size);
           setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
-        }, (error) => handleFirestoreError(error, OperationType.LIST, 'ads')));
+        }, (error) => {
+          console.error("Error loading ads:", error);
+          handleFirestoreError(error, OperationType.LIST, 'ads');
+        }));
 
         try {
           console.log("Fetching user doc for:", firebaseUser.uid);
