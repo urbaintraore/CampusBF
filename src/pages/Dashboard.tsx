@@ -81,10 +81,8 @@ export default function Dashboard() {
           {activeAds.map((ad, idx) => (
             <div 
               key={ad.id}
-              className={cn(
-                "absolute inset-0 transition-all duration-1000 ease-in-out",
-                idx === currentAd ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
-              )}
+              className="absolute inset-0 transition-transform duration-700 ease-in-out"
+              style={{ transform: `translateX(${(idx - currentAd) * 100}%)` }}
             >
               <img 
                 src={ad.imageUrl} 
@@ -93,7 +91,7 @@ export default function Dashboard() {
               />
               <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-transparent"></div>
               <div className="relative h-full flex flex-col justify-center px-8 md:px-16">
-                <div className="glass p-6 md:p-8 rounded-3xl max-w-lg animate-in slide-in-from-left-8 duration-700">
+                <div className="glass p-6 md:p-8 rounded-3xl max-w-lg">
                   <span className="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-100 text-[10px] font-bold uppercase tracking-widest rounded-full mb-4 ring-1 ring-emerald-400/30 backdrop-blur-md">
                     Annonce Partenaire
                   </span>

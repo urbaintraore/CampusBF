@@ -169,6 +169,30 @@
       },
       "required": ["title", "status", "userId", "createdAt"]
     },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "A chat conversation between users",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["conversationId", "senderId", "receiverId", "content", "timestamp", "read"]
+    }
   },
   "firestore": {
     "/users/{userId}": {
@@ -238,6 +262,14 @@
     "/notifications/{notifId}": {
       "schema": "object",
       "description": "User notifications"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Chat conversations"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages"
     }
   }
 }

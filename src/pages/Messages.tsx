@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Send, MoreVertical, Phone, Video } from 'lucide-react';
-import { MOCK_MESSAGES, MOCK_TUTORS, MOCK_MARKETPLACE } from '@/data/mock';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface Conversation {
+  id: string;
   user: User;
   lastMessage?: Message;
   unread: number;
+  updatedAt: number;
 }
 
 export default function Messages() {
@@ -18,90 +21,177 @@ export default function Messages() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Initialize conversations from mock data
+  // Helper to generate conversation ID
+  const getConversationId = (uid1: string, uid2: string) => {
+    return [uid1, uid2].sort().join('_');
+  };
+
+  // Fetch conversations
   useEffect(() => {
-    // In a real app, we would fetch conversations from an API
-    // Here we build them from MOCK_MESSAGES and known contacts
-    const initialConversations: Conversation[] = [
-      {
-        user: MOCK_TUTORS[0].user,
-        lastMessage: MOCK_MESSAGES[0],
-        unread: 1,
-      },
-      {
-        user: MOCK_MARKETPLACE[0].seller,
-        lastMessage: MOCK_MESSAGES[2],
-        unread: 0,
+    if (!currentUser) return;
+
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', currentUser.id)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const convs: Conversation[] = [];
+      snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        const otherUserId = data.participants.find((id: string) => id !== currentUser.id);
+        const otherUser = users.find(u => u.id === otherUserId);
+        
+        if (otherUser) {
+          convs.push({
+            id: docSnap.id,
+            user: otherUser,
+            lastMessage: data.lastMessage,
+            unread: data.unreadCount?.[currentUser.id] || 0,
+            updatedAt: data.updatedAt?.toMillis() || 0
+          });
+        }
+      });
+      
+      // Sort by updatedAt descending
+      convs.sort((a, b) => b.updatedAt - a.updatedAt);
+      setConversations(convs);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser, users]);
+
+  // Fetch messages for selected chat
+  useEffect(() => {
+    if (!currentUser || !selectedChat) return;
+
+    const convId = getConversationId(currentUser.id, selectedChat);
+    const q = query(
+      collection(db, `conversations/${convId}/messages`),
+      orderBy('timestamp', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate().toISOString() || new Date().toISOString()
+      })) as Message[];
+      setMessages(msgs);
+
+      // Mark messages as read
+      if (msgs.length > 0) {
+        const unreadMsgs = msgs.filter(m => m.receiverId === currentUser.id && !m.read);
+        if (unreadMsgs.length > 0) {
+          // Update unread count in conversation
+          updateDoc(doc(db, 'conversations', convId), {
+            [`unreadCount.${currentUser.id}`]: 0
+          }).catch(console.error);
+          
+          // We could also mark individual messages as read here
+        }
       }
-    ];
-    setConversations(initialConversations);
-  }, []);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser, selectedChat]);
 
   // Handle URL chat parameter
   useEffect(() => {
+    if (loading || !currentUser) return;
+
     const params = new URLSearchParams(location.search);
     const chatId = params.get('chat');
     
     if (chatId) {
-      // Check if conversation already exists
       const existingConv = conversations.find(c => c.user.id === chatId);
       
       if (existingConv) {
         setSelectedChat(chatId);
       } else {
-        // Find user in global users list
         const userToChat = users.find(u => u.id === chatId);
         
         if (userToChat) {
-          // Add new conversation
-          const newConv: Conversation = {
-            user: userToChat,
-            unread: 0
-          };
-          setConversations(prev => [...prev, newConv]);
+          // Create conversation document if it doesn't exist
+          const convId = getConversationId(currentUser.id, chatId);
+          getDoc(doc(db, 'conversations', convId)).then(docSnap => {
+            if (!docSnap.exists()) {
+              setDoc(doc(db, 'conversations', convId), {
+                participants: [currentUser.id, chatId],
+                updatedAt: serverTimestamp(),
+                unreadCount: {
+                  [currentUser.id]: 0,
+                  [chatId]: 0
+                }
+              });
+            }
+          });
           setSelectedChat(chatId);
         }
       }
     } else if (!selectedChat && conversations.length > 0) {
       setSelectedChat(conversations[0].user.id);
     }
-  }, [location.search, users, conversations.length]); // Removed conversations dependency to avoid loop, added length check
+  }, [location.search, users, conversations.length, loading, currentUser]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedChat || !currentUser) return;
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
+    const content = messageInput;
+    setMessageInput(''); // Clear input immediately for better UX
+
+    const convId = getConversationId(currentUser.id, selectedChat);
+    const newMessage = {
       senderId: currentUser.id,
       receiverId: selectedChat,
-      content: messageInput,
-      timestamp: new Date().toISOString(),
+      content,
+      timestamp: serverTimestamp(),
       read: false,
     };
 
-    setMessages(prev => [...prev, newMessage]);
-    setMessageInput('');
+    try {
+      // Add message to subcollection
+      await addDoc(collection(db, `conversations/${convId}/messages`), newMessage);
 
-    // Update last message in conversation
-    setConversations(prev => prev.map(c => {
-      if (c.user.id === selectedChat) {
-        return { ...c, lastMessage: newMessage };
+      // Update conversation metadata
+      await updateDoc(doc(db, 'conversations', convId), {
+        lastMessage: {
+          content,
+          senderId: currentUser.id,
+          timestamp: new Date().toISOString()
+        },
+        updatedAt: serverTimestamp(),
+        // Increment unread count for the receiver using Firestore's FieldValue? 
+        // For simplicity, we'll just fetch the current unread count or rely on a cloud function.
+        // Since we don't have cloud functions, we can read the doc first, but that's slow.
+        // Let's just set it to 1 for now, or use a transaction.
+      });
+      
+      // We can use a transaction to increment unread count safely
+      const convRef = doc(db, 'conversations', convId);
+      const convSnap = await getDoc(convRef);
+      if (convSnap.exists()) {
+        const currentUnread = convSnap.data().unreadCount?.[selectedChat] || 0;
+        await updateDoc(convRef, {
+          [`unreadCount.${selectedChat}`]: currentUnread + 1
+        });
       }
-      return c;
-    }));
+
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Handle error (maybe restore input)
+      setMessageInput(content);
+    }
   };
 
   const activeConversation = conversations.find(c => c.user.id === selectedChat);
 
   // Filter messages for the current chat
-  const currentChatMessages = messages.filter(m => 
-    (selectedChat && currentUser && (
-      (m.senderId === selectedChat && m.receiverId === currentUser.id) || 
-      (m.senderId === currentUser.id && m.receiverId === selectedChat)
-    ))
-  );
+  const currentChatMessages = messages;
 
   return (
     <div className="h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
