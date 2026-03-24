@@ -8,7 +8,7 @@ import TeacherOnboarding from '@/components/TeacherOnboarding';
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
-  const { ads, user, notifications, documents, internships, groups, users } = auth;
+  const { ads, user, notifications, documents, internships, groups, users, marketplace } = auth;
   const tutors = users.filter(u => u.role === 'tutor');
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
@@ -265,7 +265,7 @@ export default function Dashboard() {
               <Link to="/marketplace" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
             </div>
             <div className="space-y-4">
-              {ads.filter(ad => !ad.active).slice(0, 2).map((item) => (
+              {marketplace.slice(0, 2).map((item) => (
                 <div key={item.id} className="group flex gap-4 bg-white p-3 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer">
                   <div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 relative">
                     <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -273,11 +273,11 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 flex flex-col justify-center py-2 pr-2">
                     <h4 className="font-semibold text-slate-900 text-base line-clamp-2 group-hover:text-emerald-700 transition-colors">{item.title}</h4>
-                    <p className="text-xs text-slate-500 mt-2 font-medium uppercase tracking-wider">Annonce</p>
+                    <p className="text-xs text-slate-500 mt-2 font-medium uppercase tracking-wider">{item.category}</p>
                   </div>
                 </div>
               ))}
-              {ads.length === 0 && (
+              {marketplace.length === 0 && (
                 <p className="text-center py-10 text-slate-500 text-sm bg-white rounded-2xl border border-dashed border-slate-300">
                   Aucun article en vente.
                 </p>

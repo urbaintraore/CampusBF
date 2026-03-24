@@ -30,8 +30,10 @@ export default function Marketplace() {
   const [showPayment, setShowPayment] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Supabase config check
-  const isSupabaseConfigured = true; // Hardcoded in supabase.ts
+  // Cloudinary config check
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+  const isCloudinaryConfigured = Boolean(cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '');
 
   useEffect(() => {
     const adsList = ads.map(ad => {
@@ -134,7 +136,7 @@ export default function Marketplace() {
         const blob = await res.blob();
         const file = new File([blob], `ad-image-${Date.now()}.jpg`, { type: blob.type });
 
-        const { url } = await uploadFile(file, 'marketplace');
+        const { url } = await uploadFile(file);
         imageUrl = url;
       }
 
@@ -299,7 +301,7 @@ export default function Marketplace() {
                       <MapPin size={14} className="text-slate-400" />
                       <span className="truncate">{item.location}</span>
                     </div>
-                    {item.seller.whatsapp && (
+                    {item.seller?.whatsapp && (
                       <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
                         <MessageCircle size={14} className="text-emerald-500" />
                         <span className="truncate">WhatsApp: {item.seller.whatsapp}</span>
@@ -307,17 +309,17 @@ export default function Marketplace() {
                     )}
                     <div className="flex items-center gap-2 text-xs text-slate-600">
                       <Send size={14} className="text-slate-400" />
-                      <span className="truncate">{item.seller.email}</span>
+                      <span className="truncate">{item.seller?.email || 'Non spécifié'}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
                     <div className="flex items-center gap-2.5">
-                      <img src={item.seller.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-slate-100 ring-2 ring-white shadow-sm" />
-                      <span className="text-xs font-medium text-slate-700 truncate max-w-[100px]">{item.seller.firstName}</span>
+                      <img src={item.seller?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'} alt="" className="w-8 h-8 rounded-full bg-slate-100 ring-2 ring-white shadow-sm" />
+                      <span className="text-xs font-medium text-slate-700 truncate max-w-[100px]">{item.seller?.firstName || 'Utilisateur'}</span>
                     </div>
                     <button 
-                      onClick={() => handleContact(item.seller.id)}
+                      onClick={() => handleContact(item.seller?.id || item.sellerId)}
                       className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors shadow-sm"
                     >
                       <MessageCircle size={14} />
@@ -392,14 +394,14 @@ export default function Marketplace() {
               </div>
             ) : (
                 <form className="space-y-5">
-                  {!isSupabaseConfigured && (
+                  {!isCloudinaryConfigured && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-sm flex flex-col gap-2">
                       <div className="flex items-center gap-2 font-bold">
                         <AlertCircle size={18} />
                         Configuration de stockage manquante
                       </div>
                       <p className="text-xs opacity-90">
-                        Le stockage n'est pas configuré. Veuillez contacter l'administrateur.
+                        L'administrateur doit configurer Cloudinary dans les Secrets (VITE_CLOUDINARY_CLOUD_NAME et VITE_CLOUDINARY_UPLOAD_PRESET) pour permettre l'envoi d'images.
                       </p>
                     </div>
                   )}
@@ -549,10 +551,10 @@ export default function Marketplace() {
                   <button 
                     type="button"
                     onClick={handlePublish}
-                    disabled={isPublishing || !isSupabaseConfigured}
+                    disabled={isPublishing || !isCloudinaryConfigured}
                     className={cn(
                       "w-full py-4 rounded-2xl font-medium transition-all shadow-lg mt-4 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.98]",
-                      isPublishing || !isSupabaseConfigured
+                      isPublishing || !isCloudinaryConfigured
                         ? "bg-slate-300 text-slate-500 shadow-none"
                         : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-600/20"
                     )}

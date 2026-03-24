@@ -73,6 +73,13 @@ export default function Events() {
       await addDoc(collection(db, 'events'), {
         ...newEvent,
         organizerId: user.id,
+        organizer: {
+          id: user.id,
+          firstName: user.firstName || 'Utilisateur',
+          lastName: user.lastName || '',
+          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+          role: user.role || 'student'
+        },
         attendees: [user.id],
         createdAt: new Date().toISOString()
       });
@@ -199,7 +206,11 @@ export default function Events() {
             <div className="grid grid-cols-1 gap-4">
               {filteredEvents.length > 0 ? (
                 filteredEvents.map((event) => {
-                  const organizer = users.find(u => u.id === event.organizerId);
+                  const organizer = event.organizer || users.find((u: any) => u.id === event.organizerId) || {
+                    id: event.organizerId,
+                    firstName: 'Utilisateur',
+                    lastName: '',
+                  };
                   const isRegistered = user && event.attendees.includes(user.id);
                   const isOrganizer = user && event.organizerId === user.id;
 

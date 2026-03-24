@@ -49,15 +49,8 @@ export default function Community() {
         collection(db, 'posts'),
         where('groupId', '==', viewingGroupId)
       );
-    } else if (joinedGroupIds.length > 0) {
-      // Firestore 'in' query limit is 10. For simplicity, we'll just fetch all if many or limit to first 10
-      q = query(
-        collection(db, 'posts'),
-        where('groupId', 'in', joinedGroupIds.slice(0, 10))
-      );
     } else {
-      setPosts([]);
-      return;
+      q = query(collection(db, 'posts'));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -96,6 +89,13 @@ export default function Community() {
       await addDoc(collection(db, 'posts'), {
         groupId: selectedGroupId,
         authorId: user.id,
+        author: {
+          id: user.id,
+          firstName: user.firstName || 'Utilisateur',
+          lastName: user.lastName || '',
+          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+          role: user.role || 'student'
+        },
         content: postContent,
         likes: 0,
         likedBy: [],
@@ -144,8 +144,11 @@ export default function Community() {
   };
 
   const handleReplyToComment = (post: any, comment: any) => {
-    const author = users.find(u => u.id === comment.authorId);
-    if (!author) return;
+    const author = comment.author || users.find((u: any) => u.id === comment.authorId) || {
+      id: comment.authorId,
+      firstName: 'Utilisateur',
+      lastName: '',
+    };
 
     setActiveCommentPostId(post.id);
     setCommentContent(`@${author.firstName} ${author.lastName} `);
@@ -165,6 +168,13 @@ export default function Community() {
       await addDoc(collection(db, 'comments'), {
         postId,
         authorId: user.id,
+        author: {
+          id: user.id,
+          firstName: user.firstName || 'Utilisateur',
+          lastName: user.lastName || '',
+          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+          role: user.role || 'student'
+        },
         content: commentContent,
         createdAt: serverTimestamp(),
       });
@@ -313,11 +323,15 @@ export default function Community() {
           ) : (
             posts.map((post) => {
               const group = groups.find(g => g.id === post.groupId);
-              const author = users.find(u => u.id === post.authorId);
+              const author = post.author || users.find(u => u.id === post.authorId) || {
+                id: post.authorId,
+                firstName: 'Utilisateur',
+                lastName: '',
+                avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+                role: 'student'
+              };
               const isLiked = user && post.likedBy?.includes(user.id);
               const showComments = activeCommentPostId === post.id;
-
-              if (!author) return null;
 
               return (
                 <div key={post.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-100 transition-colors">
@@ -751,8 +765,13 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
       <span>{comments?.length || 0}</span>
       <div className="mt-4 pt-4 border-t border-gray-50 space-y-4 w-full text-left">
         {comments?.map((comment) => {
-          const author = users.find(u => u.id === comment.authorId);
-          if (!author) return null;
+          const author = comment.author || users.find((u: any) => u.id === comment.authorId) || {
+            id: comment.authorId,
+            firstName: 'Utilisateur',
+            lastName: '',
+            avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+            role: 'student'
+          };
 
           return (
             <div key={comment.id} className="flex gap-3">
