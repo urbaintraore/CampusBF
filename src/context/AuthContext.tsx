@@ -24,7 +24,10 @@ import {
   deleteDoc,
   query,
   where,
-  serverTimestamp
+  serverTimestamp,
+  getDocs,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 
 interface AuthContextType {
@@ -40,7 +43,9 @@ interface AuthContextType {
   community: Post[];
   reports: Report[];
   motoRides: MotoRide[];
-  updateAds: (newAds: Ad[]) => void;
+  updateAd: (id: string, data: Partial<Ad>) => Promise<void>;
+  createAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
+  deleteAd: (id: string) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
   updateDocument: (id: string, data: Partial<any>) => Promise<void>;
   addDocument: (data: any) => Promise<void>;
@@ -54,6 +59,7 @@ interface AuthContextType {
   deleteMotoRide: (id: string) => Promise<void>;
   addReport: (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   addMotoRide: (ride: Omit<MotoRide, 'id' | 'createdAt'>) => Promise<void>;
+  syncCommunityGroup: () => Promise<void>;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
@@ -77,6 +83,8 @@ interface AuthContextType {
   reviewSubscriptionRequest: (requestId: string, status: 'approved' | 'rejected') => void;
   updateUserRole: (userId: string, role: User['role']) => void;
   deleteUser: (userId: string) => void;
+  addGroupMember: (groupId: string, userId: string) => Promise<void>;
+  removeGroupMember: (groupId: string, userId: string) => Promise<void>;
   applications: TutorApplication[];
   teacherApplications: TeacherApplication[];
   subscriptionRequests: SubscriptionRequest[];
@@ -111,8 +119,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const updateAds = (newAds: Ad[]) => {
-    setAds(newAds);
+  const createAd = async (adData: Partial<Ad>) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'ads'), {
+        ...adData,
+        userId: user.id,
+        createdAt: serverTimestamp(),
+        active: true
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'ads');
+    }
+  };
+
+  const addGroupMember = async (groupId: string, userId: string) => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      await updateDoc(groupRef, {
+        members: arrayUnion(userId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
+    }
+  };
+
+  const removeGroupMember = async (groupId: string, userId: string) => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      await updateDoc(groupRef, {
+        members: arrayRemove(userId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
+    }
+  };
+
+  const updateAd = async (id: string, data: Partial<Ad>) => {
+    try {
+      await updateDoc(doc(db, 'ads', id), data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `ads/${id}`);
+    }
+  };
+
+  const deleteAd = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'ads', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `ads/${id}`);
+    }
   };
 
   useEffect(() => {
@@ -216,9 +274,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'marketplace')));
 
-            unsubscribes.push(onSnapshot(collection(db, 'community'), (snapshot) => {
+            unsubscribes.push(onSnapshot(collection(db, 'posts'), (snapshot) => {
               setCommunity(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'community')));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts')));
 
             unsubscribes.push(onSnapshot(collection(db, 'news'), (snapshot) => {
               setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News)));
@@ -308,6 +366,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const ensureUserInCommunityGroup = async (userId: string) => {
+    try {
+      const groupsRef = collection(db, 'groups');
+      const q = query(groupsRef, where('name', '==', 'Communauté'));
+      const querySnapshot = await getDocs(q);
+      
+      let communityGroupId = '';
+      if (querySnapshot.empty) {
+        // Create the group if it doesn't exist
+        const newGroup = await addDoc(groupsRef, {
+          name: 'Communauté',
+          description: 'Groupe général pour toute la communauté CampusBF',
+          category: 'university',
+          members: [userId],
+          createdAt: new Date().toISOString(),
+          createdBy: 'system'
+        });
+        communityGroupId = newGroup.id;
+      } else {
+        // Update existing group
+        const groupDoc = querySnapshot.docs[0];
+        communityGroupId = groupDoc.id;
+        const members = groupDoc.data().members || [];
+        if (!members.includes(userId)) {
+          await updateDoc(doc(db, 'groups', communityGroupId), {
+            members: arrayUnion(userId)
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error ensuring user in community group:", error);
+    }
+  };
+
+  const syncCommunityGroup = async () => {
+    if (user?.role !== 'admin') return;
+    try {
+      const groupsRef = collection(db, 'groups');
+      const q = query(groupsRef, where('name', '==', 'Communauté'));
+      const querySnapshot = await getDocs(q);
+      
+      const allUserIds = users.map(u => u.id);
+      
+      if (querySnapshot.empty) {
+        await addDoc(groupsRef, {
+          name: 'Communauté',
+          description: 'Groupe général pour toute la communauté CampusBF',
+          category: 'university',
+          members: allUserIds,
+          createdAt: new Date().toISOString(),
+          createdBy: user.id
+        });
+      } else {
+        const groupDoc = querySnapshot.docs[0];
+        await updateDoc(doc(db, 'groups', groupDoc.id), {
+          members: allUserIds
+        });
+      }
+      alert('Tous les utilisateurs ont été intégrés au groupe Communauté.');
+    } catch (error) {
+      console.error("Error syncing community group:", error);
+      alert('Erreur lors de la synchronisation du groupe Communauté.');
+    }
+  };
+
   const login = async (email?: string, password?: string, asAdmin?: boolean) => {
     if (asAdmin || (email === 'admin@campusbf.bf' && password === 'admin')) {
       // For testing purposes, we allow mock admin login
@@ -355,6 +478,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
         };
         await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+        await ensureUserInCommunityGroup(firebaseUser.uid);
       }
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.message?.includes('popup')) {
@@ -391,6 +515,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.institutionProfile) newUser.institutionProfile = userData.institutionProfile;
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+      await ensureUserInCommunityGroup(firebaseUser.uid);
       setUser({ id: firebaseUser.uid, ...newUser } as User);
     } catch (error: any) {
       if (error.code === 'permission-denied') {
@@ -614,7 +739,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updatedUser.subscriptionExpiry = expiry.toISOString();
           updatedUser.role = 'tutor';
         } else if (req.type === 'marketplace') {
-          expiry.setDate(expiry.getDate() + 30);
+          expiry.setDate(expiry.getDate() + 90);
           updatedUser.marketplaceSubscriptionStatus = 'active';
           updatedUser.marketplaceSubscriptionExpiry = expiry.toISOString();
         } else if (req.type === 'motoride') {
@@ -715,9 +840,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deletePost = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'community', id));
+      await deleteDoc(doc(db, 'posts', id));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `community/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `posts/${id}`);
     }
   };
 
@@ -842,7 +967,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       community,
       reports,
       motoRides,
-      updateAds,
+      deleteAd,
+      updateAd,
+      createAd,
       deleteDocument,
     updateDocument,
     addDocument,
@@ -854,6 +981,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteLostAndFound,
       deleteReport,
       deleteMotoRide,
+      syncCommunityGroup,
       addReport,
       addMotoRide,
       login, 
@@ -869,6 +997,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reviewSubscriptionRequest,
       updateUserRole,
       deleteUser,
+      addGroupMember,
+      removeGroupMember,
       applications,
       teacherApplications,
       subscriptionRequests,

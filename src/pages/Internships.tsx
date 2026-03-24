@@ -270,56 +270,71 @@ export default function Internships() {
 
       {/* Search and Filters */}
       <div className="glass p-6 rounded-3xl space-y-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-col gap-6">
+          <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
               type="text"
               placeholder="Rechercher par entreprise ou titre de poste..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              className="w-full pl-12 pr-4 py-4 bg-white/50 border border-slate-200 rounded-2xl text-base focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-sm"
             />
           </div>
-          <div className="flex flex-wrap gap-3">
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select 
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="pl-10 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[140px]"
-              >
-                <option value="all">Tous les types</option>
-                <option value="internship">Stage</option>
-                <option value="job">Job Étudiant</option>
-                <option value="employment">Emploi</option>
-              </select>
+
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'all', label: 'Tous' },
+                { id: 'internship', label: 'Stage' },
+                { id: 'job', label: 'Job Étudiant' },
+                { id: 'employment', label: 'Emploi' }
+              ].map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setTypeFilter(type.id)}
+                  className={cn(
+                    "px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95",
+                    typeFilter === type.id 
+                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20" 
+                      : "bg-white/50 text-slate-600 border border-slate-200 hover:bg-white hover:border-emerald-200"
+                  )}
+                >
+                  {type.label}
+                </button>
+              ))}
             </div>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select 
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="pl-10 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[140px]"
-              >
-                <option value="all">Toutes les villes</option>
-                {locations.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-                ))}
-              </select>
+
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+              <div className="relative flex-1 md:flex-none">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <select 
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="w-full pl-10 pr-8 py-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[160px]"
+                >
+                  <option value="all">Toutes les villes</option>
+                  {locations.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="relative flex-1 md:flex-none">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full pl-10 pr-8 py-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[160px]"
+                >
+                  <option value="date">Plus récent</option>
+                  <option value="relevance">Pertinence</option>
+                </select>
+              </div>
             </div>
-            <div className="relative">
-              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="pl-10 pr-4 py-3.5 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[140px]"
-              >
-                <option value="date">Plus récent</option>
-                <option value="relevance">Pertinence</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl">
+          </div>
+
+          <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
               <input 
                 type="checkbox"
                 id="showExpired"
@@ -327,7 +342,7 @@ export default function Internships() {
                 onChange={(e) => setShowExpired(e.target.checked)}
                 className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
               />
-              <label htmlFor="showExpired" className="text-sm font-medium text-slate-700 cursor-pointer">
+              <label htmlFor="showExpired" className="text-xs font-bold text-slate-600 cursor-pointer uppercase tracking-wider">
                 Afficher les offres expirées
               </label>
             </div>

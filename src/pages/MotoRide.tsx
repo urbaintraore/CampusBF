@@ -8,7 +8,6 @@ import MotoMap from '@/components/MotoMap';
 export default function MotoRide() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   
   // Form states
   const [departure, setDeparture] = useState('');
@@ -107,38 +106,12 @@ export default function MotoRide() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form Area */}
         <div className="lg:col-span-2 space-y-6">
-          {activeTab === 'offer' && user?.motoRideSubscriptionStatus !== 'active' ? (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center">
-              <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Bike size={32} />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Devenez Conducteur MotoRide</h2>
-              <p className="text-slate-500 mb-6 max-w-md mx-auto">
-                Pour proposer des trajets et rentabiliser vos déplacements, un abonnement de 2000 FCFA / mois est requis. Aucune commission ne sera prélevée sur vos trajets !
-              </p>
-              
-              {user?.motoRideSubscriptionStatus === 'pending' ? (
-                <div className="bg-amber-50 text-amber-700 p-4 rounded-xl font-medium inline-flex items-center gap-2">
-                  <Clock size={20} />
-                  Votre paiement est en cours de validation par l'administrateur.
-                </div>
-              ) : (
-                <button 
-                  onClick={() => setShowSubscriptionModal(true)}
-                  className="bg-orange-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 flex items-center gap-2 mx-auto"
-                >
-                  <Lock size={20} />
-                  S'abonner pour 2000 FCFA / 30 jours
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">
-                {activeTab === 'search' ? 'Où allez-vous ?' : 'Détails de votre trajet'}
-              </h2>
-              
-              <form className="space-y-4">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">
+              {activeTab === 'search' ? 'Où allez-vous ?' : 'Détails de votre trajet'}
+            </h2>
+            
+            <form className="space-y-4">
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-slate-400"></div>
                   <input 
@@ -201,7 +174,6 @@ export default function MotoRide() {
                 </button>
               </form>
             </div>
-          )}
 
           {/* Results Area (Only visible when searching) */}
           {activeTab === 'search' && (
@@ -315,15 +287,6 @@ export default function MotoRide() {
           </div>
         </div>
       </div>
-
-      <ManualPaymentModal 
-        isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-        type="motoride"
-        amount={2000}
-        title="Abonnement Conducteur"
-        description="Devenez conducteur MotoRide pendant 30 jours. Aucune commission sur vos trajets."
-      />
     </div>
   );
 }

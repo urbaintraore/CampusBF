@@ -38,6 +38,7 @@ function ChangeView({ center }: { center: [number, number] }) {
 
 export default function MotoMap({ rides }: MotoMapProps) {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const defaultCenter: [number, number] = [12.3714, -1.5197]; // Ouagadougou
 
   useEffect(() => {
@@ -45,16 +46,51 @@ export default function MotoMap({ rides }: MotoMapProps) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation([position.coords.latitude, position.coords.longitude]);
+          setLocationError(null);
         },
         (error) => {
           console.error("Error getting location:", error);
-        }
+          let message = "Impossible d'obtenir votre position.";
+          if (error.code === error.PERMISSION_DENIED) {
+            message = "Permission de géolocalisation refusée. La carte est centrée sur Ouagadougou.";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            message = "Position non disponible. La carte est centrée sur Ouagadougou.";
+          } else if (error.code === error.TIMEOUT) {
+            message = "Délai d'attente dépassé. La carte est centrée sur Ouagadougou.";
+          }
+          setLocationError(message);
+          setUserLocation(defaultCenter);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
+    } else {
+      setLocationError("La géolocalisation n'est pas supportée par votre navigateur.");
+      setUserLocation(defaultCenter);
     }
   }, []);
 
   return (
-    <div className="h-full w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
+    <div className="h-full w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner relative">
+      {locationError && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-md">
+          <div className="bg-white/90 backdrop-blur-md border border-amber-200 p-3 rounded-xl shadow-lg flex items-center gap-3 animate-in slide-in-from-top-4 duration-300">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-xs font-medium text-amber-900 leading-tight">{locationError}</p>
+            <button 
+              onClick={() => setLocationError(null)}
+              className="p-1 hover:bg-slate-100 rounded-full transition-colors ml-auto"
+            >
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       <MapContainer 
         center={userLocation || defaultCenter} 
         zoom={13} 

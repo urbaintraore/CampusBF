@@ -356,6 +356,18 @@ export default function Tutors() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{tutor.user.firstName} {tutor.user.lastName}</h3>
+                    <div 
+                      className={cn(
+                        "w-2.5 h-2.5 rounded-full shadow-sm",
+                        tutor.user.tutorStatus === 'approved' ? "bg-emerald-500" :
+                        tutor.user.tutorStatus === 'pending' ? "bg-amber-500" :
+                        "bg-red-500"
+                      )} 
+                      title={
+                        tutor.user.tutorStatus === 'approved' ? 'Approuvé' :
+                        tutor.user.tutorStatus === 'pending' ? 'En attente' : 'Refusé'
+                      }
+                    />
                     {(isAdmin || user?.id === tutor.user.id) && (
                       <span className={cn(
                         "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",

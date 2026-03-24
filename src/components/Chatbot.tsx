@@ -16,7 +16,10 @@ export default function Chatbot() {
     setInput('');
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'AI_STUDIO_DEFAULT';
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('GEMINI_API_KEY is not set');
+      }
       
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({

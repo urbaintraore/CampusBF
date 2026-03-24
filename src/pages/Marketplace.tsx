@@ -19,7 +19,7 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
-  const { user, ads } = useAuth();
+  const { user, marketplace: ads } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,10 +30,8 @@ export default function Marketplace() {
   const [showPayment, setShowPayment] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Cloudinary config check
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
-  const isCloudinaryConfigured = Boolean(cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '');
+  // Supabase config check
+  const isSupabaseConfigured = true; // Hardcoded in supabase.ts
 
   useEffect(() => {
     const adsList = ads.map(ad => {
@@ -136,7 +134,7 @@ export default function Marketplace() {
         const blob = await res.blob();
         const file = new File([blob], `ad-image-${Date.now()}.jpg`, { type: blob.type });
 
-        const { url } = await uploadFile(file);
+        const { url } = await uploadFile(file, 'marketplace');
         imageUrl = url;
       }
 
@@ -164,7 +162,7 @@ export default function Marketplace() {
         imageUrl,
       };
 
-      await addDoc(collection(db, 'ads'), newItem);
+      await addDoc(collection(db, 'marketplace'), newItem);
       resetSellForm();
       alert('Votre annonce a été publiée avec succès !');
     } catch (error) {
@@ -178,9 +176,9 @@ export default function Marketplace() {
   const handleDeleteItem = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
       try {
-        await deleteDoc(doc(db, 'ads', id));
+        await deleteDoc(doc(db, 'marketplace', id));
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `ads/${id}`);
+        handleFirestoreError(error, OperationType.DELETE, `marketplace/${id}`);
         alert("Erreur lors de la suppression.");
       }
     }
@@ -371,13 +369,13 @@ export default function Marketplace() {
                 <div className="text-center space-y-3">
                   <h3 className="text-2xl font-display font-bold text-slate-900">Abonnement requis</h3>
                   <p className="text-slate-500 max-w-sm mx-auto">
-                    Pour vendre sur la marketplace, vous devez activer un abonnement vendeur de 30 jours.
+                    Pour vendre sur la marketplace, vous devez activer un abonnement vendeur de 90 jours.
                   </p>
                 </div>
                 <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-200/60 space-y-4 max-w-sm mx-auto">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 font-medium">Durée</span>
-                    <span className="font-bold text-slate-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">30 Jours</span>
+                    <span className="font-bold text-slate-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">90 Jours</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 font-medium">Prix</span>
@@ -394,14 +392,14 @@ export default function Marketplace() {
               </div>
             ) : (
                 <form className="space-y-5">
-                  {!isCloudinaryConfigured && (
+                  {!isSupabaseConfigured && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-sm flex flex-col gap-2">
                       <div className="flex items-center gap-2 font-bold">
                         <AlertCircle size={18} />
                         Configuration de stockage manquante
                       </div>
                       <p className="text-xs opacity-90">
-                        L'administrateur doit configurer Cloudinary dans les Secrets (VITE_CLOUDINARY_CLOUD_NAME et VITE_CLOUDINARY_UPLOAD_PRESET) pour permettre l'envoi d'images.
+                        Le stockage n'est pas configuré. Veuillez contacter l'administrateur.
                       </p>
                     </div>
                   )}
@@ -551,10 +549,10 @@ export default function Marketplace() {
                   <button 
                     type="button"
                     onClick={handlePublish}
-                    disabled={isPublishing || !isCloudinaryConfigured}
+                    disabled={isPublishing || !isSupabaseConfigured}
                     className={cn(
                       "w-full py-4 rounded-2xl font-medium transition-all shadow-lg mt-4 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.98]",
-                      isPublishing || !isCloudinaryConfigured
+                      isPublishing || !isSupabaseConfigured
                         ? "bg-slate-300 text-slate-500 shadow-none"
                         : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-600/20"
                     )}
@@ -581,7 +579,7 @@ export default function Marketplace() {
         type="marketplace"
         amount={5000}
         title="Abonnement Vendeur Marketplace"
-        description="Accédez aux fonctionnalités de publication pendant 30 jours."
+        description="Accédez aux fonctionnalités de publication pendant 90 jours."
       />
     </div>
   );

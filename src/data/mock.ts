@@ -402,6 +402,7 @@ export const MOCK_GROUPS: Group[] = [
     name: 'Informatique L3 - UJKZ',
     type: 'class',
     membersCount: 145,
+    members: [],
     description: 'Groupe de la promotion Licence 3 Informatique de l\'Université Joseph Ki-Zerbo.',
   },
   {
@@ -409,6 +410,7 @@ export const MOCK_GROUPS: Group[] = [
     name: 'Club Anglais - UJKZ',
     type: 'university',
     membersCount: 320,
+    members: [],
     description: 'Pour ceux qui veulent pratiquer l\'anglais sur le campus.',
   },
 ];
@@ -537,6 +539,7 @@ export const MOCK_ADS: Ad[] = [
     title: 'Offre Spéciale : -50% sur les fournitures chez Papyrus',
     imageUrl: 'https://images.unsplash.com/photo-1503551723145-6c040742065b?w=800&auto=format&fit=crop&q=60',
     linkUrl: '#',
+    userId: 'admin1',
     active: true,
     createdAt: '2024-03-01T10:00:00',
   },
@@ -545,6 +548,7 @@ export const MOCK_ADS: Ad[] = [
     title: 'Nouveau : Cours de soutien en Anglais intensif',
     imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60',
     linkUrl: '#',
+    userId: 'admin1',
     active: true,
     createdAt: '2024-03-02T11:00:00',
   },
@@ -553,6 +557,7 @@ export const MOCK_ADS: Ad[] = [
     title: 'Job Étudiant : Serveur pour les weekends',
     imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=60',
     linkUrl: '#',
+    userId: 'admin1',
     active: true,
     createdAt: '2024-03-03T12:00:00',
   }

@@ -179,9 +179,13 @@ export interface MarketplaceItem {
 export interface Group {
   id: string;
   name: string;
-  type: 'university' | 'major' | 'class';
-  membersCount: number;
+  type?: 'university' | 'major' | 'class';
+  category?: 'university' | 'major' | 'class';
+  membersCount?: number;
+  members: string[];
   description: string;
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface Comment {
@@ -189,7 +193,7 @@ export interface Comment {
   authorId: string;
   author: User;
   content: string;
-  createdAt: string;
+  createdAt: any;
 }
 
 export interface Post {
@@ -201,7 +205,7 @@ export interface Post {
   likes: number;
   likedBy: string[];
   comments: Comment[];
-  createdAt: string;
+  createdAt: any;
 }
 
 export interface Ad {
@@ -209,8 +213,9 @@ export interface Ad {
   title: string;
   imageUrl: string;
   linkUrl?: string;
+  userId: string;
   active: boolean;
-  createdAt: string;
+  createdAt: any;
 }
 
 export interface Message {

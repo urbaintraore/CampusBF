@@ -37,7 +37,6 @@ export const SubscriptionNotification: React.FC = () => {
         checkExpiry(user.subscriptionExpiry, 'Général');
       }
       checkExpiry(user.premiumSubscriptionExpiry, 'Premium');
-      checkExpiry(user.motoRideSubscriptionExpiry, 'MotoRide');
       checkExpiry(user.eventSubscriptionExpiry, 'Event');
 
       setNotifications(newNotifications);

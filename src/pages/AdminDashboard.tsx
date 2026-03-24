@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { DocumentModal } from '@/components/DocumentModal';
 
@@ -12,11 +13,16 @@ export default function AdminDashboard() {
     reviewTeacherApplication,
     subscriptionRequests, 
     reviewSubscriptionRequest, 
+    syncCommunityGroup,
     users, 
     updateUserRole, 
     deleteUser,
+    addGroupMember,
+    groups,
     ads,
-    updateAds,
+    createAd,
+    updateAd,
+    deleteAd,
     documents,
     updateDocument,
     addDocument,
@@ -39,11 +45,6 @@ export default function AdminDashboard() {
     deleteMotoRide
   } = useAuth();
 
-  // Cloudinary config check
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
-  const isCloudinaryConfigured = cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '';
-
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
   const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments'>('documents');
   const [userSearch, setUserSearch] = useState('');
@@ -51,6 +52,7 @@ export default function AdminDashboard() {
   // Content states
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
+  const [showGroupSelectModal, setShowGroupSelectModal] = useState<string | null>(null);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<any>(null);
 
@@ -64,14 +66,25 @@ export default function AdminDashboard() {
     setEditingDoc(null);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewAd({ ...newAd, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const { url } = await uploadFile(file);
+        setNewAd({ ...newAd, imageUrl: url });
+      } catch (error) {
+        console.error("Error uploading ad image:", error);
+      }
+    }
+  };
+
+  const handleAddUserToGroup = async (groupId: string) => {
+    if (!showGroupSelectModal) return;
+    try {
+      await addGroupMember(groupId, showGroupSelectModal);
+      setShowGroupSelectModal(null);
+    } catch (error) {
+      console.error("Error adding user to group:", error);
     }
   };
 
@@ -188,13 +201,11 @@ export default function AdminDashboard() {
                               "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
                               req.type === 'exam' ? "bg-blue-50 text-blue-700" : 
                               req.type === 'premium' ? "bg-purple-50 text-purple-700" : 
-                              req.type === 'motoride' ? "bg-orange-50 text-orange-700" : 
                               req.type === 'event' ? "bg-indigo-50 text-indigo-700" : 
                               req.type === 'institution' ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
                             )}>
                               {req.type === 'exam' ? 'Abonnement Examens' : 
                                req.type === 'premium' ? 'Abonnement Premium' : 
-                               req.type === 'motoride' ? 'Abonnement MotoRide' : 
                                req.type === 'event' ? 'Abonnement Événements' : 
                                req.type === 'institution' ? 'Abonnement Établissement' : 'Abonnement Répétiteur'}
                             </span>
@@ -362,21 +373,15 @@ export default function AdminDashboard() {
               </div>
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Cloudinary (Uploads)</span>
-                  <span className={`text-sm font-medium flex items-center gap-2 ${isCloudinaryConfigured ? 'text-emerald-600' : 'text-red-600'}`}>
-                    <span className={`w-2 h-2 rounded-full bg-current`}></span>
-                    {isCloudinaryConfigured ? 'Configuré' : 'Non configuré'}
+                  <span className="text-gray-600">Supabase (Stockage)</span>
+                  <span className="text-sm font-medium flex items-center gap-2 text-emerald-600">
+                    <span className="w-2 h-2 rounded-full bg-current"></span>
+                    Opérationnel
                   </span>
                 </div>
-                {!isCloudinaryConfigured && (
-                  <div className="p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-100">
-                    <p className="font-bold mb-1">Attention : Les uploads ne fonctionneront pas !</p>
-                    <p>Veuillez ajouter <strong>VITE_CLOUDINARY_CLOUD_NAME</strong> et <strong>VITE_CLOUDINARY_UPLOAD_PRESET</strong> dans les Secrets d'AI Studio.</p>
-                  </div>
-                )}
                 {[
                   { label: 'Base de données', status: 'Opérationnel', color: 'text-emerald-600' },
-                  { label: 'Stockage Fichiers', status: 'Opérationnel', color: 'text-emerald-600' },
+                  { label: 'Authentification', status: 'Opérationnel', color: 'text-emerald-600' },
                   { label: 'API Gateway', status: 'Opérationnel', color: 'text-emerald-600' },
                   { label: 'Notifications Push', status: 'Maintenance', color: 'text-amber-600' },
                 ].map((item) => (
@@ -674,14 +679,16 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => updateAds(ads.map(a => a.id === ad.id ? { ...a, active: !a.active } : a))}
+                      onClick={() => updateAd(ad.id, { active: !ad.active })}
                       className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       title={ad.active ? "Désactiver" : "Activer"}
                     >
                       {ad.active ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                     <button 
-                      onClick={() => updateAds(ads.filter(a => a.id !== ad.id))}
+                      onClick={() => {
+                        if(confirm('Supprimer cette publicité ?')) deleteAd(ad.id);
+                      }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
@@ -1144,8 +1151,7 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <p className="font-bold text-gray-900 text-sm">
-                                {req.type === 'motoride' ? 'Abonnement MotoRide' : 
-                                 req.type === 'premium' ? 'Abonnement Premium' : 
+                                {req.type === 'premium' ? 'Abonnement Premium' : 
                                  req.type === 'tutor' ? 'Abonnement Répétiteur' : 
                                  req.type === 'marketplace' ? 'Abonnement Marketplace' : 'Abonnement'}
                               </p>
@@ -1191,6 +1197,52 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group Selection Modal */}
+      {showGroupSelectModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                Ajouter à un groupe
+              </h2>
+              <button 
+                onClick={() => setShowGroupSelectModal(null)} 
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+              {groups.map(group => {
+                const isMember = group.members.includes(showGroupSelectModal);
+                return (
+                  <div key={group.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">{group.name}</h3>
+                      <p className="text-xs text-gray-500">{group.members.length} membres</p>
+                    </div>
+                    {isMember ? (
+                      <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                        <Check size={14} />
+                        Déjà membre
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={() => handleAddUserToGroup(group.id)}
+                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors"
+                      >
+                        Ajouter
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1273,18 +1325,21 @@ export default function AdminDashboard() {
               </div>
               <div className="pt-4">
                 <button 
-                  onClick={() => {
-                    const ad = {
-                      id: `ad-${Date.now()}`,
-                      ...newAd,
-                      active: true,
-                      createdAt: new Date().toISOString()
-                    };
-                    updateAds([ad, ...ads]);
+                  onClick={async () => {
+                    if (!newAd.title || !newAd.imageUrl) {
+                      return;
+                    }
+                    await createAd(newAd);
                     setShowAddAdModal(false);
                     setNewAd({ title: '', imageUrl: '', linkUrl: '' });
                   }}
-                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                  disabled={!newAd.title || !newAd.imageUrl}
+                  className={cn(
+                    "w-full py-3 text-white rounded-xl font-bold text-sm transition-all shadow-lg",
+                    (!newAd.title || !newAd.imageUrl) 
+                      ? "bg-gray-400 cursor-not-allowed" 
+                      : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
+                  )}
                 >
                   Ajouter la publicité
                 </button>
@@ -1297,7 +1352,16 @@ export default function AdminDashboard() {
       {activeTab === 'users' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="font-bold text-gray-900">Liste des Utilisateurs</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="font-bold text-gray-900">Liste des Utilisateurs</h2>
+              <button 
+                onClick={() => syncCommunityGroup()}
+                className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors flex items-center gap-2"
+              >
+                <Users size={14} />
+                Synchroniser Communauté
+              </button>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
@@ -1345,6 +1409,13 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setShowGroupSelectModal(u.id)}
+                          title="Ajouter à un groupe"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Plus size={18} />
+                        </button>
                         <button 
                           onClick={() => handleToggleUserRole(u.id)}
                           title={u.role === 'admin' ? "Rétrograder en étudiant" : "Promouvoir en admin"}

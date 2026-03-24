@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase';
 /**
  * Uploads a file to Supabase Storage.
  * @param file The file to upload
+ * @param bucket The bucket to upload to (defaults to 'documents')
  * @returns Promise with the public download URL and original filename
  */
-export const uploadFile = async (file: File | Blob): Promise<{ url: string, fileName: string }> => {
+export const uploadFile = async (file: File | Blob, bucket: string = 'documents'): Promise<{ url: string, fileName: string }> => {
   // Determine filename
   let fileName = 'document.pdf';
   if (file instanceof File) {
@@ -18,7 +19,7 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
     throw new Error("Le fichier que vous essayez d'envoyer est vide.");
   }
 
-  console.log(`[StorageService] Tentative d'upload vers Supabase Storage pour: ${fileName} (${file.size} octets)`);
+  console.log(`[StorageService] Tentative d'upload vers Supabase Storage (bucket: ${bucket}) pour: ${fileName} (${file.size} octets)`);
 
   try {
     // Sanitize filename: remove spaces, special characters, and normalize accented characters
@@ -27,27 +28,29 @@ export const uploadFile = async (file: File | Blob): Promise<{ url: string, file
       .replace(/[\u0300-\u036f]/g, '') // Remove accent marks
       .replace(/[^a-zA-Z0-9.\-_]/g, '_'); // Replace remaining special chars with underscore
       
-    const filePath = `documents/${Date.now()}_${sanitizedFileName}`;
+    const filePath = `${Date.now()}_${sanitizedFileName}`;
     
     const { data, error } = await supabase.storage
-      .from('documents')
+      .from(bucket)
       .upload(filePath, file);
 
     if (error) {
+      console.error("[StorageService] Supabase upload error:", error);
       throw error;
     }
 
+    console.log("[StorageService] Upload successful, getting public URL...");
     const { data: publicUrlData } = supabase.storage
-      .from('documents')
+      .from(bucket)
       .getPublicUrl(filePath);
     
-    console.log("[StorageService] Upload Supabase Storage réussi:", publicUrlData.publicUrl);
+    console.log("[StorageService] Public URL generated:", publicUrlData.publicUrl);
     return {
       url: publicUrlData.publicUrl,
       fileName
     };
   } catch (supabaseError: any) {
     console.error("[StorageService] Erreur Supabase Storage:", supabaseError.message, supabaseError);
-    throw new Error("Erreur lors de l'upload du fichier sur Supabase Storage.");
+    throw new Error(`Erreur Supabase: ${supabaseError.message || "Erreur lors de l'upload du fichier."}`);
   }
 };

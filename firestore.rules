@@ -40,7 +40,7 @@ service cloud.firestore {
       return isAuthenticated() &&
         ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-         request.auth.token.email.lower() == "urbain.traoreurb@gmail.com");
+         (request.auth.token.email.lower() == "urbain.traoreurb@gmail.com" && request.auth.token.email_verified == true));
     }
 
     function isValidEmail(email) {
@@ -79,13 +79,12 @@ service cloud.firestore {
     }
 
     function isValidAd(data) {
-      return hasRequiredFields(['title', 'price', 'category', 'userId', 'createdAt']) &&
+      return hasRequiredFields(['title', 'imageUrl', 'userId', 'createdAt', 'active']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
-             data.price is number && data.price >= 0 &&
-             data.category is string && data.category.size() <= 100 &&
+             data.imageUrl is string && data.imageUrl.size() <= 1000 &&
+             (!('linkUrl' in data) || (data.linkUrl is string && data.linkUrl.size() <= 1000)) &&
              data.userId == request.auth.uid &&
-             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 1000)) &&
+             data.active is bool &&
              data.createdAt is timestamp;
     }
 
@@ -106,11 +105,12 @@ service cloud.firestore {
     }
 
     function isValidPost(data) {
-      return hasRequiredFields(['groupId', 'authorId', 'content', 'createdAt']) &&
+      return hasRequiredFields(['groupId', 'authorId', 'content', 'createdAt', 'likes', 'likedBy']) &&
              data.groupId is string && data.groupId.size() <= 100 &&
              data.authorId == request.auth.uid &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
-             (!('likes' in data) || data.likes is list) &&
+             data.likes is number &&
+             data.likedBy is list &&
              data.createdAt is timestamp;
     }
 
@@ -149,12 +149,11 @@ service cloud.firestore {
 
     match /ads/{adId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidAd(request.resource.data) && isRecent(request.resource.data.createdAt);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && 
-                      isValidAd(request.resource.data) &&
+      allow create: if isAdmin() && isValidAd(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow update: if isAdmin() && isValidAd(request.resource.data) && 
                       request.resource.data.userId == resource.data.userId &&
                       request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /documents/{docId} {
@@ -197,7 +196,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin());
     }
 
-    match /community/{postId} {
+    match /posts/{postId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidPost(request.resource.data) && isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (
@@ -205,8 +204,18 @@ service cloud.firestore {
          isValidPost(request.resource.data) &&
          request.resource.data.authorId == resource.data.authorId &&
          request.resource.data.createdAt == resource.data.createdAt) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']))
       );
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    match /comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidComment(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow update: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                      isValidComment(request.resource.data) &&
+                      request.resource.data.authorId == resource.data.authorId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 

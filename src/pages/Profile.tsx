@@ -11,7 +11,6 @@ export default function Profile() {
   const [isUploading, setIsUploading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showPremiumPayment, setShowPremiumPayment] = useState(false);
-  const [showMotoRidePayment, setShowMotoRidePayment] = useState(false);
   const [showEventPayment, setShowEventPayment] = useState(false);
   const [showTutorForm, setShowTutorForm] = useState(false);
   const [showTeacherForm, setShowTeacherForm] = useState(false);
@@ -45,10 +44,8 @@ export default function Profile() {
     avatarUrl: user?.avatarUrl || '',
   });
 
-  // Cloudinary config check
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
-  const isCloudinaryConfigured = Boolean(cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '');
+  // Supabase config check
+  const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   if (!user) return null;
 
@@ -67,7 +64,7 @@ export default function Profile() {
     if (file && user) {
       try {
         setIsUploading(true);
-        const { url: downloadUrl } = await uploadFile(file);
+        const { url: downloadUrl } = await uploadFile(file, 'avatars');
         setFormData(prev => ({ ...prev, avatarUrl: downloadUrl }));
         // Update user immediately for avatar
         await updateUser({ avatarUrl: downloadUrl });
@@ -85,7 +82,7 @@ export default function Profile() {
     if (tutorDescription && fileSelected && user) {
       try {
         setIsUploading(true);
-        const { url: downloadUrl } = await uploadFile(fileSelected);
+        const { url: downloadUrl } = await uploadFile(fileSelected, 'tutors');
         submitTutorApplication(
           tutorDescription, 
           downloadUrl,
@@ -117,9 +114,9 @@ export default function Profile() {
     if (user && teacherFiles.cv && teacherFiles.diploma && teacherFiles.rankProof) {
       try {
         setIsUploading(true);
-        const { url: cvUrl } = await uploadFile(teacherFiles.cv);
-        const { url: diplomaUrl } = await uploadFile(teacherFiles.diploma);
-        const { url: rankProofUrl } = await uploadFile(teacherFiles.rankProof);
+        const { url: cvUrl } = await uploadFile(teacherFiles.cv, 'teachers');
+        const { url: diplomaUrl } = await uploadFile(teacherFiles.diploma, 'teachers');
+        const { url: rankProofUrl } = await uploadFile(teacherFiles.rankProof, 'teachers');
         
         submitTeacherApplication({
           cvUrl,
@@ -223,9 +220,9 @@ export default function Profile() {
         <div className="px-8 pb-8">
           <div className="relative flex justify-between items-end -mt-16 mb-6">
             <div className="relative group">
-              {!isCloudinaryConfigured && isEditing && (
+              {!isSupabaseConfigured && isEditing && (
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded-xl text-[10px] leading-tight z-10 shadow-lg">
-                  Stockage non configuré. L'admin doit ajouter les clés Cloudinary.
+                  Stockage non configuré. Veuillez contacter l'administrateur.
                 </div>
               )}
               <img 
@@ -239,7 +236,7 @@ export default function Profile() {
               {isEditing && (
                 <label className={cn(
                   "absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-3xl flex items-center justify-center transition-all duration-300 border-4 border-transparent",
-                  isCloudinaryConfigured ? "cursor-pointer opacity-0 group-hover:opacity-100" : "cursor-not-allowed opacity-40"
+                  isSupabaseConfigured ? "cursor-pointer opacity-0 group-hover:opacity-100" : "cursor-not-allowed opacity-40"
                 )}>
                   {isUploading ? (
                     <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -254,7 +251,7 @@ export default function Profile() {
                     accept="image/*" 
                     className="hidden" 
                     onChange={handleImageChange}
-                    disabled={isUploading || !isCloudinaryConfigured}
+                    disabled={isUploading || !isSupabaseConfigured}
                   />
                 </label>
               )}
@@ -468,47 +465,6 @@ export default function Profile() {
                 className="mt-4 w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
               >
                 S'abonner (5 000 CFA / mois)
-              </button>
-            )}
-          </div>
-
-          {/* MotoRide Subscription */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Bike size={16} className="text-orange-600" />
-                  Conducteur MotoRide
-                </p>
-                <span className={cn(
-                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
-                  user.motoRideSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
-                  user.motoRideSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
-                  "bg-gray-100 text-gray-500"
-                )}>
-                  {user.motoRideSubscriptionStatus === 'active' ? 'Actif' : 
-                   user.motoRideSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mb-2">Proposer des trajets sans commission</p>
-              {user.motoRideSubscriptionStatus === 'active' && user.motoRideSubscriptionExpiry && (
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
-                  <Calendar size={12} />
-                  Expire le {new Date(user.motoRideSubscriptionExpiry).toLocaleDateString()}
-                </p>
-              )}
-              {user.motoRideSubscriptionStatus === 'pending' && (
-                <p className="text-xs text-amber-600 mt-2">
-                  Vérification du paiement en cours...
-                </p>
-              )}
-            </div>
-            {user.motoRideSubscriptionStatus !== 'active' && user.motoRideSubscriptionStatus !== 'pending' && (
-              <button 
-                onClick={() => setShowMotoRidePayment(true)}
-                className="mt-4 w-full py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition-colors"
-              >
-                S'abonner (2 000 CFA / mois)
               </button>
             )}
           </div>
@@ -1008,15 +964,6 @@ export default function Profile() {
         amount={5000}
         title="Renouvellement Abonnement Répétiteur"
         description="Renouvelez votre abonnement pour 3 mois."
-      />
-
-      <ManualPaymentModal 
-        isOpen={showMotoRidePayment}
-        onClose={() => setShowMotoRidePayment(false)}
-        type="motoride"
-        amount={2000}
-        title="Abonnement Conducteur MotoRide"
-        description="Devenez conducteur MotoRide pendant 30 jours. Aucune commission sur vos trajets."
       />
 
       <ManualPaymentModal 

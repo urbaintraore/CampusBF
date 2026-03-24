@@ -19,7 +19,7 @@ import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Post, Comment, Group, CampusEvent } from '@/types';
 
 export default function Community() {
-  const { user, groups, users } = useAuth();
+  const { user, groups, users, addGroupMember, removeGroupMember } = useAuth();
   const [postContent, setPostContent] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -27,6 +27,7 @@ export default function Community() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState<string | null>(null);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [newGroupData, setNewGroupData] = useState({ name: '', description: '', type: 'university' as const });
   const [showSuccessToast, setShowSuccessToast] = useState<{show: boolean, message: string}>({ show: false, message: '' });
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
@@ -46,15 +47,13 @@ export default function Community() {
     if (viewingGroupId) {
       q = query(
         collection(db, 'posts'),
-        where('groupId', '==', viewingGroupId),
-        orderBy('createdAt', 'desc')
+        where('groupId', '==', viewingGroupId)
       );
     } else if (joinedGroupIds.length > 0) {
       // Firestore 'in' query limit is 10. For simplicity, we'll just fetch all if many or limit to first 10
       q = query(
         collection(db, 'posts'),
-        where('groupId', 'in', joinedGroupIds.slice(0, 10)),
-        orderBy('createdAt', 'desc')
+        where('groupId', 'in', joinedGroupIds.slice(0, 10))
       );
     } else {
       setPosts([]);
@@ -66,6 +65,14 @@ export default function Community() {
         id: doc.id,
         ...doc.data()
       })) as Post[];
+      
+      // Sort on client side to avoid composite index requirement
+      postsData.sort((a, b) => {
+        const dateA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+        const dateB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
+        return dateB - dateA;
+      });
+      
       setPosts(postsData);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts'));
 
@@ -92,13 +99,13 @@ export default function Community() {
         content: postContent,
         likes: 0,
         likedBy: [],
-        createdAt: new Date().toISOString(), // Using ISO string for consistency with other parts
+        createdAt: serverTimestamp(),
       });
 
       setPostContent('');
       showToast('Publication partagée avec succès !');
     } catch (error) {
-      console.error('Error creating post:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'posts');
     }
   };
 
@@ -123,7 +130,7 @@ export default function Community() {
         likedBy: isLiked ? arrayRemove(user.id) : arrayUnion(user.id)
       });
     } catch (error) {
-      console.error('Error liking post:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
     }
   };
 
@@ -159,14 +166,14 @@ export default function Community() {
         postId,
         authorId: user.id,
         content: commentContent,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       });
 
       setCommentContent('');
       setActiveCommentPostId(null);
       showToast('Commentaire ajouté !');
     } catch (error) {
-      console.error('Error adding comment:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'comments');
     }
   };
 
@@ -178,7 +185,7 @@ export default function Community() {
       });
       showToast('Vous avez rejoint le groupe !');
     } catch (error) {
-      console.error('Error joining group:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
     }
   };
 
@@ -190,7 +197,7 @@ export default function Community() {
       });
       showToast('Vous avez quitté le groupe.');
     } catch (error) {
-      console.error('Error leaving group:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
     }
   };
 
@@ -212,7 +219,7 @@ export default function Community() {
       setNewGroupData({ name: '', description: '', type: 'university' });
       showToast('Groupe créé avec succès !');
     } catch (error) {
-      console.error('Error creating group:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'groups');
     }
   };
 
@@ -609,15 +616,66 @@ export default function Community() {
       {/* Members Modal */}
       {showMembersModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">
                 Membres du groupe
               </h2>
-              <button onClick={() => setShowMembersModal(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <button 
+                onClick={() => {
+                  setShowMembersModal(null);
+                  setUserSearchTerm('');
+                }} 
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
                 <X size={20} />
               </button>
             </div>
+
+            {user?.role === 'admin' && (
+              <div className="mb-6 space-y-4">
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Ajouter un membre (Nom ou Email)..." 
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  />
+                </div>
+                {userSearchTerm.length > 1 && (
+                  <div className="max-h-40 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
+                    {users
+                      .filter(u => {
+                        const group = groups.find(g => g.id === showMembersModal);
+                        const isAlreadyMember = group?.members.includes(u.id);
+                        const matchesSearch = (u.firstName + ' ' + u.lastName + ' ' + u.email).toLowerCase().includes(userSearchTerm.toLowerCase());
+                        return !isAlreadyMember && matchesSearch;
+                      })
+                      .map(u => (
+                        <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                          <div className="flex items-center gap-2">
+                            <img src={u.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                            <span className="text-sm font-medium">{u.firstName} {u.lastName}</span>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              addGroupMember(showMembersModal, u.id);
+                              setUserSearchTerm('');
+                              showToast(`${u.firstName} ajouté au groupe`);
+                            }}
+                            className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="overflow-y-auto pr-2 space-y-4 flex-1">
               {users.filter(u => {
                 const group = groups.find(g => g.id === showMembersModal);
@@ -629,6 +687,18 @@ export default function Community() {
                     <h3 className="font-bold text-sm text-gray-900 truncate">{member.firstName} {member.lastName}</h3>
                     <p className="text-xs text-gray-500 truncate">{member.major} • {member.level}</p>
                   </div>
+                  {user?.role === 'admin' && member.id !== user.id && (
+                    <button 
+                      onClick={() => {
+                        removeGroupMember(showMembersModal, member.id);
+                        showToast(`${member.firstName} retiré du groupe`);
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Retirer du groupe"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                   {member.role === 'admin' && (
                     <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded uppercase">
                       Admin
@@ -651,8 +721,7 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
   useEffect(() => {
     const q = query(
       collection(db, 'comments'),
-      where('postId', '==', postId),
-      orderBy('createdAt', 'asc')
+      where('postId', '==', postId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -660,8 +729,16 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
         id: doc.id,
         ...doc.data()
       })) as Comment[];
+      
+      // Sort on client side to avoid composite index requirement
+      commentsData.sort((a, b) => {
+        const dateA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+        const dateB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
+        return dateA - dateB;
+      });
+      
       setComments(commentsData);
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'comments'));
 
     return () => unsubscribe();
   }, [postId]);
