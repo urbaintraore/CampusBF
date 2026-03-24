@@ -225,6 +225,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribes = [];
 
       if (firebaseUser) {
+        // Listener pour les publicités (accessible à tous les utilisateurs authentifiés)
+        unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
+          setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
+        }, (error) => handleFirestoreError(error, OperationType.LIST, 'ads')));
+
         try {
           console.log("Fetching user doc for:", firebaseUser.uid);
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
@@ -250,10 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Start listeners only after we have the user data and role
             
             // Public/Authenticated lists
-            unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
-              setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'ads')));
-
             unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
               setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'documents')));
