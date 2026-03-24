@@ -12,6 +12,8 @@ export default function Dashboard() {
   const tutors = users.filter(u => u.role === 'tutor');
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
+  console.log("Dashboard ads content:", JSON.stringify(ads));
+  console.log("Dashboard activeAds content:", JSON.stringify(activeAds));
   const [currentAd, setCurrentAd] = useState(0);
 
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
