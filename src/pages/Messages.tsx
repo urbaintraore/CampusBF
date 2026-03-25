@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Send, MoreVertical, Phone, Video } from 'lucide-react';
+import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { uploadFile } from '@/services/storageService';
 
 interface Conversation {
   id: string;
@@ -20,6 +21,9 @@ export default function Messages() {
   const location = useLocation();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,6 +284,18 @@ export default function Messages() {
                         : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
                     )}>
                       <p className="text-sm">{msg.content}</p>
+                      {msg.fileUrl && (
+                        <div className="mt-2">
+                          {msg.fileUrl.match(/\.(jpeg|jpg|gif|png)$/) ? (
+                            <img src={msg.fileUrl} alt={msg.fileName} className="max-w-full rounded-lg" />
+                          ) : (
+                            <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm underline">
+                              <FileText size={16} />
+                              {msg.fileName || 'Fichier'}
+                            </a>
+                          )}
+                        </div>
+                      )}
                       <p className={cn("text-[10px] mt-1 text-right", isMe ? "text-emerald-100" : "text-gray-400")}>
                         {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>
@@ -296,7 +312,29 @@ export default function Messages() {
 
           {/* Input Area */}
           <div className="p-4 bg-white border-t border-gray-200">
+            {selectedFile && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm mb-2">
+                <FileText size={16} />
+                <span className="flex-1 truncate">{selectedFile.name}</span>
+                <button onClick={() => setSelectedFile(null)} className="hover:text-emerald-900">
+                  <X size={16} />
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="hidden" 
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+                disabled={isUploading}
+              >
+                <Paperclip size={20} />
+              </button>
               <input 
                 type="text" 
                 value={messageInput}
@@ -305,15 +343,16 @@ export default function Messages() {
                 className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleSendMessage();
+                    selectedFile ? handleUploadAndSend() : handleSendMessage();
                   }
                 }}
               />
               <button 
-                onClick={handleSendMessage}
+                onClick={selectedFile ? handleUploadAndSend : handleSendMessage}
                 className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
+                disabled={isUploading}
               >
-                <Send size={20} />
+                {isUploading ? '...' : <Send size={20} />}
               </button>
             </div>
           </div>

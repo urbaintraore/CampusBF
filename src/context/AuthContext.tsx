@@ -10,7 +10,8 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  sendEmailVerification
 } from 'firebase/auth';
 import { 
   doc, 
@@ -82,6 +83,9 @@ interface AuthContextType {
   submitSubscriptionRequest: (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => void;
   reviewSubscriptionRequest: (requestId: string, status: 'approved' | 'rejected') => void;
   updateUserRole: (userId: string, role: User['role']) => void;
+  activateUser: (userId: string) => Promise<void>;
+  deactivateUser: (userId: string) => Promise<void>;
+  adminCreateUser: (userData: Partial<User> & { password?: string }) => Promise<void>;
   deleteUser: (userId: string) => void;
   addGroupMember: (groupId: string, userId: string) => Promise<void>;
   removeGroupMember: (groupId: string, userId: string) => Promise<void>;
@@ -225,6 +229,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribes = [];
 
       if (firebaseUser) {
+        if (!firebaseUser.emailVerified) {
+          console.log("Email not verified for:", firebaseUser.email);
+          setUser(null); 
+          return;
+        }
+        
         // Listener pour les publicités (accessible à tous les utilisateurs authentifiés)
         unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
           console.log("Ads snapshot received, count:", snapshot.size);
@@ -252,8 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error("Failed to auto-upgrade to admin:", e);
               }
             }
-            
-            setUser(userData);
+                   setUser(userData);
             console.log("User set:", userData);
 
             // Start listeners only after we have the user data and role
@@ -332,7 +341,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
             }
-
           } else {
             console.log("User doc does not exist");
             setUser(null);
@@ -504,6 +512,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await auth.authStateReady();
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
       const firebaseUser = userCredential.user;
+      
+      await sendEmailVerification(firebaseUser);
 
       const newUser: Partial<User> = {
         firstName: userData.firstName || '',
@@ -792,6 +802,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const activateUser = async (userId: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { status: 'active' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  };
+
+  const deactivateUser = async (userId: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { status: 'inactive' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  };
+
+  const adminCreateUser = async (userData: Partial<User> & { password?: string }) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email!, userData.password!);
+      const firebaseUser = userCredential.user;
+      const newUser: Partial<User> = {
+        ...userData,
+        id: firebaseUser.uid,
+        status: 'active'
+      };
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'users');
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     try {
       await deleteDoc(doc(db, 'users', userId));
@@ -1001,6 +1042,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       submitSubscriptionRequest,
       reviewSubscriptionRequest,
       updateUserRole,
+      activateUser,
+      deactivateUser,
+      adminCreateUser,
       deleteUser,
       addGroupMember,
       removeGroupMember,

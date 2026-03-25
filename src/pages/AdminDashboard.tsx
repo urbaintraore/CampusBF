@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { User } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { DocumentModal } from '@/components/DocumentModal';
@@ -16,6 +17,9 @@ export default function AdminDashboard() {
     syncCommunityGroup,
     users, 
     updateUserRole, 
+    activateUser,
+    deactivateUser,
+    adminCreateUser,
     deleteUser,
     addGroupMember,
     groups,
@@ -53,6 +57,8 @@ export default function AdminDashboard() {
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
   const [showGroupSelectModal, setShowGroupSelectModal] = useState<string | null>(null);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'student' as User['role'] });
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<any>(null);
 
@@ -85,6 +91,16 @@ export default function AdminDashboard() {
       setShowGroupSelectModal(null);
     } catch (error) {
       console.error("Error adding user to group:", error);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      await adminCreateUser(newUser);
+      setShowCreateUserModal(false);
+      setNewUser({ firstName: '', lastName: '', email: '', password: '', role: 'student' });
+    } catch (error) {
+      console.error("Error creating user:", error);
     }
   };
 
@@ -1361,6 +1377,13 @@ export default function AdminDashboard() {
                 <Users size={14} />
                 Synchroniser Communauté
               </button>
+              <button 
+                onClick={() => setShowCreateUserModal(true)}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2"
+              >
+                <Plus size={14} />
+                Créer Utilisateur
+              </button>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -1417,6 +1440,16 @@ export default function AdminDashboard() {
                           <Plus size={18} />
                         </button>
                         <button 
+                          onClick={() => u.status === 'active' ? deactivateUser(u.id) : activateUser(u.id)}
+                          title={u.status === 'active' ? "Désactiver" : "Activer"}
+                          className={cn(
+                            "p-2 rounded-lg transition-colors",
+                            u.status === 'active' ? "text-amber-600 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"
+                          )}
+                        >
+                          {u.status === 'active' ? <Ban size={18} /> : <UserCheck size={18} />}
+                        </button>
+                        <button 
                           onClick={() => handleToggleUserRole(u.id)}
                           title={u.role === 'admin' ? "Rétrograder en étudiant" : "Promouvoir en admin"}
                           className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -1445,6 +1478,31 @@ export default function AdminDashboard() {
         onSave={handleSaveDocument}
         document={editingDoc}
       />
+      {showCreateUserModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Créer un utilisateur</h2>
+            <div className="space-y-4">
+              <input type="text" placeholder="Prénom" value={newUser.firstName} onChange={(e) => setNewUser({...newUser, firstName: e.target.value})} className="w-full p-2 border rounded" />
+              <input type="text" placeholder="Nom" value={newUser.lastName} onChange={(e) => setNewUser({...newUser, lastName: e.target.value})} className="w-full p-2 border rounded" />
+              <input type="email" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} className="w-full p-2 border rounded" />
+              <input type="password" placeholder="Mot de passe" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} className="w-full p-2 border rounded" />
+              <select value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value as User['role']})} className="w-full p-2 border rounded">
+                <option value="student">Étudiant</option>
+                <option value="admin">Admin</option>
+                <option value="tutor">Tuteur</option>
+                <option value="company">Entreprise</option>
+                <option value="teacher">Enseignant</option>
+                <option value="institution">Institution</option>
+              </select>
+              <div className="flex justify-end gap-2 mt-6">
+                <button onClick={() => setShowCreateUserModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Annuler</button>
+                <button onClick={handleCreateUser} className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">Créer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

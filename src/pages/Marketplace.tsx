@@ -68,10 +68,7 @@ export default function Marketplace() {
   const [categories, setCategories] = useState(['Tout', 'Livres', 'Informatique', 'Logement', 'Meubles', 'Services']);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isSubscriptionActive = (user?.premiumSubscriptionStatus === 'active' && 
-    user.premiumSubscriptionExpiry && new Date(user.premiumSubscriptionExpiry) > new Date()) ||
-    (user?.marketplaceSubscriptionStatus === 'active' && 
-    user.marketplaceSubscriptionExpiry && new Date(user.marketplaceSubscriptionExpiry) > new Date());
+  const isSubscriptionActive = true;
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 

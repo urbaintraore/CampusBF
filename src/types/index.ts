@@ -36,6 +36,7 @@ export interface User {
   tutorDescription?: string;
   teacherProfile?: TeacherProfile;
   institutionProfile?: InstitutionProfile;
+  status?: 'active' | 'inactive';
 }
 
 export interface TeacherReview {
