@@ -6,14 +6,58 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user } = useAuth();
+  const { user, addMotoRide } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states
   const [departure, setDeparture] = useState('');
   const [destination, setDestination] = useState('');
+  const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [price, setPrice] = useState('');
+  const [motorcycle, setMotorcycle] = useState('');
+  const [helmetAvailable, setHelmetAvailable] = useState(false);
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | null>(null);
+
+  const isRideExpired = (rideDate: string, rideTime: string) => {
+    const rideDateTime = new Date(`${rideDate}T${rideTime}`);
+    return rideDateTime < new Date();
+  };
+
+  const handlePublishRide = async () => {
+    if (!user || !departure || !destination || !date || !time || !price || !motorcycle) {
+      alert("Veuillez remplir tous les champs.");
+      return;
+    }
+    if (isRideExpired(date, time)) {
+      alert("La date et l'heure de départ ne peuvent pas être dans le passé.");
+      return;
+    }
+    await addMotoRide({
+      driverId: user.id,
+      driverName: `${user.firstName} ${user.lastName}`,
+      driverAvatar: user.avatarUrl,
+      driverRating: 5, // Default rating
+      departure,
+      destination,
+      date,
+      time,
+      price: Number(price),
+      distance: 'Inconnu', // Should be calculated
+      motorcycle,
+      helmetAvailable,
+      lat: 0, // Should be geocoded
+      lng: 0
+    });
+    alert("Trajet publié avec succès !");
+    setDeparture('');
+    setDestination('');
+    setDate('');
+    setTime('');
+    setPrice('');
+    setMotorcycle('');
+    setHelmetAvailable(false);
+  };
 
   const mockRides = [
     {
@@ -21,6 +65,7 @@ export default function MotoRide() {
       driver: { name: 'Amadou K.', rating: 4.8, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amadou' },
       departure: 'Zogona',
       destination: 'Université Joseph Ki-Zerbo',
+      date: '2026-03-26',
       time: '07:30',
       price: 300,
       distance: '2.5 km',
@@ -34,6 +79,7 @@ export default function MotoRide() {
       driver: { name: 'Sarah T.', rating: 4.9, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah' },
       departure: 'Patte d\'Oie',
       destination: 'ISIG',
+      date: '2026-03-26',
       time: '08:00',
       price: 500,
       distance: '5.2 km',
@@ -47,8 +93,10 @@ export default function MotoRide() {
   let filteredRides = mockRides.filter(ride => {
     const matchDeparture = departure ? ride.departure.toLowerCase().includes(departure.toLowerCase()) : true;
     const matchDestination = destination ? ride.destination.toLowerCase().includes(destination.toLowerCase()) : true;
+    const matchDate = date ? ride.date === date : true;
     const matchTime = time ? ride.time === time : true;
-    return matchDeparture && matchDestination && matchTime;
+    const isExpired = isRideExpired(ride.date, ride.time);
+    return matchDeparture && matchDestination && matchDate && matchTime && !isExpired;
   });
 
   if (priceSort === 'asc') {
@@ -134,7 +182,16 @@ export default function MotoRide() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="relative">
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      type="date" 
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                    />
+                  </div>
                   <div className="relative">
                     <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
@@ -145,19 +202,40 @@ export default function MotoRide() {
                     />
                   </div>
                   {activeTab === 'offer' && (
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">FCFA</span>
+                    <>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">FCFA</span>
+                        <input 
+                          type="number" 
+                          placeholder="Prix"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          className="w-full pl-16 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                        />
+                      </div>
                       <input 
-                        type="number" 
-                        placeholder="Prix"
-                        className="w-full pl-16 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                        type="text" 
+                        placeholder="Modèle de moto"
+                        value={motorcycle}
+                        onChange={(e) => setMotorcycle(e.target.value)}
+                        className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                       />
-                    </div>
+                      <label className="flex items-center gap-2 text-sm text-slate-700">
+                        <input 
+                          type="checkbox" 
+                          checked={helmetAvailable}
+                          onChange={(e) => setHelmetAvailable(e.target.checked)}
+                          className="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500"
+                        />
+                        Casque disponible
+                      </label>
+                    </>
                   )}
                 </div>
 
                 <button 
                   type="button"
+                  onClick={activeTab === 'offer' ? handlePublishRide : undefined}
                   className="w-full py-3.5 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2"
                 >
                   {activeTab === 'search' ? (
@@ -243,7 +321,16 @@ export default function MotoRide() {
                     </div>
                   </div>
 
-                  <button className="w-full py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                  <button 
+                    onClick={() => {
+                      if (isRideExpired(ride.date, ride.time)) {
+                        alert("Ce trajet a déjà expiré.");
+                      } else {
+                        alert("Fonctionnalité de réservation bientôt disponible !");
+                      }
+                    }}
+                    className="w-full py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors"
+                  >
                     Réserver
                   </button>
                 </div>

@@ -106,6 +106,7 @@ export default function AdminDashboard() {
 
   const pendingApplications = applications.filter(app => app.status === 'pending');
   const pendingTeacherApplications = teacherApplications.filter(app => app.status === 'pending');
+  console.log("AdminDashboard: pendingTeacherApplications:", pendingTeacherApplications.map(app => ({ id: app.id, status: app.status })));
   const rejectedTeacherApplications = teacherApplications.filter(app => app.status === 'rejected');
   const pendingSubscriptions = subscriptionRequests.filter(req => req.status === 'pending');
 

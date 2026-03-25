@@ -142,19 +142,42 @@ export default function Messages() {
     }
   }, [location.search, users, conversations.length, loading, currentUser]);
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedChat || !currentUser) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleUploadAndSend = async () => {
+    if (!selectedFile || !selectedChat || !currentUser) return;
+    setIsUploading(true);
+    try {
+      const { url, fileName } = await uploadFile(selectedFile, 'messages');
+      await handleSendMessage(url, selectedFile.type, fileName);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSendMessage = async (fileUrl?: string, fileType?: string, fileName?: string) => {
+    if ((!messageInput.trim() && !fileUrl) || !selectedChat || !currentUser) return;
 
     const content = messageInput;
     setMessageInput(''); // Clear input immediately for better UX
 
     const convId = getConversationId(currentUser.id, selectedChat);
-    const newMessage = {
+    const newMessage: Message = {
       senderId: currentUser.id,
       receiverId: selectedChat,
       content,
-      timestamp: serverTimestamp(),
+      timestamp: serverTimestamp() as any,
       read: false,
+      fileUrl,
+      fileType,
+      fileName
     };
 
     try {
@@ -164,15 +187,11 @@ export default function Messages() {
       // Update conversation metadata
       await updateDoc(doc(db, 'conversations', convId), {
         lastMessage: {
-          content,
+          content: fileUrl ? (fileType?.startsWith('image/') ? 'Image' : 'Fichier') : content,
           senderId: currentUser.id,
           timestamp: new Date().toISOString()
         },
         updatedAt: serverTimestamp(),
-        // Increment unread count for the receiver using Firestore's FieldValue? 
-        // For simplicity, we'll just fetch the current unread count or rely on a cloud function.
-        // Since we don't have cloud functions, we can read the doc first, but that's slow.
-        // Let's just set it to 1 for now, or use a transaction.
       });
       
       // We can use a transaction to increment unread count safely
@@ -333,7 +352,7 @@ export default function Messages() {
                 className="p-3 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
                 disabled={isUploading}
               >
-                <Paperclip size={20} />
+                <Paperclip size={20} className="text-gray-500" />
               </button>
               <input 
                 type="text" 

@@ -220,12 +220,15 @@ export interface Ad {
 }
 
 export interface Message {
-  id: string;
+  id?: string;
   senderId: string;
   receiverId: string;
   content: string;
   timestamp: string;
   read: boolean;
+  fileUrl?: string;
+  fileType?: string;
+  fileName?: string;
 }
 
 export interface CampusEvent {
@@ -325,6 +328,7 @@ export interface MotoRide {
   departure: string;
   destination: string;
   time: string;
+  date: string;
   price: number;
   distance: string;
   motorcycle: string;

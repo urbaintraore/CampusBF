@@ -322,7 +322,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
 
               unsubscribes.push(onSnapshot(collection(db, 'teacherApplications'), (snapshot) => {
-                setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+                const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication));
+                console.log("AuthContext: teacherApplications updated:", apps);
+                setTeacherApplications(apps);
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
 
               unsubscribes.push(onSnapshot(collection(db, 'subscriptionRequests'), (snapshot) => {
@@ -657,11 +659,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const reviewTeacherApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
+    console.log("reviewTeacherApplication: Starting review for", applicationId, "status:", status);
     try {
       const app = teacherApplications.find(a => a.id === applicationId);
-      if (!app) return;
-
+      if (!app) {
+        console.error("reviewTeacherApplication: Application not found", applicationId);
+        return;
+      }
+      console.log("reviewTeacherApplication: Updating Firestore status");
       await updateDoc(doc(db, 'teacherApplications', applicationId), { status });
+      console.log("reviewTeacherApplication: Firestore status updated");
 
       const updatedUserData: Partial<User> = { teacherStatus: status };
       if (status === 'approved') {
