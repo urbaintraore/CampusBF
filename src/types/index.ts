@@ -333,6 +333,7 @@ export interface MotoRide {
   distance: string;
   motorcycle: string;
   helmetAvailable: boolean;
+  whatsappNumber?: string;
   lat: number;
   lng: number;
   createdAt: string;

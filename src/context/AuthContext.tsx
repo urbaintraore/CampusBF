@@ -58,6 +58,7 @@ interface AuthContextType {
   deleteLostAndFound: (id: string) => Promise<void>;
   deleteReport: (id: string) => Promise<void>;
   deleteMotoRide: (id: string) => Promise<void>;
+  reserveMotoRide: (rideId: string, clientWhatsapp: string) => Promise<void>;
   addReport: (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   addMotoRide: (ride: Omit<MotoRide, 'id' | 'createdAt'>) => Promise<void>;
   syncCommunityGroup: () => Promise<void>;
@@ -303,6 +304,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             unsubscribes.push(onSnapshot(collection(db, 'reports'), (snapshot) => {
               setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'reports')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'motoRides'), (snapshot) => {
+              setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'motoRides')));
 
             // User-specific notifications
             const qNotifs = query(collection(db, 'notifications'), where('userId', '==', firebaseUser.uid));
@@ -962,6 +967,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const reserveMotoRide = async (rideId: string, clientWhatsapp: string) => {
+    if (!user) return;
+    try {
+      const ride = motoRides.find(r => r.id === rideId);
+      if (!ride) return;
+
+      // Notification for the driver
+      await addNotification(ride.driverId, {
+        type: 'info',
+        title: 'Nouvelle réservation MotoRide',
+        message: `${user.firstName} ${user.lastName} a réservé votre trajet de ${ride.departure} vers ${ride.destination}. Contact WhatsApp du client: ${clientWhatsapp}`
+      });
+
+      // Notification for the client
+      await addNotification(user.id, {
+        type: 'success',
+        title: 'Réservation confirmée',
+        message: `Votre réservation pour le trajet de ${ride.departure} vers ${ride.destination} a été envoyée au conducteur.`
+      });
+    } catch (error) {
+      console.error("Error reserving moto ride:", error);
+    }
+  };
+
   const addNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'read' | 'createdAt'>) => {
     try {
       await addDoc(collection(db, 'notifications'), {
@@ -1034,6 +1063,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteLostAndFound,
       deleteReport,
       deleteMotoRide,
+      reserveMotoRide,
       syncCommunityGroup,
       addReport,
       addMotoRide,

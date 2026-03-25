@@ -18,6 +18,26 @@
 //   - tutorStatus: string (enum: ['none', 'pending', 'approved', 'rejected'])
 //   - teacherStatus: string (enum: ['none', 'pending_approval', 'approved', 'rejected'])
 //
+// Collection: motoRides
+// Document ID: Auto-generated
+// Fields:
+//   - driverId: string (required, UID)
+//   - driverName: string (required, < 200 chars)
+//   - driverAvatar: string (optional, < 1000 chars)
+//   - driverRating: number (required)
+//   - departure: string (required, < 200 chars)
+//   - destination: string (required, < 200 chars)
+//   - time: string (required)
+//   - date: string (required)
+//   - price: number (required, > 0)
+//   - distance: string (required)
+//   - motorcycle: string (required, < 200 chars)
+//   - helmetAvailable: bool (required)
+//   - whatsappNumber: string (required, < 50 chars)
+//   - lat: number (required)
+//   - lng: number (required)
+//   - createdAt: timestamp (required)
+//
 // ===============================================================
 
 rules_version = '2';
@@ -128,6 +148,26 @@ service cloud.firestore {
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
              (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
              (!('projects' in data) || data.projects is list) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMotoRide(data) {
+      return hasRequiredFields(['driverId', 'driverName', 'driverRating', 'departure', 'destination', 'time', 'date', 'price', 'distance', 'motorcycle', 'helmetAvailable', 'whatsappNumber', 'lat', 'lng', 'createdAt']) &&
+             data.driverId == request.auth.uid &&
+             data.driverName is string && data.driverName.size() <= 200 &&
+             (!('driverAvatar' in data) || (data.driverAvatar is string && data.driverAvatar.size() <= 1000)) &&
+             data.driverRating is number &&
+             data.departure is string && data.departure.size() <= 200 &&
+             data.destination is string && data.destination.size() <= 200 &&
+             data.time is string &&
+             data.date is string &&
+             data.price is number && data.price > 0 &&
+             data.distance is string &&
+             data.motorcycle is string && data.motorcycle.size() <= 200 &&
+             data.helmetAvailable is bool &&
+             data.whatsappNumber is string && data.whatsappNumber.size() <= 50 &&
+             data.lat is number &&
+             data.lng is number &&
              data.createdAt is timestamp;
     }
 
@@ -280,6 +320,16 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /motoRides/{rideId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMotoRide(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow update: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isAdmin()) &&
+                      isValidMotoRide(request.resource.data) &&
+                      request.resource.data.driverId == resource.data.driverId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isAdmin());
     }
 
     match /subscriptionRequests/{requestId} {

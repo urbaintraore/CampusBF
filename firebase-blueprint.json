@@ -192,6 +192,30 @@
         "read": { "type": "boolean" }
       },
       "required": ["conversationId", "senderId", "receiverId", "content", "timestamp", "read"]
+    },
+    "MotoRide": {
+      "title": "MotoRide",
+      "description": "A motorcycle ride offer",
+      "type": "object",
+      "properties": {
+        "driverId": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverAvatar": { "type": "string" },
+        "driverRating": { "type": "number" },
+        "departure": { "type": "string" },
+        "destination": { "type": "string" },
+        "time": { "type": "string" },
+        "date": { "type": "string" },
+        "price": { "type": "number" },
+        "distance": { "type": "string" },
+        "motorcycle": { "type": "string" },
+        "helmetAvailable": { "type": "boolean" },
+        "whatsappNumber": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["driverId", "driverName", "departure", "destination", "time", "date", "price", "motorcycle", "whatsappNumber"]
     }
   },
   "firestore": {
@@ -270,6 +294,10 @@
     "/messages/{messageId}": {
       "schema": "Message",
       "description": "Chat messages"
+    },
+    "/motoRides/{rideId}": {
+      "schema": "MotoRide",
+      "description": "Motorcycle ride offers"
     }
   }
 }

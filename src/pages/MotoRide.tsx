@@ -6,7 +6,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user, addMotoRide } = useAuth();
+  const { user, addMotoRide, motoRides, reserveMotoRide } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states
@@ -16,21 +16,36 @@ export default function MotoRide() {
   const [time, setTime] = useState('');
   const [price, setPrice] = useState('');
   const [motorcycle, setMotorcycle] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [helmetAvailable, setHelmetAvailable] = useState(false);
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | null>(null);
 
   const isRideExpired = (rideDate: string, rideTime: string) => {
-    const rideDateTime = new Date(`${rideDate}T${rideTime}`);
-    return rideDateTime < new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const rideD = new Date(rideDate);
+    rideD.setHours(0, 0, 0, 0);
+    
+    if (rideD < today) return true;
+    if (rideD > today) return false;
+    
+    // If today, check periods
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    if (rideTime === 'Matin' && currentHour >= 12) return true;
+    if (rideTime === 'Après-Midi' && currentHour >= 18) return true;
+    // Soir is valid until end of day
+    return false;
   };
 
   const handlePublishRide = async () => {
-    if (!user || !departure || !destination || !date || !time || !price || !motorcycle) {
-      alert("Veuillez remplir tous les champs.");
+    if (!user || !departure || !destination || !date || !time || !price || !motorcycle || !whatsappNumber) {
+      alert("Veuillez remplir tous les champs, y compris votre numéro WhatsApp.");
       return;
     }
     if (isRideExpired(date, time)) {
-      alert("La date et l'heure de départ ne peuvent pas être dans le passé.");
+      alert("La date et la période de départ ne peuvent pas être dans le passé.");
       return;
     }
     await addMotoRide({
@@ -46,6 +61,7 @@ export default function MotoRide() {
       distance: 'Inconnu', // Should be calculated
       motorcycle,
       helmetAvailable,
+      whatsappNumber,
       lat: 0, // Should be geocoded
       lng: 0
     });
@@ -56,47 +72,16 @@ export default function MotoRide() {
     setTime('');
     setPrice('');
     setMotorcycle('');
+    setWhatsappNumber('');
     setHelmetAvailable(false);
   };
 
-  const mockRides = [
-    {
-      id: 'r1',
-      driver: { name: 'Amadou K.', rating: 4.8, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amadou' },
-      departure: 'Zogona',
-      destination: 'Université Joseph Ki-Zerbo',
-      date: '2026-03-26',
-      time: '07:30',
-      price: 300,
-      distance: '2.5 km',
-      motorcycle: 'Yamaha Sirius',
-      helmetAvailable: true,
-      lat: 12.3785,
-      lng: -1.5120
-    },
-    {
-      id: 'r2',
-      driver: { name: 'Sarah T.', rating: 4.9, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah' },
-      departure: 'Patte d\'Oie',
-      destination: 'ISIG',
-      date: '2026-03-26',
-      time: '08:00',
-      price: 500,
-      distance: '5.2 km',
-      motorcycle: 'Honda 125',
-      helmetAvailable: false,
-      lat: 12.3350,
-      lng: -1.5250
-    }
-  ];
-
-  let filteredRides = mockRides.filter(ride => {
+  const filteredRides = (motoRides || []).filter(ride => {
     const matchDeparture = departure ? ride.departure.toLowerCase().includes(departure.toLowerCase()) : true;
     const matchDestination = destination ? ride.destination.toLowerCase().includes(destination.toLowerCase()) : true;
     const matchDate = date ? ride.date === date : true;
-    const matchTime = time ? ride.time === time : true;
     const isExpired = isRideExpired(ride.date, ride.time);
-    return matchDeparture && matchDestination && matchDate && matchTime && !isExpired;
+    return matchDeparture && matchDestination && matchDate && !isExpired;
   });
 
   if (priceSort === 'asc') {
@@ -109,9 +94,9 @@ export default function MotoRide() {
     id: ride.id,
     lat: ride.lat,
     lng: ride.lng,
-    driverName: ride.driver.name,
+    driverName: ride.driverName,
     destination: ride.destination,
-    rating: ride.driver.rating,
+    rating: ride.driverRating,
     price: ride.price
   }));
 
@@ -182,7 +167,10 @@ export default function MotoRide() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className={cn(
+                  "grid gap-4",
+                  activeTab === 'search' ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"
+                )}>
                   <div className="relative">
                     <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
@@ -192,15 +180,27 @@ export default function MotoRide() {
                       className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                     />
                   </div>
-                  <div className="relative">
-                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="time" 
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                    />
-                  </div>
+
+                  {activeTab === 'offer' ? (
+                    <div className="flex gap-2">
+                      {['Matin', 'Après-Midi', 'Soir'].map((period) => (
+                        <button
+                          key={period}
+                          type="button"
+                          onClick={() => setTime(period)}
+                          className={cn(
+                            "flex-1 py-2 text-xs font-bold rounded-xl border transition-all",
+                            time === period 
+                              ? "bg-orange-600 border-orange-600 text-white shadow-md shadow-orange-200" 
+                              : "bg-white border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600"
+                          )}
+                        >
+                          {period}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
                   {activeTab === 'offer' && (
                     <>
                       <div className="relative">
@@ -218,6 +218,13 @@ export default function MotoRide() {
                         placeholder="Modèle de moto"
                         value={motorcycle}
                         onChange={(e) => setMotorcycle(e.target.value)}
+                        className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Numéro WhatsApp (ex: +226...)"
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
                         className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                       />
                       <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -279,15 +286,20 @@ export default function MotoRide() {
                 <div key={ride.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-orange-200 transition-all cursor-pointer group">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      <img src={ride.driver.avatar} alt={ride.driver.name} className="w-12 h-12 rounded-full bg-slate-100" />
+                      <img src={ride.driverAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ride.driverName}`} alt={ride.driverName} className="w-12 h-12 rounded-full bg-slate-100" />
                       <div>
-                        <h4 className="font-bold text-slate-900">{ride.driver.name}</h4>
+                        <h4 className="font-bold text-slate-900">{ride.driverName}</h4>
                         <div className="flex items-center gap-1 text-sm text-slate-500">
                           <Star size={14} className="text-amber-400 fill-amber-400" />
-                          <span>{ride.driver.rating}</span>
+                          <span>{ride.driverRating}</span>
                           <span className="mx-1">•</span>
                           <span>{ride.motorcycle}</span>
                         </div>
+                        {ride.whatsappNumber && (
+                          <div className="text-xs text-emerald-600 font-medium mt-1">
+                            WhatsApp: {ride.whatsappNumber}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
@@ -326,7 +338,11 @@ export default function MotoRide() {
                       if (isRideExpired(ride.date, ride.time)) {
                         alert("Ce trajet a déjà expiré.");
                       } else {
-                        alert("Fonctionnalité de réservation bientôt disponible !");
+                        const clientWhatsapp = prompt("Veuillez entrer votre numéro WhatsApp pour que le conducteur puisse vous contacter :");
+                        if (clientWhatsapp) {
+                          reserveMotoRide(ride.id, clientWhatsapp);
+                          alert("Réservation envoyée ! Le conducteur a été notifié.");
+                        }
                       }
                     }}
                     className="w-full py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors"
