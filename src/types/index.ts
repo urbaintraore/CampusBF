@@ -338,3 +338,12 @@ export interface MotoRide {
   lng: number;
   createdAt: string;
 }
+
+export interface Log {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details?: string;
+  createdAt: string;
+}

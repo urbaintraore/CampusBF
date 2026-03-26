@@ -20,23 +20,13 @@ export default function MotoRide() {
   const [helmetAvailable, setHelmetAvailable] = useState(false);
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | null>(null);
 
-  const isRideExpired = (rideDate: string, rideTime: string) => {
+  const isRideExpired = (rideDate: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const rideD = new Date(rideDate);
     rideD.setHours(0, 0, 0, 0);
     
-    if (rideD < today) return true;
-    if (rideD > today) return false;
-    
-    // If today, check periods
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    if (rideTime === 'Matin' && currentHour >= 12) return true;
-    if (rideTime === 'Après-Midi' && currentHour >= 18) return true;
-    // Soir is valid until end of day
-    return false;
+    return rideD < today;
   };
 
   const handlePublishRide = async () => {
@@ -44,8 +34,8 @@ export default function MotoRide() {
       alert("Veuillez remplir tous les champs, y compris votre numéro WhatsApp.");
       return;
     }
-    if (isRideExpired(date, time)) {
-      alert("La date et la période de départ ne peuvent pas être dans le passé.");
+    if (isRideExpired(date)) {
+      alert("La date de départ ne peut pas être dans le passé.");
       return;
     }
     await addMotoRide({
@@ -80,7 +70,7 @@ export default function MotoRide() {
     const matchDeparture = departure ? ride.departure.toLowerCase().includes(departure.toLowerCase()) : true;
     const matchDestination = destination ? ride.destination.toLowerCase().includes(destination.toLowerCase()) : true;
     const matchDate = date ? ride.date === date : true;
-    const isExpired = isRideExpired(ride.date, ride.time);
+    const isExpired = isRideExpired(ride.date);
     return matchDeparture && matchDestination && matchDate && !isExpired;
   });
 
@@ -335,7 +325,7 @@ export default function MotoRide() {
 
                   <button 
                     onClick={() => {
-                      if (isRideExpired(ride.date, ride.time)) {
+                      if (isRideExpired(ride.date)) {
                         alert("Ce trajet a déjà expiré.");
                       } else {
                         const clientWhatsapp = prompt("Veuillez entrer votre numéro WhatsApp pour que le conducteur puisse vous contacter :");

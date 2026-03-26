@@ -199,15 +199,23 @@ export default function Documents() {
         downloads: increment(1)
       });
 
-      // Try to force download using window.open
+      // Try to force download
       let downloadUrl = docData.downloadUrl;
+      
+      // If it's a Supabase URL, we can append ?download= to force download
+      if (downloadUrl.includes('supabase.co') && !downloadUrl.includes('?download=')) {
+        downloadUrl += '?download=';
+      }
       
       console.log("[Documents] URL finale pour téléchargement :", downloadUrl);
       
-      const win = window.open(downloadUrl, '_blank');
-      if (!win) {
-        window.location.href = downloadUrl;
-      }
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.target = '_blank';
+      link.download = docData.fileName || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error: any) {
       console.error("[Documents] Erreur lors du téléchargement:", error);
       alert(`Erreur lors du téléchargement: ${error.message || "Inconnue"}`);

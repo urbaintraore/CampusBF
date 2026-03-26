@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { User } from '@/types';
+import { User, Log } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { DocumentModal } from '@/components/DocumentModal';
@@ -46,12 +46,15 @@ export default function AdminDashboard() {
     reports,
     deleteReport,
     motoRides,
-    deleteMotoRide
+    deleteMotoRide,
+    logs
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs'>('overview');
   const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments'>('documents');
   const [userSearch, setUserSearch] = useState('');
+  const [logSearch, setLogSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   // Content states
   const [showAddAdModal, setShowAddAdModal] = useState(false);
@@ -167,6 +170,15 @@ export default function AdminDashboard() {
           >
             Gestion Plateformes
           </button>
+          <button 
+            onClick={() => setActiveTab('logs')}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-bold transition-all",
+              activeTab === 'logs' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Journaux
+          </button>
         </div>
       </div>
 
@@ -176,7 +188,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {[
               { label: 'Utilisateurs', count: users.length.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
-              { label: 'Documents', count: '3,890', icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Documents', count: documents.length.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Signalements', count: reports.length.toString(), icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
               { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
@@ -410,6 +422,123 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Reports & Statistics Section */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-8">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                <Activity className="text-emerald-600" size={20} />
+                Rapports & Statistiques Plateforme
+              </h2>
+              <div className="flex gap-2">
+                <button className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center gap-2">
+                  <Download size={14} />
+                  Rapport résumé
+                </button>
+                <button className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2">
+                  <Download size={14} />
+                  Rapport complet
+                </button>
+              </div>
+            </div>
+            <div className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* User Distribution */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Répartition Utilisateurs</h3>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Étudiants', count: users.filter(u => u.role === 'student').length, color: 'bg-blue-500' },
+                      { label: 'Répétiteurs', count: users.filter(u => u.role === 'tutor').length, color: 'bg-amber-500' },
+                      { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length, color: 'bg-emerald-500' },
+                      { label: 'Entreprises', count: users.filter(u => u.role === 'company').length, color: 'bg-purple-500' },
+                      { label: 'Admins', count: users.filter(u => u.role === 'admin').length, color: 'bg-red-500' },
+                    ].map((item) => (
+                      <div key={item.label} className="space-y-1">
+                        <div className="flex justify-between text-xs font-medium">
+                          <span className="text-gray-600">{item.label}</span>
+                          <span className="text-gray-900 font-bold">{item.count}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${item.color}`} 
+                            style={{ width: `${(item.count / Math.max(users.length, 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Content Statistics */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Contenus Publiés</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="text-xl font-bold text-gray-900">{documents.length}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">Documents</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="text-xl font-bold text-gray-900">{community.length}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">Posts Forum</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="text-xl font-bold text-gray-900">{marketplace.length}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">Marketplace</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="text-xl font-bold text-gray-900">{motoRides.length}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">Trajets Moto</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Engagement & Activity */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Activité Récente</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">Nouveaux inscrits</p>
+                        <p className="text-xs text-gray-500">7 derniers jours : {users.filter(u => {
+                          const date = new Date(u.createdAt);
+                          const sevenDaysAgo = new Date();
+                          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                          return date > sevenDaysAgo;
+                        }).length}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">Documents partagés</p>
+                        <p className="text-xs text-gray-500">7 derniers jours : {documents.filter(d => {
+                          const date = new Date(d.createdAt);
+                          const sevenDaysAgo = new Date();
+                          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                          return date > sevenDaysAgo;
+                        }).length}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <Activity size={20} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">Actions admin</p>
+                        <p className="text-xs text-gray-500">Total logs : {logs.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1434,6 +1563,13 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button 
+                          onClick={() => setSelectedUser(u)}
+                          title="Voir Profil Complet"
+                          className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        <button 
                           onClick={() => setShowGroupSelectModal(u.id)}
                           title="Ajouter à un groupe"
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1470,6 +1606,214 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'logs' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <h2 className="font-bold text-gray-900">Journaux d'activité</h2>
+                <div className="flex gap-2">
+                  <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] rounded-full font-bold">
+                    Aujourd'hui : {logs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length}
+                  </span>
+                  <span className="px-2 py-1 bg-gray-50 text-gray-700 text-[10px] rounded-full font-bold">
+                    Total : {logs.length}
+                  </span>
+                </div>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Rechercher dans les journaux..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 w-full md:w-64"
+                />
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                  <tr>
+                    <th className="px-6 py-4">Date & Heure</th>
+                    <th className="px-6 py-4">Utilisateur</th>
+                    <th className="px-6 py-4">Action</th>
+                    <th className="px-6 py-4">Détails</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {logs
+                    .filter(l => 
+                      l.action.toLowerCase().includes(logSearch.toLowerCase()) || 
+                      l.userName.toLowerCase().includes(logSearch.toLowerCase()) ||
+                      l.details?.toLowerCase().includes(logSearch.toLowerCase())
+                    )
+                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-xs text-gray-500">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700">
+                            {log.userName.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{log.userName}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold text-gray-700">{log.action}</span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">
+                        {log.details || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                  {logs.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
+                        Aucun journal d'activité trouvé.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Profile Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95">
+            <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center z-10">
+              <h2 className="text-xl font-bold text-gray-900">Profil Utilisateur Complet</h2>
+              <button 
+                onClick={() => setSelectedUser(null)} 
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8">
+              <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
+                <img 
+                  src={selectedUser.avatarUrl} 
+                  alt="" 
+                  className="w-32 h-32 rounded-2xl object-cover bg-gray-100 shadow-lg" 
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {selectedUser.firstName} {selectedUser.lastName}
+                    </h3>
+                    <span className={cn(
+                      "text-xs font-bold uppercase px-2 py-1 rounded-full",
+                      selectedUser.role === 'admin' ? "bg-purple-50 text-purple-700" : 
+                      selectedUser.role === 'tutor' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700"
+                    )}>
+                      {selectedUser.role}
+                    </span>
+                  </div>
+                  <p className="text-gray-500 mb-4">{selectedUser.email}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Université</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.university || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Filière</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.major || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Niveau</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.level || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Statut Compte</p>
+                      <p className={cn(
+                        "text-sm font-bold",
+                        selectedUser.status === 'active' ? "text-emerald-600" : "text-red-600"
+                      )}>
+                        {selectedUser.status === 'active' ? 'Actif' : 'Inactif'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Activity size={18} className="text-emerald-600" />
+                    Statistiques de l'utilisateur
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="border border-gray-100 p-4 rounded-xl text-center">
+                      <p className="text-2xl font-bold text-emerald-600">
+                        {documents.filter(d => d.authorId === selectedUser.id).length}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-gray-400">Documents</p>
+                    </div>
+                    <div className="border border-gray-100 p-4 rounded-xl text-center">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {community.filter(p => p.authorId === selectedUser.id).length}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-gray-400">Posts</p>
+                    </div>
+                    <div className="border border-gray-100 p-4 rounded-xl text-center">
+                      <p className="text-2xl font-bold text-amber-600">
+                        {marketplace.filter(m => m.sellerId === selectedUser.id).length}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-gray-400">Annonces</p>
+                    </div>
+                    <div className="border border-gray-100 p-4 rounded-xl text-center">
+                      <p className="text-2xl font-bold text-purple-600">
+                        {motoRides.filter(r => r.driverId === selectedUser.id).length}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-gray-400">Trajets</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Shield size={18} className="text-emerald-600" />
+                    Dernières activités (Journaux)
+                  </h4>
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="divide-y divide-gray-100">
+                      {logs
+                        .filter(l => l.userId === selectedUser.id)
+                        .slice(0, 5)
+                        .map(log => (
+                          <div key={log.id} className="p-4 flex justify-between items-center">
+                            <div>
+                              <p className="text-sm font-bold text-gray-800">{log.action}</p>
+                              <p className="text-[10px] text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 italic">{log.details}</p>
+                          </div>
+                        ))}
+                      {logs.filter(l => l.userId === selectedUser.id).length === 0 && (
+                        <div className="p-8 text-center text-gray-400 text-sm">
+                          Aucune activité enregistrée pour cet utilisateur.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

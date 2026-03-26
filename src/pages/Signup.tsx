@@ -96,11 +96,8 @@ export default function Signup() {
       }
 
       await signup(signupData);
-      if (formData.email.toLowerCase() === 'urbain.traoreurb@gmail.com') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      alert('Inscription réussie ! Veuillez vérifier votre boîte mail pour confirmer votre compte avant de vous connecter.');
+      navigate('/login');
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue lors de l\'inscription');
     } finally {

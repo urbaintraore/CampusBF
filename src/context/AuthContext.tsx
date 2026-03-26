@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide } from '@/types';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
@@ -44,6 +44,8 @@ interface AuthContextType {
   community: Post[];
   reports: Report[];
   motoRides: MotoRide[];
+  logs: Log[];
+  logAction: (action: string, details?: string) => Promise<void>;
   updateAd: (id: string, data: Partial<Ad>) => Promise<void>;
   createAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
   deleteAd: (id: string) => Promise<void>;
@@ -121,8 +123,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [lostAndFound, setLostAndFound] = useState<LostAndFound[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [motoRides, setMotoRides] = useState<MotoRide[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const logAction = async (action: string, details?: string) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'logs'), {
+        userId: user.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        action,
+        details: details || '',
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error logging action:", error);
+    }
+  };
 
   const createAd = async (adData: Partial<Ad>) => {
     if (!user) return;
@@ -247,7 +265,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           console.log("Fetching user doc for:", firebaseUser.uid);
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          let userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          let retries = 0;
+          while (!userDoc.exists() && retries < 5) {
+            console.log("User doc not found, waiting...");
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            retries++;
+          }
+          
           if (userDoc.exists()) {
             console.log("User doc exists");
             const data = userDoc.data();
@@ -335,6 +361,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               unsubscribes.push(onSnapshot(collection(db, 'subscriptionRequests'), (snapshot) => {
                 setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'subscriptionRequests')));
+
+              unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
+                setLogs(snapshot.docs.map(doc => {
+                  const data = doc.data();
+                  return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+                  } as Log;
+                }));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'logs')));
             } else {
               console.log("User is not admin, starting user listeners");
               // Non-admins see their own applications
@@ -465,7 +502,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       await auth.authStateReady();
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (!userCredential.user.emailVerified) {
+        await signOut(auth);
+        throw new Error('Veuillez vérifier votre adresse email avant de vous connecter. Vérifiez vos spams si nécessaire.');
+      }
     } catch (error: any) {
       throw new Error(error.message || 'Erreur de connexion');
     }
@@ -538,7 +579,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       await ensureUserInCommunityGroup(firebaseUser.uid);
-      setUser({ id: firebaseUser.uid, ...newUser } as User);
+      if (firebaseUser.emailVerified) {
+        setUser({ id: firebaseUser.uid, ...newUser } as User);
+      } else {
+        // Sign out immediately so they don't stay in a weird state
+        await signOut(auth);
+      }
     } catch (error: any) {
       if (error.code === 'permission-denied') {
         handleFirestoreError(error, OperationType.CREATE, 'users');
@@ -1049,6 +1095,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       community,
       reports,
       motoRides,
+      logs,
+      logAction,
       deleteAd,
       updateAd,
       createAd,

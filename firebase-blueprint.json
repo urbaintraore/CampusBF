@@ -216,6 +216,19 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["driverId", "driverName", "departure", "destination", "time", "date", "price", "motorcycle", "whatsappNumber"]
+    },
+    "Log": {
+      "title": "Log",
+      "description": "User activity log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "action", "createdAt"]
     }
   },
   "firestore": {
@@ -298,6 +311,10 @@
     "/motoRides/{rideId}": {
       "schema": "MotoRide",
       "description": "Motorcycle ride offers"
+    },
+    "/logs/{logId}": {
+      "schema": "Log",
+      "description": "User activity logs"
     }
   }
 }
