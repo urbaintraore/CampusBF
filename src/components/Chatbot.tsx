@@ -1,37 +1,57 @@
-import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
-import { MessageCircle, X, Send } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { createCampusAssistantChat } from '../services/geminiService';
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([
-    { role: 'bot', content: 'Bonjour ! Je suis l\'assistant CampusBF. Comment puis-je vous aider ?' }
+    { role: 'bot', content: 'Bonjour ! Je suis l\'assistant CampusBF 🎓. Comment puis-je vous aider aujourd\'hui ?' }
   ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Référence pour garder la session de chat active (avec historique)
+  const chatSessionRef = useRef<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialiser la session de chat à l'ouverture si elle n'existe pas
+  useEffect(() => {
+    if (isOpen && !chatSessionRef.current) {
+      try {
+        chatSessionRef.current = createCampusAssistantChat();
+      } catch (error) {
+        console.error("Erreur d'initialisation du chat:", error);
+      }
+    }
+  }, [isOpen]);
+
+  // Auto-scroll vers le bas quand un nouveau message arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
-    const userMessage = input;
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage = input.trim();
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setInput('');
+    setIsLoading(true);
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('GEMINI_API_KEY is not set');
+      if (!chatSessionRef.current) {
+        chatSessionRef.current = createCampusAssistantChat();
       }
       
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: userMessage,
-        config: {
-          systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, et l'organisation d'événements.\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions, NE gère PAS le paiement des frais de scolarité, et NE propose PAS de suivi pédagogique (notes, emplois du temps). Si un utilisateur pose une question sur ces sujets, réponds poliment que ces fonctionnalités ne sont pas disponibles sur CampusBF."
-        }
-      });
-      setMessages(prev => [...prev, { role: 'bot', content: response.text || 'Désolé, je n\'ai pas pu répondre.' }]);
+      // Envoi du message à la session de chat (qui garde l'historique)
+      const response = await chatSessionRef.current.sendMessage({ message: userMessage });
+      
+      setMessages(prev => [...prev, { role: 'bot', content: response.text || 'Désolé, je n\'ai pas pu formuler une réponse.' }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'bot', content: 'Une erreur est survenue.' }]);
+      console.error("Erreur Chatbot:", e);
+      setMessages(prev => [...prev, { role: 'bot', content: 'Une erreur est survenue lors de la communication avec l\'assistant. Veuillez réessayer.' }]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -56,18 +76,29 @@ export default function Chatbot() {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="p-3.5 bg-white border border-slate-200/60 text-slate-700 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2">
+                  <Loader2 size={16} className="animate-spin text-emerald-600" />
+                  <span className="text-xs text-slate-500">L'assistant réfléchit...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
           <div className="p-4 bg-white border-t border-slate-200/60 flex gap-2">
             <input 
               value={input} 
               onChange={e => setInput(e.target.value)} 
               onKeyPress={e => e.key === 'Enter' && handleSend()}
-              className="flex-1 px-4 py-2.5 bg-slate-100/50 border border-slate-200/60 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all" 
+              disabled={isLoading}
+              className="flex-1 px-4 py-2.5 bg-slate-100/50 border border-slate-200/60 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50" 
               placeholder="Posez votre question..." 
             />
             <button 
               onClick={handleSend} 
-              className="bg-emerald-600 text-white p-2.5 rounded-full hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center"
+              disabled={isLoading || !input.trim()}
+              className="bg-emerald-600 text-white p-2.5 rounded-full hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:hover:scale-100"
             >
               <Send size={18} className="ml-0.5" />
             </button>
