@@ -1053,23 +1053,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const addTeacherReview = async (teacherId: string, rating: number, comment: string) => {
     if (!user) return;
     try {
-      const teacher = users.find(u => u.id === teacherId);
-      if (!teacher || !teacher.teacherProfile) return;
-
-      const newReview = {
-        id: `rev-${Date.now()}`,
+      const reviewData = {
         authorId: user.id,
         authorName: `${user.firstName} ${user.lastName}`,
         rating,
         comment,
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       };
 
-      await updateDoc(doc(db, 'users', teacherId), {
-        'teacherProfile.reviews': [...(teacher.teacherProfile.reviews || []), newReview]
+      await addDoc(collection(db, 'users', teacherId, 'reviews'), reviewData);
+      
+      // Notification for the teacher
+      await addNotification(teacherId, {
+        type: 'success',
+        title: 'Nouvel avis reçu',
+        message: `${user.firstName} ${user.lastName} a laissé un avis sur votre profil.`
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${teacherId}`);
+      handleFirestoreError(error, OperationType.CREATE, `users/${teacherId}/reviews`);
     }
   };
 

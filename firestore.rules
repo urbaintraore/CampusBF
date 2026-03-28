@@ -131,7 +131,30 @@ service cloud.firestore {
              (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 200)) &&
              (!('downloads' in data) || data.downloads is number) &&
              (!('likes' in data) || data.likes is number) &&
+             (!('isForSale' in data) || data.isForSale is bool) &&
+             (!('price' in data) || (data.price is number && data.price > 0)) &&
+             (!('isForSale' in data) || data.isForSale == false || ('price' in data)) &&
              data.createdAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return hasRequiredFields(['authorId', 'authorName', 'rating', 'comment', 'createdAt']) &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() > 0 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() > 0 && data.comment.size() <= 1000 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidInternship(data) {
+      return hasRequiredFields(['title', 'company', 'type', 'description', 'authorId', 'postedAt']) &&
+             data.title is string && data.title.size() > 0 &&
+             data.company is string && data.company.size() > 0 &&
+             data.type in ['internship', 'job', 'employment'] &&
+             data.description is string && data.description.size() > 0 &&
+             data.authorId == request.auth.uid &&
+             (!('deadline' in data) || (data.deadline is string && (data.deadline == '' || data.deadline >= request.time.date().toString()))) &&
+             data.postedAt is timestamp;
     }
 
     function isValidPost(data) {
@@ -195,6 +218,13 @@ service cloud.firestore {
                       request.resource.data.role == resource.data.role &&
                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'subscriptionStatus', 'eventSubscriptionStatus'])) || isAdmin();
       allow delete: if isAdmin();
+
+      match /reviews/{reviewId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidReview(request.resource.data) && isRecent(request.resource.data.createdAt);
+        allow update: if false; // Reviews are immutable for now
+        allow delete: if isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid);
+      }
     }
 
     match /ads/{adId} {
@@ -221,9 +251,12 @@ service cloud.firestore {
 
     match /internships/{internshipId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (resource.data.postedBy == request.auth.uid || isAdmin());
-      allow delete: if isAuthenticated() && (resource.data.postedBy == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidInternship(request.resource.data) && isRecent(request.resource.data.postedAt);
+      allow update: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                      isValidInternship(request.resource.data) &&
+                      request.resource.data.authorId == resource.data.authorId &&
+                      request.resource.data.postedAt == resource.data.postedAt;
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
     match /events/{eventId} {

@@ -3,6 +3,8 @@ import { Search, Filter, MapPin, GraduationCap, BookOpen, Clock, Star, Mail, Loc
 import { useAuth } from '@/context/AuthContext';
 import { User } from '@/types';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 export default function TeachersDirectory() {
   const { user, users, submitSubscriptionRequest, addTeacherReview } = useAuth();
@@ -12,11 +14,25 @@ export default function TeachersDirectory() {
   const [availabilityFilter, setAvailabilityFilter] = useState('Tous');
   
   const [selectedTeacher, setSelectedTeacher] = useState<User | null>(null);
+  const [teacherReviews, setTeacherReviews] = useState<any[]>([]);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState('');
   
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
+
+  // Fetch reviews when a teacher is selected
+  React.useEffect(() => {
+    if (selectedTeacher) {
+      const q = query(collection(db, 'users', selectedTeacher.id, 'reviews'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setTeacherReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+      return () => unsubscribe();
+    } else {
+      setTeacherReviews([]);
+    }
+  }, [selectedTeacher]);
 
   const teachers = useMemo(() => users.filter(u => u.role === 'teacher' && u.teacherProfile), [users]);
 
@@ -58,37 +74,24 @@ export default function TeachersDirectory() {
     setShowMessageModal(false);
   };
 
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewComment.trim() || !selectedTeacher) return;
-    addTeacherReview(selectedTeacher.id, reviewRating, reviewComment);
-    setReviewComment('');
-    setReviewRating(5);
-    alert('Avis ajouté avec succès !');
-    // Update local selectedTeacher to show the new review immediately
-    setSelectedTeacher(prev => {
-      if (!prev || !prev.teacherProfile) return prev;
-      return {
-        ...prev,
-        teacherProfile: {
-          ...prev.teacherProfile,
-          reviews: [
-            ...(prev.teacherProfile.reviews || []),
-            {
-              id: `rev-${Date.now()}`,
-              authorId: user?.id || '',
-              authorName: user ? `${user.firstName} ${user.lastName}` : 'Anonyme',
-              rating: reviewRating,
-              comment: reviewComment,
-              createdAt: new Date().toISOString()
-            }
-          ]
-        }
-      };
-    });
+    try {
+      await addTeacherReview(selectedTeacher.id, reviewRating, reviewComment);
+      setReviewComment('');
+      setReviewRating(5);
+      alert('Avis ajouté avec succès !');
+    } catch (error) {
+      console.error("Error adding review:", error);
+      alert('Erreur lors de l\'ajout de l\'avis.');
+    }
   };
 
   const calculateAverageRating = (teacher: User) => {
+    // Note: This might be tricky if we don't have all reviews in memory for all teachers.
+    // For now, if we don't have them, we might need to store the average in the user doc.
+    // But let's see if we can use the one from the profile if it exists, or just show 0.
     const reviews = teacher.teacherProfile?.reviews || [];
     if (reviews.length === 0) return 0;
     const sum = reviews.reduce((acc, rev) => acc + rev.rating, 0);
@@ -289,9 +292,13 @@ export default function TeachersDirectory() {
                     <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-3">
                       <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
                         <MessageSquare size={16} className="text-emerald-500" />
-                        Contact Étudiant
+                        {user?.role === 'parent' ? 'Contact Parent' : 'Contact Étudiant'}
                       </h4>
-                      <p className="text-xs text-emerald-700">Vous pouvez envoyer un message direct à cet enseignant pour des questions ou du tutorat.</p>
+                      <p className="text-xs text-emerald-700">
+                        {user?.role === 'parent' 
+                          ? "Envoyez un message direct à cet enseignant pour discuter des besoins de votre enfant."
+                          : "Vous pouvez envoyer un message direct à cet enseignant pour des questions ou du tutorat."}
+                      </p>
                       <button 
                         onClick={() => setShowMessageModal(true)}
                         className="w-full py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
@@ -413,17 +420,19 @@ export default function TeachersDirectory() {
               <div className="pt-6 border-t border-slate-100">
                 <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                   <Star size={20} className="text-amber-500" />
-                  Avis et Évaluations ({selectedTeacher.teacherProfile?.reviews?.length || 0})
+                  Avis et Évaluations ({teacherReviews.length})
                 </h3>
                 
                 <div className="space-y-4 mb-8">
-                  {selectedTeacher.teacherProfile?.reviews?.length ? (
-                    selectedTeacher.teacherProfile.reviews.map(review => (
+                  {teacherReviews.length ? (
+                    teacherReviews.map(review => (
                       <div key={review.id} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <p className="font-bold text-slate-900 text-sm">{review.authorName}</p>
-                            <p className="text-xs text-slate-500">{new Date(review.createdAt).toLocaleDateString('fr-FR')}</p>
+                            <p className="text-xs text-slate-500">
+                              {review.createdAt?.toDate ? review.createdAt.toDate().toLocaleDateString('fr-FR') : 'Date inconnue'}
+                            </p>
                           </div>
                           <div className="flex text-amber-500">
                             {[1, 2, 3, 4, 5].map(star => (

@@ -49,6 +49,8 @@
         "fileName": { "type": "string" },
         "downloads": { "type": "number" },
         "likes": { "type": "number" },
+        "price": { "type": "number" },
+        "isForSale": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "type", "university", "subject", "downloadUrl", "authorId"]
@@ -235,6 +237,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles"
+    },
+    "/users/{userId}/reviews/{reviewId}": {
+      "schema": "object",
+      "description": "Teacher reviews"
     },
     "/ads/{adId}": {
       "schema": "Ad",

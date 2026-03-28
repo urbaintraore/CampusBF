@@ -14,21 +14,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const userNotifications = notifications.filter(n => n.userId === user?.id || n.userId === 'all');
   const unreadNotifications = userNotifications.filter(n => !n.read).length;
 
-  const navItems = [
+  const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
     { icon: MessageCircle, label: 'Messages', to: '/messages' },
-    { icon: FileText, label: 'Documents', to: '/documents' },
+    { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: GraduationCap, label: 'Répétiteurs', to: '/tutors' },
     { icon: Library, label: 'Enseignants', to: '/teachers' },
-    { icon: Briefcase, label: 'Stages', to: '/internships' },
+    { icon: Briefcase, label: 'Stages', to: '/internships', roles: ['student', 'admin', 'company'] },
     { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace' },
     { icon: Users, label: 'Communauté', to: '/community' },
     { icon: Bike, label: 'MotoRide', to: '/motoride' },
     { icon: Calendar, label: 'Événements', to: '/events' },
-    { icon: Compass, label: 'Orientation', to: '/orientation' },
-    { icon: User, label: 'Portfolio', to: '/portfolio' },
+    { icon: Compass, label: 'Orientation', to: '/orientation', roles: ['student', 'admin', 'parent'] },
+    { icon: User, label: 'Portfolio', to: '/portfolio', roles: ['teacher', 'admin', 'student'] },
     { icon: Users, label: 'Mentorat', to: '/mentorship' },
   ];
+
+  const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
 
   if (user?.role === 'admin') {
     navItems.push({ icon: Shield, label: 'Administration', to: '/admin' });

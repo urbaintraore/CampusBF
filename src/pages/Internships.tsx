@@ -697,6 +697,7 @@ export default function Internships() {
                     <input 
                       type="date" 
                       value={newInternship.deadline}
+                      min={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setNewInternship({ ...newInternship, deadline: e.target.value })}
                       className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" 
                     />

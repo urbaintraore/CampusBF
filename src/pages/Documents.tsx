@@ -38,6 +38,8 @@ export default function Documents() {
   const [uploadType, setUploadType] = useState('thesis');
   const [uploadYear, setUploadYear] = useState('2024');
   const [uploadSubject, setUploadSubject] = useState('');
+  const [isForSale, setIsForSale] = useState(false);
+  const [uploadPrice, setUploadPrice] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -121,6 +123,8 @@ export default function Documents() {
     setUploadType('thesis');
     setUploadYear('2024');
     setUploadSubject('');
+    setIsForSale(false);
+    setUploadPrice('');
     setUploadError('');
     setIsUploading(false);
   };
@@ -136,6 +140,10 @@ export default function Documents() {
     }
     if (uploadUniversity === 'Autre' && !customUniversity.trim()) {
       setUploadError('Veuillez préciser le nom de l\'université.');
+      return;
+    }
+    if (isForSale && (!uploadPrice || parseFloat(uploadPrice) <= 0)) {
+      setUploadError('Veuillez saisir un prix valide supérieur à 0.');
       return;
     }
     if (!selectedFile) {
@@ -155,7 +163,7 @@ export default function Documents() {
         throw new Error("L'URL de téléchargement n'a pas été générée.");
       }
 
-      const newDoc = {
+      const newDoc: any = {
         title: uploadTitle,
         type: uploadType,
         university: uploadUniversity === 'Autre' ? customUniversity : uploadUniversity,
@@ -167,8 +175,13 @@ export default function Documents() {
         fileName: fileName || selectedFile.name,
         downloads: 0,
         likes: 0,
+        isForSale,
         createdAt: serverTimestamp(),
       };
+
+      if (isForSale) {
+        newDoc.price = parseFloat(uploadPrice);
+      }
 
       console.log("[Documents] Ajout à Firestore:", newDoc);
       await addDoc(collection(db, 'documents'), newDoc);
@@ -341,6 +354,38 @@ export default function Documents() {
                   />
                 </div>
               )}
+
+              <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-200/60">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-700">Mettre en vente ?</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsForSale(!isForSale)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-all relative",
+                      isForSale ? "bg-emerald-600" : "bg-slate-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                      isForSale ? "left-7" : "left-1"
+                    )} />
+                  </button>
+                </div>
+                {isForSale && (
+                  <div className="space-y-1.5 animate-in slide-in-from-top-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prix (CFA)</label>
+                    <input 
+                      type="number" 
+                      value={uploadPrice}
+                      onChange={(e) => setUploadPrice(e.target.value)}
+                      placeholder="Ex: 500" 
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 ml-1">Fichier {isAdmin ? '' : '(PDF)'}</label>
                 <input 

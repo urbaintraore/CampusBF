@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
-import { Eye, EyeOff, Loader2, GraduationCap, Building2, Library } from 'lucide-react';
+import { Eye, EyeOff, Loader2, GraduationCap, Building2, Library, User } from 'lucide-react';
 
 export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [accountType, setAccountType] = useState<'student' | 'institution' | 'teacher'>('student');
+  const [accountType, setAccountType] = useState<'student' | 'institution' | 'teacher' | 'parent'>('student');
   const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -78,6 +78,10 @@ export default function Signup() {
         signupData.university = formData.university;
         signupData.major = formData.major;
         signupData.level = formData.level;
+      } else if (accountType === 'parent') {
+        signupData.firstName = formData.firstName;
+        signupData.lastName = formData.lastName;
+        signupData.role = 'parent';
       } else if (accountType === 'teacher') {
         signupData.firstName = formData.firstName;
         signupData.lastName = formData.lastName;
@@ -114,7 +118,7 @@ export default function Signup() {
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-[2rem] shadow-2xl p-8 sm:p-10 space-y-8">
           <div className="text-center space-y-3">
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center text-white font-display font-bold text-3xl mx-auto mb-6 shadow-lg shadow-emerald-500/30 ring-4 ring-white">
-              {accountType === 'student' ? <GraduationCap size={32} /> : accountType === 'teacher' ? <Library size={32} /> : <Building2 size={32} />}
+              {accountType === 'student' ? <GraduationCap size={32} /> : accountType === 'teacher' ? <Library size={32} /> : accountType === 'parent' ? <User size={32} /> : <Building2 size={32} />}
             </div>
             <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Créer un compte</h1>
             <p className="text-slate-500 text-sm">Rejoignez la communauté CampusBF dès aujourd'hui.</p>
@@ -137,6 +141,13 @@ export default function Signup() {
             </button>
             <button
               type="button"
+              onClick={() => setAccountType('parent')}
+              className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'parent' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            >
+              Parent
+            </button>
+            <button
+              type="button"
               onClick={() => setAccountType('institution')}
               className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'institution' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
@@ -151,7 +162,7 @@ export default function Signup() {
           )}
 
           <form onSubmit={handleSignup} className="space-y-5">
-            {accountType === 'student' ? (
+            {accountType === 'student' || accountType === 'parent' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
@@ -180,51 +191,55 @@ export default function Signup() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700 ml-1">Université / École</label>
-                    <input 
-                      type="text" 
-                      name="university"
-                      required
-                      value={formData.university}
-                      onChange={handleChange}
-                      placeholder="Ex: Université Joseph Ki-Zerbo"
-                      className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700 ml-1">Filière</label>
-                    <input 
-                      type="text" 
-                      name="major"
-                      required
-                      value={formData.major}
-                      onChange={handleChange}
-                      placeholder="Ex: Informatique"
-                      className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
-                    />
-                  </div>
-                </div>
+                {accountType === 'student' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-slate-700 ml-1">Université / École</label>
+                        <input 
+                          type="text" 
+                          name="university"
+                          required
+                          value={formData.university}
+                          onChange={handleChange}
+                          placeholder="Ex: Université Joseph Ki-Zerbo"
+                          className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-slate-700 ml-1">Filière</label>
+                        <input 
+                          type="text" 
+                          name="major"
+                          required
+                          value={formData.major}
+                          onChange={handleChange}
+                          placeholder="Ex: Informatique"
+                          className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 ml-1">Niveau d'études</label>
-                  <select 
-                    name="level"
-                    required
-                    value={formData.level}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
-                  >
-                    <option value="">Sélectionner un niveau</option>
-                    <option value="Licence 1">Licence 1</option>
-                    <option value="Licence 2">Licence 2</option>
-                    <option value="Licence 3">Licence 3</option>
-                    <option value="Master 1">Master 1</option>
-                    <option value="Master 2">Master 2</option>
-                    <option value="Doctorat">Doctorat</option>
-                  </select>
-                </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-slate-700 ml-1">Niveau d'études</label>
+                      <select 
+                        name="level"
+                        required
+                        value={formData.level}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
+                      >
+                        <option value="">Sélectionner un niveau</option>
+                        <option value="Licence 1">Licence 1</option>
+                        <option value="Licence 2">Licence 2</option>
+                        <option value="Licence 3">Licence 3</option>
+                        <option value="Master 1">Master 1</option>
+                        <option value="Master 2">Master 2</option>
+                        <option value="Doctorat">Doctorat</option>
+                      </select>
+                    </div>
+                  </>
+                )}
               </>
             ) : accountType === 'teacher' ? (
               <>

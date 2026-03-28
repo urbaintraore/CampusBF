@@ -31,7 +31,11 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-4xl font-display font-bold text-slate-900 tracking-tight">Bonjour, {user?.firstName} 👋</h1>
-          <p className="text-slate-500 mt-2 text-sm md:text-base font-medium">Voici ce qui se passe sur ton campus aujourd'hui.</p>
+          <p className="text-slate-500 mt-2 text-sm md:text-base font-medium">
+            {user?.role === 'parent' 
+              ? "Trouvez les meilleurs accompagnements pour la réussite de vos enfants."
+              : "Voici ce qui se passe sur ton campus aujourd'hui."}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -146,18 +150,33 @@ export default function Dashboard() {
 
       {/* Quick Stats / Highlights */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[
-          { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100' },
-          { label: 'Stages & Jobs', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100' },
-          { label: 'Groupes', count: groups.length.toString(), color: 'bg-purple-50/80 text-purple-700 ring-purple-100' },
-          { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100' },
-          { label: 'Favoris', count: '0', color: 'bg-amber-50/80 text-amber-700 ring-amber-100' },
-        ].map((stat) => (
-          <div key={stat.label} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
-            <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
-          </div>
-        ))}
+        {user?.role === 'parent' ? (
+          [
+            { label: 'Répétiteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
+            { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
+            { label: 'Événements', count: auth.events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
+            { label: 'Marketplace', count: marketplace.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100', link: '/marketplace' },
+            { label: 'Mentorat', count: users.filter(u => u.role === 'alumni').length.toString(), color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/mentorship' },
+          ].map((stat) => (
+            <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
+              <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
+            </Link>
+          ))
+        ) : (
+          [
+            { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100' },
+            { label: 'Stages & Jobs', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100' },
+            { label: 'Groupes', count: groups.length.toString(), color: 'bg-purple-50/80 text-purple-700 ring-purple-100' },
+            { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100' },
+            { label: 'Favoris', count: '0', color: 'bg-amber-50/80 text-amber-700 ring-amber-100' },
+          ].map((stat) => (
+            <div key={stat.label} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
+              <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Main Feed Grid */}
