@@ -1618,7 +1618,7 @@ export default function AdminDashboard() {
                 <h2 className="font-bold text-gray-900">Journaux d'activité</h2>
                 <div className="flex gap-2">
                   <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] rounded-full font-bold">
-                    Aujourd'hui : {logs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length}
+                    Aujourd'hui : {logs.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length}
                   </span>
                   <span className="px-2 py-1 bg-gray-50 text-gray-700 text-[10px] rounded-full font-bold">
                     Total : {logs.length}
@@ -1653,11 +1653,11 @@ export default function AdminDashboard() {
                       l.userName.toLowerCase().includes(logSearch.toLowerCase()) ||
                       l.details?.toLowerCase().includes(logSearch.toLowerCase())
                     )
-                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 text-xs text-gray-500">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {new Date(log.createdAt).toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -1799,7 +1799,7 @@ export default function AdminDashboard() {
                           <div key={log.id} className="p-4 flex justify-between items-center">
                             <div>
                               <p className="text-sm font-bold text-gray-800">{log.action}</p>
-                              <p className="text-[10px] text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
+                              <p className="text-[10px] text-gray-500">{new Date(log.createdAt).toLocaleString()}</p>
                             </div>
                             <p className="text-xs text-gray-500 italic">{log.details}</p>
                           </div>

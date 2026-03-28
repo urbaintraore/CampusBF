@@ -10,8 +10,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  GoogleAuthProvider,
-  sendEmailVerification
+  GoogleAuthProvider
 } from 'firebase/auth';
 import { 
   doc, 
@@ -248,11 +247,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribes = [];
 
       if (firebaseUser) {
-        if (!firebaseUser.emailVerified) {
-          console.log("Email not verified for:", firebaseUser.email);
-          setUser(null); 
-          return;
-        }
+        // La vérification stricte de l'email a été retirée pour permettre
+        // aux utilisateurs (ex: Yahoo) de se connecter même si l'email de
+        // vérification Firebase est bloqué par les filtres anti-spam.
         
         // Listener pour les publicités (accessible à tous les utilisateurs authentifiés)
         unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
@@ -502,11 +499,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       await auth.authStateReady();
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      if (!userCredential.user.emailVerified) {
-        await signOut(auth);
-        throw new Error('Veuillez vérifier votre adresse email avant de vous connecter. Vérifiez vos spams si nécessaire.');
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      // La vérification stricte de l'email a été retirée ici
     } catch (error: any) {
       throw new Error(error.message || 'Erreur de connexion');
     }
@@ -561,7 +555,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
       const firebaseUser = userCredential.user;
       
-      await sendEmailVerification(firebaseUser);
+      // L'envoi automatique de l'email de vérification a été retiré pour ne pas obliger l'utilisateur à vérifier son email immédiatement
+      // await sendEmailVerification(firebaseUser);
 
       const newUser: Partial<User> = {
         firstName: userData.firstName || '',
@@ -579,12 +574,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       await ensureUserInCommunityGroup(firebaseUser.uid);
-      if (firebaseUser.emailVerified) {
-        setUser({ id: firebaseUser.uid, ...newUser } as User);
-      } else {
-        // Sign out immediately so they don't stay in a weird state
-        await signOut(auth);
-      }
+      
+      // Connexion directe après inscription
+      setUser({ id: firebaseUser.uid, ...newUser } as User);
     } catch (error: any) {
       if (error.code === 'permission-denied') {
         handleFirestoreError(error, OperationType.CREATE, 'users');

@@ -1,4 +1,5 @@
 import React from 'react';
+// CampusBF - Plateforme pour les étudiants du Burkina Faso
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';

@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "description": "CampusBF - Plateforme pour étudiants",
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node dist/server.js",
