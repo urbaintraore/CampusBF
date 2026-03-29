@@ -115,9 +115,9 @@ export default function AdminDashboard() {
   const pendingSubscriptions = subscriptionRequests.filter(req => req.status === 'pending');
 
   const filteredUsers = users.filter(u => 
-    u.firstName.toLowerCase().includes(userSearch.toLowerCase()) || 
-    u.lastName.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.email.toLowerCase().includes(userSearch.toLowerCase())
+    u.firstName?.toLowerCase().includes(userSearch.toLowerCase()) || 
+    u.lastName?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email?.toLowerCase().includes(userSearch.toLowerCase())
   );
 
   const handleToggleUserRole = (userId: string) => {
@@ -222,10 +222,10 @@ export default function AdminDashboard() {
                   <div key={req.id} className="p-6 hover:bg-gray-50 transition-colors">
                     <div className="flex flex-col md:flex-row justify-between gap-6">
                       <div className="flex gap-4">
-                        <img src={req.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                        <img src={req.user?.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
                         <div>
-                          <h3 className="font-bold text-gray-900">{req.user.firstName} {req.user.lastName}</h3>
-                          <p className="text-xs text-gray-500 mb-2">{req.user.email} • {req.user.phone || 'Pas de numéro'}</p>
+                          <h3 className="font-bold text-gray-900">{req.user?.firstName} {req.user?.lastName}</h3>
+                          <p className="text-xs text-gray-500 mb-2">{req.user?.email} • {req.user?.phone || 'Pas de numéro'}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className={cn(
                               "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
@@ -288,10 +288,10 @@ export default function AdminDashboard() {
                   <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors">
                     <div className="flex flex-col md:flex-row justify-between gap-6">
                       <div className="flex gap-4">
-                        <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                        <img src={app.user?.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
                         <div>
-                          <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
-                          <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.user.major}</p>
+                          <h3 className="font-bold text-gray-900">{app.user?.firstName} {app.user?.lastName}</h3>
+                          <p className="text-xs text-gray-500 mb-2">{app.user?.university} • {app.user?.major}</p>
                           <div className="flex flex-wrap gap-1 mb-2">
                             {app.subjects?.map((sub) => (
                               <span key={sub} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] rounded-full font-bold">
@@ -872,12 +872,12 @@ export default function AdminDashboard() {
                         <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors">
                           <div className="flex flex-col md:flex-row justify-between gap-6">
                             <div className="flex gap-4">
-                              <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                              <img src={app.user?.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
                               <div>
-                                <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
-                                <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.user.major}</p>
+                                <h3 className="font-bold text-gray-900">{app.user?.firstName} {app.user?.lastName}</h3>
+                                <p className="text-xs text-gray-500 mb-2">{app.user?.university} • {app.user?.major}</p>
                                 <div className="flex flex-wrap gap-1 mb-2">
-                                  {app.subjects.map((sub) => (
+                                  {app.subjects?.map((sub) => (
                                     <span key={sub} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full font-bold">
                                       {sub}
                                     </span>
@@ -989,10 +989,10 @@ export default function AdminDashboard() {
                         <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors">
                           <div className="flex flex-col md:flex-row justify-between gap-6">
                             <div className="flex gap-4">
-                              <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
+                              <img src={app.user?.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100" />
                               <div>
-                                <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
-                                <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.academicRank}</p>
+                                <h3 className="font-bold text-gray-900">{app.user?.firstName} {app.user?.lastName}</h3>
+                                <p className="text-xs text-gray-500 mb-2">{app.user?.university} • {app.academicRank}</p>
                                 <div className="mb-2">
                                   <span className="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] rounded-full font-bold">
                                     Statut : En attente
@@ -1082,10 +1082,10 @@ export default function AdminDashboard() {
                           <div key={app.id} className="p-6 hover:bg-gray-50 transition-colors opacity-75">
                             <div className="flex flex-col md:flex-row justify-between gap-6">
                               <div className="flex gap-4">
-                                <img src={app.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 grayscale" />
+                                <img src={app.user?.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 grayscale" />
                                 <div>
-                                  <h3 className="font-bold text-gray-900">{app.user.firstName} {app.user.lastName}</h3>
-                                  <p className="text-xs text-gray-500 mb-2">{app.user.university} • {app.academicRank}</p>
+                                  <h3 className="font-bold text-gray-900">{app.user?.firstName} {app.user?.lastName}</h3>
+                                  <p className="text-xs text-gray-500 mb-2">{app.user?.university} • {app.academicRank}</p>
                                   <span className="px-2 py-1 bg-red-50 text-red-700 text-[10px] rounded-full font-bold">
                                     Statut : Refusé
                                   </span>
@@ -1666,8 +1666,8 @@ export default function AdminDashboard() {
                 <tbody className="divide-y divide-gray-50">
                   {logs
                     .filter(l => 
-                      l.action.toLowerCase().includes(logSearch.toLowerCase()) || 
-                      l.userName.toLowerCase().includes(logSearch.toLowerCase()) ||
+                      l.action?.toLowerCase().includes(logSearch.toLowerCase()) || 
+                      l.userName?.toLowerCase().includes(logSearch.toLowerCase()) ||
                       l.details?.toLowerCase().includes(logSearch.toLowerCase())
                     )
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -1679,9 +1679,9 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700">
-                            {log.userName.charAt(0)}
+                            {log.userName?.charAt(0) || '?'}
                           </div>
-                          <span className="text-sm font-medium text-gray-900">{log.userName}</span>
+                          <span className="text-sm font-medium text-gray-900">{log.userName || 'Système'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

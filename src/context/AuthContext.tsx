@@ -408,8 +408,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
             }
           } else {
-            console.log("User doc does not exist");
-            setUser(null);
+            console.log("User doc does not exist, creating default");
+            const isAdminEmail = (email: string | null | undefined) => {
+              if (!email) return false;
+              const lowerEmail = email.toLowerCase();
+              return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                     lowerEmail === 'urbain.traoreurb@gmail' || 
+                     lowerEmail === 'urbain.traoreurb@gmail.com.';
+            };
+            const newUser: Partial<User> = {
+              firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+              email: firebaseUser.email || '',
+              university: '',
+              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+            };
+            try {
+              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+              setUser({ id: firebaseUser.uid, ...newUser } as User);
+              await ensureUserInCommunityGroup(firebaseUser.uid);
+            } catch (err) {
+              console.error("Failed to create default user doc", err);
+              await signOut(auth);
+              setUser(null);
+            }
           }
         } catch (error) {
           console.error("Error fetching user doc:", error);

@@ -11,7 +11,7 @@ export interface User {
   city?: string;
   neighborhood?: string;
   avatarUrl?: string;
-  role: 'student' | 'admin' | 'tutor' | 'company' | 'teacher' | 'institution' | 'parent';
+  role: 'student' | 'admin' | 'tutor' | 'company' | 'teacher' | 'institution' | 'parent' | 'alumni';
   tutorStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   teacherStatus?: 'none' | 'pending_dossier' | 'pending_approval' | 'approved' | 'rejected';
   subscriptionStatus?: 'none' | 'pending' | 'active' | 'expired'; // Tutor subscription

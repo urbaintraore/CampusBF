@@ -202,117 +202,112 @@ export default function Events() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Area */}
         <div className="lg:col-span-2 space-y-6">
-          {activeTab === 'all' ? (
-            <div className="grid grid-cols-1 gap-4">
-              {filteredEvents.length > 0 ? (
-                filteredEvents.map((event) => {
-                  const organizer = event.organizer || users.find((u: any) => u.id === event.organizerId) || {
-                    id: event.organizerId,
-                    firstName: 'Utilisateur',
-                    lastName: '',
-                  };
-                  const isRegistered = user && event.attendees.includes(user.id);
-                  const isOrganizer = user && event.organizerId === user.id;
+          <div className="grid grid-cols-1 gap-4">
+            {filteredEvents.length > 0 ? (
+              filteredEvents.map((event) => {
+                const organizer = event.organizer || users.find((u: any) => u.id === event.organizerId) || {
+                  id: event.organizerId,
+                  firstName: 'Utilisateur',
+                  lastName: '',
+                };
+                const isRegistered = user && event.attendees.includes(user.id);
+                const isOrganizer = user && event.organizerId === user.id;
 
-                  return (
-                    <div key={event.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-indigo-200 transition-all group">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("p-2 rounded-lg border", getTypeColor(event.type))}>
-                            {getTypeIcon(event.type)}
-                          </div>
-                          <div>
-                            <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-1 inline-block", getTypeColor(event.type))}>
-                              {getTypeLabel(event.type)}
-                            </span>
-                            <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.title}</h3>
-                          </div>
+                return (
+                  <div key={event.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-indigo-200 transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("p-2 rounded-lg border", getTypeColor(event.type))}>
+                          {getTypeIcon(event.type)}
                         </div>
-                      </div>
-
-                      <p className="text-sm text-slate-600 mb-4 line-clamp-2">{event.description}</p>
-
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <Calendar size={14} className="text-indigo-500" />
-                          <span>{new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <Clock size={14} className="text-indigo-500" />
-                          <span>{event.time}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <MapPin size={14} className="text-indigo-500" />
-                          <span className="truncate">{event.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <Users size={14} className="text-indigo-500" />
-                          <span>{event.attendees?.length || 0} inscrits</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                            {organizer?.firstName?.[0] || '?'}
-                          </div>
-                          <span className="text-xs text-slate-500">Par {organizer?.firstName} {organizer?.lastName}</span>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          {isOrganizer && (
-                            <button 
-                              onClick={() => setSelectedEventAttendees(event)}
-                              className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
-                            >
-                              <Users size={14} />
-                              Voir les inscrits
-                            </button>
-                          )}
-                          {!isOrganizer && (
-                            <button 
-                              onClick={() => handleRegister(event.id)}
-                              className={cn(
-                                "px-4 py-2 text-xs font-bold rounded-lg transition-colors",
-                                isRegistered 
-                                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200" 
-                                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-                              )}
-                            >
-                              {isRegistered ? 'Se désinscrire' : 'S\'inscrire'}
-                            </button>
-                          )}
+                        <div>
+                          <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-1 inline-block", getTypeColor(event.type))}>
+                            {getTypeLabel(event.type)}
+                          </span>
+                          <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.title}</h3>
                         </div>
                       </div>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
+
+                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{event.description}</p>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Calendar size={14} className="text-indigo-500" />
+                        <span>{new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Clock size={14} className="text-indigo-500" />
+                        <span>{event.time}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <MapPin size={14} className="text-indigo-500" />
+                        <span className="truncate">{event.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Users size={14} className="text-indigo-500" />
+                        <span>{event.attendees?.length || 0} inscrits</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                          {organizer?.firstName?.[0] || '?'}
+                        </div>
+                        <span className="text-xs text-slate-500">Par {organizer?.firstName} {organizer?.lastName}</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {isOrganizer && (
+                          <button 
+                            onClick={() => setSelectedEventAttendees(event)}
+                            className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+                          >
+                            <Users size={14} />
+                            Voir les inscrits
+                          </button>
+                        )}
+                        {!isOrganizer && (
+                          <button 
+                            onClick={() => handleRegister(event.id)}
+                            className={cn(
+                              "px-4 py-2 text-xs font-bold rounded-lg transition-colors",
+                              isRegistered 
+                                ? "bg-slate-100 text-slate-600 hover:bg-slate-200" 
+                                : "bg-indigo-600 text-white hover:bg-indigo-700"
+                            )}
+                          >
+                            {isRegistered ? 'Se désinscrire' : 'S\'inscrire'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
+                {activeTab === 'my-events' ? (
+                  <Users size={48} className="mx-auto text-slate-300 mb-4" />
+                ) : activeTab === 'organized' ? (
+                  <Plus size={48} className="mx-auto text-slate-300 mb-4" />
+                ) : (
                   <Calendar size={48} className="mx-auto text-slate-300 mb-4" />
-                  <p className="text-slate-500">
-                    {activeTab === 'my-events' 
-                      ? "Vous n'êtes inscrit à aucun événement pour le moment." 
-                      : activeTab === 'organized'
-                      ? "Vous n'avez publié aucun événement pour le moment."
-                      : "Aucun événement ne correspond à votre recherche."}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : activeTab === 'my-events' ? (
-            <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
-              <Users size={48} className="mx-auto text-slate-300 mb-4" />
-              <h3 className="font-bold text-slate-900 mb-2">Vos inscriptions</h3>
-              <p className="text-slate-500 text-sm max-w-xs mx-auto">Vous n'êtes inscrit à aucun événement pour le moment. Parcourez la liste pour trouver des activités qui vous intéressent.</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-200">
-              <Plus size={48} className="mx-auto text-slate-300 mb-4" />
-              <h3 className="font-bold text-slate-900 mb-2">Vos publications</h3>
-              <p className="text-slate-500 text-sm max-w-xs mx-auto">Vous n'avez publié aucun événement pour le moment. Utilisez le bouton à droite pour créer votre premier événement.</p>
-            </div>
-          )}
+                )}
+                <h3 className="font-bold text-slate-900 mb-2">
+                  {activeTab === 'my-events' ? 'Vos inscriptions' : activeTab === 'organized' ? 'Vos publications' : 'Aucun événement'}
+                </h3>
+                <p className="text-slate-500 text-sm max-w-xs mx-auto">
+                  {activeTab === 'my-events' 
+                    ? "Vous n'êtes inscrit à aucun événement pour le moment. Parcourez la liste pour trouver des activités qui vous intéressent." 
+                    : activeTab === 'organized'
+                    ? "Vous n'avez publié aucun événement pour le moment. Utilisez le bouton à droite pour créer votre premier événement."
+                    : "Aucun événement ne correspond à votre recherche."}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Sidebar / Publish Section */}

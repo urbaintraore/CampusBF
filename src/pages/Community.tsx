@@ -328,7 +328,8 @@ export default function Community() {
                 firstName: 'Utilisateur',
                 lastName: '',
                 avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
-                role: 'student'
+                role: 'student',
+                major: ''
               };
               const isLiked = user && post.likedBy?.includes(user.id);
               const showComments = activeCommentPostId === post.id;

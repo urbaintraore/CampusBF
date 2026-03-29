@@ -367,7 +367,7 @@ export default function Messages() {
                 }}
               />
               <button 
-                onClick={selectedFile ? handleUploadAndSend : handleSendMessage}
+                onClick={() => selectedFile ? handleUploadAndSend() : handleSendMessage()}
                 className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
                 disabled={isUploading}
               >

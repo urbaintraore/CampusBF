@@ -70,8 +70,8 @@ export class ErrorBoundary extends Component<Props, State> {
                   <p className="text-slate-300"><span className="text-slate-500">Message:</span> <span className="text-white">{errorInfo.error}</span></p>
                   <div className="pt-4 border-t border-slate-800 mt-4">
                     <p className="text-slate-500 text-xs mb-2 uppercase tracking-widest">Informations d'authentification</p>
-                    <p className="text-slate-400 text-xs">ID Utilisateur: {errorInfo.authInfo.userId || 'Non connecté'}</p>
-                    <p className="text-slate-400 text-xs">Email: {errorInfo.authInfo.email || 'N/A'}</p>
+                    <p className="text-slate-400 text-xs">ID Utilisateur: {errorInfo.authInfo?.userId || 'Non connecté'}</p>
+                    <p className="text-slate-400 text-xs">Email: {errorInfo.authInfo?.email || 'N/A'}</p>
                   </div>
                 </div>
               </div>
