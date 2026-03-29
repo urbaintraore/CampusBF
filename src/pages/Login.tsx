@@ -23,7 +23,15 @@ export default function Login() {
       await loginPromise;
       const currentUser = auth.currentUser;
       if (currentUser) {
-        if (currentUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com') {
+        const isAdminEmail = (email: string | null | undefined) => {
+          if (!email) return false;
+          const lowerEmail = email.toLowerCase();
+          return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                 lowerEmail === 'urbain.traoreurb@gmail' || 
+                 lowerEmail === 'urbain.traoreurb@gmail.com.';
+        };
+
+        if (isAdminEmail(currentUser.email)) {
           navigate('/admin');
         } else {
           navigate('/');
@@ -51,7 +59,15 @@ export default function Login() {
     
     try {
       await login(email, password);
-      if (email.toLowerCase() === 'admin@campusbf.bf' || email.toLowerCase() === 'urbain.traoreurb@gmail.com') {
+      const isAdminEmail = (email: string | null | undefined) => {
+        if (!email) return false;
+        const lowerEmail = email.toLowerCase();
+        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+               lowerEmail === 'urbain.traoreurb@gmail' || 
+               lowerEmail === 'urbain.traoreurb@gmail.com.';
+      };
+
+      if (email.toLowerCase() === 'admin@campusbf.bf' || isAdminEmail(email)) {
         navigate('/admin');
       } else {
         navigate('/');

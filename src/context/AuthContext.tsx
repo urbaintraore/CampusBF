@@ -219,6 +219,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
             const lastName = lastNameParts.join(' ') || 'CampusBF';
             
+            const isAdminEmail = (email: string | null | undefined) => {
+              if (!email) return false;
+              const lowerEmail = email.toLowerCase();
+              return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                     lowerEmail === 'urbain.traoreurb@gmail' || 
+                     lowerEmail === 'urbain.traoreurb@gmail.com.';
+            };
+
             const newUser: Partial<User> = {
               firstName,
               lastName,
@@ -226,7 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               university: '',
               major: '',
               level: '',
-              role: firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
+              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
               avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
@@ -276,17 +284,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = userDoc.data();
             const userData = { id: firebaseUser.uid, ...data } as User;
             
+            const isAdminEmail = (email: string | null | undefined) => {
+              if (!email) return false;
+              const lowerEmail = email.toLowerCase();
+              return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                     lowerEmail === 'urbain.traoreurb@gmail' || 
+                     lowerEmail === 'urbain.traoreurb@gmail.com.';
+            };
+
             // Force admin role for the owner email if not already set
-            if (firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' && userData.role !== 'admin') {
-              console.log("Forcing admin role");
-              userData.role = 'admin';
-              try {
-                await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
-              } catch (e) {
-                console.error("Failed to auto-upgrade to admin:", e);
+            console.log("Checking admin email for:", firebaseUser.email);
+            if (isAdminEmail(firebaseUser.email)) {
+              console.log("Email matches admin list");
+              if (userData.role !== 'admin') {
+                console.log("Forcing admin role in local state and Firestore");
+                userData.role = 'admin';
+                try {
+                  await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+                  console.log("Firestore updated with admin role");
+                } catch (e) {
+                  console.error("Failed to auto-upgrade to admin:", e);
+                }
+              } else {
+                console.log("User already has admin role in Firestore");
               }
+            } else {
+              console.log("Email does not match admin list");
             }
-                   setUser(userData);
+            setUser(userData);
             console.log("User set:", userData);
 
             // Start listeners only after we have the user data and role
@@ -372,7 +397,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
               console.log("User is not admin, starting user listeners");
               // Non-admins see their own applications
-              const qApps = query(collection(db, 'applications'), where('userId', '==', firebaseUser.uid));
+              const qApps = query(collection(db, 'applications'), where('studentId', '==', firebaseUser.uid));
               unsubscribes.push(onSnapshot(qApps, (snapshot) => {
                 setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
@@ -522,6 +547,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
         const lastName = lastNameParts.join(' ') || 'CampusBF';
         
+        const isAdminEmail = (email: string | null | undefined) => {
+          if (!email) return false;
+          const lowerEmail = email.toLowerCase();
+          return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                 lowerEmail === 'urbain.traoreurb@gmail' || 
+                 lowerEmail === 'urbain.traoreurb@gmail.com.';
+        };
+
         const newUser: Partial<User> = {
           firstName,
           lastName,
@@ -529,7 +562,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           university: '',
           major: '',
           level: '',
-          role: firebaseUser.email?.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : 'student',
+          role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
           avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
         };
         await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
@@ -558,12 +591,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // L'envoi automatique de l'email de vérification a été retiré pour ne pas obliger l'utilisateur à vérifier son email immédiatement
       // await sendEmailVerification(firebaseUser);
 
+      const isAdminEmail = (email: string | null | undefined) => {
+        if (!email) return false;
+        const lowerEmail = email.toLowerCase();
+        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+               lowerEmail === 'urbain.traoreurb@gmail' || 
+               lowerEmail === 'urbain.traoreurb@gmail.com.';
+      };
+
       const newUser: Partial<User> = {
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
         email: userData.email,
         university: userData.university || '',
-        role: userData.email.toLowerCase() === 'urbain.traoreurb@gmail.com' ? 'admin' : (userData.role || 'student'),
+        role: isAdminEmail(userData.email) ? 'admin' : (userData.role || 'student'),
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
       };
 
@@ -625,14 +666,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     try {
       const newApp = {
-        userId: user.id,
+        studentId: user.id,
         user: user,
         description,
         documentUrl,
         subjects,
         hourlyRates,
         status: 'pending',
-        createdAt: new Date().toISOString(),
+        appliedAt: serverTimestamp(),
       };
       await addDoc(collection(db, 'applications'), newApp);
       await updateUser({ tutorStatus: 'pending' });
@@ -655,9 +696,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedUserData.tutorDescription = app.description;
       }
       
-      await updateDoc(doc(db, 'users', app.userId), updatedUserData);
+      await updateDoc(doc(db, 'users', app.studentId), updatedUserData);
 
-      await addNotification(app.userId, {
+      await addNotification(app.studentId, {
         type: status === 'approved' ? 'success' : 'alert',
         title: status === 'approved' ? 'Demande Répétiteur Approuvée' : 'Demande Répétiteur Refusée',
         message: status === 'approved' 

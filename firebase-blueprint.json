@@ -63,15 +63,16 @@
         "title": { "type": "string" },
         "company": { "type": "string" },
         "location": { "type": "string" },
-        "type": { "type": "string", "enum": ["internship", "job"] },
+        "type": { "type": "string", "enum": ["internship", "job", "employment"] },
         "description": { "type": "string" },
-        "requirements": { "type": "array" },
-        "salary": { "type": "string" },
+        "applicationMethod": { "type": "string", "enum": ["email", "url"] },
+        "applicationValue": { "type": "string" },
         "deadline": { "type": "string" },
-        "postedBy": { "type": "string" },
+        "authorId": { "type": "string" },
+        "postedAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["title", "company", "type", "postedBy"]
+      "required": ["title", "company", "type", "authorId", "postedAt"]
     },
     "Event": {
       "title": "Event",

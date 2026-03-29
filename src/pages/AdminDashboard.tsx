@@ -8,6 +8,7 @@ import { DocumentModal } from '@/components/DocumentModal';
 
 export default function AdminDashboard() {
   const { 
+    user: currentUser,
     applications, 
     reviewApplication, 
     teacherApplications,
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
   
   // Content states
   const [showAddAdModal, setShowAddAdModal] = useState(false);
-  const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '' });
+  const [newAd, setNewAd] = useState({ title: '', imageUrl: '', linkUrl: '', userId: '', active: true, createdAt: '' });
   const [showGroupSelectModal, setShowGroupSelectModal] = useState<string | null>(null);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'student' as User['role'] });
@@ -640,6 +641,17 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
+              {contentTab === 'stages' && (
+                <div className="flex justify-end p-4 bg-gray-50 border-b border-gray-100">
+                  <button 
+                    onClick={() => window.location.href = '/internships'}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                  >
+                    <Plus size={16} />
+                    Publier une offre
+                  </button>
+                </div>
+              )}
               {contentTab === 'stages' && internships.map(job => (
                 <div key={job.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
@@ -1475,9 +1487,14 @@ export default function AdminDashboard() {
                     if (!newAd.title || !newAd.imageUrl) {
                       return;
                     }
-                    await createAd(newAd);
+                    await createAd({
+                      ...newAd,
+                      userId: currentUser?.id || '',
+                      active: true,
+                      createdAt: new Date().toISOString()
+                    });
                     setShowAddAdModal(false);
-                    setNewAd({ title: '', imageUrl: '', linkUrl: '' });
+                    setNewAd({ title: '', imageUrl: '', linkUrl: '', userId: '', active: true, createdAt: '' });
                   }}
                   disabled={!newAd.title || !newAd.imageUrl}
                   className={cn(

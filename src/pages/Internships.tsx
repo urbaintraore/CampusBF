@@ -107,7 +107,7 @@ export default function Internships() {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const isSubscriptionActive = user?.subscriptionStatus === 'active';
+  const isSubscriptionActive = user?.premiumSubscriptionStatus === 'active';
   const isAdmin = user?.role === 'admin';
 
   const handlePostInternship = () => {
@@ -157,7 +157,7 @@ export default function Internships() {
         internshipTitle: selectedJob.title,
         company: selectedJob.company,
         studentId: user.id,
-        studentName: user.displayName || 'Étudiant',
+        studentName: `${user.firstName} ${user.lastName}`,
         studentEmail: user.email,
         status: 'pending',
         appliedAt: serverTimestamp(),
@@ -186,7 +186,7 @@ export default function Internships() {
     try {
       if (editingId) {
         const internshipRef = doc(db, 'internships', editingId);
-        await updateDoc(internshipRef, {
+        const updateData: any = {
           title: newInternship.title,
           company: newInternship.company,
           location: newInternship.location,
@@ -196,7 +196,8 @@ export default function Internships() {
           applicationValue: newInternship.applicationValue,
           deadline: newInternship.deadline,
           updatedAt: serverTimestamp(),
-        });
+        };
+        await updateDoc(internshipRef, updateData);
         alert('Offre modifiée avec succès !');
       } else {
         const internshipData = {
@@ -357,9 +358,9 @@ export default function Internships() {
             <AlertCircle className="text-amber-600" size={20} />
           </div>
           <div>
-            <h3 className="font-semibold text-amber-900">Abonnement Requis</h3>
+            <h3 className="font-semibold text-amber-900">Abonnement Recruteur Requis</h3>
             <p className="text-sm text-amber-800/80 mt-1">
-              Vous devez avoir un abonnement actif (5 000 CFA / 30 jours) pour publier des offres de stage.
+              Vous devez avoir un abonnement Recruteur actif (5 000 CFA / 30 jours) pour publier des offres.
             </p>
           </div>
         </div>
@@ -391,7 +392,7 @@ export default function Internships() {
           </div>
         ) : filteredInternships.map((job) => (
           <div key={job.id} className="glass p-6 md:p-8 rounded-3xl hover:shadow-xl transition-all duration-300 group relative border border-white/40">
-            {(isAdmin || user?.uid === job.authorId) && (
+            {(isAdmin || user?.id === job.authorId) && (
               <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => handleEditInternship(job)}
@@ -424,9 +425,11 @@ export default function Internships() {
                         "px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase",
                         job.type === 'internship' 
                           ? 'bg-blue-100/50 text-blue-700 border border-blue-200/50' 
-                          : 'bg-purple-100/50 text-purple-700 border border-purple-200/50'
+                          : job.type === 'job'
+                            ? 'bg-purple-100/50 text-purple-700 border border-purple-200/50'
+                            : 'bg-emerald-100/50 text-emerald-700 border border-emerald-200/50'
                       )}>
-                        {job.type === 'internship' ? 'Stage' : 'Job Étudiant'}
+                        {job.type === 'internship' ? 'Stage' : job.type === 'job' ? 'Job Étudiant' : 'Emploi'}
                       </span>
                       <span className="text-sm text-slate-500 flex items-center gap-1.5">
                         <Clock size={14} />

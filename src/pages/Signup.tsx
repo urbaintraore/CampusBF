@@ -20,8 +20,20 @@ export default function Signup() {
     
     try {
       await loginPromise;
+      const isAdminEmail = (email: string | null | undefined) => {
+        if (!email) return false;
+        const lowerEmail = email.toLowerCase();
+        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+               lowerEmail === 'urbain.traoreurb@gmail' || 
+               lowerEmail === 'urbain.traoreurb@gmail.com.';
+      };
+
       if (auth.currentUser) {
-        navigate('/');
+        if (isAdminEmail(auth.currentUser.email)) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       }
     } catch (err: any) {
       if (err.message?.includes('popup-closed-by-user')) {
@@ -99,8 +111,20 @@ export default function Signup() {
         };
       }
 
+      const isAdminEmail = (email: string | null | undefined) => {
+        if (!email) return false;
+        const lowerEmail = email.toLowerCase();
+        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+               lowerEmail === 'urbain.traoreurb@gmail' || 
+               lowerEmail === 'urbain.traoreurb@gmail.com.';
+      };
+
       await signup(signupData);
-      navigate('/');
+      if (isAdminEmail(formData.email)) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue lors de l\'inscription');
     } finally {

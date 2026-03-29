@@ -37,6 +37,7 @@ export interface User {
   teacherProfile?: TeacherProfile;
   institutionProfile?: InstitutionProfile;
   status?: 'active' | 'inactive';
+  createdAt?: any;
 }
 
 export interface TeacherReview {
@@ -78,7 +79,7 @@ export interface SubscriptionRequest {
   id: string;
   userId: string;
   user: User;
-  type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event';
+  type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution';
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
@@ -86,12 +87,12 @@ export interface SubscriptionRequest {
 
 export interface TutorApplication {
   id: string;
-  userId: string;
+  studentId: string;
   user: User;
   description: string;
   documentUrl: string; // URL of the single file (diploma, transcripts, CV)
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
+  appliedAt: any;
   subjects: string[];
   hourlyRates: {
     college?: number;
@@ -159,11 +160,16 @@ export interface Internship {
   title: string;
   company: string;
   location: string;
-  type: 'internship' | 'job';
+  type: 'internship' | 'job' | 'employment';
   description: string;
-  postedAt: string;
+  postedAt: any;
   deadline?: string;
+  applicationMethod?: 'email' | 'url';
+  applicationValue?: string;
   applicationEmail?: string;
+  authorId: string;
+  createdAt?: any;
+  linkUrl?: string;
 }
 
 export interface MarketplaceItem {
@@ -177,6 +183,7 @@ export interface MarketplaceItem {
   seller: User;
   location: string;
   postedAt: string;
+  createdAt?: any;
 }
 
 export interface Group {

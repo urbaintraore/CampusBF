@@ -198,7 +198,7 @@ export const MOCK_USERS: User[] = [
 export const MOCK_APPLICATIONS: TutorApplication[] = [
   {
     id: 'app1',
-    userId: 'u2',
+    studentId: 'u2',
     user: {
         id: 'u2',
         firstName: 'Moussa',
@@ -213,7 +213,7 @@ export const MOCK_APPLICATIONS: TutorApplication[] = [
     description: 'Je souhaite devenir répétiteur en Java et Algorithmique.',
     documentUrl: '#',
     status: 'pending',
-    createdAt: '2024-03-05T08:00:00',
+    appliedAt: '2024-03-05T08:00:00',
     subjects: ['Java', 'Algorithmique', 'Base de données'],
     hourlyRates: {
       licence: 2500,
@@ -328,6 +328,7 @@ export const MOCK_INTERNSHIPS: Internship[] = [
     description: 'Nous recherchons un stagiaire passionné par le développement web (React, Node.js) pour une durée de 3 mois.',
     postedAt: '2024-03-01',
     deadline: '2024-03-30',
+    authorId: 'admin1',
   },
   {
     id: 'i2',
@@ -337,6 +338,7 @@ export const MOCK_INTERNSHIPS: Internship[] = [
     type: 'internship',
     description: 'Stage de perfectionnement au service comptabilité.',
     postedAt: '2024-02-28',
+    authorId: 'admin1',
   },
   {
     id: 'i3',
@@ -346,6 +348,7 @@ export const MOCK_INTERNSHIPS: Internship[] = [
     type: 'job',
     description: 'Job étudiant pour les weekends. Promotion des offres Canal+.',
     postedAt: '2024-03-02',
+    authorId: 'admin1',
   },
 ];
 
