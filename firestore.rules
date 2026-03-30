@@ -164,7 +164,7 @@ service cloud.firestore {
              data.description is string && data.description.size() > 0 && data.description.size() <= 20000 &&
              (request.method == 'create' ? data.authorId == request.auth.uid : data.authorId == resource.data.authorId) &&
              (request.method == 'create' ? true : data.postedAt == resource.data.postedAt) &&
-             (!('deadline' in data) || (data.deadline is string && (data.deadline == '' || data.deadline >= string(request.time).substring(0, 10) || (request.method == 'update' && data.deadline == resource.data.deadline)))) &&
+             (!('deadline' in data) || (data.deadline is string && data.deadline.size() <= 20)) &&
              (!('applicationMethod' in data) || data.applicationMethod in ['email', 'url']) &&
              (!('applicationValue' in data) || (data.applicationValue is string && data.applicationValue.size() <= 1000)) &&
              data.postedAt is timestamp &&
