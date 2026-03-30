@@ -68,7 +68,8 @@ export default function Marketplace() {
   const [categories, setCategories] = useState(['Tout', 'Livres', 'Informatique', 'Logement', 'Meubles', 'Services']);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isSubscriptionActive = true;
+  const isSubscriptionActive = user?.marketplaceSubscriptionStatus === 'active';
+  const isSubscriptionPending = user?.marketplaceSubscriptionStatus === 'pending';
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -361,34 +362,48 @@ export default function Marketplace() {
             </div>
             
             {!isSubscriptionActive ? (
-              <div className="space-y-8 py-8">
-                <div className="w-20 h-20 bg-amber-50/80 rounded-full flex items-center justify-center mx-auto text-amber-600 shadow-inner ring-1 ring-amber-100">
-                  <AlertCircle size={40} strokeWidth={1.5} />
-                </div>
-                <div className="text-center space-y-3">
-                  <h3 className="text-2xl font-display font-bold text-slate-900">Abonnement requis</h3>
-                  <p className="text-slate-500 max-w-sm mx-auto">
-                    Pour vendre sur la marketplace, vous devez activer un abonnement vendeur de 90 jours.
-                  </p>
-                </div>
-                <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-200/60 space-y-4 max-w-sm mx-auto">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 font-medium">Durée</span>
-                    <span className="font-bold text-slate-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">90 Jours</span>
+              isSubscriptionPending ? (
+                <div className="space-y-8 py-8">
+                  <div className="w-20 h-20 bg-amber-50/80 rounded-full flex items-center justify-center mx-auto text-amber-600 shadow-inner ring-1 ring-amber-100">
+                    <AlertCircle size={40} strokeWidth={1.5} />
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 font-medium">Prix</span>
-                    <span className="font-display font-bold text-xl text-emerald-600">5 000 CFA</span>
+                  <div className="text-center space-y-3">
+                    <h3 className="text-2xl font-display font-bold text-slate-900">Abonnement en cours d'activation</h3>
+                    <p className="text-slate-500 max-w-sm mx-auto">
+                      Votre demande d'abonnement vendeur est en cours de traitement par un administrateur.
+                    </p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowPayment(true)}
-                  className="w-full max-w-sm mx-auto py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl font-medium hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <CreditCard size={20} />
-                  Payer l'abonnement (5 000 CFA)
-                </button>
-              </div>
+              ) : (
+                <div className="space-y-8 py-8">
+                  <div className="w-20 h-20 bg-amber-50/80 rounded-full flex items-center justify-center mx-auto text-amber-600 shadow-inner ring-1 ring-amber-100">
+                    <AlertCircle size={40} strokeWidth={1.5} />
+                  </div>
+                  <div className="text-center space-y-3">
+                    <h3 className="text-2xl font-display font-bold text-slate-900">Abonnement requis</h3>
+                    <p className="text-slate-500 max-w-sm mx-auto">
+                      Pour vendre sur la marketplace, vous devez activer un abonnement vendeur de 90 jours.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-200/60 space-y-4 max-w-sm mx-auto">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600 font-medium">Durée</span>
+                      <span className="font-bold text-slate-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">90 Jours</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600 font-medium">Prix</span>
+                      <span className="font-display font-bold text-xl text-emerald-600">5 000 CFA</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowPayment(true)}
+                    className="w-full max-w-sm mx-auto py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl font-medium hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <CreditCard size={20} />
+                    Payer l'abonnement (5 000 CFA)
+                  </button>
+                </div>
+              )
             ) : (
                 <form className="space-y-5">
                   {!isCloudinaryConfigured && (

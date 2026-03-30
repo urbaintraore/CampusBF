@@ -108,6 +108,7 @@ export default function Internships() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const isSubscriptionActive = user?.premiumSubscriptionStatus === 'active';
+  const isSubscriptionPending = user?.premiumSubscriptionStatus === 'pending';
   const isAdmin = user?.role === 'admin';
 
   const handlePostInternship = () => {
@@ -587,34 +588,50 @@ export default function Internships() {
 
             <div className="p-6 sm:p-8 overflow-y-auto bg-white/20">
               {!isSubscriptionActive && !isAdmin ? (
-                <div className="space-y-6">
-                  <div className="bg-blue-50/80 p-8 rounded-3xl border border-blue-100/50 text-center">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Briefcase size={28} className="text-blue-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-blue-900 mb-2">
-                      Abonnement Entreprise Requis
-                    </h3>
-                    <p className="text-blue-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-                      Pour publier des offres de stage sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
-                    </p>
-                    
-                    <div className="bg-white rounded-2xl p-6 border border-blue-100 shadow-sm max-w-sm mx-auto">
-                      <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Tarif unique</p>
-                      <div className="flex items-baseline justify-center gap-1 mb-6">
-                        <span className="text-4xl font-black text-slate-900">5 000</span>
-                        <span className="text-lg font-bold text-slate-600">CFA</span>
-                        <span className="text-sm font-medium text-slate-400">/ 30 jours</span>
+                isSubscriptionPending ? (
+                  <div className="space-y-6">
+                    <div className="bg-amber-50/80 p-8 rounded-3xl border border-amber-100/50 text-center">
+                      <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle size={28} className="text-amber-600" />
                       </div>
-                      <button 
-                        onClick={() => setShowPayment(true)}
-                        className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
-                      >
-                        S'abonner maintenant
-                      </button>
+                      <h3 className="text-xl font-bold text-amber-900 mb-2">
+                        Abonnement en cours d'activation
+                      </h3>
+                      <p className="text-amber-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+                        Votre demande d'abonnement a bien été reçue et est en cours de traitement par un administrateur. Vous pourrez publier des offres dès son activation.
+                      </p>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="bg-blue-50/80 p-8 rounded-3xl border border-blue-100/50 text-center">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Briefcase size={28} className="text-blue-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-blue-900 mb-2">
+                        Abonnement Entreprise Requis
+                      </h3>
+                      <p className="text-blue-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+                        Pour publier des offres de stage sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
+                      </p>
+                      
+                      <div className="bg-white rounded-2xl p-6 border border-blue-100 shadow-sm max-w-sm mx-auto">
+                        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Tarif unique</p>
+                        <div className="flex items-baseline justify-center gap-1 mb-6">
+                          <span className="text-4xl font-black text-slate-900">5 000</span>
+                          <span className="text-lg font-bold text-slate-600">CFA</span>
+                          <span className="text-sm font-medium text-slate-400">/ 30 jours</span>
+                        </div>
+                        <button 
+                          onClick={() => setShowPayment(true)}
+                          className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
+                        >
+                          S'abonner maintenant
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
               ) : (
                 <form className="space-y-6" onSubmit={handleSubmitInternship}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

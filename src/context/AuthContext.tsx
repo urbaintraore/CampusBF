@@ -279,26 +279,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             retries++;
           }
           
+          const isAdminEmail = (email: string | null | undefined) => {
+            if (!email) return false;
+            const lowerEmail = email.toLowerCase();
+            return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                   lowerEmail === 'urbain.traoreurb@gmail' || 
+                   lowerEmail === 'urbain.traoreurb@gmail.com.';
+          };
+
+          let initialUserData: User;
+
           if (userDoc.exists()) {
             console.log("User doc exists");
             const data = userDoc.data();
-            const userData = { id: firebaseUser.uid, ...data } as User;
+            initialUserData = { id: firebaseUser.uid, ...data } as User;
             
-            const isAdminEmail = (email: string | null | undefined) => {
-              if (!email) return false;
-              const lowerEmail = email.toLowerCase();
-              return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                     lowerEmail === 'urbain.traoreurb@gmail' || 
-                     lowerEmail === 'urbain.traoreurb@gmail.com.';
-            };
-
             // Force admin role for the owner email if not already set
             console.log("Checking admin email for:", firebaseUser.email);
             if (isAdminEmail(firebaseUser.email)) {
               console.log("Email matches admin list");
-              if (userData.role !== 'admin') {
+              if (initialUserData.role !== 'admin') {
                 console.log("Forcing admin role in local state and Firestore");
-                userData.role = 'admin';
+                initialUserData.role = 'admin';
                 try {
                   await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
                   console.log("Firestore updated with admin role");
@@ -311,13 +313,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
               console.log("Email does not match admin list");
             }
-            setUser(userData);
-            console.log("User set:", userData);
+          } else {
+            console.log("User doc does not exist, creating default");
+            const newUser: Partial<User> = {
+              firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+              email: firebaseUser.email || '',
+              university: '',
+              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+            };
+            try {
+              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+              initialUserData = { id: firebaseUser.uid, ...newUser } as User;
+              await ensureUserInCommunityGroup(firebaseUser.uid);
+            } catch (err) {
+              console.error("Failed to create default user doc", err);
+              await signOut(auth);
+              setUser(null);
+              return;
+            }
+          }
 
-            // Start listeners only after we have the user data and role
-            
-            // Public/Authenticated lists
-            unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
+          setUser(initialUserData);
+          console.log("User set:", initialUserData);
+
+          // Set up real-time listener for the user's own document
+          unsubscribes.push(onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
+            if (docSnap.exists()) {
+              setUser({ id: firebaseUser.uid, ...docSnap.data() } as User);
+            }
+          }, (error) => {
+            console.error("Error listening to user doc:", error);
+          }));
+
+          // Start listeners only after we have the user data and role
+          
+          // Public/Authenticated lists
+          unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
               setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'documents')));
 
@@ -364,9 +397,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'notifications')));
 
             // Admin-only or restricted lists
-            if (userData.role === 'admin') {
-              console.log("User is admin, starting admin listeners");
-              unsubscribes.push(onSnapshot(collection(db, 'users'), (snapshot) => {
+          if (initialUserData.role === 'admin') {
+            console.log("User is admin, starting admin listeners");
+            unsubscribes.push(onSnapshot(collection(db, 'users'), (snapshot) => {
                 setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'users')));
 
@@ -384,55 +417,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'subscriptionRequests')));
 
-              unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
-                setLogs(snapshot.docs.map(doc => {
-                  const data = doc.data();
-                  return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
-                  } as Log;
-                }));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'logs')));
-            } else {
-              console.log("User is not admin, starting user listeners");
-              // Non-admins see their own applications
-              const qApps = query(collection(db, 'applications'), where('studentId', '==', firebaseUser.uid));
-              unsubscribes.push(onSnapshot(qApps, (snapshot) => {
-                setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
-
-              const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', firebaseUser.uid));
-              unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
-                setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
-            }
+            unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
+              setLogs(snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                  id: doc.id,
+                  ...data,
+                  createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+                } as Log;
+              }));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'logs')));
           } else {
-            console.log("User doc does not exist, creating default");
-            const isAdminEmail = (email: string | null | undefined) => {
-              if (!email) return false;
-              const lowerEmail = email.toLowerCase();
-              return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                     lowerEmail === 'urbain.traoreurb@gmail' || 
-                     lowerEmail === 'urbain.traoreurb@gmail.com.';
-            };
-            const newUser: Partial<User> = {
-              firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
-              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
-              email: firebaseUser.email || '',
-              university: '',
-              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
-            };
-            try {
-              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-              setUser({ id: firebaseUser.uid, ...newUser } as User);
-              await ensureUserInCommunityGroup(firebaseUser.uid);
-            } catch (err) {
-              console.error("Failed to create default user doc", err);
-              await signOut(auth);
-              setUser(null);
-            }
+            console.log("User is not admin, starting user listeners");
+            // Non-admins see their own applications
+            const qApps = query(collection(db, 'applications'), where('studentId', '==', firebaseUser.uid));
+            unsubscribes.push(onSnapshot(qApps, (snapshot) => {
+              setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
+
+            const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', firebaseUser.uid));
+            unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
+              setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
           }
         } catch (error) {
           console.error("Error fetching user doc:", error);
@@ -561,36 +567,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prompt: 'select_account'
     });
     try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-      
-      // Check if user document exists, if not create it
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      if (!userDoc.exists()) {
-        const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
-        const lastName = lastNameParts.join(' ') || 'CampusBF';
-        
-        const isAdminEmail = (email: string | null | undefined) => {
-          if (!email) return false;
-          const lowerEmail = email.toLowerCase();
-          return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                 lowerEmail === 'urbain.traoreurb@gmail' || 
-                 lowerEmail === 'urbain.traoreurb@gmail.com.';
-        };
-
-        const newUser: Partial<User> = {
-          firstName,
-          lastName,
-          email: firebaseUser.email || '',
-          university: '',
-          major: '',
-          level: '',
-          role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-          avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
-        };
-        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-        await ensureUserInCommunityGroup(firebaseUser.uid);
-      }
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.message?.includes('popup')) {
         // Fallback to redirect on mobile/Vercel
@@ -818,7 +795,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type,
         amount,
         status: 'pending',
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       };
       await addDoc(collection(db, 'subscriptionRequests'), newRequest);
 

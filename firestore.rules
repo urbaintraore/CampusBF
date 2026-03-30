@@ -235,7 +235,15 @@ service cloud.firestore {
                       (!('teacherStatus' in request.resource.data) || request.resource.data.teacherStatus == 'pending_dossier');
       allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
                       request.resource.data.role == resource.data.role &&
-                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'subscriptionStatus', 'eventSubscriptionStatus'])) || isAdmin();
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'premiumSubscriptionExpiry', 'examSubscriptionExpiry', 'marketplaceSubscriptionExpiry', 'motoRideSubscriptionExpiry', 'eventSubscriptionExpiry', 'subscriptionExpiry']) &&
+                      (!('subscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.subscriptionStatus == 'pending') &&
+                      (!('eventSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.eventSubscriptionStatus == 'pending') &&
+                      (!('premiumSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.premiumSubscriptionStatus == 'pending') &&
+                      (!('examSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.examSubscriptionStatus == 'pending') &&
+                      (!('marketplaceSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.marketplaceSubscriptionStatus == 'pending') &&
+                      (!('motoRideSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.motoRideSubscriptionStatus == 'pending') &&
+                      (!('institutionProfile' in request.resource.data.diff(resource.data).affectedKeys()) || !('subscriptionStatus' in request.resource.data.institutionProfile) || !('institutionProfile' in resource.data) || !('subscriptionStatus' in resource.data.institutionProfile) || request.resource.data.institutionProfile.subscriptionStatus == resource.data.institutionProfile.subscriptionStatus || request.resource.data.institutionProfile.subscriptionStatus == 'pending')
+                      ) || isAdmin();
       allow delete: if isAdmin();
 
       match /reviews/{reviewId} {
