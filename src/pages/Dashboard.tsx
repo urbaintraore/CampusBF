@@ -235,9 +235,23 @@ export default function Dashboard() {
                   </div>
                   <h3 className="font-semibold text-slate-900 mb-2 text-lg line-clamp-2">{job.title}</h3>
                   <p className="text-sm text-slate-500 mb-6 font-medium flex-1">{job.company} • {job.location}</p>
-                  <button className="w-full py-2.5 text-sm font-bold text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent">
-                    Postuler
-                  </button>
+                  {job.applicationMethod === 'url' ? (
+                    <a 
+                      href={job.applicationValue}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2.5 text-sm font-bold text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent inline-block text-center"
+                    >
+                      Consulter l'annonce
+                    </a>
+                  ) : (
+                    <Link 
+                      to="/internships"
+                      className="w-full py-2.5 text-sm font-bold text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent inline-block text-center"
+                    >
+                      Postuler
+                    </Link>
+                  )}
                 </div>
               ))}
               {internships.length === 0 && (

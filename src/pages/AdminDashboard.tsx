@@ -311,13 +311,25 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-3 min-w-[200px]">
-                        <a 
-                          href={app.documentUrl} 
-                          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                        >
-                          <Download size={16} />
-                          Voir le dossier
-                        </a>
+                        {app.documentUrl && app.documentUrl !== '#' ? (
+                          <a 
+                            href={app.documentUrl} 
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                          >
+                            <Download size={16} />
+                            Voir le dossier
+                          </a>
+                        ) : (
+                          <button 
+                            disabled
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm font-bold cursor-not-allowed"
+                          >
+                            <Download size={16} />
+                            Aucun dossier
+                          </button>
+                        )}
                         <div className="flex gap-2">
                           <button 
                             onClick={() => reviewApplication(app.id, 'approved')}
@@ -889,15 +901,25 @@ export default function AdminDashboard() {
                               </div>
                             </div>
                             <div className="flex flex-col gap-3 min-w-[200px]">
-                              <a 
-                                href={app.documentUrl} 
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                              >
-                                <Download size={16} />
-                                Voir Justificatif
-                              </a>
+                              {app.documentUrl && app.documentUrl !== '#' ? (
+                                <a 
+                                  href={app.documentUrl} 
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                >
+                                  <Download size={16} />
+                                  Voir Justificatif
+                                </a>
+                              ) : (
+                                <button 
+                                  disabled
+                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm font-bold cursor-not-allowed"
+                                >
+                                  <Download size={16} />
+                                  Aucun justificatif
+                                </button>
+                              )}
                               <div className="flex gap-2">
                                 <button 
                                   onClick={() => reviewApplication(app.id, 'approved')}
@@ -1012,33 +1034,63 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex flex-col gap-3 min-w-[200px]">
                               <div className="flex flex-col gap-2">
-                                <a 
-                                  href={app.cvUrl} 
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                >
-                                  <Download size={16} />
-                                  Voir CV
-                                </a>
-                                <a 
-                                  href={app.diplomaUrl} 
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                >
-                                  <Download size={16} />
-                                  Voir Diplôme
-                                </a>
-                                <a 
-                                  href={app.rankProofUrl} 
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                >
-                                  <Download size={16} />
-                                  Preuve Grade
-                                </a>
+                                {app.cvUrl && app.cvUrl !== '#' ? (
+                                  <a 
+                                    href={app.cvUrl} 
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Download size={16} />
+                                    Voir CV
+                                  </a>
+                                ) : (
+                                  <button 
+                                    disabled
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm font-bold cursor-not-allowed"
+                                  >
+                                    <Download size={16} />
+                                    Aucun CV
+                                  </button>
+                                )}
+                                {app.diplomaUrl && app.diplomaUrl !== '#' ? (
+                                  <a 
+                                    href={app.diplomaUrl} 
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Download size={16} />
+                                    Voir Diplôme
+                                  </a>
+                                ) : (
+                                  <button 
+                                    disabled
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm font-bold cursor-not-allowed"
+                                  >
+                                    <Download size={16} />
+                                    Aucun Diplôme
+                                  </button>
+                                )}
+                                {app.rankProofUrl && app.rankProofUrl !== '#' ? (
+                                  <a 
+                                    href={app.rankProofUrl} 
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Download size={16} />
+                                    Preuve Grade
+                                  </a>
+                                ) : (
+                                  <button 
+                                    disabled
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm font-bold cursor-not-allowed"
+                                  >
+                                    <Download size={16} />
+                                    Aucune preuve
+                                  </button>
+                                )}
                               </div>
                               <div className="flex gap-2 mt-2">
                                 <button 

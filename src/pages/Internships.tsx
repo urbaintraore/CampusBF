@@ -470,12 +470,23 @@ export default function Internships() {
                 </p>
 
                 <div className="flex flex-wrap items-center gap-4">
-                  <button 
-                    onClick={() => openApplyModal(job)}
-                    className="px-8 py-3 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
-                  >
-                    Postuler maintenant
-                  </button>
+                  {job.applicationMethod === 'url' ? (
+                    <a 
+                      href={job.applicationValue}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-8 py-3 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95 inline-block text-center"
+                    >
+                      Consulter l'annonce
+                    </a>
+                  ) : (
+                    <button 
+                      onClick={() => openApplyModal(job)}
+                      className="px-8 py-3 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
+                    >
+                      Postuler maintenant
+                    </button>
+                  )}
                   <button className="px-8 py-3 bg-white/50 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-white transition-all hover:shadow-md">
                     Voir les détails
                   </button>
