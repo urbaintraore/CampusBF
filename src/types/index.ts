@@ -156,7 +156,7 @@ export interface Internship {
   title: string;
   company: string;
   location: string;
-  type: 'internship' | 'job' | 'employment';
+  type: 'Stage' | 'Bourse' | 'Emploi' | 'Job Etudiant';
   description: string;
   postedAt: any;
   deadline?: string;

@@ -196,7 +196,7 @@ export default function Dashboard() {
         ) : (
           [
             { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100' },
-            { label: 'Stages & Jobs', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100' },
+            { label: 'Stages & Emplois & Bourses', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100' },
             { label: 'Groupes', count: groups.length.toString(), color: 'bg-purple-50/80 text-purple-700 ring-purple-100' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100' },
             { label: 'Favoris', count: '0', color: 'bg-amber-50/80 text-amber-700 ring-amber-100' },
@@ -249,7 +249,7 @@ export default function Dashboard() {
           {/* Internships */}
           <section>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-display font-bold text-slate-900">Stages & Jobs</h2>
+              <h2 className="text-xl font-display font-bold text-slate-900">Stages & Emplois & Bourses</h2>
               <Link to="/internships" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
             </div>
             <div className="grid sm:grid-cols-2 gap-5">
@@ -260,7 +260,7 @@ export default function Dashboard() {
                       {job.company.slice(0, 2).toUpperCase()}
                     </div>
                     <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-widest rounded-full font-bold ring-1 ring-slate-200/50">
-                      {job.type === 'internship' ? 'Stage' : 'Job'}
+                      {job.type}
                     </span>
                   </div>
                   <h3 className="font-semibold text-slate-900 mb-2 text-lg line-clamp-2">{job.title}</h3>

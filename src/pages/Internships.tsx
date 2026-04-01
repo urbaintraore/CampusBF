@@ -30,7 +30,7 @@ export default function Internships() {
     title: '',
     company: '',
     location: '',
-    type: 'internship' as 'internship' | 'job' | 'employment',
+    type: 'Stage' as 'Stage' | 'Bourse' | 'Emploi' | 'Job Etudiant',
     description: '',
     applicationMethod: 'email' as 'email' | 'url',
     applicationValue: '',
@@ -113,7 +113,7 @@ export default function Internships() {
 
   const handlePostInternship = () => {
     if (!user) {
-      alert('Veuillez vous connecter pour publier un stage.');
+      alert('Veuillez vous connecter pour publier une offre (Stage, Emploi ou Bourse).');
       return;
     }
     setEditingId(null);
@@ -121,7 +121,7 @@ export default function Internships() {
       title: '',
       company: '',
       location: '',
-      type: 'internship',
+      type: 'Stage',
       description: '',
       applicationMethod: 'email',
       applicationValue: '',
@@ -258,7 +258,7 @@ export default function Internships() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stages & Emplois</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stages & Emplois & Bourses</h1>
           <p className="text-slate-500 mt-1">Lancez votre carrière professionnelle dès maintenant.</p>
         </div>
         <button 
@@ -288,9 +288,10 @@ export default function Internships() {
             <div className="flex flex-wrap gap-2">
               {[
                 { id: 'all', label: 'Tous' },
-                { id: 'internship', label: 'Stage' },
-                { id: 'job', label: 'Job Étudiant' },
-                { id: 'employment', label: 'Emploi' }
+                { id: 'Stage', label: 'Stage' },
+                { id: 'Bourse', label: 'Bourse' },
+                { id: 'Emploi', label: 'Emploi' },
+                { id: 'Job Etudiant', label: 'Job Etudiant' }
               ].map((type) => (
                 <button
                   key={type.id}
@@ -361,7 +362,7 @@ export default function Internships() {
           <div>
             <h3 className="font-semibold text-amber-900">Abonnement Recruteur Requis</h3>
             <p className="text-sm text-amber-800/80 mt-1">
-              Vous devez avoir un abonnement Recruteur actif (5 000 CFA / 30 jours) pour publier des offres.
+              Vous devez avoir un abonnement Recruteur actif (5 000 CFA / 30 jours) pour publier des offres d'emploi ou de bourse. Les stages et jobs étudiants sont gratuits.
             </p>
           </div>
         </div>
@@ -388,7 +389,7 @@ export default function Internships() {
             <p className="text-slate-500 max-w-md mx-auto">
               {searchQuery || typeFilter !== 'all' || locationFilter !== 'all' 
                 ? "Aucune offre ne correspond à vos critères de recherche. Essayez de modifier vos filtres."
-                : "Il n'y a pas encore d'offres de stage ou d'emploi publiées. Revenez plus tard ou soyez le premier à en publier une !"}
+                : "Il n'y a pas encore d'offres de stage, d'emploi ou de bourse publiées. Revenez plus tard ou soyez le premier à en publier une !"}
             </p>
           </div>
         ) : filteredInternships.map((job) => (
@@ -424,13 +425,15 @@ export default function Internships() {
                     <div className="flex items-center gap-3 mb-2">
                       <span className={cn(
                         "px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase",
-                        job.type === 'internship' 
+                        job.type === 'Stage' 
                           ? 'bg-blue-100/50 text-blue-700 border border-blue-200/50' 
-                          : job.type === 'job'
+                          : job.type === 'Bourse'
                             ? 'bg-purple-100/50 text-purple-700 border border-purple-200/50'
-                            : 'bg-emerald-100/50 text-emerald-700 border border-emerald-200/50'
+                            : job.type === 'Job Etudiant'
+                              ? 'bg-orange-100/50 text-orange-700 border border-orange-200/50'
+                              : 'bg-emerald-100/50 text-emerald-700 border border-emerald-200/50'
                       )}>
-                        {job.type === 'internship' ? 'Stage' : job.type === 'job' ? 'Job Étudiant' : 'Emploi'}
+                        {job.type}
                       </span>
                       <span className="text-sm text-slate-500 flex items-center gap-1.5">
                         <Clock size={14} />
@@ -598,7 +601,7 @@ export default function Internships() {
             </div>
 
             <div className="p-6 sm:p-8 overflow-y-auto bg-white/20">
-              {!isSubscriptionActive && !isAdmin ? (
+              {!isSubscriptionActive && !isAdmin && newInternship.type !== 'Stage' && newInternship.type !== 'Job Etudiant' ? (
                 isSubscriptionPending ? (
                   <div className="space-y-6">
                     <div className="bg-amber-50/80 p-8 rounded-3xl border border-amber-100/50 text-center">
@@ -623,7 +626,7 @@ export default function Internships() {
                         Abonnement Entreprise Requis
                       </h3>
                       <p className="text-blue-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-                        Pour publier des offres de stage sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
+                        Pour publier des offres de stage, d'emploi ou de bourse sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
                       </p>
                       
                       <div className="bg-white rounded-2xl p-6 border border-blue-100 shadow-sm max-w-sm mx-auto">
@@ -689,9 +692,10 @@ export default function Internships() {
                         onChange={(e) => setNewInternship({ ...newInternship, type: e.target.value as any })}
                         className="w-full p-3.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                       >
-                        <option value="internship">Stage</option>
-                        <option value="job">Job Étudiant</option>
-                        <option value="employment">Emploi</option>
+                        <option value="Stage">Stage</option>
+                        <option value="Bourse">Bourse</option>
+                        <option value="Emploi">Emploi</option>
+                        <option value="Job Etudiant">Job Etudiant</option>
                       </select>
                     </div>
                   </div>

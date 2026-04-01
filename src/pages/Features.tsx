@@ -37,8 +37,8 @@ const features = [
   },
   {
     icon: Briefcase,
-    title: "Stages & Emplois",
-    description: "Découvrez les meilleures opportunités de stages et de premiers emplois adaptées à votre profil.",
+    title: "Stages & Emplois & Bourses",
+    description: "Découvrez les meilleures opportunités de stages, d'emplois et de bourses adaptées à votre profil.",
     color: "bg-indigo-50 text-indigo-600",
     link: "/internships",
     roles: ['student', 'alumni', 'admin']

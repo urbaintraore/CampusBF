@@ -565,7 +565,7 @@ export default function AdminDashboard() {
           <div className="flex bg-gray-100 p-1 rounded-xl w-fit flex-wrap gap-1">
             {[
               { id: 'documents', label: 'Documents', icon: FileText },
-              { id: 'stages', label: 'Stages', icon: Briefcase },
+              { id: 'stages', label: 'Stages & Emplois & Bourses', icon: Briefcase },
               { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
               { id: 'community', label: 'Communauté', icon: MessageSquare },
               { id: 'events', label: 'Événements', icon: Calendar },

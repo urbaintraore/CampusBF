@@ -1,0 +1,15 @@
+src/pages/AdminDashboard.tsx:57:  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments'>('documents');
+src/pages/AdminDashboard.tsx:658:              {contentTab === 'stages' && (
+src/pages/AdminDashboard.tsx:669:              {contentTab === 'stages' && internships.map(job => (
+src/pages/AlumniMentorship.tsx:95:                  placeholder="Ex: Orientation, Stage, Entrepreneuriat" 
+src/pages/Dashboard.tsx:289:                  Aucune offre de stage disponible.
+src/pages/Features.tsx:41:    description: "Découvrez les meilleures opportunités de stages, d'emplois et de bourses adaptées à votre profil.",
+src/pages/Internships.tsx:116:      alert('Veuillez vous connecter pour publier une offre (Stage, Emploi ou Bourse).');
+src/pages/Internships.tsx:391:                : "Il n'y a pas encore d'offres de stage, d'emploi ou de bourse publiées. Revenez plus tard ou soyez le premier à en publier une !"}
+src/pages/Internships.tsx:626:                        Pour publier des offres de stage, d'emploi ou de bourse sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
+src/pages/Orientation.tsx:154:      Expériences (projets, associations, stages) : ${experiences.join(', ') || 'Aucune précisée'}
+src/pages/Orientation.tsx:251:Tu as accès à internet via l'outil de recherche Google. Si l'étudiant te demande des offres d'emploi, des stages ou des opportunités actuelles, effectue une recherche web ciblée sur les sites des grandes entreprises et institutions du Burkina Faso (ex: Ministère de la fonction publique, Ministère de la défense, ONEA, SONABEL, SONABHY, Orange Burkina, Moov Africa, Telecel Faso, etc.) pour lui fournir des informations à jour.
+src/pages/Orientation.tsx:461:              <label className="block text-sm font-medium text-slate-700 mb-2">Expériences (Projets, Associations, Stages)</label>
+src/pages/Orientation.tsx:468:                  placeholder="Ex: Stage développeur, Club Informatique..."
+src/pages/Profile.tsx:448:              <p className="text-xs text-slate-500 mb-2">Stages, Communauté</p>
+src/pages/Profile.tsx:924:        description="Accédez aux fonctionnalités de publication (Stages, Communauté) pendant 30 jours."
