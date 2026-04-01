@@ -33,9 +33,6 @@ export const SubscriptionNotification: React.FC = () => {
       };
 
       // Check different subscription types
-      if (user.subscriptionStatus === 'active') {
-        checkExpiry(user.subscriptionExpiry, 'Général');
-      }
       checkExpiry(user.premiumSubscriptionExpiry, 'Premium');
       checkExpiry(user.eventSubscriptionExpiry, 'Event');
 

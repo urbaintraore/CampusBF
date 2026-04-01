@@ -81,7 +81,6 @@ export default function Marketplace() {
 
   const resetSellForm = () => {
     setShowSellModal(false);
-    setShowPayment(false);
     setSellTitle('');
     setSellPrice('');
     setSellCategory('Livres');

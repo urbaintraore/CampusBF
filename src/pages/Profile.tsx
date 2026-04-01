@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { uploadFile } from '@/services/storageService';
@@ -512,6 +512,7 @@ export default function Profile() {
       </div>
 
       {/* Tutor Status Section */}
+      {user.role !== 'parent' && (
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-gray-900 flex items-center gap-2">
@@ -553,6 +554,7 @@ export default function Profile() {
           </div>
         )}
       </div>
+      )}
 
       {/* Teacher Status Section */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">

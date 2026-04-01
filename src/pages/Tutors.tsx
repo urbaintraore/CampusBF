@@ -69,7 +69,7 @@ export default function Tutors() {
 
   const renderTutorStatus = () => {
     if (!user) return null;
-    if (user.role === 'admin') return null;
+    if (user.role === 'admin' || user.role === 'parent') return null;
 
       if (!user.tutorStatus || user.tutorStatus === 'none') {
       return (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -18,16 +18,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
     { icon: MessageCircle, label: 'Messages', to: '/messages' },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
-    { icon: GraduationCap, label: 'Répétiteurs', to: '/tutors' },
+    { icon: GraduationCap, label: 'Répétiteurs', to: '/tutors', roles: ['student', 'admin', 'parent'] },
     { icon: Library, label: 'Enseignants', to: '/teachers' },
     { icon: Briefcase, label: 'Stages', to: '/internships', roles: ['student', 'admin', 'company'] },
-    { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace' },
-    { icon: Users, label: 'Communauté', to: '/community' },
-    { icon: Bike, label: 'MotoRide', to: '/motoride' },
+    { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'teacher', 'alumni', 'company'] },
+    { icon: Users, label: 'Communauté', to: '/community', roles: ['student', 'admin', 'teacher', 'alumni'] },
+    { icon: Bike, label: 'MotoRide', to: '/motoride', roles: ['student', 'admin', 'teacher', 'alumni'] },
     { icon: Calendar, label: 'Événements', to: '/events' },
     { icon: Compass, label: 'Orientation', to: '/orientation', roles: ['student', 'admin', 'parent'] },
     { icon: User, label: 'Portfolio', to: '/portfolio', roles: ['teacher', 'admin', 'student'] },
-    { icon: Users, label: 'Mentorat', to: '/mentorship' },
+    { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['student', 'admin', 'alumni'] },
+    { icon: Sparkles, label: 'Fonctionnalités', to: '/features' },
   ];
 
   const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));

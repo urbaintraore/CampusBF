@@ -14,8 +14,6 @@ export interface User {
   role: 'student' | 'admin' | 'tutor' | 'company' | 'teacher' | 'institution' | 'parent' | 'alumni';
   tutorStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   teacherStatus?: 'none' | 'pending_dossier' | 'pending_approval' | 'approved' | 'rejected';
-  subscriptionStatus?: 'none' | 'pending' | 'active' | 'expired'; // Tutor subscription
-  subscriptionExpiry?: string;
   examSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
   examSubscriptionExpiry?: string;
   premiumSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
@@ -77,7 +75,7 @@ export interface SubscriptionRequest {
   id: string;
   userId: string;
   user: User;
-  type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution';
+  type: 'exam' | 'premium' | 'marketplace' | 'motoride' | 'event' | 'institution';
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;

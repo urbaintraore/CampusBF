@@ -11,7 +11,6 @@ export const CURRENT_USER: User = {
   avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ousmane',
   role: 'student',
   tutorStatus: 'none',
-  subscriptionStatus: 'none',
 };
 
 export const ADMIN_USER: User = {

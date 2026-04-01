@@ -24,6 +24,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Chatbot from './components/Chatbot';
 import { SubscriptionNotification } from './components/SubscriptionNotification';
+import Features from './pages/Features';
 import Messages from './pages/Messages';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -163,6 +164,11 @@ export default function App() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/features" element={
+            <ProtectedRoute>
+              <Features />
             </ProtectedRoute>
           } />
           

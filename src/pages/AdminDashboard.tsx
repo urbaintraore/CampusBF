@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { User, Log } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
 
 export default function AdminDashboard() {
@@ -465,7 +467,7 @@ export default function AdminDashboard() {
                   <div className="space-y-3">
                     {[
                       { label: 'Étudiants', count: users.filter(u => u.role === 'student').length, color: 'bg-blue-500' },
-                      { label: 'Répétiteurs', count: users.filter(u => u.role === 'tutor').length, color: 'bg-amber-500' },
+                      { label: 'Répétiteurs', count: users.filter(u => u.tutorStatus === 'approved').length, color: 'bg-amber-500' },
                       { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length, color: 'bg-emerald-500' },
                       { label: 'Entreprises', count: users.filter(u => u.role === 'company').length, color: 'bg-purple-500' },
                       { label: 'Admins', count: users.filter(u => u.role === 'admin').length, color: 'bg-red-500' },
@@ -954,11 +956,11 @@ export default function AdminDashboard() {
                       Répétiteurs actifs
                     </h3>
                     <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                      {users.filter(u => u.role === 'tutor').length} actifs
+                      {users.filter(u => u.tutorStatus === 'approved').length} actifs
                     </span>
                   </div>
                   <div className="divide-y divide-gray-50">
-                    {users.filter(u => u.role === 'tutor').map(tutor => (
+                    {users.filter(u => u.tutorStatus === 'approved').map(tutor => (
                       <div key={tutor.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
                         <div className="flex items-center gap-4 w-full md:w-auto">
                           <img src={tutor.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 object-cover" />
@@ -972,9 +974,9 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
                           <button 
-                            onClick={() => {
+                            onClick={async () => {
                               if(confirm('Voulez-vous retirer le statut répétiteur de cet utilisateur ?')) {
-                                updateUserRole(tutor.id, 'student');
+                                await updateDoc(doc(db, 'users', tutor.id), { tutorStatus: 'none' });
                               }
                             }}
                             className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors flex items-center gap-2"
@@ -1361,8 +1363,7 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <p className="font-bold text-gray-900 text-sm">
-                                {req.type === 'premium' ? 'Abonnement Premium' : 
-                                 req.type === 'tutor' ? 'Abonnement Répétiteur' : 'Abonnement'}
+                                {req.type === 'premium' ? 'Abonnement Premium' : 'Abonnement'}
                               </p>
                               <p className="text-xs text-gray-500">
                                 Par {req.user?.firstName} {req.user?.lastName} • {req.amount} FCFA • {new Date(req.createdAt).toLocaleDateString()}
