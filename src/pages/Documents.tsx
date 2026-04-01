@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
@@ -627,10 +627,17 @@ export default function Documents() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-end md:border-l md:border-slate-100 md:pl-5">
+              <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
+                <button 
+                  onClick={() => window.open(doc.downloadUrl, '_blank')}
+                  className="w-full md:w-auto px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <Eye size={18} />
+                  Voir
+                </button>
                 <button 
                   onClick={() => handleDownload(doc)}
-                  className="w-full md:w-auto px-6 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full md:w-auto px-4 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Download size={18} />
                   Télécharger
