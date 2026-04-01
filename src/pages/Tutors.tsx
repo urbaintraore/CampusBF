@@ -5,8 +5,9 @@ import { MOCK_TUTORS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { Tutor } from '@/types';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function Tutors() {
   const { user, users, submitTutorApplication } = useAuth();
@@ -15,7 +16,6 @@ export default function Tutors() {
   const [selectedTutor, setSelectedTutor] = useState<string | null>(null);
   const [ratingModal, setRatingModal] = useState<string | null>(null);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [description, setDescription] = useState('');
   const [fileSelected, setFileSelected] = useState(false);
   const [subjects, setSubjects] = useState('');
@@ -46,7 +46,7 @@ export default function Tutors() {
   const realTutors: Tutor[] = users
     .filter(u => {
       if (isAdmin) return u.tutorStatus && u.tutorStatus !== 'none';
-      return u.tutorStatus === 'approved' && u.subscriptionStatus === 'active';
+      return u.tutorStatus === 'approved';
     })
     .map(u => ({
       id: u.id,
@@ -80,7 +80,7 @@ export default function Tutors() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-emerald-900">Devenez Répétiteur sur CampusBF</h2>
-              <p className="text-emerald-800/80 text-sm mt-1">Partagez vos connaissances et gagnez de l'argent. <span className="font-bold">Abonnement requis : 5000 FCFA / mois.</span></p>
+              <p className="text-emerald-800/80 text-sm mt-1">Partagez vos connaissances et gagnez de l'argent.</p>
             </div>
           </div>
           <button 
@@ -121,58 +121,53 @@ export default function Tutors() {
       );
     }
 
-    if (user.tutorStatus === 'approved' && user.subscriptionStatus !== 'active' && user.subscriptionStatus !== 'pending') {
-      return (
-        <div className="glass border-blue-200/50 p-6 rounded-3xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-start gap-5">
-            <div className="w-14 h-14 bg-blue-100/50 rounded-2xl flex items-center justify-center text-blue-600 flex-shrink-0 shadow-inner">
-              <CheckCircle2 size={28} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-blue-900">Demande approuvée !</h2>
-              <p className="text-blue-800/80 text-sm mt-1">Pour commencer à être contacté par des étudiants, veuillez activer votre abonnement mensuel (5000 FCFA).</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setShowPayment(true)}
-            className="px-8 py-3.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2 whitespace-nowrap active:scale-95"
-          >
-            <CreditCard size={18} />
-            Payer 5000 FCFA via Mobile Money
-          </button>
-        </div>
-      );
-    }
-
-    if (user.subscriptionStatus === 'pending') {
-      return (
-        <div className="glass border-amber-200/50 p-6 rounded-3xl mb-8 flex items-center gap-5 animate-in fade-in slide-in-from-bottom-4">
-          <div className="w-14 h-14 bg-amber-100/50 rounded-2xl flex items-center justify-center text-amber-600 flex-shrink-0 shadow-inner">
-            <AlertCircle size={28} />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-amber-900">Vérification du paiement en cours</h2>
-            <p className="text-amber-800/80 text-sm mt-1">Votre paiement est en cours de vérification par nos administrateurs. Votre abonnement sera activé sous peu.</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (user.subscriptionStatus === 'active') {
+    if (user.tutorStatus === 'approved') {
       return (
         <div className="glass border-emerald-200/50 p-6 rounded-3xl mb-8 flex items-center gap-5 animate-in fade-in slide-in-from-bottom-4">
           <div className="w-14 h-14 bg-emerald-100/50 rounded-2xl flex items-center justify-center text-emerald-600 flex-shrink-0 shadow-inner">
             <CheckCircle2 size={28} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-emerald-900">Abonnement Actif</h2>
-            <p className="text-emerald-800/80 text-sm mt-1">Vous êtes désormais visible par les étudiants. Votre abonnement expire le {new Date(user.subscriptionExpiry!).toLocaleDateString()}.</p>
+            <h2 className="text-xl font-bold text-emerald-900">Profil Répétiteur Actif</h2>
+            <p className="text-emerald-800/80 text-sm mt-1">Vous êtes désormais visible par les étudiants dans la liste des répétiteurs.</p>
           </div>
         </div>
       );
     }
 
     return null;
+  };
+
+  const createMockTutor = async () => {
+    try {
+      const mockId = 'mock-tutor-' + Date.now();
+      const mockUser = {
+        id: mockId,
+        firstName: 'Test',
+        lastName: 'Répétiteur',
+        email: `test.tutor.${Date.now()}@example.com`,
+        university: 'Université de Test',
+        major: 'Mathématiques',
+        level: 'Master 1',
+        role: 'tutor',
+        tutorStatus: 'approved',
+        tutorSubjects: ['Mathématiques', 'Physique'],
+        tutorHourlyRates: {
+          college: 2000,
+          lycee: 2500,
+          licence: 3000,
+          master: 4000
+        },
+        tutorDescription: 'Je suis un répétiteur de test créé automatiquement.',
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${mockId}`
+      };
+      
+      await setDoc(doc(db, 'users', mockId), mockUser);
+      alert('Répétiteur de test créé avec succès !');
+    } catch (error) {
+      console.error('Error creating mock tutor:', error);
+      alert('Erreur lors de la création du répétiteur de test.');
+    }
   };
 
   return (
@@ -183,6 +178,14 @@ export default function Tutors() {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Trouver un Répétiteur</h1>
           <p className="text-slate-500 mt-1">Des étudiants brillants prêts à vous aider.</p>
         </div>
+        {isAdmin && (
+          <button 
+            onClick={createMockTutor}
+            className="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 transition-all shadow-lg shadow-purple-600/20"
+          >
+            Créer un répétiteur de test
+          </button>
+        )}
       </div>
 
       {renderTutorStatus()}
@@ -307,7 +310,7 @@ export default function Tutors() {
                   <AlertCircle className="text-blue-500 flex-shrink-0" size={20} />
                   <div>
                     <p className="font-bold mb-1">Information importante</p>
-                    <p className="leading-relaxed">Pour être visible sur la plateforme, vous devrez souscrire à un abonnement mensuel de <span className="font-bold">5000 FCFA</span> une fois votre demande approuvée.</p>
+                    <p className="leading-relaxed">Votre demande sera examinée par nos administrateurs avant d'être approuvée.</p>
                   </div>
                 </div>
 
@@ -331,15 +334,6 @@ export default function Tutors() {
           </div>
         </div>
       )}
-
-      <ManualPaymentModal 
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        type="tutor"
-        amount={5000}
-        title="Abonnement Répétiteur CampusBF"
-        description="Activez votre visibilité en tant que répétiteur pour 30 jours."
-      />
 
       {/* Tutors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

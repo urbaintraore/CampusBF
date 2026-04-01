@@ -9,7 +9,6 @@ export default function Profile() {
   const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [showPremiumPayment, setShowPremiumPayment] = useState(false);
   const [showEventPayment, setShowEventPayment] = useState(false);
   const [showTutorForm, setShowTutorForm] = useState(false);
@@ -533,46 +532,12 @@ export default function Profile() {
 
         {user.tutorStatus === 'approved' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Abonnement</p>
-                <div className="flex items-center gap-2">
-                  <CreditCard size={16} className="text-emerald-600" />
-                  <span className={cn(
-                    "text-sm font-bold",
-                    user.subscriptionStatus === 'active' ? "text-emerald-700" : 
-                    user.subscriptionStatus === 'pending' ? "text-amber-600" : "text-red-600"
-                  )}>
-                    {user.subscriptionStatus === 'active' ? 'Actif (Trimestriel)' : 
-                     user.subscriptionStatus === 'pending' ? 'En attente de vérification' : 'Expiré'}
-                  </span>
-                </div>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Date d'expiration</p>
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-emerald-600" />
-                  <span className="text-sm font-bold text-slate-700">
-                    {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-              </div>
+            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center gap-3">
+              <CheckCircle size={20} className="text-emerald-600" />
+              <p className="text-sm font-medium text-emerald-800">
+                Vous êtes visible dans la liste des répétiteurs.
+              </p>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              {user.subscriptionStatus !== 'pending' && (
-                <button 
-                  onClick={() => setShowPayment(true)}
-                  className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <CreditCard size={18} />
-                  Renouveler l'abonnement (5 000 CFA / Trimestre)
-                </button>
-              )}
-            </div>
-            <p className="text-[10px] text-gray-400 text-center italic">
-              Le renouvellement prolonge votre visibilité dans la liste des répétiteurs pour une durée de 3 mois.
-            </p>
           </div>
         )}
 
@@ -955,15 +920,6 @@ export default function Profile() {
         amount={5000}
         title="Abonnement Premium"
         description="Accédez aux fonctionnalités de publication (Stages, Marketplace, Communauté) pendant 30 jours."
-      />
-
-      <ManualPaymentModal 
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        type="tutor"
-        amount={5000}
-        title="Renouvellement Abonnement Répétiteur"
-        description="Renouvelez votre abonnement pour 3 mois."
       />
 
       <ManualPaymentModal 
