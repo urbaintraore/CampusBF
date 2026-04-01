@@ -82,7 +82,7 @@ interface AuthContextType {
   reviewApplication: (applicationId: string, status: 'approved' | 'rejected') => void;
   submitTeacherApplication: (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => void;
   reviewTeacherApplication: (applicationId: string, status: 'approved' | 'rejected') => void;
-  submitSubscriptionRequest: (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => void;
+  submitSubscriptionRequest: (type: 'exam' | 'premium' | 'tutor' | 'motoride' | 'event' | 'institution', amount: number) => void;
   reviewSubscriptionRequest: (requestId: string, status: 'approved' | 'rejected') => void;
   updateUserRole: (userId: string, role: User['role']) => void;
   activateUser: (userId: string) => Promise<void>;
@@ -787,7 +787,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const submitSubscriptionRequest = async (type: 'exam' | 'premium' | 'tutor' | 'marketplace' | 'motoride' | 'event' | 'institution', amount: number) => {
+  const submitSubscriptionRequest = async (type: 'exam' | 'premium' | 'tutor' | 'motoride' | 'event' | 'institution', amount: number) => {
     if (!user) return;
     try {
       const newRequest = {
@@ -804,7 +804,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (type === 'exam') updateData.examSubscriptionStatus = 'pending';
       else if (type === 'premium') updateData.premiumSubscriptionStatus = 'pending';
       else if (type === 'tutor') updateData.subscriptionStatus = 'pending';
-      else if (type === 'marketplace') updateData.marketplaceSubscriptionStatus = 'pending';
       else if (type === 'motoride') updateData.motoRideSubscriptionStatus = 'pending';
       else if (type === 'event') updateData.eventSubscriptionStatus = 'pending';
       else if (type === 'institution') {
@@ -845,10 +844,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updatedUser.subscriptionStatus = 'active';
           updatedUser.subscriptionExpiry = expiry.toISOString();
           updatedUser.role = 'tutor';
-        } else if (req.type === 'marketplace') {
-          expiry.setDate(expiry.getDate() + 90);
-          updatedUser.marketplaceSubscriptionStatus = 'active';
-          updatedUser.marketplaceSubscriptionExpiry = expiry.toISOString();
         } else if (req.type === 'motoride') {
           expiry.setDate(expiry.getDate() + 30);
           updatedUser.motoRideSubscriptionStatus = 'active';
@@ -869,7 +864,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (req.type === 'exam') updatedUser.examSubscriptionStatus = 'none';
         else if (req.type === 'premium') updatedUser.premiumSubscriptionStatus = 'none';
         else if (req.type === 'tutor') updatedUser.subscriptionStatus = 'none';
-        else if (req.type === 'marketplace') updatedUser.marketplaceSubscriptionStatus = 'none';
         else if (req.type === 'motoride') updatedUser.motoRideSubscriptionStatus = 'none';
         else if (req.type === 'event') updatedUser.eventSubscriptionStatus = 'none';
         else if (req.type === 'institution') {

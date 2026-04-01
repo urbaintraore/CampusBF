@@ -445,7 +445,7 @@ export default function Profile() {
                    user.premiumSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mb-2">Stages, Marketplace, Communauté</p>
+              <p className="text-xs text-slate-500 mb-2">Stages, Communauté</p>
               {user.premiumSubscriptionStatus === 'active' && user.premiumSubscriptionExpiry && (
                 <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
                   <Calendar size={12} />
@@ -919,7 +919,7 @@ export default function Profile() {
         type="premium"
         amount={5000}
         title="Abonnement Premium"
-        description="Accédez aux fonctionnalités de publication (Stages, Marketplace, Communauté) pendant 30 jours."
+        description="Accédez aux fonctionnalités de publication (Stages, Communauté) pendant 30 jours."
       />
 
       <ManualPaymentModal 

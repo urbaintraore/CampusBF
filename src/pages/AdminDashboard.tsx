@@ -1362,8 +1362,7 @@ export default function AdminDashboard() {
                             <div>
                               <p className="font-bold text-gray-900 text-sm">
                                 {req.type === 'premium' ? 'Abonnement Premium' : 
-                                 req.type === 'tutor' ? 'Abonnement Répétiteur' : 
-                                 req.type === 'marketplace' ? 'Abonnement Marketplace' : 'Abonnement'}
+                                 req.type === 'tutor' ? 'Abonnement Répétiteur' : 'Abonnement'}
                               </p>
                               <p className="text-xs text-gray-500">
                                 Par {req.user?.firstName} {req.user?.lastName} • {req.amount} FCFA • {new Date(req.createdAt).toLocaleDateString()}

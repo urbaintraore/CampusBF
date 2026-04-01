@@ -20,8 +20,6 @@ export interface User {
   examSubscriptionExpiry?: string;
   premiumSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
   premiumSubscriptionExpiry?: string;
-  marketplaceSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
-  marketplaceSubscriptionExpiry?: string;
   motoRideSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
   motoRideSubscriptionExpiry?: string;
   eventSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';
