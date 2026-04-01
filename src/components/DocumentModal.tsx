@@ -20,7 +20,14 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
 
   useEffect(() => {
     if (document) {
-      setFormData(document);
+      setFormData({
+        title: document.title || '',
+        subject: document.subject || '',
+        university: document.university || '',
+        type: document.type || 'exam',
+        downloadUrl: document.downloadUrl || '',
+        fileName: document.fileName || ''
+      });
     } else {
       setFormData({
         title: '',
@@ -32,6 +39,18 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
       });
     }
   }, [document, isOpen]);
+
+  const isFormValid = !!(formData.title?.trim() && formData.subject?.trim() && formData.university?.trim() && formData.downloadUrl?.trim());
+  
+  const isChanged = !document || (
+    formData.title !== (document.title || '') ||
+    formData.subject !== (document.subject || '') ||
+    formData.university !== (document.university || '') ||
+    formData.type !== (document.type || 'exam') ||
+    formData.downloadUrl !== (document.downloadUrl || '')
+  );
+
+  const canSave = isFormValid && isChanged;
 
   if (!isOpen) return null;
 
@@ -85,7 +104,12 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
           />
           <button
             onClick={() => onSave(formData)}
-            className="w-full py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700"
+            disabled={!canSave}
+            className={`w-full py-2 rounded-lg font-bold transition-colors ${
+              canSave 
+                ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
           >
             Enregistrer
           </button>
