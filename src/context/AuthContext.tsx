@@ -126,6 +126,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const syncProfile = async (userId: string, userData: Partial<User>) => {
+    try {
+      const profileData = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        university: userData.university,
+        major: userData.major,
+        level: userData.level,
+        promotion: userData.promotion,
+        avatarUrl: userData.avatarUrl,
+        role: userData.role,
+      };
+      // Remove undefined fields
+      Object.keys(profileData).forEach(key => (profileData as any)[key] === undefined && delete (profileData as any)[key]);
+      
+      await setDoc(doc(db, 'profiles', userId), profileData, { merge: true });
+    } catch (error) {
+      console.error("Error syncing profile:", error);
+    }
+  };
+
   const logAction = async (action: string, details?: string) => {
     if (!user) return;
     try {
@@ -238,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+            await syncProfile(firebaseUser.uid, newUser);
           }
         }
       } catch (error) {
@@ -325,6 +347,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
             try {
               await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+              await syncProfile(firebaseUser.uid, newUser);
               initialUserData = { id: firebaseUser.uid, ...newUser } as User;
               await ensureUserInCommunityGroup(firebaseUser.uid);
             } catch (err) {
@@ -615,6 +638,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.institutionProfile) newUser.institutionProfile = userData.institutionProfile;
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+      await syncProfile(firebaseUser.uid, newUser);
       await ensureUserInCommunityGroup(firebaseUser.uid);
       
       // Connexion directe après inscription
@@ -642,6 +666,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const userRef = doc(db, 'users', user.id);
         await updateDoc(userRef, updatedUser);
+        await syncProfile(user.id, updatedUser);
         setUser({ ...user, ...updatedUser });
         console.log("updateUser: User updated successfully");
       } catch (error) {

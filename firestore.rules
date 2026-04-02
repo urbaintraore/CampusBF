@@ -12,6 +12,7 @@
 //   - university: string (optional, < 200 chars)
 //   - major: string (optional, < 200 chars)
 //   - level: string (optional, < 50 chars)
+//   - promotion: string (optional, < 20 chars)
 //   - avatarUrl: string (optional, < 1000 chars)
 //   - city: string (optional, < 100 chars)
 //   - neighborhood: string (optional, < 100 chars)
@@ -110,6 +111,7 @@ service cloud.firestore {
              (!('university' in data) || (data.university is string && data.university.size() <= 200)) &&
              (!('major' in data) || (data.major is string && data.major.size() <= 200)) &&
              (!('level' in data) || (data.level is string && data.level.size() <= 50)) &&
+             (!('promotion' in data) || (data.promotion is string && data.promotion.size() <= 20)) &&
              (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2000)) &&
              (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
              (!('neighborhood' in data) || (data.neighborhood is string && data.neighborhood.size() <= 100)) &&
@@ -251,6 +253,11 @@ service cloud.firestore {
         allow update: if false; // Reviews are immutable for now
         allow delete: if isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid);
       }
+    }
+
+    match /profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     match /ads/{adId} {

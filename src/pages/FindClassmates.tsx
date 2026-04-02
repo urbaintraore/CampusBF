@@ -18,25 +18,25 @@ export default function FindClassmates() {
       if (!user) return;
       setIsLoading(true);
       try {
-        const usersRef = collection(db, 'users');
+        const profilesRef = collection(db, 'profiles');
         let q;
 
         if (filter === 'promotion') {
           q = query(
-            usersRef, 
+            profilesRef, 
             where('university', '==', user.university),
             where('major', '==', user.major),
             where('promotion', '==', user.promotion || '')
           );
         } else if (filter === 'major') {
           q = query(
-            usersRef, 
+            profilesRef, 
             where('university', '==', user.university),
             where('major', '==', user.major)
           );
         } else {
           q = query(
-            usersRef, 
+            profilesRef, 
             where('university', '==', user.university)
           );
         }
