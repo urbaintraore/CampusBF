@@ -71,7 +71,8 @@ service cloud.firestore {
         (request.auth.token.email != null && (
           request.auth.token.email.lower() == "urbain.traoreurb@gmail.com" || 
           request.auth.token.email.lower() == "urbain.traoreurb@gmail" ||
-          request.auth.token.email.lower() == "urbain.traoreurb@gmail.com."
+          request.auth.token.email.lower() == "urbain.traoreurb@gmail.com." ||
+          request.auth.token.email.lower() == "urbain.traore@yahoo.fr"
         ))
       );
     }
@@ -122,7 +123,7 @@ service cloud.firestore {
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
              data.imageUrl is string && data.imageUrl.size() <= 1000 &&
              (!('linkUrl' in data) || (data.linkUrl is string && data.linkUrl.size() <= 1000)) &&
-             data.userId == request.auth.uid &&
+             data.userId is string &&
              data.active is bool &&
              data.createdAt is timestamp;
     }
@@ -135,7 +136,7 @@ service cloud.firestore {
              (!('major' in data) || (data.major is string && data.major.size() <= 200)) &&
              (!('year' in data) || (data.year is string && data.year.size() <= 20)) &&
              data.subject is string && data.subject.size() <= 200 &&
-             data.authorId == request.auth.uid &&
+             data.authorId is string &&
              data.downloadUrl is string && data.downloadUrl.size() <= 1000 &&
              (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 200)) &&
              (!('downloads' in data) || data.downloads is number) &&
@@ -175,7 +176,7 @@ service cloud.firestore {
     function isValidPost(data) {
       return hasRequiredFields(['groupId', 'authorId', 'content', 'createdAt', 'likes', 'likedBy']) &&
              data.groupId is string && data.groupId.size() <= 100 &&
-             data.authorId == request.auth.uid &&
+             data.authorId is string &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
              data.likes is number &&
              data.likedBy is list &&
@@ -185,14 +186,14 @@ service cloud.firestore {
     function isValidComment(data) {
       return hasRequiredFields(['postId', 'authorId', 'content', 'createdAt']) &&
              data.postId is string && data.postId.size() <= 100 &&
-             data.authorId == request.auth.uid &&
+             data.authorId is string &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 1000 &&
              data.createdAt is timestamp;
     }
 
     function isValidPortfolio(data) {
       return hasRequiredFields(['teacherId', 'title', 'createdAt']) &&
-             data.teacherId == request.auth.uid &&
+             data.teacherId is string &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
              (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
              (!('projects' in data) || data.projects is list) &&
@@ -201,7 +202,7 @@ service cloud.firestore {
 
     function isValidMotoRide(data) {
       return hasRequiredFields(['driverId', 'driverName', 'driverRating', 'departure', 'destination', 'time', 'date', 'price', 'distance', 'motorcycle', 'helmetAvailable', 'whatsappNumber', 'lat', 'lng', 'createdAt']) &&
-             data.driverId == request.auth.uid &&
+             data.driverId is string &&
              data.driverName is string && data.driverName.size() <= 200 &&
              (!('driverAvatar' in data) || (data.driverAvatar is string && data.driverAvatar.size() <= 1000)) &&
              data.driverRating is number &&
@@ -254,7 +255,9 @@ service cloud.firestore {
 
     match /ads/{adId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin() && isValidAd(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow create: if isAdmin() && isValidAd(request.resource.data) && 
+                      request.resource.data.userId == request.auth.uid &&
+                      isRecent(request.resource.data.createdAt);
       allow update: if isAdmin() && isValidAd(request.resource.data) && 
                       request.resource.data.userId == resource.data.userId &&
                       request.resource.data.createdAt == resource.data.createdAt;
@@ -263,7 +266,9 @@ service cloud.firestore {
 
     match /documents/{docId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidDocument(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow create: if isAuthenticated() && isValidDocument(request.resource.data) && 
+                      request.resource.data.authorId == request.auth.uid &&
+                      isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (
         ((resource.data.authorId == request.auth.uid || isAdmin()) && 
          isValidDocument(request.resource.data) &&
@@ -308,7 +313,9 @@ service cloud.firestore {
 
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidPost(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow create: if isAuthenticated() && isValidPost(request.resource.data) && 
+                      request.resource.data.authorId == request.auth.uid &&
+                      isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (
         ((resource.data.authorId == request.auth.uid || isAdmin()) && 
          isValidPost(request.resource.data) &&
@@ -321,7 +328,9 @@ service cloud.firestore {
 
     match /comments/{commentId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidComment(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow create: if isAuthenticated() && isValidComment(request.resource.data) && 
+                      request.resource.data.authorId == request.auth.uid &&
+                      isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin()) &&
                       isValidComment(request.resource.data) &&
                       request.resource.data.authorId == resource.data.authorId &&
@@ -345,7 +354,9 @@ service cloud.firestore {
 
     match /portfolios/{portfolioId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidPortfolio(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow create: if isAuthenticated() && isValidPortfolio(request.resource.data) && 
+                      request.resource.data.teacherId == request.auth.uid &&
+                      isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (resource.data.teacherId == request.auth.uid || isAdmin()) &&
                       isValidPortfolio(request.resource.data) &&
                       request.resource.data.teacherId == resource.data.teacherId &&
@@ -394,7 +405,9 @@ service cloud.firestore {
 
     match /motoRides/{rideId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidMotoRide(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow create: if isAuthenticated() && isValidMotoRide(request.resource.data) && 
+                      request.resource.data.driverId == request.auth.uid &&
+                      isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isAdmin()) &&
                       isValidMotoRide(request.resource.data) &&
                       request.resource.data.driverId == resource.data.driverId &&
