@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, BookOpen, Target, Brain, Briefcase, Sparkles, Send, GraduationCap, Plus, Trash2, TrendingUp, X, Save, CheckCircle2, Filter } from 'lucide-react';
+import { Compass, BookOpen, Target, Brain, Briefcase, Sparkles, Send, GraduationCap, Plus, Trash2, TrendingUp, X, Save, CheckCircle2, Filter, Download } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { GoogleGenAI } from '@google/genai';
 import { CONCOURS_LIST } from '../data/concours';
 import { cn } from '@/lib/utils';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface AnalysisResult {
   skills: { subject: string; A: number; fullMark: number; description: string }[];
@@ -265,6 +267,43 @@ Question : ${userMsg}`,
     } finally {
       setIsChatLoading(false);
     }
+  };
+
+  const exportChatToPDF = () => {
+    if (chatMessages.length === 0) return;
+    
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(79, 70, 229); // Indigo 600
+    doc.text("CampusBF - Orientation IA : Historique", 10, 15);
+    
+    // Metadata
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate 500
+    doc.text(`Exporté le : ${new Date().toLocaleString('fr-FR')}`, 10, 25);
+    doc.text(`Profil : Licence ${actualMajor} à ${university}`, 10, 30);
+    
+    const tableData = chatMessages.map(msg => [
+      msg.role === 'user' ? 'Moi' : 'Assistant IA',
+      msg.text
+    ]);
+    
+    autoTable(doc, {
+      head: [['Interlocuteur', 'Message']],
+      body: tableData,
+      startY: 40,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 4, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 35, fontStyle: 'bold' },
+        1: { cellWidth: 'auto' }
+      }
+    });
+    
+    doc.save(`Orientation_IA_Discussion_${new Date().getTime()}.pdf`);
   };
 
   return (
@@ -744,9 +783,19 @@ Question : ${userMsg}`,
 
               {/* AI Assistant Chat */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 lg:col-span-3 overflow-hidden flex flex-col h-[400px]">
-                <div className="p-4 bg-indigo-600 text-white flex items-center gap-2">
-                  <Brain size={20} />
-                  <h3 className="font-bold">Assistant d'Orientation IA</h3>
+                <div className="p-4 bg-indigo-600 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Brain size={20} />
+                    <h3 className="font-bold">Assistant d'Orientation IA</h3>
+                  </div>
+                  <button 
+                    onClick={exportChatToPDF}
+                    className="p-1.5 hover:bg-indigo-500 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold"
+                    title="Exporter la discussion en PDF"
+                  >
+                    <Download size={16} />
+                    PDF
+                  </button>
                 </div>
                 
                 <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50">

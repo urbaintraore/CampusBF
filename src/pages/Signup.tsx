@@ -58,6 +58,7 @@ export default function Signup() {
     university: '',
     major: '',
     level: '',
+    promotion: '',
     // Institution specific
     institutionName: '',
     institutionType: 'Université Publique',
@@ -90,6 +91,7 @@ export default function Signup() {
         signupData.university = formData.university;
         signupData.major = formData.major;
         signupData.level = formData.level;
+        signupData.promotion = formData.promotion;
       } else if (accountType === 'parent') {
         signupData.firstName = formData.firstName;
         signupData.lastName = formData.lastName;
@@ -244,23 +246,37 @@ export default function Signup() {
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700 ml-1">Niveau d'études</label>
-                      <select 
-                        name="level"
-                        required
-                        value={formData.level}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
-                      >
-                        <option value="">Sélectionner un niveau</option>
-                        <option value="Licence 1">Licence 1</option>
-                        <option value="Licence 2">Licence 2</option>
-                        <option value="Licence 3">Licence 3</option>
-                        <option value="Master 1">Master 1</option>
-                        <option value="Master 2">Master 2</option>
-                        <option value="Doctorat">Doctorat</option>
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-slate-700 ml-1">Niveau d'études</label>
+                        <select 
+                          name="level"
+                          required
+                          value={formData.level}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
+                        >
+                          <option value="">Sélectionner un niveau</option>
+                          <option value="Licence 1">Licence 1</option>
+                          <option value="Licence 2">Licence 2</option>
+                          <option value="Licence 3">Licence 3</option>
+                          <option value="Master 1">Master 1</option>
+                          <option value="Master 2">Master 2</option>
+                          <option value="Doctorat">Doctorat</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-slate-700 ml-1">Promotion (Année)</label>
+                        <input 
+                          type="text" 
+                          name="promotion"
+                          required
+                          value={formData.promotion}
+                          onChange={handleChange}
+                          placeholder="Ex: 2024"
+                          className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                        />
+                      </div>
                     </div>
                   </>
                 )}

@@ -41,6 +41,7 @@ export default function Profile() {
     city: user?.city || '',
     neighborhood: user?.neighborhood || '',
     avatarUrl: user?.avatarUrl || '',
+    promotion: user?.promotion || '',
   });
 
   // Supabase config check
@@ -405,13 +406,28 @@ export default function Profile() {
                   <option value="Master 2">Master 2</option>
                   <option value="Doctorat">Doctorat</option>
                 </select>
+                <input 
+                  type="text" 
+                  name="promotion"
+                  value={formData.promotion}
+                  onChange={handleChange}
+                  placeholder="Promotion (ex: 2024)"
+                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
               </div>
             ) : (
               <div className="bg-white/40 p-4 rounded-2xl border border-white/50 w-full">
                 <p className="text-base font-bold text-slate-900">{user.major}</p>
                 <p className="text-sm text-slate-500 font-medium mt-1">{user.university}</p>
-                <div className="inline-block mt-3 px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg uppercase tracking-wider">
-                  {user.level}
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg uppercase tracking-wider">
+                    {user.level}
+                  </div>
+                  {user.promotion && (
+                    <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg uppercase tracking-wider">
+                      Promotion {user.promotion}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

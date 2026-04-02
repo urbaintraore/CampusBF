@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -208,6 +208,32 @@ export default function Dashboard() {
           ))
         )}
       </div>
+
+      {/* Find Classmates Call to Action */}
+      {user?.role === 'student' && (
+        <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Users size={32} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-display font-bold text-slate-900">Trouver mes camarades</h2>
+                <p className="text-slate-500 mt-1 max-w-md">
+                  Découvre les étudiants de ta promotion ({user.promotion || 'Non définie'}) à {user.university} déjà sur CampusBF.
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => navigate('/find-classmates')}
+              className="px-8 py-3.5 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
+            >
+              Voir ma promotion
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Main Feed Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

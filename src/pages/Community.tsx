@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, MessageSquare, Share2, AlertCircle, Send, X, Plus, CheckCircle2 } from 'lucide-react';
+import { Users, MessageSquare, Share2, AlertCircle, Send, X, Plus, CheckCircle2, Download } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { 
@@ -17,6 +17,8 @@ import {
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Post, Comment, Group, CampusEvent } from '@/types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Community() {
   const { user, groups, users, addGroupMember, removeGroupMember } = useAuth();
@@ -238,6 +240,48 @@ export default function Community() {
     setTimeout(() => setShowSuccessToast({ show: false, message: '' }), 3000);
   };
 
+  const exportGroupToPDF = () => {
+    const group = groups.find(g => g.id === viewingGroupId);
+    const groupName = group ? group.name : "Fil d'actualité";
+    
+    if (posts.length === 0) return;
+    
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.setTextColor(16, 185, 129); // Emerald 600
+    doc.text(`CampusBF - Communauté : ${groupName}`, 10, 15);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate 500
+    doc.text(`Exporté le : ${new Date().toLocaleString('fr-FR')}`, 10, 25);
+    
+    const tableData = posts.map(post => {
+      const author = post.author || users.find(u => u.id === post.authorId) || { firstName: 'Utilisateur', lastName: '' };
+      const date = post.createdAt?.toMillis ? new Date(post.createdAt.toMillis()) : (post.createdAt ? new Date(post.createdAt) : new Date());
+      return [
+        date.toLocaleString('fr-FR'),
+        `${author.firstName} ${author.lastName}`,
+        post.content
+      ];
+    });
+    
+    autoTable(doc, {
+      head: [['Date', 'Auteur', 'Contenu']],
+      body: tableData,
+      startY: 35,
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129], textColor: 255 },
+      styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 'auto' }
+      }
+    });
+    
+    doc.save(`Communaute_${groupName.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
+  };
+
   const scrollToCreate = () => {
     textareaRef.current?.focus();
     textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -259,13 +303,23 @@ export default function Community() {
       <div className="lg:col-span-2 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Fil d'actualité</h1>
-          <button 
-            onClick={scrollToCreate}
-            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
-          >
-            <Plus size={18} />
-            Nouvelle publication
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={exportGroupToPDF}
+              className="flex items-center gap-2 bg-white text-emerald-600 border border-emerald-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-emerald-50 transition-colors shadow-sm"
+              title="Exporter en PDF"
+            >
+              <Download size={18} />
+              Exporter
+            </button>
+            <button 
+              onClick={scrollToCreate}
+              className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
+            >
+              <Plus size={18} />
+              Nouvelle publication
+            </button>
+          </div>
         </div>
 
         {/* Create Post Input */}

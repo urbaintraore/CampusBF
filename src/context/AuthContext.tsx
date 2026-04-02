@@ -610,6 +610,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userData.major) newUser.major = userData.major;
       if (userData.level) newUser.level = userData.level;
+      if (userData.promotion) newUser.promotion = userData.promotion;
       if (userData.teacherStatus) newUser.teacherStatus = userData.teacherStatus;
       if (userData.institutionProfile) newUser.institutionProfile = userData.institutionProfile;
 

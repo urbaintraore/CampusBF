@@ -26,6 +26,7 @@ import Chatbot from './components/Chatbot';
 import { SubscriptionNotification } from './components/SubscriptionNotification';
 import Features from './pages/Features';
 import Messages from './pages/Messages';
+import FindClassmates from './pages/FindClassmates';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -180,6 +181,11 @@ export default function App() {
           <Route path="/mentorship" element={
             <ProtectedRoute>
               <AlumniMentorship />
+            </ProtectedRoute>
+          } />
+          <Route path="/find-classmates" element={
+            <ProtectedRoute>
+              <FindClassmates />
             </ProtectedRoute>
           } />
           

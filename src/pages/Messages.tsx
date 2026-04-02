@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon, Download } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { uploadFile } from '@/services/storageService';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Conversation {
   id: string;
@@ -213,6 +215,53 @@ export default function Messages() {
 
   const activeConversation = conversations.find(c => c.user.id === selectedChat);
 
+  const exportToPDF = () => {
+    if (!activeConversation || messages.length === 0 || !currentUser) return;
+    
+    const doc = new jsPDF();
+    const userName = `${activeConversation.user.firstName} ${activeConversation.user.lastName}`;
+    const currentUserName = `${currentUser.firstName} ${currentUser.lastName}`;
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(16, 185, 129); // Emerald 600
+    doc.text("CampusBF - Historique de Discussion", 10, 15);
+    
+    // Metadata
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate 500
+    doc.text(`Exporté le : ${new Date().toLocaleString('fr-FR')}`, 10, 25);
+    doc.text(`Participants : ${currentUserName} & ${userName}`, 10, 30);
+    
+    const tableData = messages.map(msg => [
+      new Date(msg.timestamp).toLocaleString('fr-FR', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+      msg.senderId === currentUser.id ? 'Moi' : userName,
+      msg.content || (msg.fileUrl ? '[Fichier joint]' : '')
+    ]);
+    
+    autoTable(doc, {
+      head: [['Date & Heure', 'Expéditeur', 'Message']],
+      body: tableData,
+      startY: 40,
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 'auto' }
+      }
+    });
+    
+    doc.save(`Discussion_${userName.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
+  };
+
   // Filter messages for the current chat
   const currentChatMessages = messages;
 
@@ -283,6 +332,13 @@ export default function Messages() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-gray-400">
+              <button 
+                onClick={exportToPDF}
+                className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"
+                title="Exporter la discussion en PDF"
+              >
+                <Download size={20} />
+              </button>
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><Phone size={20} /></button>
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><Video size={20} /></button>
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><MoreVertical size={20} /></button>

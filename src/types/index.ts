@@ -5,6 +5,7 @@ export interface User {
   university: string;
   major: string; // Filière
   level: string; // Niveau (L1, L2, etc.)
+  promotion?: string; // Année de promotion
   email: string;
   password?: string;
   phone?: string;
