@@ -11,12 +11,29 @@
         "university": { "type": "string" },
         "major": { "type": "string" },
         "level": { "type": "string" },
-        "role": { "type": "string", "enum": ["student", "tutor", "admin"] },
+        "promotion": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "tutor", "admin", "teacher", "institution", "parent", "alumni"] },
         "avatarUrl": { "type": "string" },
         "tutorStatus": { "type": "string", "enum": ["none", "pending", "approved", "rejected"] },
         "teacherStatus": { "type": "string", "enum": ["none", "pending_approval", "approved", "rejected"] }
       },
       "required": ["email", "firstName", "lastName", "role"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "Public user profile for search",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "university": { "type": "string" },
+        "major": { "type": "string" },
+        "level": { "type": "string" },
+        "promotion": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["firstName", "lastName", "university", "major"]
     },
     "Ad": {
       "title": "Ad",
@@ -238,6 +255,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles"
+    },
+    "/profiles/{userId}": {
+      "schema": "Profile",
+      "description": "Public user profiles"
     },
     "/users/{userId}/reviews/{reviewId}": {
       "schema": "object",

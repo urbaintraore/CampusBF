@@ -316,6 +316,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = userDoc.data();
             initialUserData = { id: firebaseUser.uid, ...data } as User;
             
+            // Sync profile for existing users to ensure they appear in "Find Classmates"
+            await syncProfile(firebaseUser.uid, data);
+
             // Force admin role for the owner email if not already set
             console.log("Checking admin email for:", firebaseUser.email);
             if (isAdminEmail(firebaseUser.email)) {

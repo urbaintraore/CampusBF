@@ -21,27 +21,36 @@ export default function FindClassmates() {
         const profilesRef = collection(db, 'profiles');
         let q;
 
+        console.log("Fetching classmates with filter:", filter);
+        console.log("User criteria:", {
+          university: user.university,
+          major: user.major,
+          promotion: user.promotion
+        });
+
         if (filter === 'promotion') {
           q = query(
             profilesRef, 
-            where('university', '==', user.university),
-            where('major', '==', user.major),
+            where('university', '==', user.university || ''),
+            where('major', '==', user.major || ''),
             where('promotion', '==', user.promotion || '')
           );
         } else if (filter === 'major') {
           q = query(
             profilesRef, 
-            where('university', '==', user.university),
-            where('major', '==', user.major)
+            where('university', '==', user.university || ''),
+            where('major', '==', user.major || '')
           );
         } else {
           q = query(
             profilesRef, 
-            where('university', '==', user.university)
+            where('university', '==', user.university || '')
           );
         }
 
         const querySnapshot = await getDocs(q);
+        console.log("Query results count:", querySnapshot.size);
+
         const results = querySnapshot.docs
           .map(doc => {
             const data = doc.data() as any;
@@ -49,6 +58,7 @@ export default function FindClassmates() {
           })
           .filter(u => u.id !== user.id); // Exclude current user
         
+        console.log("Filtered results count (excluding self):", results.length);
         setClassmates(results);
       } catch (error) {
         console.error("Error fetching classmates:", error);
@@ -67,6 +77,8 @@ export default function FindClassmates() {
       </div>
     );
   }
+
+  const hasIncompleteProfile = !user.university || !user.major || !user.promotion;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -98,18 +110,37 @@ export default function FindClassmates() {
         </div>
       </div>
 
+      {hasIncompleteProfile && (
+        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
+            <Search size={24} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-900">Profil incomplet</h3>
+            <p className="text-amber-700 text-sm mt-1">
+              Pour trouver vos camarades, vous devez renseigner votre université, votre filière et votre promotion dans votre profil.
+            </p>
+            <Link to="/profile" className="text-amber-600 text-sm font-medium hover:underline mt-2 inline-block">
+              Compléter mon profil
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
         <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
           <GraduationCap size={24} />
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-semibold text-emerald-900">Votre profil académique</h3>
           <p className="text-emerald-700 text-sm mt-1">
-            {user.university} • {user.major} • {user.level} {user.promotion ? `• Promotion ${user.promotion}` : ''}
+            {user.university || 'Non renseignée'} • {user.major || 'Non renseignée'} • {user.level || 'Non renseigné'} {user.promotion ? `• Promotion ${user.promotion}` : ''}
           </p>
-          <Link to="/profile" className="text-emerald-600 text-sm font-medium hover:underline mt-2 inline-block">
-            Modifier mon profil
-          </Link>
+          <div className="flex gap-4 mt-2">
+            <Link to="/profile" className="text-emerald-600 text-sm font-medium hover:underline">
+              Modifier mon profil
+            </Link>
+          </div>
         </div>
       </div>
 
