@@ -21,18 +21,37 @@ export default function FindClassmates() {
       url: window.location.origin,
     };
 
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.origin);
+    const copyToClipboard = async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(window.location.origin);
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = window.location.origin;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+        }
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
+      } catch (err) {
+        console.error('Erreur lors de la copie:', err);
       }
-    } catch (err) {
-      if (err instanceof Error && err.name !== 'AbortError') {
-        console.error('Erreur lors du partage:', err);
+    };
+
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile && navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          await copyToClipboard();
+        }
       }
+    } else {
+      await copyToClipboard();
     }
   };
 
