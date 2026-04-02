@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, MessageCircle, Calendar, CheckCircle, X, GraduationCap, FileUp, CheckCircle2, AlertCircle, CreditCard, Phone, Mail } from 'lucide-react';
+import { MapPin, Star, MessageCircle, Calendar, CheckCircle, X, GraduationCap, FileUp, CheckCircle2, AlertCircle, CreditCard, Phone, Mail, Loader2 } from 'lucide-react';
 import { MOCK_TUTORS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Tutor } from '@/types';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { uploadFile } from '@/services/storageService';
 
 export default function Tutors() {
   const { user, users, submitTutorApplication } = useAuth();
@@ -17,7 +18,9 @@ export default function Tutors() {
   const [ratingModal, setRatingModal] = useState<string | null>(null);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [description, setDescription] = useState('');
-  const [fileSelected, setFileSelected] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
   const [subjects, setSubjects] = useState('');
   const [hourlyRates, setHourlyRates] = useState({
     college: 0,
@@ -26,20 +29,37 @@ export default function Tutors() {
     master: 0
   });
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (description && fileSelected) {
-      submitTutorApplication(
+    if (!description || !selectedFile || !subjects) {
+      setError('Veuillez remplir tous les champs et sélectionner un fichier.');
+      return;
+    }
+
+    setIsUploading(true);
+    setError('');
+
+    try {
+      const { url } = await uploadFile(selectedFile);
+      
+      await submitTutorApplication(
         description, 
-        'mock-file-url',
+        url,
         subjects.split(',').map(s => s.trim()).filter(Boolean),
         hourlyRates
       );
+      
       setShowApplicationForm(false);
       setDescription('');
       setSubjects('');
       setHourlyRates({ college: 0, lycee: 0, licence: 0, master: 0 });
-      setFileSelected(false);
+      setSelectedFile(null);
+      alert('Votre demande a été envoyée avec succès !');
+    } catch (err: any) {
+      console.error('Error submitting tutor application:', err);
+      setError(err.message || 'Une erreur est survenue lors de l\'envoi de votre demande.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -71,7 +91,8 @@ export default function Tutors() {
     if (!user) return null;
     if (user.role === 'admin' || user.role === 'parent') return null;
 
-      if (!user.tutorStatus || user.tutorStatus === 'none') {
+    if (!user.tutorStatus || user.tutorStatus === 'none') {
+      const isTeacher = user.role === 'teacher';
       return (
         <div className="glass border-emerald-200/50 p-6 rounded-3xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4">
           <div className="flex items-start gap-5">
@@ -79,8 +100,14 @@ export default function Tutors() {
               <GraduationCap size={28} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-emerald-900">Devenez Répétiteur sur CampusBF</h2>
-              <p className="text-emerald-800/80 text-sm mt-1">Partagez vos connaissances et gagnez de l'argent.</p>
+              <h2 className="text-xl font-bold text-emerald-900">
+                {isTeacher ? 'Proposez vos services de Répétiteur' : 'Devenez Répétiteur sur CampusBF'}
+              </h2>
+              <p className="text-emerald-800/80 text-sm mt-1">
+                {isTeacher 
+                  ? 'En tant qu\'enseignant, partagez votre expertise avec les étudiants.' 
+                  : 'Partagez vos connaissances et gagnez de l\'argent.'}
+              </p>
             </div>
           </div>
           <button 
@@ -210,6 +237,12 @@ export default function Tutors() {
             
             <div className="p-6 sm:p-8 overflow-y-auto bg-white/20">
               <form onSubmit={handleApply} className="space-y-6">
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-2">
+                    <AlertCircle size={18} />
+                    {error}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-900">Matières (séparées par des virgules)</label>
                   <input 
@@ -283,23 +316,28 @@ export default function Tutors() {
                   <label className="text-sm font-semibold text-slate-900">Dossier unique (Diplôme, Relevés, CV)</label>
                   <div className={cn(
                     "border-2 border-dashed rounded-2xl p-8 text-center transition-all bg-white/50",
-                    fileSelected ? "border-emerald-500 bg-emerald-50/50 shadow-inner" : "border-slate-200 hover:border-emerald-400 hover:bg-white"
+                    selectedFile ? "border-emerald-500 bg-emerald-50/50 shadow-inner" : "border-slate-200 hover:border-emerald-400 hover:bg-white"
                   )}>
                     <input 
                       type="file" 
                       id="tutor-docs" 
                       className="hidden" 
-                      onChange={() => setFileSelected(true)}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setSelectedFile(e.target.files[0]);
+                        }
+                      }}
+                      accept=".pdf"
                     />
                     <label htmlFor="tutor-docs" className="cursor-pointer flex flex-col items-center gap-3">
                       <div className={cn(
                         "w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-colors",
-                        fileSelected ? "bg-emerald-100" : "bg-slate-100"
+                        selectedFile ? "bg-emerald-100" : "bg-slate-100"
                       )}>
-                        <FileUp size={28} className={fileSelected ? "text-emerald-600" : "text-slate-400"} />
+                        <FileUp size={28} className={selectedFile ? "text-emerald-600" : "text-slate-400"} />
                       </div>
                       <span className="text-sm font-bold text-slate-700">
-                        {fileSelected ? "Fichier sélectionné" : "Cliquez pour déposer votre fichier (PDF)"}
+                        {selectedFile ? selectedFile.name : "Cliquez pour déposer votre fichier (PDF)"}
                       </span>
                       <span className="text-xs text-slate-500">Un seul fichier contenant tous les documents (Max 5MB)</span>
                     </label>
@@ -324,9 +362,17 @@ export default function Tutors() {
                   </button>
                   <button 
                     type="submit"
-                    className="flex-1 py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98]"
+                    disabled={isUploading}
+                    className="flex-1 py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Envoyer ma demande
+                    {isUploading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      'Envoyer ma demande'
+                    )}
                   </button>
                 </div>
               </form>

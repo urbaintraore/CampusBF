@@ -197,7 +197,7 @@ export const MOCK_USERS: User[] = [
 export const MOCK_APPLICATIONS: TutorApplication[] = [
   {
     id: 'app1',
-    studentId: 'u2',
+    userId: 'u2',
     user: {
         id: 'u2',
         firstName: 'Moussa',

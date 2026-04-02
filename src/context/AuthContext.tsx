@@ -430,7 +430,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             console.log("User is not admin, starting user listeners");
             // Non-admins see their own applications
-            const qApps = query(collection(db, 'applications'), where('studentId', '==', firebaseUser.uid));
+            const qApps = query(collection(db, 'applications'), where('userId', '==', firebaseUser.uid));
             unsubscribes.push(onSnapshot(qApps, (snapshot) => {
               setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
@@ -666,7 +666,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     try {
       const newApp = {
-        studentId: user.id,
+        userId: user.id,
         user: user,
         description,
         documentUrl,
@@ -697,9 +697,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedUserData.role = 'tutor';
       }
       
-      await updateDoc(doc(db, 'users', app.studentId), updatedUserData);
+      await updateDoc(doc(db, 'users', app.userId), updatedUserData);
 
-      await addNotification(app.studentId, {
+      await addNotification(app.userId, {
         type: status === 'approved' ? 'success' : 'alert',
         title: status === 'approved' ? 'Demande Répétiteur Approuvée' : 'Demande Répétiteur Refusée',
         message: status === 'approved' 

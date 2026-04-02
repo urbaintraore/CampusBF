@@ -83,7 +83,7 @@ export interface SubscriptionRequest {
 
 export interface TutorApplication {
   id: string;
-  studentId: string;
+  userId: string;
   user: User;
   description: string;
   documentUrl: string; // URL of the single file (diploma, transcripts, CV)
