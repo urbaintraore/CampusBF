@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import TeacherOnboarding from '@/components/TeacherOnboarding';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { User as UserType } from '@/types';
 
 export default function Dashboard() {
   const auth = useAuth();
@@ -14,8 +17,57 @@ export default function Dashboard() {
   const activeAds = ads.filter(ad => ad.active);
   console.log("Dashboard activeAds length:", activeAds.length);
   const [currentAd, setCurrentAd] = useState(0);
+  const [suggestedFriends, setSuggestedFriends] = useState<UserType[]>([]);
 
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!user || user.role !== 'student') return;
+      
+      try {
+        const profilesRef = collection(db, 'profiles');
+        let q;
+        
+        if (user.university && user.major && user.promotion) {
+          q = query(
+            profilesRef,
+            where('university', '==', user.university),
+            where('major', '==', user.major),
+            where('promotion', '==', user.promotion),
+            limit(10)
+          );
+        } else if (user.university && user.major) {
+          q = query(
+            profilesRef,
+            where('university', '==', user.university),
+            where('major', '==', user.major),
+            limit(10)
+          );
+        } else if (user.university) {
+          q = query(
+            profilesRef,
+            where('university', '==', user.university),
+            limit(10)
+          );
+        } else {
+          return;
+        }
+
+        const querySnapshot = await getDocs(q);
+        const results = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as UserType))
+          .filter(u => u.id !== user.id)
+          .slice(0, 3);
+          
+        setSuggestedFriends(results);
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+      }
+    };
+
+    fetchSuggestions();
+  }, [user]);
 
   useEffect(() => {
     if (activeAds.length === 0) return;
@@ -323,6 +375,36 @@ export default function Dashboard() {
         {/* Right Column: Tutors & Marketplace */}
         <div className="space-y-8">
           
+          {/* Friend Suggestions */}
+          {user?.role === 'student' && suggestedFriends.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-display font-bold text-slate-900">Suggestions d'amis</h2>
+                <Link to="/find-classmates" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm divide-y divide-slate-100 overflow-hidden">
+                {suggestedFriends.map((friend) => (
+                  <div key={friend.id} className="p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors group">
+                    <img src={friend.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.firstName}`} alt={friend.firstName} className="w-12 h-12 rounded-full bg-slate-100 object-cover ring-2 ring-white shadow-sm group-hover:ring-emerald-100 transition-all" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-slate-900 text-base group-hover:text-emerald-700 transition-colors truncate">{friend.firstName} {friend.lastName}</h4>
+                      <p className="text-xs text-slate-500 truncate mt-0.5 font-medium">
+                        {friend.major} {friend.promotion ? `• Promo ${friend.promotion}` : ''}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => navigate(`/messages?userId=${friend.id}`)}
+                      className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-colors"
+                      title="Envoyer un message"
+                    >
+                      <UserPlus size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Recommended Tutors */}
           <section>
             <div className="flex items-center justify-between mb-5">

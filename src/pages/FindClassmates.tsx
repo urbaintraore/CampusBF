@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { User as UserType } from '@/types';
-import { Search, GraduationCap, Users, MessageSquare, UserPlus, Loader2, Share, CheckCircle2 } from 'lucide-react';
+import { Search, GraduationCap, Users, MessageSquare, UserPlus, Loader2, Share, CheckCircle2, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 
@@ -13,6 +13,65 @@ export default function FindClassmates() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'promotion' | 'major' | 'university'>('promotion');
   const [showToast, setShowToast] = useState(false);
+  const [contactsStatus, setContactsStatus] = useState<'idle' | 'loading' | 'done' | 'error' | 'unsupported'>('idle');
+  const [contactsStats, setContactsStats] = useState({ registered: 0, unregistered: 0 });
+
+  const handleImportContacts = async () => {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      setContactsStatus('unsupported');
+      return;
+    }
+
+    try {
+      setContactsStatus('loading');
+      const props = ['name', 'email', 'tel'];
+      const opts = { multiple: true };
+      
+      const contacts = await (navigator as any).contacts.select(props, opts);
+      
+      if (!contacts || contacts.length === 0) {
+        setContactsStatus('idle');
+        return;
+      }
+
+      const usersRef = collection(db, 'users');
+      const usersSnap = await getDocs(usersRef);
+      const allUsers = usersSnap.docs.map(doc => doc.data() as UserType);
+
+      let registeredCount = 0;
+      let unregisteredCount = 0;
+
+      contacts.forEach((contact: any) => {
+        let isRegistered = false;
+        
+        if (contact.email) {
+          isRegistered = contact.email.some((e: string) => 
+            allUsers.some(u => u.email?.toLowerCase() === e.toLowerCase())
+          );
+        }
+        
+        if (!isRegistered && contact.tel) {
+          isRegistered = contact.tel.some((t: string) => {
+            const cleanT = t.replace(/\D/g, '');
+            return allUsers.some(u => u.phone && u.phone.replace(/\D/g, '') === cleanT);
+          });
+        }
+
+        if (isRegistered) {
+          registeredCount++;
+        } else {
+          unregisteredCount++;
+        }
+      });
+
+      setContactsStats({ registered: registeredCount, unregistered: unregisteredCount });
+      setContactsStatus('done');
+
+    } catch (err) {
+      console.error("Error importing contacts:", err);
+      setContactsStatus('error');
+    }
+  };
 
   const handleInvite = async () => {
     const shareData = {
@@ -142,6 +201,17 @@ export default function FindClassmates() {
         
         <div className="flex flex-wrap items-center gap-3">
           <button 
+            onClick={handleImportContacts}
+            disabled={contactsStatus === 'loading'}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-md shadow-indigo-600/10 flex items-center gap-2 disabled:opacity-70"
+            title="Trouver mes camarades dans mes contacts"
+          >
+            {contactsStatus === 'loading' ? <Loader2 size={16} className="animate-spin" /> : <Smartphone size={16} />}
+            <span className="hidden sm:inline">Trouver mes camarades dans mes contacts</span>
+            <span className="sm:hidden">Contacts</span>
+          </button>
+
+          <button 
             onClick={handleInvite}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-md shadow-emerald-600/10 flex items-center gap-2"
             title="Inviter vos amis à rejoindre CampusBF"
@@ -173,6 +243,50 @@ export default function FindClassmates() {
           </div>
         </div>
       </div>
+
+      {contactsStatus === 'unsupported' && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
+          <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 shrink-0">
+            <Smartphone size={24} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-red-900">Fonctionnalité non supportée</h3>
+            <p className="text-red-700 text-sm mt-1">
+              L'importation de contacts n'est pas supportée par votre navigateur actuel. Veuillez utiliser un appareil mobile compatible (Chrome sur Android).
+            </p>
+          </div>
+        </div>
+      )}
+
+      {contactsStatus === 'done' && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
+          <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
+            <Users size={24} />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-indigo-900">Résultats de vos contacts</h3>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 text-indigo-800">
+                <CheckCircle2 size={18} className="text-emerald-500" />
+                <span className="font-medium">{contactsStats.registered} contacts</span> déjà sur CampusBF
+              </div>
+              <div className="flex items-center gap-2 text-indigo-800">
+                <UserPlus size={18} className="text-indigo-500" />
+                <span className="font-medium">{contactsStats.unregistered} contacts</span> à inviter
+              </div>
+            </div>
+            {contactsStats.unregistered > 0 && (
+              <button 
+                onClick={handleInvite}
+                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2"
+              >
+                <Share size={16} />
+                Inviter ces contacts
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {hasIncompleteProfile && (
         <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
