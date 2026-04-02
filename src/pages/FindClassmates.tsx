@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { User as UserType } from '@/types';
-import { Search, GraduationCap, Users, MessageSquare, UserPlus, Loader2 } from 'lucide-react';
+import { Search, GraduationCap, Users, MessageSquare, UserPlus, Loader2, Share, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 
@@ -12,6 +12,29 @@ export default function FindClassmates() {
   const [classmates, setClassmates] = useState<UserType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'promotion' | 'major' | 'university'>('promotion');
+  const [showToast, setShowToast] = useState(false);
+
+  const handleInvite = async () => {
+    const shareData = {
+      title: 'CampusBF',
+      text: 'Rejoins-moi sur CampusBF, la plateforme pour les étudiants ! Retrouvons-nous ici.',
+      url: window.location.origin,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.origin);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Erreur lors du partage:', err);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchClassmates = async () => {
@@ -82,6 +105,16 @@ export default function FindClassmates() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Success Toast */}
+      {showToast && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4">
+          <div className="bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2">
+            <CheckCircle2 size={20} />
+            <span className="font-medium">Lien de partage copié !</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-display font-bold text-slate-900">Trouver mes camarades</h1>
@@ -212,7 +245,11 @@ export default function FindClassmates() {
             Nous n'avons pas trouvé d'autres étudiants correspondant à vos critères pour le moment. 
             Invitez vos amis à rejoindre CampusBF !
           </p>
-          <button className="mt-8 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-2xl font-medium transition-all shadow-lg shadow-emerald-600/20">
+          <button 
+            onClick={handleInvite}
+            className="mt-8 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-2xl font-medium transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 mx-auto"
+          >
+            <Share size={18} />
             Inviter des amis
           </button>
         </div>

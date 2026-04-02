@@ -213,6 +213,27 @@ export default function Community() {
     }
   };
 
+  const handleSharePost = async (post: Post) => {
+    const shareData = {
+      title: 'Publication sur CampusBF',
+      text: post.content.substring(0, 100) + (post.content.length > 100 ? '...' : ''),
+      url: `${window.location.origin}/community?postId=${post.id}`,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        showToast('Lien de la publication copié !');
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Erreur lors du partage:', err);
+      }
+    }
+  };
+
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newGroupData.name || !newGroupData.description) return;
@@ -435,7 +456,10 @@ export default function Community() {
                     {/* For now, let's assume we fetch them separately or they are in subcollection */}
                     <PostComments postId={post.id} showComments={showComments} onReply={(comment) => handleReplyToComment(post, comment)} />
                   </button>
-                  <button className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 text-sm font-medium transition-colors ml-auto group">
+                  <button 
+                    onClick={() => handleSharePost(post)}
+                    className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 text-sm font-medium transition-colors ml-auto group"
+                  >
                     <Share2 size={18} className="group-hover:scale-110 transition-transform" />
                   </button>
                 </div>
