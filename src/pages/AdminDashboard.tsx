@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2 } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -69,13 +69,55 @@ export default function AdminDashboard() {
   const [editingDoc, setEditingDoc] = useState<any>(null);
 
   const handleSaveDocument = async (data: any) => {
-    if (editingDoc) {
-      await updateDocument(editingDoc.id, data);
-    } else {
-      await addDocument(data);
+    try {
+      if (editingDoc) {
+        await updateDocument(editingDoc.id, data);
+      } else {
+        await addDocument(data);
+      }
+      setIsDocModalOpen(false);
+      setEditingDoc(null);
+    } catch (error) {
+      console.error("Error in handleSaveDocument:", error);
+      throw error;
     }
-    setIsDocModalOpen(false);
-    setEditingDoc(null);
+  };
+
+  const fixMemoires = async () => {
+    const toFix = documents.filter(docItem => 
+      (docItem.type === 'thesis' || docItem.type === 'Mémoire') && 
+      (docItem.title.toLowerCase().includes('examen') || 
+       docItem.title.toLowerCase().includes('sujet') || 
+       docItem.title.toLowerCase().includes('corrigé') ||
+       docItem.title.toLowerCase().includes('td ') ||
+       docItem.title.toLowerCase().includes('exercice') ||
+       docItem.title.toLowerCase().includes('composition') ||
+       docItem.title.toLowerCase().includes('partiel') ||
+       docItem.title.toLowerCase().includes('épreuve') ||
+       docItem.title.toLowerCase().includes('session'))
+    );
+    
+    if (toFix.length === 0) {
+      alert("Aucun document mal classé trouvé dans l'espace Mémoires.");
+      return;
+    }
+    
+    if (confirm(`Voulez-vous reclasser ${toFix.length} documents de "Mémoires" vers "Examens/Exercices" ?`)) {
+      let count = 0;
+      for (const docItem of toFix) {
+        try {
+          let newType = 'exam';
+          if (docItem.title.toLowerCase().includes('td ') || docItem.title.toLowerCase().includes('exercice')) {
+            newType = 'exercise';
+          }
+          await updateDocument(docItem.id, { type: newType });
+          count++;
+        } catch (error) {
+          console.error(`Error fixing doc ${docItem.id}:`, error);
+        }
+      }
+      alert(`${count} documents ont été reclassés avec succès.`);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -605,13 +647,23 @@ export default function AdminDashboard() {
                 </button>
               )}
               {contentTab === 'documents' && (
-                <button 
-                  onClick={() => { setEditingDoc(null); setIsDocModalOpen(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
-                >
-                  <Plus size={16} />
-                  Ajouter un document
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={fixMemoires}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 transition-colors"
+                    title="Reclasser les examens qui sont dans Mémoires"
+                  >
+                    <RefreshCw size={16} />
+                    Nettoyer Mémoires
+                  </button>
+                  <button 
+                    onClick={() => { setEditingDoc(null); setIsDocModalOpen(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                  >
+                    <Plus size={16} />
+                    Ajouter un document
+                  </button>
+                </div>
               )}
             </div>
             
@@ -639,10 +691,11 @@ export default function AdminDashboard() {
                       href={doc.downloadUrl} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="flex items-center gap-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                       title="Voir le document"
                     >
                       <ExternalLink size={18} />
+                      <span className="text-sm font-medium">Voir</span>
                     </a>
                     <button 
                       onClick={() => deleteDocument(doc.id)}
@@ -904,15 +957,25 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex flex-col gap-3 min-w-[200px]">
                               {app.documentUrl && app.documentUrl !== '#' ? (
-                                <a 
-                                  href={app.documentUrl} 
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                >
-                                  <Download size={16} />
-                                  Voir Justificatif
-                                </a>
+                                <div className="flex flex-col gap-2">
+                                  <a 
+                                    href={app.documentUrl} 
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Eye size={16} />
+                                    Voir Justificatif
+                                  </a>
+                                  <a 
+                                    href={app.documentUrl} 
+                                    download
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 transition-colors"
+                                  >
+                                    <Download size={16} />
+                                    Télécharger
+                                  </a>
+                                </div>
                               ) : (
                                 <button 
                                   disabled
@@ -1037,15 +1100,25 @@ export default function AdminDashboard() {
                             <div className="flex flex-col gap-3 min-w-[200px]">
                               <div className="flex flex-col gap-2">
                                 {app.cvUrl && app.cvUrl !== '#' ? (
-                                  <a 
-                                    href={app.cvUrl} 
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                  >
-                                    <Download size={16} />
-                                    Voir CV
-                                  </a>
+                                  <div className="flex flex-col gap-2">
+                                    <a 
+                                      href={app.cvUrl} 
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                    >
+                                      <Eye size={16} />
+                                      Voir CV
+                                    </a>
+                                    <a 
+                                      href={app.cvUrl} 
+                                      download
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 transition-colors"
+                                    >
+                                      <Download size={16} />
+                                      Télécharger CV
+                                    </a>
+                                  </div>
                                 ) : (
                                   <button 
                                     disabled
@@ -1056,15 +1129,25 @@ export default function AdminDashboard() {
                                   </button>
                                 )}
                                 {app.diplomaUrl && app.diplomaUrl !== '#' ? (
-                                  <a 
-                                    href={app.diplomaUrl} 
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                  >
-                                    <Download size={16} />
-                                    Voir Diplôme
-                                  </a>
+                                  <div className="flex flex-col gap-2">
+                                    <a 
+                                      href={app.diplomaUrl} 
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                    >
+                                      <Eye size={16} />
+                                      Voir Diplôme
+                                    </a>
+                                    <a 
+                                      href={app.diplomaUrl} 
+                                      download
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 transition-colors"
+                                    >
+                                      <Download size={16} />
+                                      Télécharger Diplôme
+                                    </a>
+                                  </div>
                                 ) : (
                                   <button 
                                     disabled
@@ -1075,15 +1158,25 @@ export default function AdminDashboard() {
                                   </button>
                                 )}
                                 {app.rankProofUrl && app.rankProofUrl !== '#' ? (
-                                  <a 
-                                    href={app.rankProofUrl} 
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
-                                  >
-                                    <Download size={16} />
-                                    Preuve Grade
-                                  </a>
+                                  <div className="flex flex-col gap-2">
+                                    <a 
+                                      href={app.rankProofUrl} 
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                                    >
+                                      <Eye size={16} />
+                                      Preuve Grade
+                                    </a>
+                                    <a 
+                                      href={app.rankProofUrl} 
+                                      download
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 transition-colors"
+                                    >
+                                      <Download size={16} />
+                                      Télécharger Preuve
+                                    </a>
+                                  </div>
                                 ) : (
                                   <button 
                                     disabled
@@ -1184,6 +1277,20 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
+                          {teacher.tutorStatus !== 'approved' && (
+                            <button 
+                              onClick={async () => {
+                                if(confirm('Voulez-vous promouvoir cet enseignant comme Répétiteur ?')) {
+                                  await updateDoc(doc(db, 'users', teacher.id), { tutorStatus: 'approved' });
+                                }
+                              }}
+                              className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-colors flex items-center gap-2"
+                              title="Promouvoir comme Répétiteur"
+                            >
+                              <GraduationCap size={16} />
+                              Promouvoir Répétiteur
+                            </button>
+                          )}
                           <button 
                             onClick={() => {
                               if(confirm('Voulez-vous retirer le statut enseignant de cet utilisateur ?')) {

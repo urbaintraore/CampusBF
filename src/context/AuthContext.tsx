@@ -694,7 +694,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedUserData.tutorSubjects = app.subjects;
         updatedUserData.tutorHourlyRates = app.hourlyRates;
         updatedUserData.tutorDescription = app.description;
-        updatedUserData.role = 'tutor';
+        // Only change role to tutor if they were a student
+        if (app.user.role === 'student') {
+          updatedUserData.role = 'tutor';
+        }
       }
       
       await updateDoc(doc(db, 'users', app.userId), updatedUserData);

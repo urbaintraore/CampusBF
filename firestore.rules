@@ -131,7 +131,7 @@ service cloud.firestore {
     function isValidDocument(data) {
       return hasRequiredFields(['title', 'type', 'university', 'subject', 'downloadUrl', 'authorId', 'createdAt']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.type in ['exam', 'exercise', 'summary', 'thesis'] &&
+             data.type in ['exam', 'exercise', 'summary', 'thesis', 'Mémoire'] &&
              data.university is string && data.university.size() <= 200 &&
              (!('major' in data) || (data.major is string && data.major.size() <= 200)) &&
              (!('year' in data) || (data.year is string && data.year.size() <= 20)) &&
@@ -144,7 +144,7 @@ service cloud.firestore {
              (!('isForSale' in data) || data.isForSale is bool) &&
              (!('price' in data) || (data.price is number && data.price > 0)) &&
              (!('isForSale' in data) || data.isForSale == false || ('price' in data)) &&
-             data.createdAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt is string);
     }
 
     function isValidReview(data) {

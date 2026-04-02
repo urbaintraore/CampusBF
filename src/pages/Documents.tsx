@@ -35,7 +35,7 @@ export default function Documents() {
   
   // Form states
   const [uploadTitle, setUploadTitle] = useState('');
-  const [uploadType, setUploadType] = useState('thesis');
+  const [uploadType, setUploadType] = useState('exam');
   const [uploadYear, setUploadYear] = useState('2024');
   const [uploadSubject, setUploadSubject] = useState('');
   const [isForSale, setIsForSale] = useState(false);
@@ -59,7 +59,7 @@ export default function Documents() {
     'examen corrigés': 'exam',
     'td corrigés': 'exercise',
     'cours et résumés de cours': 'summary',
-    'mémoires': 'thesis',
+    'mémoires': 'Mémoire',
   };
 
   const subjects = Array.from(new Set(documents.map(doc => doc.subject)));
@@ -120,7 +120,7 @@ export default function Documents() {
     setUploadUniversity('Université Joseph Ki-Zerbo');
     setCustomUniversity('');
     setUploadTitle('');
-    setUploadType('thesis');
+    setUploadType('exam');
     setUploadYear('2024');
     setUploadSubject('');
     setIsForSale(false);
@@ -305,7 +305,7 @@ export default function Documents() {
                     <option value="exam">Examen corrigé</option>
                     <option value="exercise">TD corrigé</option>
                     <option value="summary">Cours et résumé</option>
-                    <option value="thesis">Mémoire</option>
+                    <option value="Mémoire">Mémoire</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -592,9 +592,9 @@ export default function Documents() {
                   "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-display font-bold flex-shrink-0 shadow-inner ring-1 ring-inset",
                   doc.type === 'exam' ? "bg-red-50 text-red-600 ring-red-100" :
                   doc.type === 'summary' ? "bg-blue-50 text-blue-600 ring-blue-100" : 
-                  doc.type === 'thesis' ? "bg-amber-50 text-amber-600 ring-amber-100" : "bg-purple-50 text-purple-600 ring-purple-100"
+                  doc.type === 'Mémoire' ? "bg-amber-50 text-amber-600 ring-amber-100" : "bg-purple-50 text-purple-600 ring-purple-100"
                 )}>
-                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : doc.type === 'thesis' ? 'ME' : 'TD'}
+                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : doc.type === 'Mémoire' ? 'ME' : 'TD'}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
