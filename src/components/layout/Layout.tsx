@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
   const { user, logout, notifications, markNotificationAsRead } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -157,6 +158,44 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
             </NavLink>
           ))}
+          
+          <div className="pt-4 px-4">
+            <button 
+              onClick={async () => {
+                const shareUrl = window.location.origin;
+                const shareData = {
+                  title: 'CampusBF',
+                  text: 'Rejoins-moi sur CampusBF, la plateforme pour les étudiants !',
+                  url: shareUrl,
+                };
+                
+                try {
+                  if (navigator.share) {
+                    await navigator.share(shareData);
+                  } else {
+                    await navigator.clipboard.writeText(shareUrl);
+                    setShowShareToast(true);
+                    setTimeout(() => setShowShareToast(false), 3000);
+                  }
+                } catch (err) {
+                  if (err instanceof Error && err.name !== 'AbortError') {
+                    // Fallback to clipboard if share fails
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      setShowShareToast(true);
+                      setTimeout(() => setShowShareToast(false), 3000);
+                    } catch (clipboardErr) {
+                      console.error('Failed to copy:', clipboardErr);
+                    }
+                  }
+                }
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 font-medium text-sm"
+            >
+              <Share size={18} />
+              <span>Inviter des amis</span>
+            </button>
+          </div>
         </nav>
 
         <div className="p-4 border-t border-slate-200/60 bg-slate-50/50 space-y-2">
@@ -185,6 +224,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         "flex-1 overflow-y-auto relative bg-[#F8FAFC]",
         user?.role === 'admin' ? "h-[calc(100vh-64px-32px)] md:h-[calc(100vh-32px)] mt-[32px]" : "h-[calc(100vh-64px)] md:h-screen"
       )}>
+        {/* Share Toast */}
+        {showShareToast && (
+          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4">
+            <div className="bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2">
+              <CheckCircle2 size={20} />
+              <span className="font-medium">Lien d'invitation copié !</span>
+            </div>
+          </div>
+        )}
+
         <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50">
           <div className="relative">
             <button 
