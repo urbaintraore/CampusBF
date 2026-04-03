@@ -6,6 +6,7 @@ import { CONCOURS_LIST } from '../data/concours';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Markdown from 'react-markdown';
 
 interface AnalysisResult {
   skills: { subject: string; A: number; fullMark: number; description: string }[];
@@ -805,7 +806,13 @@ Question : ${userMsg}`,
                         "max-w-[80%] p-3 rounded-2xl text-sm",
                         msg.role === 'user' ? "bg-indigo-600 text-white rounded-tr-none" : "bg-white border border-slate-200 text-slate-700 rounded-tl-none shadow-sm"
                       )}>
-                        {msg.text}
+                        {msg.role === 'ai' || msg.role === 'bot' ? (
+                          <div className="prose prose-sm prose-indigo max-w-none">
+                            <Markdown>{msg.text}</Markdown>
+                          </div>
+                        ) : (
+                          msg.text
+                        )}
                       </div>
                     </div>
                   ))}

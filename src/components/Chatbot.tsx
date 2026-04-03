@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { createCampusAssistantChat } from '../services/geminiService';
+import Markdown from 'react-markdown';
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,7 +73,13 @@ export default function Chatbot() {
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`p-3.5 max-w-[85%] rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white border border-slate-200/60 text-slate-700 rounded-tl-sm'}`}>
-                  {m.content}
+                  {m.role === 'bot' ? (
+                    <div className="prose prose-sm prose-emerald max-w-none">
+                      <Markdown>{m.content}</Markdown>
+                    </div>
+                  ) : (
+                    m.content
+                  )}
                 </div>
               </div>
             ))}
