@@ -52,6 +52,7 @@ interface AuthContextType {
   updateDocument: (id: string, data: Partial<any>) => Promise<void>;
   addDocument: (data: any) => Promise<void>;
   deleteInternship: (id: string) => Promise<void>;
+  updateInternship: (id: string, data: Partial<Internship>) => Promise<void>;
   deleteMarketplaceItem: (id: string) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
@@ -987,6 +988,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateInternship = async (id: string, data: Partial<Internship>) => {
+    try {
+      await updateDoc(doc(db, 'internships', id), data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `internships/${id}`);
+    }
+  };
+
   const deleteMarketplaceItem = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'marketplace', id));
@@ -1158,6 +1167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateDocument,
     addDocument,
       deleteInternship,
+      updateInternship,
       deleteMarketplaceItem,
       deletePost,
       deleteEvent,

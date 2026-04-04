@@ -395,7 +395,7 @@ export default function Internships() {
         ) : filteredInternships.map((job) => (
           <div key={job.id} className="glass p-6 md:p-8 rounded-3xl hover:shadow-xl transition-all duration-300 group relative border border-white/40">
             {(isAdmin || user?.id === job.authorId) && (
-              <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-6 right-6 flex gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => handleEditInternship(job)}
                   className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors bg-white/50 backdrop-blur-sm shadow-sm"

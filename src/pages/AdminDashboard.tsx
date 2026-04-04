@@ -5,7 +5,7 @@ import { User, Log } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
 
 export default function AdminDashboard() {
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
     updateDocument,
     addDocument,
     internships,
+    updateInternship,
     marketplace,
     community,
     events,
@@ -67,6 +68,22 @@ export default function AdminDashboard() {
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'student' as User['role'] });
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<any>(null);
+  const [showEditInternshipModal, setShowEditInternshipModal] = useState(false);
+  const [editingInternship, setEditingInternship] = useState<any>(null);
+
+  const handleSaveInternship = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { id, ...updateData } = editingInternship;
+      await updateInternship(id, { ...updateData, updatedAt: serverTimestamp() } as any);
+      setShowEditInternshipModal(false);
+      setEditingInternship(null);
+      alert('Offre modifiée avec succès');
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de la modification');
+    }
+  };
 
   const handleSaveDocument = async (data: any) => {
     try {
@@ -740,6 +757,16 @@ export default function AdminDashboard() {
                     >
                       <ExternalLink size={18} />
                     </a>
+                    <button 
+                      onClick={() => {
+                        setEditingInternship(job);
+                        setShowEditInternshipModal(true);
+                      }}
+                      className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Modifier l'offre"
+                    >
+                      <Edit2 size={18} />
+                    </button>
                     <button 
                       onClick={() => {
                         if(confirm('Supprimer cette offre ?')) deleteInternship(job.id);
@@ -1566,6 +1593,114 @@ export default function AdminDashboard() {
       )}
 
       {/* Add Ad Modal */}
+      {showEditInternshipModal && editingInternship && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Modifier l'offre</h2>
+              <button onClick={() => setShowEditInternshipModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveInternship} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Titre</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingInternship.title}
+                    onChange={(e) => setEditingInternship({ ...editingInternship, title: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Entreprise</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingInternship.company}
+                    onChange={(e) => setEditingInternship({ ...editingInternship, company: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Lieu</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingInternship.location}
+                    onChange={(e) => setEditingInternship({ ...editingInternship, location: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Type</label>
+                  <select
+                    value={editingInternship.type}
+                    onChange={(e) => setEditingInternship({ ...editingInternship, type: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  >
+                    <option value="Stage">Stage</option>
+                    <option value="Bourse">Bourse</option>
+                    <option value="Emploi">Emploi</option>
+                    <option value="Job Etudiant">Job Etudiant</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  required
+                  value={editingInternship.description}
+                  onChange={(e) => setEditingInternship({ ...editingInternship, description: e.target.value })}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all h-32 resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Mode de candidature</label>
+                  <select
+                    value={editingInternship.applicationMethod || 'email'}
+                    onChange={(e) => setEditingInternship({ ...editingInternship, applicationMethod: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  >
+                    <option value="email">Email</option>
+                    <option value="url">Lien web</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Email ou Lien</label>
+                  <input
+                    type={editingInternship.applicationMethod === 'url' ? 'url' : 'email'}
+                    value={editingInternship.applicationValue || editingInternship.applicationEmail || ''}
+                    onChange={(e) => setEditingInternship({ ...editingInternship, applicationValue: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Date limite</label>
+                <input
+                  type="date"
+                  value={editingInternship.deadline || ''}
+                  onChange={(e) => setEditingInternship({ ...editingInternship, deadline: e.target.value })}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20"
+              >
+                Enregistrer les modifications
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showAddAdModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">

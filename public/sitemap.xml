@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Home page -->
+  <url>
+    <loc>https://campusbf.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- Stages & emplois -->
+  <url>
+    <loc>https://campusbf.com/internships</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Répétiteurs -->
+  <url>
+    <loc>https://campusbf.com/tutors</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Documents académiques -->
+  <url>
+    <loc>https://campusbf.com/documents</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Marketplace étudiante -->
+  <url>
+    <loc>https://campusbf.com/marketplace</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- MotoRide (covoiturage) -->
+  <url>
+    <loc>https://campusbf.com/motoride</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Communauté / forums -->
+  <url>
+    <loc>https://campusbf.com/community</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Événements campus -->
+  <url>
+    <loc>https://campusbf.com/events</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Annuaire enseignants -->
+  <url>
+    <loc>https://campusbf.com/teachers</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Mentorat alumni -->
+  <url>
+    <loc>https://campusbf.com/alumni</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Orientation & conseils -->
+  <url>
+    <loc>https://campusbf.com/orientation</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
