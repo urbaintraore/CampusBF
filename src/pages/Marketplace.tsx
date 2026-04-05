@@ -28,11 +28,6 @@ export default function Marketplace() {
   const [sortBy, setSortBy] = useState('date-desc');
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Cloudinary config check
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
-  const isCloudinaryConfigured = Boolean(cloudName && uploadPreset && cloudName !== '' && uploadPreset !== '');
-
   useEffect(() => {
     const adsList = ads.map(ad => {
       let postedAt = '';
@@ -356,17 +351,6 @@ export default function Marketplace() {
             </div>
             
             <form className="space-y-5">
-              {!isCloudinaryConfigured && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-sm flex flex-col gap-2">
-                  <div className="flex items-center gap-2 font-bold">
-                    <AlertCircle size={18} />
-                    Configuration de stockage manquante
-                  </div>
-                  <p className="text-xs opacity-90">
-                    L'administrateur doit configurer Cloudinary dans les Secrets (VITE_CLOUDINARY_CLOUD_NAME et VITE_CLOUDINARY_UPLOAD_PRESET) pour permettre l'envoi d'images.
-                  </p>
-                </div>
-              )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-slate-700 ml-1">Titre de l'annonce</label>
@@ -513,10 +497,10 @@ export default function Marketplace() {
                   <button 
                     type="button"
                     onClick={handlePublish}
-                    disabled={isPublishing || !isCloudinaryConfigured}
+                    disabled={isPublishing}
                     className={cn(
                       "w-full py-4 rounded-2xl font-medium transition-all shadow-lg mt-4 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.98]",
-                      isPublishing || !isCloudinaryConfigured
+                      isPublishing
                         ? "bg-slate-300 text-slate-500 shadow-none"
                         : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-600/20"
                     )}
