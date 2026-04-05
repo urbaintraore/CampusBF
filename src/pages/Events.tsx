@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Calendar, MapPin, Clock, Users, Plus, Search, Filter, Shield, AlertCircle, Lock, GraduationCap, Trophy, Music, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { CampusEvent } from '@/types';
 import { 
   collection, 
@@ -17,7 +16,6 @@ import { auth, db } from '@/lib/firebase';
 export default function Events() {
   const { user, events, users } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -318,46 +316,16 @@ export default function Events() {
               Publier un événement
             </h3>
             
-            {user?.eventSubscriptionStatus === 'active' ? (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-500">Partagez votre événement avec toute la communauté étudiante.</p>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
-                >
-                  <Plus size={18} />
-                  Créer un événement
-                </button>
-                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                  <p className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
-                    <Shield size={12} /> Abonnement Actif
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                  <Lock size={32} className="mx-auto text-slate-300 mb-3" />
-                  <p className="text-sm text-slate-600 mb-4">
-                    Pour publier des événements, un abonnement de 2000 FCFA / mois est requis.
-                  </p>
-                  
-                  {user?.eventSubscriptionStatus === 'pending' ? (
-                    <div className="bg-amber-50 text-amber-700 p-3 rounded-lg text-xs font-medium flex items-center gap-2 justify-center">
-                      <Clock size={16} />
-                      Paiement en attente...
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => setShowSubscriptionModal(true)}
-                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-                    >
-                      S'abonner (2000 F)
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500">Partagez votre événement avec toute la communauté étudiante.</p>
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                Créer un événement
+              </button>
+            </div>
           </div>
 
           <div className="bg-indigo-900 rounded-2xl p-6 text-white overflow-hidden relative">
@@ -373,15 +341,6 @@ export default function Events() {
           </div>
         </div>
       </div>
-
-      <ManualPaymentModal 
-        isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-        type="event"
-        amount={2000}
-        title="Abonnement Événements"
-        description="Publiez vos conférences, soutenances et activités culturelles pendant 30 jours."
-      />
 
       {/* Create Event Modal */}
       {showCreateModal && (
