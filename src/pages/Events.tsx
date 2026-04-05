@@ -18,6 +18,7 @@ export default function Events() {
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CampusEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -257,6 +258,13 @@ export default function Events() {
                       </div>
                       
                       <div className="flex gap-2">
+                        <button 
+                          onClick={() => setSelectedEvent(event)}
+                          className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
+                        >
+                          <Info size={14} />
+                          Voir détails
+                        </button>
                         {isOrganizer && (
                           <button 
                             onClick={() => setSelectedEventAttendees(event)}
@@ -341,6 +349,115 @@ export default function Events() {
           </div>
         </div>
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className={cn("p-2 rounded-lg border", getTypeColor(selectedEvent.type))}>
+                  {getTypeIcon(selectedEvent.type)}
+                </div>
+                <div>
+                  <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-1 inline-block", getTypeColor(selectedEvent.type))}>
+                    {getTypeLabel(selectedEvent.type)}
+                  </span>
+                  <h2 className="font-bold text-slate-900">{selectedEvent.title}</h2>
+                </div>
+              </div>
+              <button onClick={() => setSelectedEvent(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-indigo-600 mb-1">
+                    <Calendar size={16} />
+                    <span className="text-xs font-bold uppercase">Date</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-900">
+                    {new Date(selectedEvent.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-indigo-600 mb-1">
+                    <Clock size={16} />
+                    <span className="text-xs font-bold uppercase">Heure</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-900">{selectedEvent.time}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-indigo-600 mb-1">
+                    <MapPin size={16} />
+                    <span className="text-xs font-bold uppercase">Lieu</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-900 truncate" title={selectedEvent.location}>{selectedEvent.location}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-indigo-600 mb-1">
+                    <Users size={16} />
+                    <span className="text-xs font-bold uppercase">Inscrits</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-900">{selectedEvent.attendees?.length || 0} personnes</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 mb-2">Description de l'événement</h3>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  {selectedEvent.description}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
+                  {(() => {
+                    const org = selectedEvent.organizer || users.find((u: any) => u.id === selectedEvent.organizerId);
+                    return org?.firstName?.[0] || '?';
+                  })()}
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Organisé par</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {(() => {
+                      const org = selectedEvent.organizer || users.find((u: any) => u.id === selectedEvent.organizerId);
+                      return org ? `${org.firstName} ${org.lastName}` : 'Utilisateur inconnu';
+                    })()}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setSelectedEvent(null)}
+                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-xl transition-colors"
+              >
+                Fermer
+              </button>
+              {user && selectedEvent.organizerId !== user.id && (
+                <button 
+                  onClick={() => {
+                    handleRegister(selectedEvent.id);
+                    setSelectedEvent(null);
+                  }}
+                  className={cn(
+                    "px-6 py-2 font-bold rounded-xl transition-all shadow-lg",
+                    selectedEvent.attendees.includes(user.id)
+                      ? "bg-slate-200 text-slate-700 hover:bg-slate-300 shadow-none"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
+                  )}
+                >
+                  {selectedEvent.attendees.includes(user.id) ? 'Se désinscrire' : 'S\'inscrire à l\'événement'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Event Modal */}
       {showCreateModal && (
