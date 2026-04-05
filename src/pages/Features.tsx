@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   FileText, GraduationCap, ShoppingBag, Briefcase, 
   Compass, Users, Bike, Calendar, Library, 
-  UserCheck, MessageSquare, Sparkles, Download, Loader2
+  UserCheck, MessageSquare, Sparkles, Download, Loader2,
+  WifiOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -90,6 +91,14 @@ const features = [
     color: "bg-violet-50 text-violet-600",
     link: "/mentorship",
     roles: ['student', 'alumni', 'admin']
+  },
+  {
+    icon: WifiOff,
+    title: "Mode Hors-ligne",
+    description: "Consultez vos offres, événements et messages même sans connexion internet grâce à notre mode hors-ligne intelligent.",
+    color: "bg-slate-100 text-slate-700",
+    link: "#",
+    roles: ['student', 'teacher', 'parent', 'alumni', 'admin']
   }
 ];
 
