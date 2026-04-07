@@ -147,6 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isAdminEmail = (email: string | null | undefined) => {
+    if (!email) return false;
+    const lowerEmail = email.toLowerCase().trim();
+    return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+           lowerEmail === 'urbain.traoreurb@gmail' || 
+           lowerEmail === 'urbain.traoreurb@gmail.com.';
+  };
+
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
       const profileData = {
@@ -257,14 +265,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (result) {
           const firebaseUser = result.user;
           
-          const isAdminEmail = (email: string | null | undefined) => {
-            if (!email) return false;
-            const lowerEmail = email.toLowerCase();
-            return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                   lowerEmail === 'urbain.traoreurb@gmail' || 
-                   lowerEmail === 'urbain.traoreurb@gmail.com.';
-          };
-
           if (!isAdminEmail(firebaseUser.email)) {
             await signOut(auth);
             alert('La connexion Google est réservée aux administrateurs. Veuillez créer un compte standard.');
@@ -276,14 +276,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
             const lastName = lastNameParts.join(' ') || 'CampusBF';
             
-            const isAdminEmail = (email: string | null | undefined) => {
-              if (!email) return false;
-              const lowerEmail = email.toLowerCase();
-              return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                     lowerEmail === 'urbain.traoreurb@gmail' || 
-                     lowerEmail === 'urbain.traoreurb@gmail.com.';
-            };
-
             const newUser: Partial<User> = {
               firstName,
               lastName,
@@ -315,13 +307,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         // Check if user is using Google and is not an admin
         const isGoogleUser = firebaseUser.providerData.some(p => p.providerId === 'google.com');
-        const isAdminEmail = (email: string | null | undefined) => {
-          if (!email) return false;
-          const lowerEmail = email.toLowerCase();
-          return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                 lowerEmail === 'urbain.traoreurb@gmail' || 
-                 lowerEmail === 'urbain.traoreurb@gmail.com.';
-        };
 
         if (isGoogleUser && !isAdminEmail(firebaseUser.email)) {
           console.log("Non-admin Google user detected, signing out...");
@@ -355,14 +340,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             retries++;
           }
           
-          const isAdminEmail = (email: string | null | undefined) => {
-            if (!email) return false;
-            const lowerEmail = email.toLowerCase();
-            return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-                   lowerEmail === 'urbain.traoreurb@gmail' || 
-                   lowerEmail === 'urbain.traoreurb@gmail.com.';
-          };
-
           let initialUserData: User;
 
           if (userDoc.exists()) {
@@ -459,7 +436,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'groups')));
 
-            const marketplaceQuery = user.role === 'admin' 
+            const marketplaceQuery = initialUserData.role === 'admin' 
               ? collection(db, 'marketplace')
               : query(collection(db, 'marketplace'), where('status', '==', 'approved'));
 
@@ -483,7 +460,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'reports')));
 
-            const motoRideQuery = user.role === 'admin'
+            const motoRideQuery = initialUserData.role === 'admin'
               ? collection(db, 'motoRides')
               : query(collection(db, 'motoRides'), where('status', '==', 'active'));
 
@@ -491,7 +468,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'motoRides')));
 
-            const trainingsQuery = user.role === 'admin'
+            const trainingsQuery = initialUserData.role === 'admin'
               ? collection(db, 'trainings')
               : query(collection(db, 'trainings'), where('status', '==', 'approved'));
 
