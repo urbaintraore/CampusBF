@@ -7,6 +7,7 @@ import firebaseConfig from '../../firebase-applet-config.json' with { type: 'jso
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+auth.languageCode = 'fr';
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 }, firebaseConfig.firestoreDatabaseId);

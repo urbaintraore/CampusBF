@@ -20,15 +20,19 @@ export default function ForgotPassword() {
       await resetPassword(email);
       setMessage('Un e-mail de réinitialisation a été envoyé à votre adresse. Pensez à vérifier vos courriers indésirables (spams).');
     } catch (err: any) {
-      console.error('Password reset error:', err);
-      if (err.message?.includes('user-not-found')) {
+      console.error('Password reset error details:', err);
+      const errorCode = err.code || '';
+      
+      if (errorCode === 'auth/user-not-found' || err.message?.includes('user-not-found')) {
         setError('Aucun compte ne correspond à cette adresse e-mail.');
-      } else if (err.message?.includes('invalid-email')) {
+      } else if (errorCode === 'auth/invalid-email' || err.message?.includes('invalid-email')) {
         setError('Adresse e-mail invalide.');
-      } else if (err.message?.includes('too-many-requests')) {
-        setError('Trop de tentatives. Veuillez réessayer plus tard.');
+      } else if (errorCode === 'auth/too-many-requests' || err.message?.includes('too-many-requests')) {
+        setError('Trop de tentatives. Veuillez réessayer plus tard (environ 15-30 minutes).');
+      } else if (errorCode === 'auth/network-request-failed') {
+        setError('Erreur réseau. Veuillez vérifier votre connexion internet.');
       } else {
-        setError(err.message || 'Une erreur est survenue lors de l\'envoi de l\'e-mail.');
+        setError(`Erreur (${errorCode || 'inconnue'}): ${err.message || 'Une erreur est survenue lors de l\'envoi de l\'e-mail.'}`);
       }
     } finally {
       setIsLoading(false);

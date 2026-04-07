@@ -624,8 +624,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await sendPasswordResetEmail(auth, email);
       console.log("Password reset email sent successfully");
     } catch (error: any) {
-      console.error("Firebase password reset error:", error);
-      throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email de réinitialisation');
+      console.error("Firebase password reset error:", error.code, error.message);
+      throw error;
     }
   };
 
