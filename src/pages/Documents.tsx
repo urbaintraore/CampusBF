@@ -621,66 +621,99 @@ export default function Documents() {
         ))}
       </div>
 
-      {/* Documents List */}
-      <div className="grid gap-4">
+      {/* Documents List grouped by University */}
+      <div className="space-y-10">
         {filteredDocuments.length > 0 ? (
-          filteredDocuments.map((doc) => (
-            <div key={doc.id} className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200/60 transition-all group flex flex-col md:flex-row gap-5">
-              <div className="flex items-start gap-4 flex-1">
-                <div className={cn(
-                  "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-display font-bold flex-shrink-0 shadow-inner ring-1 ring-inset",
-                  doc.type === 'exam' ? "bg-red-50 text-red-600 ring-red-100" :
-                  doc.type === 'summary' ? "bg-blue-50 text-blue-600 ring-blue-100" : 
-                  doc.type === 'Mémoire' ? "bg-amber-50 text-amber-600 ring-amber-100" : "bg-purple-50 text-purple-600 ring-purple-100"
-                )}>
-                  {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : doc.type === 'Mémoire' ? 'ME' : 'TD'}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-display font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
-                    </div>
-                    <span className="text-xs font-medium px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-lg border border-slate-200/60">{doc.type.toUpperCase()}</span>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-y-2 gap-x-4 mt-2 text-sm text-slate-500">
-                    <span className="flex items-center gap-1.5"><BookOpen size={14} className="text-slate-400" /> {doc.subject}</span>
-                    <span className="flex items-center gap-1.5"><Calendar size={14} className="text-slate-400" /> {doc.year}</span>
-                    <span className="flex items-center gap-1.5 text-slate-300">|</span>
-                    <span className="text-slate-600">{doc.university}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 mt-4">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100">
-                      <Download size={14} className="text-slate-400" /> {doc.downloads}
-                    </div>
-                    <button 
-                      onClick={() => handleLike(doc.id, doc.title)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-100 transition-colors active:scale-95"
-                    >
-                      <ThumbsUp size={14} className={doc.likes > 0 ? "text-emerald-500" : "text-slate-400"} /> {doc.likes}
-                    </button>
-                    <div className="text-xs text-slate-400 ml-auto flex items-center gap-1.5">
-                      Ajouté par <span className="text-slate-700 font-medium bg-slate-100/50 px-2 py-0.5 rounded-md">{doc.authorId === user?.id ? `${user?.firstName} ${user?.lastName?.charAt(0)}.` : 'Admin'}</span>
-                    </div>
-                  </div>
-                </div>
+          (Object.entries(
+            filteredDocuments.reduce((acc: Record<string, any[]>, doc) => {
+              const uni = doc.university || 'Autres Universités';
+              if (!acc[uni]) acc[uni] = [];
+              acc[uni].push(doc);
+              return acc;
+            }, {})
+          ) as [string, any[]][]).map(([university, universityDocs]) => (
+            <div key={university} className="space-y-5">
+              <div className="flex items-center gap-3 px-2">
+                <div className="h-8 w-1.5 bg-emerald-600 rounded-full shadow-sm shadow-emerald-600/20"></div>
+                <h2 className="text-xl font-display font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  {university}
+                  <span className="text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-200/50">
+                    {universityDocs.length} {universityDocs.length > 1 ? 'documents' : 'document'}
+                  </span>
+                </h2>
               </div>
-              <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
-                <button 
-                  onClick={() => window.open(doc.downloadUrl, '_blank')}
-                  className="w-full md:w-auto px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <Eye size={18} />
-                  Voir
-                </button>
-                <button 
-                  onClick={() => handleDownload(doc)}
-                  className="w-full md:w-auto px-4 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <Download size={18} />
-                  Télécharger
-                </button>
+              
+              <div className="grid gap-4">
+                {universityDocs.map((doc) => (
+                  <div key={doc.id} className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200/60 transition-all group flex flex-col md:flex-row gap-5">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className={cn(
+                        "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-display font-bold flex-shrink-0 shadow-inner ring-1 ring-inset",
+                        doc.type === 'exam' ? "bg-red-50 text-red-600 ring-red-100" :
+                        doc.type === 'summary' ? "bg-blue-50 text-blue-600 ring-blue-100" : 
+                        doc.type === 'Mémoire' ? "bg-amber-50 text-amber-600 ring-amber-100" : "bg-purple-50 text-purple-600 ring-purple-100"
+                      )}>
+                        {doc.type === 'exam' ? 'EX' : doc.type === 'summary' ? 'CR' : doc.type === 'Mémoire' ? 'ME' : 'TD'}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-display font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                          </div>
+                          <span className="text-xs font-medium px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-lg border border-slate-200/60">{doc.type.toUpperCase()}</span>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-y-2 gap-x-4 mt-2 text-sm text-slate-500">
+                          <span className="flex items-center gap-1.5"><BookOpen size={14} className="text-slate-400" /> {doc.subject}</span>
+                          <span className="flex items-center gap-1.5"><Calendar size={14} className="text-slate-400" /> {doc.year}</span>
+                          {doc.ufr && (
+                            <>
+                              <span className="flex items-center gap-1.5 text-slate-300">|</span>
+                              <span className="text-slate-600 font-medium">{doc.ufr}</span>
+                            </>
+                          )}
+                          {doc.department && (
+                            <>
+                              <span className="flex items-center gap-1.5 text-slate-300">|</span>
+                              <span className="text-slate-600 font-medium">{doc.department}</span>
+                            </>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 mt-4">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                            <Download size={14} className="text-slate-400" /> {doc.downloads}
+                          </div>
+                          <button 
+                            onClick={() => handleLike(doc.id, doc.title)}
+                            className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-100 transition-colors active:scale-95"
+                          >
+                            <ThumbsUp size={14} className={doc.likes > 0 ? "text-emerald-500" : "text-slate-400"} /> {doc.likes}
+                          </button>
+                          <div className="text-xs text-slate-400 ml-auto flex items-center gap-1.5">
+                            Ajouté par <span className="text-slate-700 font-medium bg-slate-100/50 px-2 py-0.5 rounded-md">{doc.authorId === user?.id ? `${user?.firstName} ${user?.lastName?.charAt(0)}.` : 'Admin'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
+                      <button 
+                        onClick={() => window.open(doc.downloadUrl, '_blank')}
+                        className="w-full md:w-auto px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        <Eye size={18} />
+                        Voir
+                      </button>
+                      <button 
+                        onClick={() => handleDownload(doc)}
+                        className="w-full md:w-auto px-4 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        <Download size={18} />
+                        Télécharger
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))
@@ -694,6 +727,10 @@ export default function Documents() {
               onClick={() => {
                 setFilter('tout');
                 setSearchQuery('');
+                setSelectedUniversity('Toutes les universités');
+                setSelectedMajor('Toutes les filières');
+                setSelectedYear('Toutes les années');
+                setSelectedSubject('Toutes les matières');
               }}
               className="mt-4 text-sm text-emerald-600 font-medium hover:text-emerald-700 transition-colors"
             >

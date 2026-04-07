@@ -11,7 +11,7 @@ import { User as UserType } from '@/types';
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
-  const { ads, user, notifications, documents, internships, groups, users, marketplace } = auth;
+  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings } = auth;
   const tutors = users.filter(u => u.tutorStatus === 'approved');
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
@@ -247,16 +247,16 @@ export default function Dashboard() {
           ))
         ) : (
           [
-            { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100' },
-            { label: 'Stages & Emplois & Bourses', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100' },
-            { label: 'Groupes', count: groups.length.toString(), color: 'bg-purple-50/80 text-purple-700 ring-purple-100' },
-            { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100' },
-            { label: 'Favoris', count: '0', color: 'bg-amber-50/80 text-amber-700 ring-amber-100' },
+            { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
+            { label: 'Stages & Emplois', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100', link: '/internships' },
+            { label: 'Groupes', count: groups.length.toString(), color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/community' },
+            { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
+            { label: 'Formations', count: trainings.filter(t => t.status === 'approved').length.toString(), color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
           ].map((stat) => (
-            <div key={stat.label} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
+            <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
               <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
-            </div>
+            </Link>
           ))
         )}
       </div>

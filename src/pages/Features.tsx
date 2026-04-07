@@ -3,7 +3,7 @@ import {
   FileText, GraduationCap, ShoppingBag, Briefcase, 
   Compass, Users, Bike, Calendar, Library, 
   UserCheck, MessageSquare, Sparkles, Download, Loader2,
-  WifiOff
+  WifiOff, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -43,6 +43,14 @@ const features = [
     color: "bg-indigo-50 text-indigo-600",
     link: "/internships",
     roles: ['student', 'alumni', 'admin']
+  },
+  {
+    icon: BookOpen,
+    title: "Formations & Ateliers",
+    description: "Développez de nouvelles compétences avec des formations académiques et professionnelles, en ligne ou en présentiel.",
+    color: "bg-emerald-50 text-emerald-600",
+    link: "/trainings",
+    roles: ['student', 'teacher', 'admin', 'alumni']
   },
   {
     icon: Compass,
