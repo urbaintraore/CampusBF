@@ -195,9 +195,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      deleteUser(userId);
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
+      try {
+        await deleteUser(userId);
+        alert('Utilisateur supprimé avec succès.');
+      } catch (error) {
+        console.error("Error in handleDeleteUser:", error);
+        alert('Erreur lors de la suppression de l\'utilisateur.');
+      }
     }
   };
 
@@ -2190,7 +2196,7 @@ export default function AdminDashboard() {
                           title="Supprimer l'utilisateur"
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
-                          <Ban size={18} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -2339,6 +2345,25 @@ export default function AdminDashboard() {
                         {selectedUser.status === 'active' ? 'Actif' : 'Inactif'}
                       </p>
                     </div>
+                  </div>
+                  <div className="mt-6 flex gap-3">
+                    <button 
+                      onClick={() => {
+                        handleDeleteUser(selectedUser.id);
+                        setSelectedUser(null);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                    >
+                      <Trash2 size={18} />
+                      Supprimer le compte
+                    </button>
+                    <button 
+                      onClick={() => handleToggleUserRole(selectedUser.id)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-100 transition-colors"
+                    >
+                      <Shield size={18} />
+                      {selectedUser.role === 'admin' ? 'Rétrograder' : 'Promouvoir Admin'}
+                    </button>
                   </div>
                 </div>
               </div>

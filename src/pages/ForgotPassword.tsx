@@ -18,7 +18,7 @@ export default function ForgotPassword() {
 
     try {
       await resetPassword(email);
-      setMessage('Un e-mail de réinitialisation a été envoyé à votre adresse.');
+      setMessage('Un e-mail de réinitialisation a été envoyé à votre adresse. Pensez à vérifier vos courriers indésirables (spams).');
     } catch (err: any) {
       console.error('Password reset error:', err);
       if (err.message?.includes('user-not-found')) {

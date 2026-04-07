@@ -102,7 +102,7 @@ interface AuthContextType {
   activateUser: (userId: string) => Promise<void>;
   deactivateUser: (userId: string) => Promise<void>;
   adminCreateUser: (userData: Partial<User> & { password?: string }) => Promise<void>;
-  deleteUser: (userId: string) => void;
+  deleteUser: (userId: string) => Promise<void>;
   addGroupMember: (groupId: string, userId: string) => Promise<void>;
   removeGroupMember: (groupId: string, userId: string) => Promise<void>;
   applications: TutorApplication[];
@@ -582,8 +582,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email?: string, password?: string, asAdmin?: boolean) => {
-    if (asAdmin || (email === 'admin@campusbf.bf' && password === 'admin')) {
+    const normalizedEmail = email?.toLowerCase().trim();
+    
+    if (asAdmin || (normalizedEmail === 'admin@campusbf.bf' && password === 'admin')) {
       // For testing purposes, we allow mock admin login
+      console.log("Mock login successful for:", normalizedEmail);
       setUser(ADMIN_USER);
       setIsLoading(false);
       return;
@@ -594,20 +597,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      console.log("Attempting Firebase login for:", normalizedEmail);
       await auth.authStateReady();
       await signInWithEmailAndPassword(auth, email, password);
-      // La vérification stricte de l'email a été retirée ici
+      console.log("Firebase login successful");
     } catch (error: any) {
-      throw new Error(error.message || 'Erreur de connexion');
+      console.error("Firebase login error:", error);
+      let errorMessage = 'Erreur de connexion';
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = 'Email ou mot de passe incorrect. Si vous utilisiez la connexion Google auparavant, veuillez utiliser "Mot de passe oublié" pour définir un nouveau mot de passe.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Trop de tentatives infructueuses. Veuillez réessayer plus tard.';
+      } else if (error.message?.includes('400')) {
+        errorMessage = 'Identifiants invalides. Si vous utilisiez Google, réinitialisez votre mot de passe.';
+      }
+      
+      throw new Error(errorMessage);
     }
   };
 
   const resetPassword = async (email: string) => {
+    if (!email) throw new Error('Email requis');
     try {
-      await auth.authStateReady();
+      console.log("Attempting to send password reset email to:", email);
       await sendPasswordResetEmail(auth, email);
-      alert('Un email de réinitialisation de mot de passe a été envoyé à votre adresse.');
+      console.log("Password reset email sent successfully");
     } catch (error: any) {
+      console.error("Firebase password reset error:", error);
       throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email de réinitialisation');
     }
   };
@@ -967,9 +984,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = async (userId: string) => {
+    if (!user || user.role !== 'admin') {
+      throw new Error('Action non autorisée. Seuls les administrateurs peuvent supprimer des utilisateurs.');
+    }
+    
     try {
+      console.log("Attempting to delete user:", userId);
       await deleteDoc(doc(db, 'users', userId));
+      // Also delete profile
+      try {
+        await deleteDoc(doc(db, 'profiles', userId));
+      } catch (e) {
+        console.warn("Failed to delete profile, it might not exist:", e);
+      }
+      console.log("User deleted successfully");
     } catch (error) {
+      console.error("Error deleting user:", error);
       handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
     }
   };
