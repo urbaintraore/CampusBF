@@ -2099,20 +2099,20 @@ export default function AdminDashboard() {
                 <div>
                   <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <Shield size={18} className="text-emerald-600" />
-                    Dernières activités (Journaux)
+                    Historique complet des activités (Journaux)
                   </h4>
-                  <div className="bg-gray-50 rounded-xl overflow-hidden">
-                    <div className="divide-y divide-gray-100">
+                  <div className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                    <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                       {logs
                         .filter(l => l.userId === selectedUser.id)
-                        .slice(0, 5)
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         .map(log => (
-                          <div key={log.id} className="p-4 flex justify-between items-center">
+                          <div key={log.id} className="p-4 flex justify-between items-center hover:bg-gray-100/50 transition-colors">
                             <div>
                               <p className="text-sm font-bold text-gray-800">{log.action}</p>
                               <p className="text-[10px] text-gray-500">{new Date(log.createdAt).toLocaleString()}</p>
                             </div>
-                            <p className="text-xs text-gray-500 italic">{log.details}</p>
+                            <p className="text-xs text-gray-500 italic max-w-[50%] text-right">{log.details}</p>
                           </div>
                         ))}
                       {logs.filter(l => l.userId === selectedUser.id).length === 0 && (

@@ -18,7 +18,7 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
-  const { user, marketplace: ads } = useAuth();
+  const { user, marketplace: ads, logAction } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +152,9 @@ export default function Marketplace() {
       };
 
       await addDoc(collection(db, 'marketplace'), newItem);
+      if (logAction) {
+        logAction('Nouvelle annonce', `Annonce: ${sellTitle} (${sellPrice} FCFA)`);
+      }
       resetSellForm();
       alert('Votre annonce a été publiée avec succès !');
     } catch (error) {
@@ -173,7 +176,10 @@ export default function Marketplace() {
     }
   };
 
-  const handleContact = (sellerId: string) => {
+  const handleContact = (sellerId: string, itemTitle: string) => {
+    if (logAction) {
+      logAction('Contact vendeur', `Annonce: ${itemTitle}`);
+    }
     navigate(`/messages?chat=${sellerId}`);
   };
 
@@ -306,7 +312,7 @@ export default function Marketplace() {
                       <span className="text-xs font-medium text-slate-700 truncate max-w-[100px]">{item.seller?.firstName || 'Utilisateur'}</span>
                     </div>
                     <button 
-                      onClick={() => handleContact(item.seller?.id || item.sellerId)}
+                      onClick={() => handleContact(item.seller?.id || item.sellerId, item.title)}
                       className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors shadow-sm"
                     >
                       <MessageCircle size={14} />

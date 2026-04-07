@@ -19,7 +19,7 @@ interface Conversation {
 }
 
 export default function Messages() {
-  const { user: currentUser, users } = useAuth();
+  const { user: currentUser, users, logAction } = useAuth();
   const location = useLocation();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
@@ -200,6 +200,11 @@ export default function Messages() {
         },
         updatedAt: serverTimestamp(),
       });
+      
+      // Log message sending
+      if (typeof logAction === 'function') {
+        await logAction('Envoi message', `Destinataire ID: ${selectedChat}`);
+      }
       
       // We can use a transaction to increment unread count safely
       const convRef = doc(db, 'conversations', convId);

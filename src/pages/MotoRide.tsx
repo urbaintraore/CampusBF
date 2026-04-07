@@ -6,7 +6,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user, addMotoRide, motoRides, reserveMotoRide } = useAuth();
+  const { user, addMotoRide, motoRides, reserveMotoRide, logAction } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states
@@ -55,6 +55,9 @@ export default function MotoRide() {
       lat: 0, // Should be geocoded
       lng: 0
     });
+    if (logAction) {
+      logAction('Proposition de trajet', `De ${departure} à ${destination}`);
+    }
     alert("Trajet publié avec succès !");
     setDeparture('');
     setDestination('');

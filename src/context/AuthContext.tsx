@@ -236,6 +236,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const result = await getRedirectResult(auth);
         if (result) {
           const firebaseUser = result.user;
+          
+          const isAdminEmail = (email: string | null | undefined) => {
+            if (!email) return false;
+            const lowerEmail = email.toLowerCase();
+            return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+                   lowerEmail === 'urbain.traoreurb@gmail' || 
+                   lowerEmail === 'urbain.traoreurb@gmail.com.';
+          };
+
+          if (!isAdminEmail(firebaseUser.email)) {
+            await signOut(auth);
+            alert('La connexion Google est réservée aux administrateurs. Veuillez créer un compte standard.');
+            return;
+          }
+
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (!userDoc.exists()) {
             const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
@@ -364,6 +379,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           setUser(initialUserData);
           console.log("User set:", initialUserData);
+
+          // Log login
+          try {
+            await addDoc(collection(db, 'logs'), {
+              userId: initialUserData.id,
+              userName: `${initialUserData.firstName} ${initialUserData.lastName}`,
+              action: 'Connexion',
+              details: 'Session ouverte',
+              createdAt: serverTimestamp()
+            });
+          } catch (e) {
+            console.error("Failed to log login:", e);
+          }
 
           // Set up real-time listener for the user's own document
           unsubscribes.push(onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
@@ -594,7 +622,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prompt: 'select_account'
     });
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+      
+      const isAdminEmail = (email: string | null | undefined) => {
+        if (!email) return false;
+        const lowerEmail = email.toLowerCase();
+        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
+               lowerEmail === 'urbain.traoreurb@gmail' || 
+               lowerEmail === 'urbain.traoreurb@gmail.com.';
+      };
+
+      if (!isAdminEmail(firebaseUser.email)) {
+        await signOut(auth);
+        throw new Error('La connexion Google est réservée aux administrateurs. Veuillez créer un compte standard.');
+      }
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.message?.includes('popup')) {
         // Fallback to redirect on mobile/Vercel
@@ -657,6 +699,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      if (user) {
+        await logAction('Déconnexion', 'Session terminée');
+      }
       await signOut(auth);
       setUser(null);
     } catch (error) {
@@ -673,6 +718,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await syncProfile(user.id, updatedUser);
         setUser({ ...user, ...updatedUser });
         console.log("updateUser: User updated successfully");
+        await logAction('Mise à jour profil', 'Modification des informations personnelles');
       } catch (error) {
         console.error("updateUser: Error", error);
         handleFirestoreError(error, OperationType.UPDATE, `users/${user.id}`);
@@ -707,6 +753,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       await addDoc(collection(db, 'applications'), newApp);
       await updateUser({ tutorStatus: 'pending' });
+      await logAction('Demande Tuteur', `Sujets: ${subjects.join(', ')}`);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'applications');
     }
@@ -731,6 +778,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       await updateDoc(doc(db, 'users', app.userId), updatedUserData);
+      await logAction('Examen demande tuteur', `ID: ${applicationId}, Statut: ${status}`);
 
       await addNotification(app.userId, {
         type: status === 'approved' ? 'success' : 'alert',
@@ -763,6 +811,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("submitTeacherApplication: Updating user teacherStatus to pending_approval");
       await updateUser({ teacherStatus: 'pending_approval' });
       console.log("submitTeacherApplication: Submission successful");
+      await logAction('Demande Enseignant', `Rang: ${data.academicRank}`);
 
       const adminUser = users.find(u => u.role === 'admin') || ADMIN_USER;
       await addNotification(adminUser.id, {
@@ -807,6 +856,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       await updateDoc(doc(db, 'users', app.userId), updatedUserData);
+      await logAction('Examen demande enseignant', `ID: ${applicationId}, Statut: ${status}`);
 
       await addNotification(app.userId, {
         type: status === 'approved' ? 'success' : 'alert',
@@ -832,6 +882,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
       };
       await addDoc(collection(db, 'subscriptionRequests'), newRequest);
+      await logAction('Demande Abonnement', `Type: ${type}, Montant: ${amount} FCFA`);
 
       const updateData: Partial<User> = {};
       if (type === 'exam') updateData.examSubscriptionStatus = 'pending';
@@ -856,6 +907,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!req) return;
 
       await updateDoc(doc(db, 'subscriptionRequests', requestId), { status });
+      await logAction('Examen demande abonnement', `ID: ${requestId}, Statut: ${status}`);
 
       const targetUser = users.find(u => u.id === req.userId);
       if (!targetUser) return;
@@ -917,6 +969,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const activateUser = async (userId: string) => {
     try {
       await updateDoc(doc(db, 'users', userId), { status: 'active' });
+      await logAction('Activation utilisateur', `Utilisateur ID: ${userId}`);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
     }
@@ -925,6 +978,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deactivateUser = async (userId: string) => {
     try {
       await updateDoc(doc(db, 'users', userId), { status: 'inactive' });
+      await logAction('Désactivation utilisateur', `Utilisateur ID: ${userId}`);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
     }

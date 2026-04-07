@@ -19,7 +19,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
-  const { user, documents: globalDocuments } = useAuth();
+  const { user, documents: globalDocuments, logAction } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
@@ -193,6 +193,10 @@ export default function Documents() {
       await addDoc(collection(db, 'documents'), newDoc);
       console.log("[Documents] Document ajouté avec succès.");
       
+      if (logAction) {
+        logAction('Partage de document', `Document: ${uploadTitle} (${uploadSubject})`);
+      }
+      
       resetUploadForm();
       alert('Document partagé avec succès !');
     } catch (error: any) {
@@ -218,6 +222,10 @@ export default function Documents() {
         downloads: increment(1)
       });
 
+      if (logAction) {
+        logAction('Téléchargement de document', `Document: ${docData.title}`);
+      }
+
       // Try to force download
       let downloadUrl = docData.downloadUrl;
       
@@ -241,11 +249,14 @@ export default function Documents() {
     }
   };
 
-  const handleLike = async (docId: string) => {
+  const handleLike = async (docId: string, docTitle: string) => {
     try {
       await updateDoc(doc(db, 'documents', docId), {
         likes: increment(1)
       });
+      if (logAction) {
+        logAction('Like de document', `Document: ${docTitle}`);
+      }
     } catch (error) {
       console.error("Error liking document:", error);
     }
@@ -644,7 +655,7 @@ export default function Documents() {
                       <Download size={14} className="text-slate-400" /> {doc.downloads}
                     </div>
                     <button 
-                      onClick={() => handleLike(doc.id)}
+                      onClick={() => handleLike(doc.id, doc.title)}
                       className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-100 transition-colors active:scale-95"
                     >
                       <ThumbsUp size={14} className={doc.likes > 0 ? "text-emerald-500" : "text-slate-400"} /> {doc.likes}

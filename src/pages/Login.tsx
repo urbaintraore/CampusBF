@@ -153,15 +153,20 @@ export default function Login() {
             <div className="flex-grow border-t border-slate-200/60"></div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-            className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-3.5 px-4 border border-slate-200/60 rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-70 shadow-sm hover:shadow active:scale-[0.98]"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-            Google
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-3.5 px-4 border border-slate-200/60 rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-70 shadow-sm hover:shadow active:scale-[0.98]"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+              Google
+            </button>
+            <p className="text-[10px] text-center text-slate-400 font-medium uppercase tracking-widest">
+              Réservé aux administrateurs
+            </p>
+          </div>
 
           <div className="text-center text-sm text-slate-500 pt-2">
             Pas encore de compte ? <Link to="/signup" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">S'inscrire</Link>

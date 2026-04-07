@@ -21,7 +21,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function Community() {
-  const { user, groups, users, addGroupMember, removeGroupMember } = useAuth();
+  const { user, groups, users, addGroupMember, removeGroupMember, logAction } = useAuth();
   const [postContent, setPostContent] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -105,6 +105,9 @@ export default function Community() {
       });
 
       setPostContent('');
+      if (logAction) {
+        logAction('Nouvelle publication', `Groupe ID: ${selectedGroupId}`);
+      }
       showToast('Publication partagée avec succès !');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'posts');
@@ -131,6 +134,9 @@ export default function Community() {
         likes: isLiked ? post.likes - 1 : post.likes + 1,
         likedBy: isLiked ? arrayRemove(user.id) : arrayUnion(user.id)
       });
+      if (logAction && !isLiked) {
+        logAction('Like de publication', `Post ID: ${postId}`);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
     }

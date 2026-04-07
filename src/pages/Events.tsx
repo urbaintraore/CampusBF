@@ -14,7 +14,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 
 export default function Events() {
-  const { user, events, users } = useAuth();
+  const { user, events, users, logAction } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
@@ -59,6 +59,9 @@ export default function Events() {
       await updateDoc(doc(db, 'events', eventId), {
         attendees: isRegistered ? arrayRemove(user.id) : arrayUnion(user.id)
       });
+      if (logAction) {
+        logAction(isRegistered ? 'Désinscription événement' : 'Inscription événement', `Événement: ${event.title}`);
+      }
     } catch (error) {
       console.error('Error registering for event:', error);
     }
@@ -82,6 +85,10 @@ export default function Events() {
         attendees: [user.id],
         createdAt: new Date().toISOString()
       });
+
+      if (logAction) {
+        logAction('Création événement', `Événement: ${newEvent.title}`);
+      }
 
       setShowCreateModal(false);
       setNewEvent({

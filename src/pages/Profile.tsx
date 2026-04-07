@@ -6,7 +6,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { uploadFile } from '@/services/storageService';
 
 export default function Profile() {
-  const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication } = useAuth();
+  const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showPremiumPayment, setShowPremiumPayment] = useState(false);
@@ -49,8 +49,8 @@ export default function Profile() {
 
   if (!user) return null;
 
-  const handleSave = () => {
-    updateUser(formData);
+  const handleSave = async () => {
+    await updateUser(formData);
     setIsEditing(false);
   };
 
@@ -83,7 +83,7 @@ export default function Profile() {
       try {
         setIsUploading(true);
         const { url: downloadUrl } = await uploadFile(fileSelected, 'tutors');
-        submitTutorApplication(
+        await submitTutorApplication(
           tutorDescription, 
           downloadUrl,
           tutorSubjects.split(',').map(s => s.trim()),
@@ -118,7 +118,7 @@ export default function Profile() {
         const { url: diplomaUrl } = await uploadFile(teacherFiles.diploma, 'teachers');
         const { url: rankProofUrl } = await uploadFile(teacherFiles.rankProof, 'teachers');
         
-        submitTeacherApplication({
+        await submitTeacherApplication({
           cvUrl,
           diplomaUrl,
           rankProofUrl,
@@ -156,6 +156,7 @@ export default function Profile() {
           academicRank: teacherFormData.academicRank
         };
         await updateUser({ teacherProfile: updatedProfile });
+        await logAction('Mise à jour profil enseignant', 'Modification des informations professionnelles');
         setIsEditingTeacher(false);
         alert('Profil enseignant mis à jour !');
       } catch (error) {
