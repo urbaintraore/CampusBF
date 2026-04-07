@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 export default function ForgotPassword() {
@@ -9,6 +8,7 @@ export default function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,15 +17,15 @@ export default function ForgotPassword() {
     setMessage('');
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await resetPassword(email);
       setMessage('Un e-mail de réinitialisation a été envoyé à votre adresse.');
     } catch (err: any) {
       console.error('Password reset error:', err);
-      if (err.code === 'auth/user-not-found') {
+      if (err.message?.includes('user-not-found')) {
         setError('Aucun compte ne correspond à cette adresse e-mail.');
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (err.message?.includes('invalid-email')) {
         setError('Adresse e-mail invalide.');
-      } else if (err.code === 'auth/too-many-requests') {
+      } else if (err.message?.includes('too-many-requests')) {
         setError('Trop de tentatives. Veuillez réessayer plus tard.');
       } else {
         setError(err.message || 'Une erreur est survenue lors de l\'envoi de l\'e-mail.');

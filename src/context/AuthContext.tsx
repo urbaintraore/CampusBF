@@ -7,10 +7,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  GoogleAuthProvider
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   doc, 
@@ -81,7 +78,7 @@ interface AuthContextType {
   reviewMarketplaceItem: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   reportMarketplaceItem: (id: string, reason: string) => Promise<void>;
   login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (updatedUser: Partial<User>) => void;
@@ -258,44 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     testConnection();
 
-    // Handle redirect result for Google Login on mobile/Vercel
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          const firebaseUser = result.user;
-          
-          if (!isAdminEmail(firebaseUser.email)) {
-            await signOut(auth);
-            alert('La connexion Google est réservée aux administrateurs. Veuillez créer un compte standard.');
-            return;
-          }
-
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (!userDoc.exists()) {
-            const [firstName, ...lastNameParts] = (firebaseUser.displayName || 'Utilisateur').split(' ');
-            const lastName = lastNameParts.join(' ') || 'CampusBF';
-            
-            const newUser: Partial<User> = {
-              firstName,
-              lastName,
-              email: firebaseUser.email || '',
-              university: '',
-              major: '',
-              level: '',
-              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
-            };
-            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-            await syncProfile(firebaseUser.uid, newUser);
-          }
-        }
-      } catch (error) {
-        console.error("Redirect auth error:", error);
-      }
-    };
-    handleRedirectResult();
-
     let unsubscribes: (() => void)[] = [];
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -305,21 +264,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribes = [];
 
       if (firebaseUser) {
-        // Check if user is using Google and is not an admin
-        const isGoogleUser = firebaseUser.providerData.some(p => p.providerId === 'google.com');
-
-        if (isGoogleUser && !isAdminEmail(firebaseUser.email)) {
-          console.log("Non-admin Google user detected, signing out...");
-          await signOut(auth);
-          setUser(null);
-          alert('La connexion Google est désormais réservée aux administrateurs. Veuillez créer un compte standard avec votre e-mail et un mot de passe.');
-          return;
-        }
-
-        // La vérification stricte de l'email a été retirée pour permettre
-        // aux utilisateurs (ex: Yahoo) de se connecter même si l'email de
-        // vérification Firebase est bloqué par les filtres anti-spam.
-        
         // Listener pour les publicités (accessible à tous les utilisateurs authentifiés)
         unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
           console.log("Ads snapshot received, count:", snapshot.size);
@@ -658,35 +602,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithGoogle = async () => {
-    await auth.authStateReady();
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
+  const resetPassword = async (email: string) => {
     try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-      
-      const isAdminEmail = (email: string | null | undefined) => {
-        if (!email) return false;
-        const lowerEmail = email.toLowerCase();
-        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-               lowerEmail === 'urbain.traoreurb@gmail' || 
-               lowerEmail === 'urbain.traoreurb@gmail.com.';
-      };
-
-      if (!isAdminEmail(firebaseUser.email)) {
-        await signOut(auth);
-        throw new Error('La connexion Google est réservée aux administrateurs. Veuillez créer un compte standard.');
-      }
+      await auth.authStateReady();
+      await sendPasswordResetEmail(auth, email);
+      alert('Un email de réinitialisation de mot de passe a été envoyé à votre adresse.');
     } catch (error: any) {
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.message?.includes('popup')) {
-        // Fallback to redirect on mobile/Vercel
-        await signInWithRedirect(auth, provider);
-      } else {
-        throw new Error(error.message || 'Erreur de connexion avec Google');
-      }
+      throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email de réinitialisation');
     }
   };
 
@@ -1655,7 +1577,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateTrainingStatus,
       deleteTraining,
       login, 
-      loginWithGoogle,
+      resetPassword,
       signup,
       logout, 
       updateUser, 
