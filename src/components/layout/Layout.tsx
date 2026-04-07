@@ -153,9 +153,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <item.icon size={20} className="transition-colors duration-300 z-10" />
               <span className="z-10">{item.label}</span>
-              {item.label === 'Messages' && (
-                <span className="ml-auto bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full z-10">2</span>
-              )}
             </NavLink>
           ))}
           

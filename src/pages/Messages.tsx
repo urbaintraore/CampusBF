@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon, Download } from 'lucide-react';
+import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon, Download, ChevronLeft, MessageCircle, Plus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
@@ -29,6 +29,8 @@ export default function Messages() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Helper to generate conversation ID
   const getConversationId = (uid1: string, uid2: string) => {
@@ -140,7 +142,10 @@ export default function Messages() {
         }
       }
     } else if (!selectedChat && conversations.length > 0) {
-      setSelectedChat(conversations[0].user.id);
+      // Auto-select first chat only on desktop to avoid hiding the list on mobile
+      if (window.innerWidth >= 768) {
+        setSelectedChat(conversations[0].user.id);
+      }
     }
   }, [location.search, users, conversations.length, loading, currentUser]);
 
@@ -265,12 +270,57 @@ export default function Messages() {
   // Filter messages for the current chat
   const currentChatMessages = messages;
 
+  const startNewConversation = async (userId: string) => {
+    if (!currentUser) return;
+    
+    // Check if conversation already exists
+    const existingConv = conversations.find(c => c.user.id === userId);
+    if (existingConv) {
+      setSelectedChat(userId);
+      setShowNewMessageModal(false);
+      return;
+    }
+
+    // Create new conversation
+    const convId = getConversationId(currentUser.id, userId);
+    try {
+      await setDoc(doc(db, 'conversations', convId), {
+        participants: [currentUser.id, userId],
+        updatedAt: serverTimestamp(),
+        unreadCount: {
+          [currentUser.id]: 0,
+          [userId]: 0
+        }
+      });
+      setSelectedChat(userId);
+      setShowNewMessageModal(false);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+    }
+  };
+
+  const filteredUsers = users.filter(u => 
+    u.id !== currentUser?.id && 
+    (u.firstName.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
+     u.lastName.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+     u.university?.toLowerCase().includes(userSearchQuery.toLowerCase()))
+  );
+
   return (
     <div className="h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
       {/* Sidebar List */}
-      <div className="w-full md:w-80 border-r border-gray-200 flex flex-col">
+      <div className={cn("w-full md:w-80 border-r border-gray-200 flex-col", selectedChat ? "hidden md:flex" : "flex")}>
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Messages</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Messages</h2>
+            <button 
+              onClick={() => setShowNewMessageModal(true)}
+              className="p-2 bg-emerald-100 text-emerald-700 rounded-full hover:bg-emerald-200 transition-colors"
+              title="Nouveau message"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
@@ -282,46 +332,62 @@ export default function Messages() {
         </div>
         
         <div className="flex-1 overflow-y-auto">
-          {conversations.map((conv) => (
-            <button
-              key={conv.user.id}
-              onClick={() => setSelectedChat(conv.user.id)}
-              className={cn(
-                "w-full p-4 flex items-start gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50",
-                selectedChat === conv.user.id ? "bg-emerald-50/50 hover:bg-emerald-50/80" : ""
-              )}
-            >
-              <div className="relative">
-                <img src={conv.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-200 object-cover" />
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-1">
-                  <h3 className="font-semibold text-gray-900 truncate">{conv.user.firstName} {conv.user.lastName}</h3>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
-                    {conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
-                  </span>
+          {conversations.length > 0 ? (
+            conversations.map((conv) => (
+              <button
+                key={conv.user.id}
+                onClick={() => setSelectedChat(conv.user.id)}
+                className={cn(
+                  "w-full p-4 flex items-start gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50",
+                  selectedChat === conv.user.id ? "bg-emerald-50/50 hover:bg-emerald-50/80" : ""
+                )}
+              >
+                <div className="relative">
+                  <img src={conv.user.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-200 object-cover" />
+                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
                 </div>
-                <p className={cn("text-sm truncate", conv.unread ? "font-semibold text-gray-900" : "text-gray-500")}>
-                  {conv.lastMessage ? conv.lastMessage.content : <span className="italic text-gray-400">Nouvelle conversation</span>}
-                </p>
-              </div>
-              {conv.unread > 0 && (
-                <div className="w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
-                  {conv.unread}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <h3 className="font-semibold text-gray-900 truncate">{conv.user.firstName} {conv.user.lastName}</h3>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                    </span>
+                  </div>
+                  <p className={cn("text-sm truncate", conv.unread ? "font-semibold text-gray-900" : "text-gray-500")}>
+                    {conv.lastMessage ? conv.lastMessage.content : <span className="italic text-gray-400">Nouvelle conversation</span>}
+                  </p>
                 </div>
-              )}
-            </button>
-          ))}
+                {conv.unread > 0 && (
+                  <div className="w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
+                    {conv.unread}
+                  </div>
+                )}
+              </button>
+            ))
+          ) : (
+            <div className="p-8 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <MessageCircle size={32} className="text-gray-400" />
+              </div>
+              <p className="font-medium text-gray-900 mb-1">Aucun message</p>
+              <p className="text-sm">Vous n'avez pas encore de conversation. Contactez d'autres étudiants depuis leur profil ou leurs annonces.</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Chat Area */}
       {selectedChat ? (
-        <div className="hidden md:flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col">
           {/* Chat Header */}
           <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
             <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setSelectedChat(null)}
+                className="md:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600"
+              >
+                <ChevronLeft size={24} />
+              </button>
               <img src={activeConversation?.user.avatarUrl} alt="" className="w-10 h-10 rounded-full bg-gray-200" />
               <div>
                 <h3 className="font-bold text-gray-900">{activeConversation?.user.firstName} {activeConversation?.user.lastName}</h3>
@@ -439,6 +505,57 @@ export default function Messages() {
               <Send size={32} />
             </div>
             <p>Sélectionnez une conversation pour commencer</p>
+          </div>
+        </div>
+      )}
+      {/* New Message Modal */}
+      {showNewMessageModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="font-bold text-gray-900">Nouvelle conversation</h3>
+              <button 
+                onClick={() => setShowNewMessageModal(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-4 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Rechercher un utilisateur..." 
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2">
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => startNewConversation(u.id)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors text-left"
+                  >
+                    <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full bg-gray-200 object-cover" />
+                    <div>
+                      <p className="font-semibold text-gray-900">{u.firstName} {u.lastName}</p>
+                      <p className="text-xs text-gray-500">{u.university || u.role}</p>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  <p>Aucun utilisateur trouvé</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -32,6 +32,8 @@ export default function Documents() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadUniversity, setUploadUniversity] = useState('Université Joseph Ki-Zerbo');
   const [customUniversity, setCustomUniversity] = useState('');
+  const [uploadUfr, setUploadUfr] = useState('');
+  const [uploadDepartment, setUploadDepartment] = useState('');
   
   // Form states
   const [uploadTitle, setUploadTitle] = useState('');
@@ -119,6 +121,8 @@ export default function Documents() {
     setSelectedFile(null);
     setUploadUniversity('Université Joseph Ki-Zerbo');
     setCustomUniversity('');
+    setUploadUfr('');
+    setUploadDepartment('');
     setUploadTitle('');
     setUploadType('exam');
     setUploadYear('2024');
@@ -167,6 +171,8 @@ export default function Documents() {
         title: uploadTitle,
         type: uploadType,
         university: uploadUniversity === 'Autre' ? customUniversity : uploadUniversity,
+        ufr: uploadUfr,
+        department: uploadDepartment,
         major: user?.major || 'Général',
         year: uploadYear,
         subject: uploadSubject,
@@ -354,6 +360,28 @@ export default function Documents() {
                   />
                 </div>
               )}
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 ml-1">UFR / Institut</label>
+                  <input 
+                    type="text" 
+                    value={uploadUfr}
+                    onChange={(e) => setUploadUfr(e.target.value)}
+                    placeholder="Ex: UFR/SEA" 
+                    className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Département / Filière</label>
+                  <input 
+                    type="text" 
+                    value={uploadDepartment}
+                    onChange={(e) => setUploadDepartment(e.target.value)}
+                    placeholder="Ex: Informatique" 
+                    className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
+                  />
+                </div>
+              </div>
 
               <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-200/60">
                 <div className="flex items-center justify-between">

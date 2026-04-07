@@ -122,6 +122,8 @@ export interface Document {
   title: string;
   type: 'exam' | 'exercise' | 'summary' | 'thesis'; // Sujet, TD, Résumé, Mémoire
   university: string;
+  ufr?: string;
+  department?: string;
   major: string;
   year: string;
   subject: string;

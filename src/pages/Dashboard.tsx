@@ -301,7 +301,13 @@ export default function Dashboard() {
             </div>
             <div className="space-y-4">
               {documents.slice(0, 3).map((doc) => (
-                <div key={doc.id} className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-start gap-5 group">
+                <a 
+                  key={doc.id} 
+                  href={doc.downloadUrl} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-start gap-5 group block"
+                >
                   <div className="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0 ring-1 ring-emerald-200/50 group-hover:scale-105 transition-transform">
                     <span className="font-bold text-sm uppercase tracking-wider">{doc.type.slice(0, 3)}</span>
                   </div>
@@ -314,7 +320,7 @@ export default function Dashboard() {
                       <span className="flex items-center gap-1"><FileText size={12} /> {doc.downloads} téléchargements</span>
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
               {documents.length === 0 && (
                 <p className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">

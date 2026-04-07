@@ -13,6 +13,8 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
     title: '',
     subject: '',
     university: '',
+    ufr: '',
+    department: '',
     major: '',
     year: '',
     type: 'exam',
@@ -30,6 +32,8 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
         title: document.title || '',
         subject: document.subject || '',
         university: document.university || '',
+        ufr: document.ufr || '',
+        department: document.department || '',
         major: document.major || '',
         year: document.year || '',
         type: document.type || 'exam',
@@ -41,6 +45,8 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
         title: '',
         subject: '',
         university: '',
+        ufr: '',
+        department: '',
         major: '',
         year: '',
         type: 'exam',
@@ -147,16 +153,29 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">Filière</label>
+              <label className="text-xs font-bold text-gray-500 uppercase">UFR / Institut</label>
+              <input
+                type="text"
+                placeholder="Ex: UFR/SEA"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                value={formData.ufr}
+                onChange={(e) => setFormData({ ...formData, ufr: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Département / Filière</label>
               <input
                 type="text"
                 placeholder="Ex: Informatique"
                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                value={formData.major}
-                onChange={(e) => setFormData({ ...formData, major: e.target.value })}
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 disabled={loading}
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase">Année</label>
               <input
@@ -168,17 +187,17 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
                 disabled={loading}
               />
             </div>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase">URL du fichier <span className="text-red-500">*</span></label>
-            <input
-              type="text"
-              placeholder="Lien de téléchargement"
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-              value={formData.downloadUrl}
-              onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
-              disabled={loading}
-            />
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">URL du fichier <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                placeholder="Lien de téléchargement"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                value={formData.downloadUrl}
+                onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
+                disabled={loading}
+              />
+            </div>
           </div>
           <button
             type="submit"
