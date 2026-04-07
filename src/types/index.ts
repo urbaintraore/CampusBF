@@ -9,6 +9,7 @@ export interface User {
   email: string;
   password?: string;
   phone?: string;
+  ine?: string;
   city?: string;
   neighborhood?: string;
   avatarUrl?: string;
@@ -33,8 +34,83 @@ export interface User {
   tutorDescription?: string;
   teacherProfile?: TeacherProfile;
   institutionProfile?: InstitutionProfile;
+  marketplaceStats?: {
+    published: number;
+    sold: number;
+    reports: number;
+  };
   status?: 'active' | 'inactive';
+  isVerified?: boolean;
+  isDriverVerified?: boolean;
+  motoRideStatus?: 'active' | 'suspended';
+  motoRideStats?: {
+    ridesCompleted: number;
+    averageRating: number;
+    totalReports: number;
+  };
+  trainingStats?: {
+    averageRating: number;
+    trainingsOrganized: number;
+  };
+  vehicleDetails?: {
+    type: 'moto' | 'car';
+    plateNumber: string;
+    imageUrl?: string;
+  };
   createdAt?: any;
+}
+
+export interface Training {
+  id: string;
+  title: string;
+  description: string;
+  domain: string;
+  type: 'online' | 'in_person';
+  location?: string;
+  meetingLink?: string;
+  price: number;
+  startDate: string;
+  duration: string;
+  maxParticipants: number;
+  imageUrl?: string;
+  trainerId: string;
+  trainerName: string;
+  trainerAvatar?: string;
+  trainerUniversity?: string;
+  trainerRating?: number;
+  trainerTrainingsCount?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  participants: string[];
+  createdAt: string;
+}
+
+export interface TrainingEnrollment {
+  id: string;
+  trainingId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  enrolledAt: string;
+}
+
+export interface TrainingReview {
+  id: string;
+  trainingId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface TrainingReport {
+  id: string;
+  trainingId: string;
+  reporterId: string;
+  reason: string;
+  details: string;
+  status: 'pending' | 'resolved' | 'dismissed';
+  createdAt: string;
 }
 
 export interface TeacherReview {
@@ -176,11 +252,17 @@ export interface MarketplaceItem {
   title: string;
   description: string;
   price: number; // CFA
-  category: 'book' | 'computer' | 'housing' | 'service' | 'other';
-  imageUrl?: string;
+  category: string;
+  imageUrls?: string[]; // At least 2
+  imageUrl?: string; // For backward compatibility
   sellerId: string;
   seller: User;
-  location: string;
+  location: string; // Meeting place
+  university?: string;
+  phone?: string; // WhatsApp or phone
+  status?: 'pending' | 'approved' | 'rejected';
+  reports?: string[]; // User IDs who reported
+  reportCount?: number;
   postedAt: string;
   createdAt?: any;
 }
@@ -340,10 +422,32 @@ export interface MotoRide {
   price: number;
   distance: string;
   motorcycle: string;
+  vehicleDetails?: {
+    type: string;
+    plateNumber: string;
+    imageUrl?: string;
+  };
   helmetAvailable: boolean;
   whatsappNumber?: string;
   lat: number;
   lng: number;
+  status: 'active' | 'completed' | 'cancelled' | 'suspended';
+  passengers: string[]; // User IDs
+  reports?: {
+    reporterId: string;
+    reason: string;
+    createdAt: string;
+  }[];
+  createdAt: string;
+}
+
+export interface RideReview {
+  id: string;
+  rideId: string;
+  reviewerId: string;
+  revieweeId: string; // Can be driver or passenger
+  rating: number;
+  comment: string;
   createdAt: string;
 }
 

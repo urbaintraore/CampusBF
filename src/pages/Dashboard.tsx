@@ -56,7 +56,7 @@ export default function Dashboard() {
 
         const querySnapshot = await getDocs(q);
         const results = querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as UserType))
+          .map(doc => ({ id: doc.id, ...(doc.data() as any) } as UserType))
           .filter(u => u.id !== user.id)
           .slice(0, 3);
           
@@ -450,7 +450,7 @@ export default function Dashboard() {
                 {marketplace.slice(0, 2).map((item) => (
                   <div key={item.id} className="group flex gap-4 bg-white p-3 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer">
                     <div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 relative">
-                      <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img src={item.imageUrls?.[0] || item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
                     </div>
                     <div className="flex-1 flex flex-col justify-center py-2 pr-2">

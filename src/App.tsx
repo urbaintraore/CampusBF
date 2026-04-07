@@ -27,6 +27,7 @@ import { SubscriptionNotification } from './components/SubscriptionNotification'
 import Features from './pages/Features';
 import Messages from './pages/Messages';
 import FindClassmates from './pages/FindClassmates';
+import Trainings from './pages/Trainings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -186,6 +187,11 @@ export default function App() {
           <Route path="/find-classmates" element={
             <ProtectedRoute>
               <FindClassmates />
+            </ProtectedRoute>
+          } />
+          <Route path="/trainings" element={
+            <ProtectedRoute>
+              <Trainings />
             </ProtectedRoute>
           } />
           

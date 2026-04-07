@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { MapPin, Navigation, Clock, Users, Star, Shield, Search, Plus, Bike, CreditCard, ChevronRight, AlertCircle, Lock } from 'lucide-react';
+import { MapPin, Navigation, Clock, Users, Star, Shield, Search, Plus, Bike, CreditCard, ChevronRight, AlertCircle, Lock, Flag, CheckCircle, UserCheck, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user, addMotoRide, motoRides, reserveMotoRide, logAction } = useAuth();
+  const { user, addMotoRide, motoRides, reserveMotoRide, logAction, reportRideUser, reviewRide, updateRideStatus, users } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states
@@ -18,7 +18,18 @@ export default function MotoRide() {
   const [motorcycle, setMotorcycle] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [helmetAvailable, setHelmetAvailable] = useState(false);
+  const [vehicleType, setVehicleType] = useState<'moto' | 'car'>('moto');
+  const [plateNumber, setPlateNumber] = useState('');
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | null>(null);
+
+  // Report state
+  const [reportingRideId, setReportingRideId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('');
+
+  // Review state
+  const [reviewingRideId, setReviewingRideId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
 
   const isRideExpired = (rideDate: string) => {
     const today = new Date();
@@ -30,8 +41,25 @@ export default function MotoRide() {
   };
 
   const handlePublishRide = async () => {
-    if (!user || !departure || !destination || !date || !time || !price || !motorcycle || !whatsappNumber) {
-      alert("Veuillez remplir tous les champs, y compris votre numéro WhatsApp.");
+    if (!user) return;
+    
+    if (user.motoRideStatus === 'suspended') {
+      alert("Votre compte MotoRide est suspendu. Vous ne pouvez pas proposer de trajets.");
+      return;
+    }
+
+    if (!user.isVerified) {
+      alert("Vous devez vérifier votre compte (Email, Nom réel, Université) avant de proposer un trajet.");
+      return;
+    }
+
+    if (!user.isDriverVerified) {
+      alert("Votre profil de conducteur n'est pas encore vérifié par un administrateur.");
+      return;
+    }
+
+    if (!departure || !destination || !date || !time || !price || !motorcycle || !whatsappNumber || !plateNumber) {
+      alert("Veuillez remplir tous les champs obligatoires, y compris le numéro d'immatriculation.");
       return;
     }
     if (isRideExpired(date)) {
@@ -42,22 +70,26 @@ export default function MotoRide() {
       driverId: user.id,
       driverName: `${user.firstName} ${user.lastName}`,
       driverAvatar: user.avatarUrl,
-      driverRating: 5, // Default rating
+      driverRating: user.motoRideStats?.averageRating || 5,
       departure,
       destination,
       date,
       time,
       price: Number(price),
-      distance: 'Inconnu', // Should be calculated
+      distance: 'Inconnu',
       motorcycle,
+      vehicleDetails: {
+        type: vehicleType,
+        plateNumber,
+      },
       helmetAvailable,
       whatsappNumber,
-      lat: 0, // Should be geocoded
-      lng: 0
+      lat: 0,
+      lng: 0,
+      status: 'active',
+      passengers: []
     });
-    if (logAction) {
-      logAction('Proposition de trajet', `De ${departure} à ${destination}`);
-    }
+    
     alert("Trajet publié avec succès !");
     setDeparture('');
     setDestination('');
@@ -66,7 +98,26 @@ export default function MotoRide() {
     setPrice('');
     setMotorcycle('');
     setWhatsappNumber('');
+    setPlateNumber('');
     setHelmetAvailable(false);
+  };
+
+  const handleReportUser = async (reportedUserId: string, rideId: string) => {
+    if (!reportReason) {
+      alert("Veuillez indiquer une raison pour le signalement.");
+      return;
+    }
+    await reportRideUser(reportedUserId, rideId, reportReason);
+    setReportingRideId(null);
+    setReportReason('');
+  };
+
+  const handleReviewRide = async (rideId: string, revieweeId: string) => {
+    await reviewRide(rideId, revieweeId, reviewRating, reviewComment);
+    setReviewingRideId(null);
+    setReviewComment('');
+    setReviewRating(5);
+    alert("Merci pour votre avis !");
   };
 
   const filteredRides = (motoRides || []).filter(ride => {
@@ -196,6 +247,44 @@ export default function MotoRide() {
 
                   {activeTab === 'offer' && (
                     <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Type de véhicule</label>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setVehicleType('moto')}
+                              className={cn(
+                                "flex-1 py-2.5 rounded-xl border flex items-center justify-center gap-2 transition-all",
+                                vehicleType === 'moto' ? "bg-orange-50 border-orange-200 text-orange-600" : "bg-white border-slate-200 text-slate-500"
+                              )}
+                            >
+                              <Bike size={18} /> Moto
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setVehicleType('car')}
+                              className={cn(
+                                "flex-1 py-2.5 rounded-xl border flex items-center justify-center gap-2 transition-all",
+                                vehicleType === 'car' ? "bg-orange-50 border-orange-200 text-orange-600" : "bg-white border-slate-200 text-slate-500"
+                              )}
+                            >
+                              <Car size={18} /> Voiture
+                            </button>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Immatriculation</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ex: 11 J 1234"
+                            value={plateNumber}
+                            onChange={(e) => setPlateNumber(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                          />
+                        </div>
+                      </div>
+
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">FCFA</span>
                         <input 
@@ -208,7 +297,7 @@ export default function MotoRide() {
                       </div>
                       <input 
                         type="text" 
-                        placeholder="Modèle de moto"
+                        placeholder="Modèle (ex: Yamaha Crypton)"
                         value={motorcycle}
                         onChange={(e) => setMotorcycle(e.target.value)}
                         className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
@@ -275,22 +364,31 @@ export default function MotoRide() {
                 </div>
               </div>
               
-              {filteredRides.length > 0 ? filteredRides.map((ride) => (
+              {filteredRides.length > 0 ? filteredRides.map((ride) => {
+                const driver = users?.find(u => u.id === ride.driverId);
+                return (
                 <div key={ride.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-orange-200 transition-all cursor-pointer group">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <img src={ride.driverAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ride.driverName}`} alt={ride.driverName} className="w-12 h-12 rounded-full bg-slate-100" />
                       <div>
-                        <h4 className="font-bold text-slate-900">{ride.driverName}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-900">{ride.driverName}</h4>
+                          {driver?.isDriverVerified && (
+                            <div className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                              <Shield size={10} /> VÉRIFIÉ
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 text-sm text-slate-500">
                           <Star size={14} className="text-amber-400 fill-amber-400" />
-                          <span>{ride.driverRating}</span>
+                          <span>{ride.driverRating.toFixed(1)}</span>
                           <span className="mx-1">•</span>
                           <span>{ride.motorcycle}</span>
                         </div>
-                        {ride.whatsappNumber && (
-                          <div className="text-xs text-emerald-600 font-medium mt-1">
-                            WhatsApp: {ride.whatsappNumber}
+                        {ride.vehicleDetails?.plateNumber && (
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            Immatriculation: {ride.vehicleDetails.plateNumber}
                           </div>
                         )}
                       </div>
@@ -326,24 +424,118 @@ export default function MotoRide() {
                     </div>
                   </div>
 
-                  <button 
-                    onClick={() => {
-                      if (isRideExpired(ride.date)) {
-                        alert("Ce trajet a déjà expiré.");
-                      } else {
-                        const clientWhatsapp = prompt("Veuillez entrer votre numéro WhatsApp pour que le conducteur puisse vous contacter :");
-                        if (clientWhatsapp) {
-                          reserveMotoRide(ride.id, clientWhatsapp);
-                          alert("Réservation envoyée ! Le conducteur a été notifié.");
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isRideExpired(ride.date)) {
+                          alert("Ce trajet a déjà expiré.");
+                        } else {
+                          const clientWhatsapp = prompt("Veuillez entrer votre numéro WhatsApp pour que le conducteur puisse vous contacter :");
+                          if (clientWhatsapp) {
+                            reserveMotoRide(ride.id, clientWhatsapp);
+                            alert("Réservation envoyée ! Le conducteur a été notifié.");
+                          }
                         }
-                      }
-                    }}
-                    className="w-full py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors"
-                  >
-                    Réserver
-                  </button>
+                      }}
+                      className="flex-1 py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors"
+                    >
+                      Réserver
+                    </button>
+                    {user?.id !== ride.driverId && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReportingRideId(ride.id);
+                        }}
+                        className="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                        title="Signaler"
+                      >
+                        <Flag size={18} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Reporting UI */}
+                  {reportingRideId === ride.id && (
+                    <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-100 space-y-3">
+                      <h5 className="text-xs font-bold text-red-700 uppercase">Signaler ce trajet / conducteur</h5>
+                      <select 
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        className="w-full p-2 text-sm bg-white border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                      >
+                        <option value="">Sélectionnez un motif</option>
+                        <option value="comportement suspect">Comportement suspect</option>
+                        <option value="arnaque">Arnaque</option>
+                        <option value="harcèlement">Harcèlement</option>
+                        <option value="fausse annonce">Fausse annonce</option>
+                      </select>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleReportUser(ride.driverId, ride.id)}
+                          className="flex-1 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700"
+                        >
+                          Confirmer le signalement
+                        </button>
+                        <button 
+                          onClick={() => setReportingRideId(null)}
+                          className="px-4 py-2 bg-white text-slate-600 text-xs font-bold rounded-lg border border-slate-200"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Review UI (Simulated for completed rides) */}
+                  {ride.status === 'completed' && !ride.passengers.includes(user?.id || '') && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReviewingRideId(ride.id);
+                      }}
+                      className="mt-3 w-full py-2 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg border border-amber-100"
+                    >
+                      Laisser un avis sur ce trajet
+                    </button>
+                  )}
+
+                  {reviewingRideId === ride.id && (
+                    <div className="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-100 space-y-3">
+                      <h5 className="text-xs font-bold text-amber-700 uppercase">Votre avis</h5>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} onClick={() => setReviewRating(star)}>
+                            <Star size={20} className={cn(star <= reviewRating ? "text-amber-400 fill-amber-400" : "text-slate-300")} />
+                          </button>
+                        ))}
+                      </div>
+                      <textarea 
+                        placeholder="Votre commentaire..."
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        className="w-full p-2 text-sm bg-white border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 h-20"
+                      />
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleReviewRide(ride.id, ride.driverId)}
+                          className="flex-1 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700"
+                        >
+                          Publier l'avis
+                        </button>
+                        <button 
+                          onClick={() => setReviewingRideId(null)}
+                          className="px-4 py-2 bg-white text-slate-600 text-xs font-bold rounded-lg border border-slate-200"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )) : (
+              );
+              }) : (
                 <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center">
                   <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Search size={24} className="text-slate-400" />
@@ -364,20 +556,24 @@ export default function MotoRide() {
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
             <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
               <Shield size={18} className="text-emerald-500" />
-              Sécurité avant tout
+              Conseils de sécurité CampusBF
             </h3>
             <ul className="space-y-3 text-sm text-slate-600">
               <li className="flex gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
-                <p>Tous les conducteurs sont des étudiants vérifiés.</p>
+                <p>Vérifiez toujours le profil du conducteur ou passager.</p>
               </li>
               <li className="flex gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
-                <p>Partagez votre trajet en temps réel avec un proche.</p>
+                <p>Rencontrez-vous dans un lieu public (campus).</p>
               </li>
               <li className="flex gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
-                <p>Paiement sécurisé via Mobile Money.</p>
+                <p>Informez un ami de votre trajet.</p>
+              </li>
+              <li className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
+                <p>Signalez tout comportement suspect immédiatement.</p>
               </li>
             </ul>
           </div>

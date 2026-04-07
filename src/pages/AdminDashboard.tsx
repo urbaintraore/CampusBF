@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -43,6 +43,7 @@ export default function AdminDashboard() {
     deleteDocument,
     deleteInternship,
     deleteMarketplaceItem,
+    reviewMarketplaceItem,
     deletePost,
     deleteEvent,
     deleteNews,
@@ -51,11 +52,17 @@ export default function AdminDashboard() {
     deleteReport,
     motoRides,
     deleteMotoRide,
+    verifyDriver,
+    updateRideStatus,
+    trainings,
+    trainingReports,
+    updateTrainingStatus,
+    deleteTraining,
     logs
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations'>('documents');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -254,6 +261,7 @@ export default function AdminDashboard() {
               { label: 'Signalements', count: reports.length.toString(), icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
               { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Formations en attente', count: trainings.filter(t => t.status === 'pending').length.toString(), icon: BookOpen, color: 'bg-blue-50 text-blue-700' },
               { label: 'Paiements', count: pendingSubscriptions.length.toString(), icon: CreditCard, color: 'bg-indigo-50 text-indigo-700' },
             ].map((stat) => (
               <div key={stat.label} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
@@ -635,6 +643,7 @@ export default function AdminDashboard() {
               { id: 'tutors', label: 'Répétiteurs', icon: GraduationCap },
               { id: 'reports', label: 'Signalements', icon: AlertTriangle },
               { id: 'motoRide', label: 'MotoRide', icon: Bike },
+              { id: 'formations', label: 'Formations', icon: BookOpen },
               { id: 'payments', label: 'Paiements', icon: CreditCard },
             ].map((tab) => (
               <button 
@@ -779,33 +788,79 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {contentTab === 'marketplace' && marketplace.map(item => (
-                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                        <ShoppingBag size={20} />
+              {contentTab === 'marketplace' && (
+                <div className="divide-y divide-gray-50">
+                  {marketplace.sort((a, b) => {
+                    if (a.status === 'pending' && b.status !== 'pending') return -1;
+                    if (a.status !== 'pending' && b.status === 'pending') return 1;
+                    return (b.reportCount || 0) - (a.reportCount || 0);
+                  }).map(item => (
+                    <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col md:flex-row justify-between gap-6">
+                        <div className="flex gap-4">
+                          <div className="relative">
+                            <img src={item.imageUrls?.[0] || item.imageUrl} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                            {item.status === 'pending' && (
+                              <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">EN ATTENTE</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-gray-900">{item.title}</h3>
+                              <span className="text-emerald-600 font-bold text-sm">{item.price.toLocaleString()} CFA</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{item.description}</p>
+                            <div className="flex flex-wrap gap-3 text-[10px] font-medium text-gray-400">
+                              <span className="flex items-center gap-1"><MapPin size={12} /> {item.university || item.location}</span>
+                              <span className="flex items-center gap-1"><Users size={12} /> {item.seller?.firstName} {item.seller?.lastName}</span>
+                              {(item.reportCount || 0) > 0 && (
+                                <span className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                                  <AlertTriangle size={12} /> {item.reportCount} signalements
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 min-w-[150px] justify-center">
+                          {item.status === 'pending' ? (
+                            <>
+                              <button 
+                                onClick={() => reviewMarketplaceItem(item.id, 'approved')}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                              >
+                                <Check size={16} />
+                                Approuver
+                              </button>
+                              <button 
+                                onClick={() => reviewMarketplaceItem(item.id, 'rejected')}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                              >
+                                <X size={16} />
+                                Rejeter
+                              </button>
+                            </>
+                          ) : (
+                            <button 
+                              onClick={() => {
+                                if(confirm('Supprimer cet article ?')) deleteMarketplaceItem(item.id);
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">{item.title}</p>
-                      <p className="text-xs text-gray-500">{item.price.toLocaleString()} CFA • {item.seller?.firstName || 'Vendeur'}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => {
-                        if(confirm('Supprimer cet article ?')) deleteMarketplaceItem(item.id);
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
+                  ))}
+                  {marketplace.length === 0 && (
+                    <div className="p-12 text-center text-gray-400">
+                      <p>Aucun article dans la marketplace.</p>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
 
               {contentTab === 'community' && community.map(post => (
                 <div key={post.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
@@ -1432,42 +1487,268 @@ export default function AdminDashboard() {
                   <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2">
                       <Bike className="text-orange-600" size={18} />
-                      Gestion des Trajets MotoRide
+                      Modération MotoRide
                     </h3>
-                    <span className="text-xs font-medium bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
-                      {motoRides.length} trajets
-                    </span>
+                    <div className="flex gap-2">
+                      <span className="text-xs font-medium bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
+                        {motoRides.length} trajets
+                      </span>
+                      <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                        {users.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).length} vérifications en attente
+                      </span>
+                    </div>
                   </div>
-                  <div className="divide-y divide-gray-50">
-                    {motoRides.length > 0 ? (
-                      motoRides.map((ride) => (
-                        <div key={ride.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center">
-                              <Bike size={20} />
-                            </div>
+
+                  {/* Driver Verification Requests */}
+                  <div className="p-4 bg-blue-50/30 border-b border-blue-100">
+                    <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">Vérifications Conducteurs en attente</h4>
+                    <div className="space-y-3">
+                      {users.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).map(user => (
+                        <div key={user.id} className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col md:flex-row justify-between gap-4">
+                          <div className="flex gap-4">
+                            <img src={user.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
                             <div>
-                              <p className="font-bold text-gray-900 text-sm">{ride.departure} → {ride.destination}</p>
-                              <p className="text-xs text-gray-500">Par {ride.driverName} • {ride.price} FCFA • {ride.time}</p>
+                              <p className="font-bold text-gray-900">{user.firstName} {user.lastName}</p>
+                              <p className="text-xs text-gray-500">{user.university} • {user.phone}</p>
+                              <div className="mt-2 p-2 bg-gray-50 rounded-lg text-xs">
+                                <p><span className="font-bold">Véhicule:</span> {user.vehicleDetails?.type}</p>
+                                <p><span className="font-bold">Plaque:</span> {user.vehicleDetails?.plateNumber}</p>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <button 
-                              onClick={() => {
-                                if(confirm('Supprimer ce trajet ?')) deleteMotoRide(ride.id);
-                              }}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              onClick={() => verifyDriver(user.id, user.vehicleDetails)}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2"
                             >
-                              <Trash2 size={18} />
+                              <Check size={16} />
+                              Valider Conducteur
                             </button>
+                            <button 
+                              onClick={async () => {
+                                if(confirm('Refuser la demande de conducteur ?')) {
+                                  await updateDoc(doc(db, 'users', user.id), { vehicleDetails: null });
+                                }
+                              }}
+                              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                            >
+                              Refuser
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {users.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).length === 0 && (
+                        <p className="text-center text-gray-400 text-sm py-4">Aucune demande de vérification en attente.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Active Rides */}
+                  <div className="divide-y divide-gray-50">
+                    <div className="p-4 bg-gray-50/50">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trajets en cours</h4>
+                    </div>
+                    {motoRides.map((ride) => (
+                      <div key={ride.id} className="p-6 hover:bg-gray-50 transition-colors">
+                        <div className="flex flex-col md:flex-row justify-between gap-6">
+                          <div className="flex gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                              <Bike size={24} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold text-gray-900">{ride.departure} → {ride.destination}</h3>
+                                <span className={cn(
+                                  "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                                  ride.status === 'active' ? "bg-emerald-100 text-emerald-700" :
+                                  ride.status === 'completed' ? "bg-blue-100 text-blue-700" :
+                                  ride.status === 'cancelled' ? "bg-gray-100 text-gray-700" : "bg-red-100 text-red-700"
+                                )}>
+                                  {ride.status}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                Conducteur : <span className="font-bold">{ride.driverName}</span> • {ride.price} FCFA • {ride.time}
+                              </p>
+                              <div className="flex items-center gap-3 text-xs text-gray-500">
+                                <span>{ride.passengers?.length || 0} passagers</span>
+                                <span>•</span>
+                                <span>{ride.reports?.length || 0} signalements</span>
+                                <span>•</span>
+                                <span>{new Date(ride.createdAt).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 min-w-[180px] justify-center">
+                            {ride.status === 'active' && (
+                              <button 
+                                onClick={() => updateRideStatus(ride.id, 'suspended')}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors"
+                              >
+                                <Ban size={16} />
+                                Suspendre
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => {
+                                if(confirm('Supprimer ce trajet définitivement ?')) deleteMotoRide(ride.id);
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {motoRides.length === 0 && (
+                      <div className="p-12 text-center text-gray-400">
+                        <p>Aucun trajet publié.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Suspended Users */}
+                  <div className="p-6 border-t border-gray-100 bg-red-50/30">
+                    <h4 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-4">Utilisateurs MotoRide Suspendus</h4>
+                    <div className="space-y-3">
+                      {users.filter(u => u.motoRideStatus === 'suspended').map(user => (
+                        <div key={user.id} className="bg-white p-4 rounded-xl border border-red-100 shadow-sm flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover grayscale" />
+                            <div>
+                              <p className="font-bold text-gray-900">{user.firstName} {user.lastName}</p>
+                              <p className="text-xs text-red-600 font-medium">Compte MotoRide Suspendu</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={async () => {
+                              if(confirm('Réactiver le compte MotoRide de cet utilisateur ?')) {
+                                await updateDoc(doc(db, 'users', user.id), { motoRideStatus: 'active' });
+                              }
+                            }}
+                            className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-colors"
+                          >
+                            Réactiver
+                          </button>
+                        </div>
+                      ))}
+                      {users.filter(u => u.motoRideStatus === 'suspended').length === 0 && (
+                        <p className="text-center text-gray-400 text-sm py-4">Aucun utilisateur suspendu.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {contentTab === 'formations' && (
+                <div className="p-0">
+                  {/* Pending Trainings */}
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <BookOpen className="text-emerald-600" size={18} />
+                      Formations en attente de validation
+                    </h3>
+                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                      {trainings.filter(t => t.status === 'pending').length} en attente
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {trainings.filter(t => t.status === 'pending').length > 0 ? (
+                      trainings.filter(t => t.status === 'pending').map((training) => (
+                        <div key={training.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <img src={training.imageUrl || `https://picsum.photos/seed/${training.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                              <div>
+                                <h3 className="font-bold text-gray-900">{training.title}</h3>
+                                <p className="text-xs text-gray-500 mb-2">Par {training.trainerName} • {training.domain} • {training.type === 'online' ? 'En ligne' : 'Présentiel'}</p>
+                                <p className="text-sm text-gray-600 line-clamp-2 max-w-xl">{training.description}</p>
+                                <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-400">
+                                  <span className="flex items-center gap-1"><Users size={12} /> {training.participants.length} / {training.maxParticipants} inscrits</span>
+                                  <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(training.startDate).toLocaleDateString()}</span>
+                                  <span className="font-bold text-emerald-600">{training.price === 0 ? 'GRATUIT' : `${training.price} CFA`}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[150px]">
+                              <button 
+                                onClick={() => updateTrainingStatus(training.id, 'approved')}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                              >
+                                <Check size={16} />
+                                Approuver
+                              </button>
+                              <button 
+                                onClick={() => updateTrainingStatus(training.id, 'rejected')}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                              >
+                                <X size={16} />
+                                Rejeter
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <Trash2 size={16} />
+                                Supprimer
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="p-8 text-center text-gray-400">
-                        <p>Aucun trajet publié pour le moment.</p>
+                      <div className="p-12 text-center text-gray-400">
+                        <p>Aucune formation en attente.</p>
                       </div>
                     )}
+                  </div>
+
+                  {/* Approved Trainings */}
+                  <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-gray-50/50 mt-4">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <CheckCircle2 className="text-blue-600" size={18} />
+                      Formations actives
+                    </h3>
+                    <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                      {trainings.filter(t => t.status === 'approved').length} actives
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {trainings.filter(t => t.status === 'approved').map(training => (
+                      <div key={training.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                          <img src={training.imageUrl || `https://picsum.photos/seed/${training.id}/200/200`} alt="" className="w-16 h-16 rounded-xl object-cover bg-gray-100" />
+                          <div>
+                            <h3 className="font-bold text-gray-900">{training.title}</h3>
+                            <p className="text-xs text-gray-500">{training.trainerName} • {training.domain}</p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-[10px] font-bold text-emerald-600 uppercase">{training.participants.length} participants</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase">{training.type}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 w-full md:w-auto">
+                          <button 
+                            onClick={() => updateTrainingStatus(training.id, 'rejected')}
+                            className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors"
+                          >
+                            Désactiver
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

@@ -806,7 +806,7 @@ Question : ${userMsg}`,
                         "max-w-[80%] p-3 rounded-2xl text-sm",
                         msg.role === 'user' ? "bg-indigo-600 text-white rounded-tr-none" : "bg-white border border-slate-200 text-slate-700 rounded-tl-none shadow-sm"
                       )}>
-                        {msg.role === 'ai' || msg.role === 'bot' ? (
+                        {msg.role === 'ai' ? (
                           <div className="prose prose-sm prose-indigo max-w-none">
                             <Markdown>{msg.text}</Markdown>
                           </div>

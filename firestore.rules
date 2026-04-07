@@ -38,6 +38,33 @@
 //   - lat: number (required)
 //   - lng: number (required)
 //   - createdAt: timestamp (required)
+//   - status: string (required, enum: ['active', 'completed', 'cancelled', 'suspended'])
+//   - passengers: list (required, list of UIDs)
+//   - reports: list (required, list of report IDs)
+//   - vehicleDetails: map (optional)
+//
+// Collection: rideReviews
+// Document ID: Auto-generated
+// Fields:
+//   - rideId: string (required)
+//   - reviewerId: string (required, UID)
+//   - reviewerName: string (required)
+//   - driverId: string (required, UID)
+//   - rating: number (required, 1-5)
+//   - comment: string (required, < 1000 chars)
+//   - createdAt: timestamp (required)
+//
+// Collection: rideReports
+// Document ID: Auto-generated
+// Fields:
+//   - rideId: string (required)
+//   - reporterId: string (required, UID)
+//   - reporterName: string (required)
+//   - reportedUserId: string (required, UID)
+//   - reason: string (required)
+//   - details: string (required, < 2000 chars)
+//   - createdAt: timestamp (required)
+//   - status: string (required, enum: ['pending', 'resolved', 'dismissed'])
 //
 // Collection: logs
 // Document ID: Auto-generated
@@ -82,6 +109,23 @@ service cloud.firestore {
       return isAuthenticated() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.premiumSubscriptionStatus == 'active';
+    }
+
+    function isVerifiedUser() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isVerified == true;
+    }
+
+    function isVerifiedDriver() {
+      return isVerifiedUser() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDriverVerified == true;
+    }
+
+    function isMotoRideActive() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.motoRideStatus != 'suspended';
     }
 
     function isValidEmail(email) {
@@ -203,7 +247,7 @@ service cloud.firestore {
     }
 
     function isValidMotoRide(data) {
-      return hasRequiredFields(['driverId', 'driverName', 'driverRating', 'departure', 'destination', 'time', 'date', 'price', 'distance', 'motorcycle', 'helmetAvailable', 'whatsappNumber', 'lat', 'lng', 'createdAt']) &&
+      return hasRequiredFields(['driverId', 'driverName', 'driverRating', 'departure', 'destination', 'time', 'date', 'price', 'distance', 'motorcycle', 'helmetAvailable', 'whatsappNumber', 'lat', 'lng', 'createdAt', 'status', 'passengers', 'reports']) &&
              data.driverId is string &&
              data.driverName is string && data.driverName.size() <= 200 &&
              (!('driverAvatar' in data) || (data.driverAvatar is string && data.driverAvatar.size() <= 1000)) &&
@@ -219,7 +263,34 @@ service cloud.firestore {
              data.whatsappNumber is string && data.whatsappNumber.size() <= 50 &&
              data.lat is number &&
              data.lng is number &&
+             data.createdAt is timestamp &&
+             data.status in ['active', 'completed', 'cancelled', 'suspended'] &&
+             data.passengers is list &&
+             data.reports is list &&
+             (!('vehicleDetails' in data) || data.vehicleDetails is map);
+    }
+
+    function isValidRideReview(data) {
+      return hasRequiredFields(['rideId', 'reviewerId', 'reviewerName', 'driverId', 'rating', 'comment', 'createdAt']) &&
+             data.rideId is string &&
+             data.reviewerId == request.auth.uid &&
+             data.reviewerName is string && data.reviewerName.size() <= 200 &&
+             data.driverId is string &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000 &&
              data.createdAt is timestamp;
+    }
+
+    function isValidRideReport(data) {
+      return hasRequiredFields(['rideId', 'reporterId', 'reporterName', 'reportedUserId', 'reason', 'details', 'createdAt', 'status']) &&
+             data.rideId is string &&
+             data.reporterId == request.auth.uid &&
+             data.reporterName is string && data.reporterName.size() <= 200 &&
+             data.reportedUserId is string &&
+             data.reason in ['suspicious_behavior', 'scam', 'harassment', 'false_advertisement', 'other'] &&
+             data.details is string && data.details.size() <= 2000 &&
+             data.createdAt is timestamp &&
+             data.status == 'pending';
     }
 
     // ===============================================================
@@ -238,7 +309,7 @@ service cloud.firestore {
                       (!('teacherStatus' in request.resource.data) || request.resource.data.teacherStatus == 'pending_dossier');
       allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
                       request.resource.data.role == resource.data.role &&
-                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'premiumSubscriptionExpiry', 'examSubscriptionExpiry', 'motoRideSubscriptionExpiry', 'eventSubscriptionExpiry']) &&
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'premiumSubscriptionExpiry', 'examSubscriptionExpiry', 'motoRideSubscriptionExpiry', 'eventSubscriptionExpiry', 'isVerified', 'isDriverVerified', 'motoRideStatus', 'motoRideStats']) &&
                       (!('eventSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.eventSubscriptionStatus == 'pending') &&
                       (!('premiumSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.premiumSubscriptionStatus == 'pending') &&
                       (!('examSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.examSubscriptionStatus == 'pending') &&
@@ -412,14 +483,31 @@ service cloud.firestore {
 
     match /motoRides/{rideId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidMotoRide(request.resource.data) && 
+      allow create: if isVerifiedDriver() && isMotoRideActive() && isValidMotoRide(request.resource.data) && 
                       request.resource.data.driverId == request.auth.uid &&
                       isRecent(request.resource.data.createdAt);
-      allow update: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isAdmin()) &&
-                      isValidMotoRide(request.resource.data) &&
-                      request.resource.data.driverId == resource.data.driverId &&
-                      request.resource.data.createdAt == resource.data.createdAt;
+      allow update: if isAuthenticated() && (
+        ((resource.data.driverId == request.auth.uid || isAdmin()) && 
+         isValidMotoRide(request.resource.data) &&
+         request.resource.data.driverId == resource.data.driverId &&
+         request.resource.data.createdAt == resource.data.createdAt) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['passengers', 'reports', 'status']))
+      );
       allow delete: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isAdmin());
+    }
+
+    match /rideReviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isVerifiedUser() && isValidRideReview(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow update: if false;
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.reviewerId == request.auth.uid);
+    }
+
+    match /rideReports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isVerifiedUser() && isValidRideReport(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /subscriptionRequests/{requestId} {

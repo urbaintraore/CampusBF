@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send, Loader2 } from 'lucide-react';
+import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send, Loader2, ShieldAlert, Flag, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { auth, db, storage, handleFirestoreError, OperationType } from '@/lib/firebase';
@@ -18,7 +18,7 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
-  const { user, marketplace: ads, logAction } = useAuth();
+  const { user, marketplace: ads, logAction, reportMarketplaceItem } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,7 +55,8 @@ export default function Marketplace() {
   const [sellAddress, setSellAddress] = useState('');
   const [sellWhatsapp, setSellWhatsapp] = useState('');
   const [sellEmail, setSellEmail] = useState(user?.email || '');
-  const [sellImage, setSellImage] = useState<string | null>(null);
+  const [sellUniversity, setSellUniversity] = useState(user?.university || '');
+  const [sellImages, setSellImages] = useState<string[]>([]);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categories, setCategories] = useState(['Tout', 'Livres', 'Informatique', 'Logement', 'Meubles', 'Services']);
@@ -83,25 +84,37 @@ export default function Marketplace() {
     setSellAddress('');
     setSellWhatsapp('');
     setSellEmail(user?.email || '');
-    setSellImage(null);
+    setSellUniversity(user?.university || '');
+    setSellImages([]);
     setShowNewCategoryInput(false);
     setNewCategoryName('');
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSellImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setSellImages(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
+  const removeImage = (index: number) => {
+    setSellImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handlePublish = async () => {
-    if (!sellTitle || !sellPrice || !sellDescription || !sellAddress || !sellWhatsapp || !sellEmail) {
+    if (!sellTitle || !sellPrice || !sellDescription || !sellAddress || !sellWhatsapp || !sellEmail || !sellUniversity) {
       alert('Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+
+    if (sellImages.length < 2) {
+      alert('Veuillez ajouter au moins 2 photos de votre article.');
       return;
     }
 
@@ -115,16 +128,14 @@ export default function Marketplace() {
         }
       }
 
-      let imageUrl = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3';
+      const imageUrls: string[] = [];
       
-      if (sellImage) {
-        // Convert base64 to blob
-        const res = await fetch(sellImage);
+      for (const imgBase64 of sellImages) {
+        const res = await fetch(imgBase64);
         const blob = await res.blob();
         const file = new File([blob], `ad-image-${Date.now()}.jpg`, { type: blob.type });
-
         const { url } = await uploadFile(file);
-        imageUrl = url;
+        imageUrls.push(url);
       }
 
       const newItem = {
@@ -132,7 +143,7 @@ export default function Marketplace() {
         description: sellDescription,
         price: parseInt(sellPrice),
         category: finalCategory.toLowerCase().replace('é', 'e'),
-        userId: user?.id || 'anonymous',
+        sellerId: user?.id || 'anonymous',
         seller: {
           id: user?.id || 'anonymous',
           firstName: user?.firstName || 'Utilisateur',
@@ -145,23 +156,37 @@ export default function Marketplace() {
           address: sellAddress,
           avatarUrl: user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
           role: user?.role || 'student',
+          marketplaceStats: user?.marketplaceStats || { published: 0, sold: 0, reports: 0 }
         },
         location: sellAddress,
+        university: sellUniversity,
+        phone: sellWhatsapp,
+        status: 'pending',
+        reports: [],
+        reportCount: 0,
         createdAt: serverTimestamp(),
-        imageUrl,
+        imageUrls,
+        imageUrl: imageUrls[0], // For backward compatibility
       };
 
       await addDoc(collection(db, 'marketplace'), newItem);
       if (logAction) {
-        logAction('Nouvelle annonce', `Annonce: ${sellTitle} (${sellPrice} FCFA)`);
+        logAction('Nouvelle annonce marketplace', `Annonce: ${sellTitle} (${sellPrice} FCFA) - En attente de validation`);
       }
       resetSellForm();
-      alert('Votre annonce a été publiée avec succès !');
+      alert('Votre annonce a été soumise avec succès ! Elle sera visible après validation par un administrateur.');
     } catch (error) {
       console.error("Error publishing ad:", error);
       alert("Erreur lors de la publication de l'annonce.");
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const handleReport = async (itemId: string, itemTitle: string) => {
+    const reason = prompt(`Pourquoi signalez-vous l'annonce "${itemTitle}" ?`);
+    if (reason && reason.trim()) {
+      await reportMarketplaceItem(itemId, reason);
     }
   };
 
@@ -267,49 +292,74 @@ export default function Marketplace() {
             {filteredItems.map((item) => (
               <div key={item.id} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden hover:shadow-xl hover:shadow-slate-200/40 hover:-translate-y-1 transition-all group flex flex-col">
                 <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden">
-                  <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+                  <img src={item.imageUrls?.[0] || item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm border border-white/20">
                     {item.category.toUpperCase()}
                   </div>
+                  {item.imageUrls && item.imageUrls.length > 1 && (
+                    <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-white border border-white/10">
+                      +{item.imageUrls.length - 1} photos
+                    </div>
+                  )}
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-2 gap-2">
                     <h3 className="font-display font-bold text-slate-900 text-lg line-clamp-1 group-hover:text-emerald-700 transition-colors">{item.title}</h3>
-                    {(user?.id === item.sellerId || user?.role === 'admin') && (
-                      <button 
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                        title="Supprimer l'annonce"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {user && user.id !== item.sellerId && (
+                        <button 
+                          onClick={() => handleReport(item.id, item.title)}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Signaler l'annonce"
+                        >
+                          <Flag size={16} />
+                        </button>
+                      )}
+                      {(user?.id === item.sellerId || user?.role === 'admin') && (
+                        <button 
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Supprimer l'annonce"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-emerald-600 font-display font-bold text-xl mb-3">{item.price.toLocaleString()} CFA</p>
                   <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-1">{item.description}</p>
                   
-                  <div className="space-y-2 mb-5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                  <div className="space-y-2 mb-4 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2 text-xs text-slate-600">
                       <MapPin size={14} className="text-slate-400" />
-                      <span className="truncate">{item.location}</span>
+                      <span className="truncate">{item.university || item.location}</span>
                     </div>
-                    {item.seller?.whatsapp && (
+                    {item.phone && (
                       <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
                         <MessageCircle size={14} className="text-emerald-500" />
-                        <span className="truncate">WhatsApp: {item.seller.whatsapp}</span>
+                        <span className="truncate">WhatsApp: {item.phone}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-slate-600">
-                      <Send size={14} className="text-slate-400" />
-                      <span className="truncate">{item.seller?.email || 'Non spécifié'}</span>
-                    </div>
+                  </div>
+
+                  <div className="mb-4 p-2 bg-amber-50 border border-amber-100 rounded-lg">
+                    <p className="text-[10px] text-amber-800 leading-tight flex items-start gap-1.5">
+                      <ShieldAlert size={12} className="mt-0.5 flex-shrink-0" />
+                      <span><strong>Conseil de sécurité :</strong> ne payez jamais à l'avance. Le paiement doit se faire uniquement lors de la remise de l'objet.</span>
+                    </p>
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
-                    <div className="flex items-center gap-2.5">
-                      <img src={item.seller?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'} alt="" className="w-8 h-8 rounded-full bg-slate-100 ring-2 ring-white shadow-sm" />
-                      <span className="text-xs font-medium text-slate-700 truncate max-w-[100px]">{item.seller?.firstName || 'Utilisateur'}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <img src={item.seller?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'} alt="" className="w-7 h-7 rounded-full bg-slate-100 ring-2 ring-white shadow-sm" />
+                        <span className="text-[11px] font-bold text-slate-700 truncate max-w-[80px]">{item.seller?.firstName || 'Utilisateur'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-medium ml-9">
+                        <span className="flex items-center gap-0.5 text-emerald-600"><CheckCircle size={10} /> {item.seller?.marketplaceStats?.published || 0} annonces</span>
+                        <span className="flex items-center gap-0.5 text-amber-600"><Flag size={10} /> {item.seller?.marketplaceStats?.reports || 0} signalements</span>
+                      </div>
                     </div>
                     <button 
                       onClick={() => handleContact(item.seller?.id || item.sellerId, item.title)}
@@ -421,12 +471,12 @@ export default function Marketplace() {
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700 ml-1">Adresse / Lieu</label>
+                      <label className="text-sm font-medium text-slate-700 ml-1">Université / Lieu de rencontre</label>
                       <input 
                         type="text" 
-                        value={sellAddress}
-                        onChange={(e) => setSellAddress(e.target.value)}
-                        placeholder="Ex: Ouagadougou, Zone 1" 
+                        value={sellUniversity}
+                        onChange={(e) => setSellUniversity(e.target.value)}
+                        placeholder="Ex: Université Joseph Ki-Zerbo" 
                         className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400" 
                       />
                     </div>
@@ -434,7 +484,7 @@ export default function Marketplace() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700 ml-1">Numéro WhatsApp</label>
+                      <label className="text-sm font-medium text-slate-700 ml-1">Numéro WhatsApp / Téléphone</label>
                       <input 
                         type="text" 
                         value={sellWhatsapp}
@@ -457,47 +507,61 @@ export default function Marketplace() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700 ml-1">Description</label>
+                      <label className="text-sm font-medium text-slate-700 ml-1">Description détaillée</label>
                       <textarea 
                         value={sellDescription}
                         onChange={(e) => setSellDescription(e.target.value)}
-                        placeholder="Décrivez votre article..." 
+                        placeholder="Décrivez votre article avec précision..." 
                         className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400 h-32 resize-none"
                       ></textarea>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700 ml-1">Photo de l'article</label>
+                      <label className="text-sm font-medium text-slate-700 ml-1 flex justify-between">
+                        Photos (min. 2)
+                        <span className="text-[10px] text-slate-400 font-normal">{sellImages.length} photo(s) ajoutée(s)</span>
+                      </label>
                       <input 
                         type="file" 
                         ref={fileInputRef}
                         onChange={handleImageChange}
                         accept="image/*"
+                        multiple
                         className="hidden"
                       />
-                      <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className={cn(
-                          "border-2 border-dashed rounded-2xl p-2 text-center transition-all cursor-pointer overflow-hidden relative h-32 flex flex-col items-center justify-center group",
-                          sellImage ? "border-emerald-500 bg-emerald-50/30" : "border-slate-200 hover:border-emerald-400 hover:bg-slate-50/50 bg-slate-50/30"
-                        )}
-                      >
-                        {sellImage ? (
-                          <>
-                            <img src={sellImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <span className="text-white text-sm font-medium bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm">Changer de photo</span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-emerald-100/50 transition-colors">
-                              <ImageIcon size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-                            </div>
-                            <span className="text-xs font-medium text-slate-600">Ajouter une photo</span>
-                          </>
+                      <div className="grid grid-cols-3 gap-2">
+                        {sellImages.map((img, idx) => (
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                            <button 
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {sellImages.length < 6 && (
+                          <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="aspect-square border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center hover:border-emerald-400 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+                          >
+                            <ImageIcon size={20} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                            <span className="text-[10px] font-medium text-slate-500 mt-1">Ajouter</span>
+                          </div>
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                    <p className="text-xs text-amber-800 leading-relaxed flex items-start gap-2">
+                      <ShieldAlert size={16} className="mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong>Règle de sécurité :</strong> Votre annonce sera examinée par un administrateur avant d'être publiée. 
+                        Assurez-vous que les photos sont réelles et la description honnête.
+                      </span>
+                    </p>
                   </div>
 
                   <button 

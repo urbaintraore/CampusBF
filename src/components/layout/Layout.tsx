@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -29,6 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Compass, label: 'Orientation', to: '/orientation', roles: ['student', 'admin', 'parent'] },
     { icon: User, label: 'Portfolio', to: '/portfolio', roles: ['teacher', 'admin', 'student'] },
     { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['student', 'admin', 'alumni'] },
+    { icon: BookOpen, label: 'Formations', to: '/trainings' },
     { icon: Sparkles, label: 'Fonctionnalités', to: '/features' },
   ];
 
