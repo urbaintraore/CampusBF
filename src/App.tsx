@@ -28,6 +28,7 @@ import Features from './pages/Features';
 import Messages from './pages/Messages';
 import FindClassmates from './pages/FindClassmates';
 import Trainings from './pages/Trainings';
+import Contests from './pages/Contests';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -192,6 +193,11 @@ export default function App() {
           <Route path="/trainings" element={
             <ProtectedRoute>
               <Trainings />
+            </ProtectedRoute>
+          } />
+          <Route path="/contests" element={
+            <ProtectedRoute>
+              <Contests />
             </ProtectedRoute>
           } />
           

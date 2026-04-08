@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +11,7 @@ import { User as UserType } from '@/types';
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
-  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings } = auth;
+  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings, events } = auth;
   const tutors = users.filter(u => u.tutorStatus === 'approved');
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
@@ -410,6 +410,69 @@ export default function Dashboard() {
               </div>
             </section>
           )}
+
+          {/* Featured Events */}
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-display font-bold text-slate-900">Événements à la Une</h2>
+              <Link to="/events" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
+            </div>
+            <div className="space-y-4">
+              {events && events.length > 0 ? (
+                events.slice(0, 2).map((event) => (
+                  <div 
+                    key={event.id} 
+                    onClick={() => navigate('/events')}
+                    className="bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer overflow-hidden group"
+                  >
+                    {event.imageUrl && (
+                      <div className="h-32 w-full overflow-hidden">
+                        <img 
+                          src={event.imageUrl} 
+                          alt={event.title} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider",
+                          event.type === 'conference' ? "bg-blue-50 text-blue-600" :
+                          event.type === 'defense' ? "bg-purple-50 text-purple-600" :
+                          event.type === 'competition' ? "bg-amber-50 text-amber-600" :
+                          event.type === 'cultural' ? "bg-pink-50 text-pink-600" : "bg-slate-50 text-slate-600"
+                        )}>
+                          {event.type}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-base group-hover:text-emerald-700 transition-colors line-clamp-1">
+                        {event.title}
+                      </h4>
+                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-500 font-medium">
+                        <div className="flex items-center gap-1">
+                          <Calendar size={14} className="text-slate-400" />
+                          <span>{event.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <MapPin size={14} className="text-slate-400" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                  <Calendar className="mx-auto text-slate-300 mb-2" size={24} />
+                  <p className="text-sm text-slate-500">Aucun événement à venir</p>
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* Recommended Tutors */}
           <section>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport } from '@/types';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
@@ -45,6 +45,14 @@ interface AuthContextType {
   trainingEnrollments: TrainingEnrollment[];
   trainingReviews: TrainingReview[];
   trainingReports: TrainingReport[];
+  contests: Contest[];
+  contestParticipants: ContestParticipant[];
+  createContest: (contest: Omit<Contest, 'id' | 'createdAt'>) => Promise<void>;
+  updateContest: (id: string, data: Partial<Contest>) => Promise<void>;
+  deleteContest: (id: string) => Promise<void>;
+  registerForContest: (contestId: string) => Promise<void>;
+  updateParticipantStatus: (participantId: string, status: ContestParticipant['status']) => Promise<void>;
+  publishContestResults: (contestId: string, winners: ContestWinner[]) => Promise<void>;
   logAction: (action: string, details?: string) => Promise<void>;
   updateAd: (id: string, data: Partial<Ad>) => Promise<void>;
   createAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
@@ -141,6 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [trainingEnrollments, setTrainingEnrollments] = useState<TrainingEnrollment[]>([]);
   const [trainingReviews, setTrainingReviews] = useState<TrainingReview[]>([]);
   const [trainingReports, setTrainingReports] = useState<TrainingReport[]>([]);
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [contestParticipants, setContestParticipants] = useState<ContestParticipant[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -458,6 +468,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               unsubscribes.push(onSnapshot(collection(db, 'training_reports'), (snapshot) => {
                 setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'training_reports')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'contests'), (snapshot) => {
+              setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'contests')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
+              setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'contest_participants')));
 
             unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
               setLogs(snapshot.docs.map(doc => {
@@ -1557,6 +1575,106 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createContest = async (contest: Omit<Contest, 'id' | 'createdAt'>) => {
+    try {
+      const contestData = {
+        ...contest,
+        createdAt: serverTimestamp()
+      };
+      await addDoc(collection(db, 'contests'), contestData);
+      await logAction('Création concours', `Titre: ${contest.title}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'contests');
+    }
+  };
+
+  const updateContest = async (id: string, data: Partial<Contest>) => {
+    try {
+      await updateDoc(doc(db, 'contests', id), data);
+      await logAction('Modification concours', `ID: ${id}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `contests/${id}`);
+    }
+  };
+
+  const deleteContest = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'contests', id));
+      // Also delete participants
+      const participantsQuery = query(collection(db, 'contest_participants'), where('contestId', '==', id));
+      const participantsSnapshot = await getDocs(participantsQuery);
+      for (const participantDoc of participantsSnapshot.docs) {
+        await deleteDoc(participantDoc.ref);
+      }
+      await logAction('Suppression concours', `ID: ${id}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `contests/${id}`);
+    }
+  };
+
+  const registerForContest = async (contestId: string) => {
+    if (!user) return;
+    try {
+      const contest = contests.find(c => c.id === contestId);
+      if (!contest) throw new Error('Concours non trouvé');
+
+      // Check conditions
+      if (contest.conditions.requireVerifiedProfile && !user.isVerified) {
+        throw new Error('Votre profil doit être vérifié pour participer à ce concours');
+      }
+
+      // Check max participants
+      const participantsCount = contestParticipants.filter(p => p.contestId === contestId).length;
+      if (participantsCount >= contest.maxParticipants) {
+        throw new Error('Le nombre maximum de participants est atteint');
+      }
+
+      // Check if already registered
+      const alreadyRegistered = contestParticipants.some(p => p.contestId === contestId && p.userId === user.id);
+      if (alreadyRegistered) {
+        throw new Error('Vous êtes déjà inscrit à ce concours');
+      }
+
+      const participantData: Omit<ContestParticipant, 'id'> = {
+        contestId,
+        userId: user.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        userAvatar: user.avatarUrl,
+        status: 'pending',
+        registrationDate: new Date().toISOString(),
+        stats: {},
+        totalScore: 0
+      };
+
+      await addDoc(collection(db, 'contest_participants'), participantData);
+      await logAction('Inscription concours', `Concours: ${contest.title}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'contest_participants');
+      throw error;
+    }
+  };
+
+  const updateParticipantStatus = async (participantId: string, status: ContestParticipant['status']) => {
+    try {
+      await updateDoc(doc(db, 'contest_participants', participantId), { status });
+      await logAction('Mise à jour statut participant', `ID: ${participantId}, Statut: ${status}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `contest_participants/${participantId}`);
+    }
+  };
+
+  const publishContestResults = async (contestId: string, winners: ContestWinner[]) => {
+    try {
+      await updateDoc(doc(db, 'contests', contestId), { 
+        status: 'results_published',
+        winners 
+      });
+      await logAction('Publication résultats concours', `ID: ${contestId}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `contests/${contestId}`);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -1606,6 +1724,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reportTraining,
       updateTrainingStatus,
       deleteTraining,
+      contests,
+      contestParticipants,
+      createContest,
+      updateContest,
+      deleteContest,
+      registerForContest,
+      updateParticipantStatus,
+      publishContestResults,
       login, 
       resetPassword,
       signup,

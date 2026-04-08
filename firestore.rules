@@ -293,6 +293,78 @@ service cloud.firestore {
              data.status == 'pending';
     }
 
+    function isValidTraining(data) {
+      return hasRequiredFields(['title', 'description', 'domain', 'type', 'price', 'startDate', 'duration', 'maxParticipants', 'trainerId', 'trainerName', 'status', 'participants', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 5000 &&
+             data.domain is string &&
+             data.type in ['online', 'in_person'] &&
+             data.price is number && data.price >= 0 &&
+             data.startDate is string &&
+             data.duration is string &&
+             data.maxParticipants is number &&
+             data.trainerId is string &&
+             data.trainerName is string &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.participants is list &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidTrainingEnrollment(data) {
+      return hasRequiredFields(['trainingId', 'userId', 'userName', 'enrolledAt']) &&
+             data.trainingId is string &&
+             data.userId == request.auth.uid &&
+             data.userName is string &&
+             (data.enrolledAt is timestamp || data.enrolledAt is string);
+    }
+
+    function isValidTrainingReview(data) {
+      return hasRequiredFields(['trainingId', 'userId', 'userName', 'rating', 'comment', 'createdAt']) &&
+             data.trainingId is string &&
+             data.userId == request.auth.uid &&
+             data.userName is string &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000 &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidTrainingReport(data) {
+      return hasRequiredFields(['trainingId', 'reporterId', 'reason', 'details', 'status', 'createdAt']) &&
+             data.trainingId is string &&
+             data.reporterId == request.auth.uid &&
+             data.reason is string &&
+             data.details is string && data.details.size() <= 2000 &&
+             data.status in ['pending', 'resolved', 'dismissed'] &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidContest(data) {
+      return hasRequiredFields(['title', 'description', 'type', 'startDate', 'endDate', 'resultsDate', 'maxParticipants', 'reward', 'conditions', 'criteria', 'status', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 5000 &&
+             data.type in ['academic', 'documents', 'events', 'motoride', 'marketplace', 'ambassador'] &&
+             data.startDate is string &&
+             data.endDate is string &&
+             data.resultsDate is string &&
+             data.maxParticipants is number &&
+             data.reward is string &&
+             data.conditions is map &&
+             data.criteria is list &&
+             data.status in ['draft', 'active', 'finished', 'results_published'] &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidContestParticipant(data) {
+      return hasRequiredFields(['contestId', 'userId', 'userName', 'status', 'registrationDate', 'stats', 'totalScore']) &&
+             data.contestId is string &&
+             data.userId == request.auth.uid &&
+             data.userName is string &&
+             data.status in ['pending', 'validated', 'excluded'] &&
+             data.registrationDate is string &&
+             data.stats is map &&
+             data.totalScore is number;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -508,6 +580,70 @@ service cloud.firestore {
       allow create: if isVerifiedUser() && isValidRideReport(request.resource.data) && isRecent(request.resource.data.createdAt);
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    match /trainings/{trainingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTraining(request.resource.data) && 
+                      request.resource.data.trainerId == request.auth.uid &&
+                      request.resource.data.status == 'pending';
+      allow update: if isAuthenticated() && (
+        (resource.data.trainerId == request.auth.uid && isValidTraining(request.resource.data) && request.resource.data.trainerId == resource.data.trainerId) ||
+        isAdmin() ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']))
+      );
+      allow delete: if resource.data.trainerId == request.auth.uid || isAdmin();
+    }
+
+    match /training_enrollments/{enrollmentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTrainingEnrollment(request.resource.data);
+      allow update: if false;
+      allow delete: if resource.data.userId == request.auth.uid || isAdmin();
+    }
+
+    match /training_reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTrainingReview(request.resource.data);
+      allow update: if false;
+      allow delete: if resource.data.userId == request.auth.uid || isAdmin();
+    }
+
+    match /training_reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidTrainingReport(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /contests/{contestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidContest(request.resource.data);
+      allow update: if isAdmin() && isValidContest(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /contest_participants/{participantId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidContestParticipant(request.resource.data);
+      allow update: if isAdmin() || (
+        isAuthenticated() && 
+        resource.data.userId == request.auth.uid && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats', 'totalScore']) &&
+        false // Users cannot modify their own scores, but the system might. 
+        // Actually, the system (agent) will do it, but rules should prevent manual user edits.
+      );
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /contest_scores/{scoreId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /contest_rules/{ruleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     match /subscriptionRequests/{requestId} {

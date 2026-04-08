@@ -459,3 +459,52 @@ export interface Log {
   details?: string;
   createdAt: string;
 }
+
+export interface Contest {
+  id: string;
+  title: string;
+  description: string;
+  type: 'academic' | 'documents' | 'events' | 'motoride' | 'marketplace' | 'ambassador';
+  domain?: string;
+  startDate: string;
+  endDate: string;
+  resultsDate: string;
+  maxParticipants: number;
+  reward: string;
+  imageUrl?: string;
+  conditions: {
+    minInvites: number;
+    requireVerifiedProfile: boolean;
+  };
+  criteria: ContestCriterion[];
+  status: 'draft' | 'active' | 'finished' | 'results_published';
+  createdAt: string;
+}
+
+export interface ContestCriterion {
+  id: string;
+  label: string;
+  key: string; // e.g., 'score', 'time', 'docsCount', 'downloads', 'eventsCount', 'participantsCount', 'ridesCount', 'rating', 'salesCount'
+  weight: number; // percentage (0-100)
+}
+
+export interface ContestParticipant {
+  id: string;
+  contestId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  status: 'pending' | 'validated' | 'excluded';
+  registrationDate: string;
+  stats: { [key: string]: number }; // Current values for criteria keys
+  totalScore: number;
+}
+
+export interface ContestWinner {
+  contestId: string;
+  userId: string;
+  userName: string;
+  position: number;
+  reward: string;
+  score: number;
+}

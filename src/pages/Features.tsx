@@ -3,7 +3,7 @@ import {
   FileText, GraduationCap, ShoppingBag, Briefcase, 
   Compass, Users, Bike, Calendar, Library, 
   UserCheck, MessageSquare, Sparkles, Download, Loader2,
-  WifiOff, BookOpen
+  WifiOff, BookOpen, Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -83,6 +83,14 @@ const features = [
     color: "bg-teal-50 text-teal-600",
     link: "/events",
     roles: ['student', 'teacher', 'parent', 'admin']
+  },
+  {
+    icon: Trophy,
+    title: "Concours CampusBF",
+    description: "Participez à des concours académiques et thématiques pour gagner des prix et booster votre profil.",
+    color: "bg-amber-50 text-amber-600",
+    link: "/contests",
+    roles: ['student', 'teacher', 'admin', 'alumni']
   },
   {
     icon: Library,

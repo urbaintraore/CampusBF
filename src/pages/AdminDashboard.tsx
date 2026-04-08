@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Log } from '@/types';
+import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
@@ -58,11 +58,18 @@ export default function AdminDashboard() {
     trainingReports,
     updateTrainingStatus,
     deleteTraining,
+    contests,
+    contestParticipants,
+    createContest,
+    updateContest,
+    deleteContest,
+    updateParticipantStatus,
+    publishContestResults,
     logs
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests'>('documents');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -77,6 +84,21 @@ export default function AdminDashboard() {
   const [editingDoc, setEditingDoc] = useState<any>(null);
   const [showEditInternshipModal, setShowEditInternshipModal] = useState(false);
   const [editingInternship, setEditingInternship] = useState<any>(null);
+  const [showAddContestModal, setShowAddContestModal] = useState(false);
+  const [editingContest, setEditingContest] = useState<any>(null);
+  const [newContest, setNewContest] = useState<Partial<Contest>>({
+    title: '',
+    description: '',
+    type: 'academic',
+    startDate: '',
+    endDate: '',
+    resultsDate: '',
+    maxParticipants: 100,
+    reward: '',
+    conditions: { minInvites: 0, requireVerifiedProfile: false },
+    criteria: [{ id: '1', label: 'Score', key: 'score', weight: 100 }],
+    status: 'draft'
+  });
 
   const handleSaveInternship = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +126,35 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error in handleSaveDocument:", error);
       throw error;
+    }
+  };
+
+  const handleSaveContest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingContest) {
+        await updateContest(editingContest.id, newContest);
+      } else {
+        await createContest(newContest as Contest);
+      }
+      setShowAddContestModal(false);
+      setEditingContest(null);
+      setNewContest({
+        title: '',
+        description: '',
+        type: 'academic',
+        startDate: '',
+        endDate: '',
+        resultsDate: '',
+        maxParticipants: 100,
+        reward: '',
+        conditions: { minInvites: 0, requireVerifiedProfile: false },
+        criteria: [{ id: '1', label: 'Score', key: 'score', weight: 100 }],
+        status: 'draft'
+      });
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'enregistrement du concours');
     }
   };
 
@@ -650,6 +701,7 @@ export default function AdminDashboard() {
               { id: 'reports', label: 'Signalements', icon: AlertTriangle },
               { id: 'motoRide', label: 'MotoRide', icon: Bike },
               { id: 'formations', label: 'Formations', icon: BookOpen },
+              { id: 'contests', label: 'Concours', icon: Trophy },
               { id: 'payments', label: 'Paiements', icon: CreditCard },
             ].map((tab) => (
               <button 
@@ -676,6 +728,15 @@ export default function AdminDashboard() {
                 >
                   <Plus size={16} />
                   Nouvelle Publicité
+                </button>
+              )}
+              {contentTab === 'contests' && (
+                <button 
+                  onClick={() => setShowAddContestModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus size={16} />
+                  Nouveau Concours
                 </button>
               )}
               {contentTab === 'documents' && (
@@ -1759,6 +1820,70 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {contentTab === 'contests' && (
+                <div className="p-0">
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <Trophy className="text-emerald-600" size={18} />
+                      Gestion des Concours
+                    </h3>
+                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                      {contests.length} concours
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {contests.length > 0 ? (
+                      contests.map((contest) => (
+                        <div key={contest.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <img src={contest.imageUrl || `https://picsum.photos/seed/${contest.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                              <div>
+                                <h3 className="font-bold text-gray-900">{contest.title}</h3>
+                                <p className="text-xs text-gray-500 mb-2">{contest.type} • {new Date(contest.startDate).toLocaleDateString()} - {new Date(contest.endDate).toLocaleDateString()}</p>
+                                <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-400">
+                                  <span className="flex items-center gap-1"><Users size={12} /> {contestParticipants.filter(p => p.contestId === contest.id).length} / {contest.maxParticipants} participants</span>
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded-full font-bold uppercase",
+                                    contest.status === 'active' ? "bg-emerald-50 text-emerald-600" :
+                                    contest.status === 'finished' ? "bg-blue-50 text-blue-600" :
+                                    contest.status === 'results_published' ? "bg-purple-50 text-purple-600" : "bg-gray-100 text-gray-500"
+                                  )}>
+                                    {contest.status}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[150px]">
+                              <button 
+                                onClick={() => { setEditingContest(contest); setShowAddContestModal(true); }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                              >
+                                <Edit2 size={16} />
+                                Modifier
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if(confirm('Supprimer ce concours et tous ses participants ?')) deleteContest(contest.id);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <Trash2 size={16} />
+                                Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 text-center text-gray-400">
+                        <p>Aucun concours créé.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {contentTab === 'payments' && (
                 <div className="p-0">
                   <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
@@ -2465,6 +2590,188 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      <AddContestModal
+        isOpen={showAddContestModal}
+        onClose={() => { setShowAddContestModal(false); setEditingContest(null); }}
+        onSave={handleSaveContest}
+        contest={editingContest || newContest}
+        setContest={editingContest ? setEditingContest : setNewContest}
+      />
+    </div>
+  );
+}
+
+function AddContestModal({ isOpen, onClose, onSave, contest, setContest }: any) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Trophy className="text-emerald-600" size={24} />
+            {contest?.id ? 'Modifier le concours' : 'Nouveau Concours'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <form onSubmit={onSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Titre du concours</label>
+              <input
+                type="text"
+                required
+                value={contest.title}
+                onChange={(e) => setContest({ ...contest, title: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                placeholder="Ex: Concours de Mathématiques 2024"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Type de concours</label>
+              <select
+                value={contest.type}
+                onChange={(e) => setContest({ ...contest, type: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              >
+                <option value="academic">Académique</option>
+                <option value="documents">Documents</option>
+                <option value="events">Événements</option>
+                <option value="motoride">MotoRide</option>
+                <option value="marketplace">Marketplace</option>
+                <option value="ambassador">Ambassadeur</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Description</label>
+            <textarea
+              required
+              rows={4}
+              value={contest.description}
+              onChange={(e) => setContest({ ...contest, description: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              placeholder="Décrivez les objectifs, les règles et le déroulement du concours..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Date de début</label>
+              <input
+                type="date"
+                required
+                value={contest.startDate}
+                onChange={(e) => setContest({ ...contest, startDate: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Date de fin</label>
+              <input
+                type="date"
+                required
+                value={contest.endDate}
+                onChange={(e) => setContest({ ...contest, endDate: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Date résultats</label>
+              <input
+                type="date"
+                required
+                value={contest.resultsDate}
+                onChange={(e) => setContest({ ...contest, resultsDate: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Nombre max participants</label>
+              <input
+                type="number"
+                required
+                value={contest.maxParticipants}
+                onChange={(e) => setContest({ ...contest, maxParticipants: parseInt(e.target.value) })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Récompense</label>
+              <input
+                type="text"
+                required
+                value={contest.reward}
+                onChange={(e) => setContest({ ...contest, reward: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                placeholder="Ex: 50 000 CFA + Certificat"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Conditions de participation</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500">Invitations minimales</label>
+                <input
+                  type="number"
+                  value={contest.conditions.minInvites}
+                  onChange={(e) => setContest({ ...contest, conditions: { ...contest.conditions, minInvites: parseInt(e.target.value) } })}
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <input
+                  type="checkbox"
+                  id="requireVerified"
+                  checked={contest.conditions.requireVerifiedProfile}
+                  onChange={(e) => setContest({ ...contest, conditions: { ...contest.conditions, requireVerifiedProfile: e.target.checked } })}
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                />
+                <label htmlFor="requireVerified" className="text-sm font-medium text-gray-700">Profil vérifié requis</label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Statut</label>
+            <select
+              value={contest.status}
+              onChange={(e) => setContest({ ...contest, status: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+            >
+              <option value="draft">Brouillon</option>
+              <option value="active">Actif</option>
+              <option value="finished">Terminé</option>
+              <option value="results_published">Résultats publiés</option>
+            </select>
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+            >
+              {contest?.id ? 'Enregistrer les modifications' : 'Créer le concours'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
