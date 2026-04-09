@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/Logo';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -66,10 +67,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         "md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky z-50 shadow-sm",
         user?.role === 'admin' ? "top-[32px]" : "top-0"
       )}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400/50">C</div>
-          <span className="font-display font-bold text-xl text-slate-900 tracking-tight">CampusBF</span>
-        </div>
+        <Logo size="md" />
         <div className="flex items-center gap-2">
           <button 
             onClick={() => navigate('/notifications')}
@@ -122,9 +120,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         "hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
         user?.role === 'admin' ? "top-[32px]" : "top-0"
       )}>
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400/50">C</div>
-          <span className="font-display font-bold text-2xl text-slate-900 tracking-tight">CampusBF</span>
+        <div className="p-6">
+          <Logo size="lg" />
         </div>
 
         <div className="px-4 mb-6">

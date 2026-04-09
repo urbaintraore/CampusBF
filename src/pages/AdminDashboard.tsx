@@ -133,7 +133,8 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       if (editingContest) {
-        await updateContest(editingContest.id, newContest);
+        const { id, ...data } = editingContest;
+        await updateContest(id, data);
       } else {
         await createContest(newContest as Contest);
       }
@@ -2606,7 +2607,7 @@ function AddContestModal({ isOpen, onClose, onSave, contest, setContest }: any) 
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+      <div className="bg-white w-full max-w-xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Trophy className="text-emerald-600" size={24} />
@@ -2617,25 +2618,25 @@ function AddContestModal({ isOpen, onClose, onSave, contest, setContest }: any) 
           </button>
         </div>
         
-        <form onSubmit={onSave} className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Titre du concours</label>
+        <form id="contest-form" onSubmit={onSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Titre du concours</label>
               <input
                 type="text"
                 required
                 value={contest.title}
                 onChange={(e) => setContest({ ...contest, title: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
                 placeholder="Ex: Concours de Mathématiques 2024"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Type de concours</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Type de concours</label>
               <select
                 value={contest.type}
                 onChange={(e) => setContest({ ...contest, type: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
               >
                 <option value="academic">Académique</option>
                 <option value="documents">Documents</option>
@@ -2647,106 +2648,106 @@ function AddContestModal({ isOpen, onClose, onSave, contest, setContest }: any) 
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700">Description</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
             <textarea
               required
-              rows={4}
+              rows={3}
               value={contest.description}
               onChange={(e) => setContest({ ...contest, description: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm resize-none"
               placeholder="Décrivez les objectifs, les règles et le déroulement du concours..."
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Date de début</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Date de début</label>
               <input
                 type="date"
                 required
                 value={contest.startDate}
                 onChange={(e) => setContest({ ...contest, startDate: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Date de fin</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Date de fin</label>
               <input
                 type="date"
                 required
                 value={contest.endDate}
                 onChange={(e) => setContest({ ...contest, endDate: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Date résultats</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Résultats</label>
               <input
                 type="date"
                 required
                 value={contest.resultsDate}
                 onChange={(e) => setContest({ ...contest, resultsDate: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Nombre max participants</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Max participants</label>
               <input
                 type="number"
                 required
                 value={contest.maxParticipants}
                 onChange={(e) => setContest({ ...contest, maxParticipants: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Récompense</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Récompense</label>
               <input
                 type="text"
                 required
                 value={contest.reward}
                 onChange={(e) => setContest({ ...contest, reward: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                placeholder="Ex: 50 000 CFA + Certificat"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="Ex: 50 000 CFA"
               />
             </div>
           </div>
 
-          <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Conditions de participation</h3>
+          <div className="space-y-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Conditions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500">Invitations minimales</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Invitations min.</label>
                 <input
                   type="number"
                   value={contest.conditions.minInvites}
                   onChange={(e) => setContest({ ...contest, conditions: { ...contest.conditions, minInvites: parseInt(e.target.value) } })}
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none text-sm"
                 />
               </div>
-              <div className="flex items-center gap-3 pt-6">
+              <div className="flex items-center gap-3 pt-4 md:pt-6">
                 <input
                   type="checkbox"
                   id="requireVerified"
                   checked={contest.conditions.requireVerifiedProfile}
                   onChange={(e) => setContest({ ...contest, conditions: { ...contest.conditions, requireVerifiedProfile: e.target.checked } })}
-                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                  className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
                 />
-                <label htmlFor="requireVerified" className="text-sm font-medium text-gray-700">Profil vérifié requis</label>
+                <label htmlFor="requireVerified" className="text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer">Profil vérifié</label>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700">Statut</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Statut</label>
             <select
               value={contest.status}
               onChange={(e) => setContest({ ...contest, status: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
             >
               <option value="draft">Brouillon</option>
               <option value="active">Actif</option>
@@ -2754,23 +2755,24 @@ function AddContestModal({ isOpen, onClose, onSave, contest, setContest }: any) 
               <option value="results_published">Résultats publiés</option>
             </select>
           </div>
-
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-            >
-              {contest?.id ? 'Enregistrer les modifications' : 'Créer le concours'}
-            </button>
-          </div>
         </form>
+
+        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-2xl font-bold hover:bg-gray-50 transition-all text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            form="contest-form"
+            className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-sm"
+          >
+            {contest?.id ? 'Enregistrer' : 'Créer le concours'}
+          </button>
+        </div>
       </div>
     </div>
   );

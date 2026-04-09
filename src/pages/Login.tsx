@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -49,8 +50,8 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10">
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-[2rem] shadow-2xl p-8 sm:p-10 space-y-8">
           <div className="text-center space-y-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center text-white font-display font-bold text-3xl mx-auto mb-6 shadow-lg shadow-emerald-500/30 ring-4 ring-white">
-              C
+            <div className="flex justify-center mb-6">
+              <Logo size="xl" />
             </div>
             <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Bienvenue sur CampusBF</h1>
             <p className="text-slate-500 text-sm">Connectez-vous pour accéder à votre espace étudiant.</p>

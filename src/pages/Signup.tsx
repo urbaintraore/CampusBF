@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Loader2, GraduationCap, Building2, Library, User } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
@@ -109,6 +110,9 @@ export default function Signup() {
       <div className="w-full max-w-2xl relative z-10">
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-[2rem] shadow-2xl p-8 sm:p-10 space-y-8">
           <div className="text-center space-y-3">
+            <div className="flex justify-center mb-6">
+              <Logo size="lg" />
+            </div>
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center text-white font-display font-bold text-3xl mx-auto mb-6 shadow-lg shadow-emerald-500/30 ring-4 ring-white">
               {accountType === 'student' ? <GraduationCap size={32} /> : accountType === 'teacher' ? <Library size={32} /> : accountType === 'parent' ? <User size={32} /> : <Building2 size={32} />}
             </div>
