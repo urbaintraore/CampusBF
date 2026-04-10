@@ -29,6 +29,7 @@ export default function Profile() {
     specialties: '',
     domains: '',
     courses: '',
+    experienceYears: '0',
     academicRank: 'Assistant' as any
   });
   const [formData, setFormData] = useState({
@@ -127,6 +128,7 @@ export default function Profile() {
           specialties: teacherFormData.specialties.split(',').map(s => s.trim()),
           domains: teacherFormData.domains.split(',').map(d => d.trim()),
           courses: teacherFormData.courses.split(',').map(c => c.trim()),
+          experienceYears: parseInt(teacherFormData.experienceYears) || 0,
           academicRank: teacherFormData.academicRank
         });
         
@@ -154,6 +156,7 @@ export default function Profile() {
           specialties: teacherFormData.specialties.split(',').map(s => s.trim()),
           domains: teacherFormData.domains.split(',').map(d => d.trim()),
           courses: teacherFormData.courses.split(',').map(c => c.trim()),
+          yearsOfExperience: parseInt(teacherFormData.experienceYears) || 0,
           academicRank: teacherFormData.academicRank
         };
         await updateUser({ teacherProfile: updatedProfile });
@@ -176,6 +179,7 @@ export default function Profile() {
         specialties: user.teacherProfile.specialties.join(', '),
         domains: user.teacherProfile.domains.join(', '),
         courses: user.teacherProfile.courses.join(', '),
+        experienceYears: user.teacherProfile.yearsOfExperience.toString(),
         academicRank: user.teacherProfile.academicRank
       });
       setIsEditingTeacher(true);
@@ -801,6 +805,17 @@ export default function Profile() {
                     <option value="Professeur Titulaire">Professeur Titulaire</option>
                     <option value="Autre">Autre</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">Années d'expérience</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="0"
+                    value={teacherFormData.experienceYears}
+                    onChange={(e) => setTeacherFormData({ ...teacherFormData, experienceYears: e.target.value })}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">Spécialités (séparées par des virgules)</label>

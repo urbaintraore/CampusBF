@@ -20,6 +20,7 @@ export default function Tutors() {
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [subjects, setSubjects] = useState('');
   const [hourlyRates, setHourlyRates] = useState({
@@ -50,11 +51,8 @@ export default function Tutors() {
       );
       
       setShowApplicationForm(false);
+      setIsSubmitted(true);
       setDescription('');
-      setSubjects('');
-      setHourlyRates({ college: 0, lycee: 0, licence: 0, master: 0 });
-      setSelectedFile(null);
-      alert('Votre demande a été envoyée avec succès !');
     } catch (err: any) {
       console.error('Error submitting tutor application:', err);
       setError(err.message || 'Une erreur est survenue lors de l\'envoi de votre demande.');
@@ -120,7 +118,7 @@ export default function Tutors() {
       );
     }
 
-    if (user.tutorStatus === 'pending') {
+    if (user.tutorStatus === 'pending' || isSubmitted) {
       return (
         <div className="glass border-amber-200/50 p-6 rounded-3xl mb-8 flex items-center gap-5 animate-in fade-in slide-in-from-bottom-4">
           <div className="w-14 h-14 bg-amber-100/50 rounded-2xl flex items-center justify-center text-amber-600 flex-shrink-0 shadow-inner">

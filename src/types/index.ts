@@ -186,6 +186,7 @@ export interface TeacherApplication {
   specialties: string[];
   domains: string[];
   courses: string[];
+  experienceYears: number;
   academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre';
   status: 'pending' | 'approved' | 'rejected';
   createdAt: any;

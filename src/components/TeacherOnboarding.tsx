@@ -14,6 +14,7 @@ export default function TeacherOnboarding() {
     specialties: '',
     domains: '',
     courses: '',
+    experienceYears: '',
     academicRank: 'Assistant' as 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre'
   });
 
@@ -47,6 +48,7 @@ export default function TeacherOnboarding() {
         diplomaUrl: formData.diplomaUrl || 'https://example.com/diploma.pdf',
         rankProofUrl: formData.rankProofUrl || 'https://example.com/rank.pdf',
         biography: formData.biography,
+        experienceYears: parseInt(formData.experienceYears) || 0,
         specialties: formData.specialties.split(',').map(s => s.trim()),
         domains: formData.domains.split(',').map(d => d.trim()),
         courses: formData.courses.split(',').map(c => c.trim()),
@@ -139,6 +141,19 @@ export default function TeacherOnboarding() {
                     <option value="Professeur Titulaire">Professeur Titulaire</option>
                     <option value="Autre">Autre</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Années d'expérience</label>
+                  <input 
+                    type="number" 
+                    name="experienceYears"
+                    required
+                    min="0"
+                    value={formData.experienceYears}
+                    onChange={handleChange}
+                    placeholder="Ex: 5"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Domaines d'expertise (séparés par des virgules)</label>
