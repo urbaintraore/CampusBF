@@ -438,6 +438,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setTrainingReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReview)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'training_reviews')));
 
+            // Public users list (only teachers and tutors for non-admins)
+            const usersQuery = initialUserData.role === 'admin'
+              ? collection(db, 'users')
+              : query(collection(db, 'users'), where('role', 'in', ['teacher', 'tutor']));
+
+            unsubscribes.push(onSnapshot(usersQuery, (snapshot) => {
+              setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'users')));
+
             // User-specific notifications
             const qNotifs = query(collection(db, 'notifications'), where('userId', '==', firebaseUser.uid));
             unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
@@ -447,10 +456,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Admin-only or restricted lists
           if (initialUserData.role === 'admin') {
             console.log("User is admin, starting admin listeners");
-            unsubscribes.push(onSnapshot(collection(db, 'users'), (snapshot) => {
-                setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'users')));
-
               unsubscribes.push(onSnapshot(collection(db, 'applications'), (snapshot) => {
                 setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
