@@ -371,23 +371,26 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && 
-                      (request.resource.data.role in ['student', 'teacher', 'institution', 'parent', 'company', 'alumni', 'tutor'] || (request.resource.data.role == 'admin' && (
-                        request.auth.token.email.lower() == "urbain.traoreurb@gmail.com" || 
-                        request.auth.token.email.lower() == "urbain.traoreurb@gmail" ||
-                        request.auth.token.email.lower() == "urbain.traoreurb@gmail.com."
-                      ))) &&
-                      (!('tutorStatus' in request.resource.data) || request.resource.data.tutorStatus == 'none' || request.resource.data.tutorStatus == 'approved') &&
-                      (!('teacherStatus' in request.resource.data) || request.resource.data.teacherStatus == 'pending_dossier');
-      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
-                      request.resource.data.role == resource.data.role &&
-                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'tutorStatus', 'teacherStatus', 'premiumSubscriptionExpiry', 'examSubscriptionExpiry', 'motoRideSubscriptionExpiry', 'eventSubscriptionExpiry', 'isVerified', 'isDriverVerified', 'motoRideStatus', 'motoRideStats']) &&
-                      (!('eventSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.eventSubscriptionStatus == 'pending') &&
-                      (!('premiumSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.premiumSubscriptionStatus == 'pending') &&
-                      (!('examSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.examSubscriptionStatus == 'pending') &&
-                      (!('motoRideSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.motoRideSubscriptionStatus == 'pending') &&
-                      (!('institutionProfile' in request.resource.data.diff(resource.data).affectedKeys()) || !('subscriptionStatus' in request.resource.data.institutionProfile) || !('institutionProfile' in resource.data) || !('subscriptionStatus' in resource.data.institutionProfile) || request.resource.data.institutionProfile.subscriptionStatus == resource.data.institutionProfile.subscriptionStatus || request.resource.data.institutionProfile.subscriptionStatus == 'pending')
-                      ) || isAdmin();
+      allow create: if isAdmin() || (
+        isOwner(userId) && 
+        isValidUser(request.resource.data) && 
+        request.resource.data.role in ['student', 'teacher', 'institution', 'parent', 'company', 'alumni', 'tutor'] &&
+        (!('tutorStatus' in request.resource.data) || request.resource.data.tutorStatus == 'none') &&
+        (!('teacherStatus' in request.resource.data) || request.resource.data.teacherStatus == 'pending_dossier')
+      );
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        isValidUser(request.resource.data) && 
+        request.resource.data.role == resource.data.role &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'premiumSubscriptionExpiry', 'examSubscriptionExpiry', 'motoRideSubscriptionExpiry', 'eventSubscriptionExpiry', 'isVerified', 'isDriverVerified', 'motoRideStatus', 'motoRideStats']) &&
+        (!('tutorStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.tutorStatus == 'pending') &&
+        (!('teacherStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.teacherStatus == 'pending_approval') &&
+        (!('eventSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.eventSubscriptionStatus == 'pending') &&
+        (!('premiumSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.premiumSubscriptionStatus == 'pending') &&
+        (!('examSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.examSubscriptionStatus == 'pending') &&
+        (!('motoRideSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.motoRideSubscriptionStatus == 'pending') &&
+        (!('institutionProfile' in request.resource.data.diff(resource.data).affectedKeys()) || !('subscriptionStatus' in request.resource.data.institutionProfile) || !('institutionProfile' in resource.data) || !('subscriptionStatus' in resource.data.institutionProfile) || request.resource.data.institutionProfile.subscriptionStatus == resource.data.institutionProfile.subscriptionStatus || request.resource.data.institutionProfile.subscriptionStatus == 'pending')
+      );
       allow delete: if isAdmin();
 
       match /reviews/{reviewId} {
