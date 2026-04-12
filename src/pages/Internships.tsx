@@ -15,7 +15,7 @@ import {
 import { handleFirestoreError, OperationType } from '@/lib/firebase';
 
 export default function Internships() {
-  const { user, internships } = useAuth();
+  const { user, internships, addInternship, updateInternship, deleteInternship } = useAuth();
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -192,40 +192,18 @@ export default function Internships() {
     setIsSubmitting(true);
     try {
       if (editingId) {
-        const internshipRef = doc(db, 'internships', editingId);
-        const updateData: any = {
-          title: newInternship.title,
-          company: newInternship.company,
-          location: newInternship.location,
-          type: newInternship.type,
-          description: newInternship.description,
-          applicationMethod: newInternship.applicationMethod,
-          applicationValue: newInternship.applicationValue,
-          deadline: newInternship.deadline,
-          updatedAt: serverTimestamp(),
-        };
-        await updateDoc(internshipRef, updateData);
+        await updateInternship(editingId, newInternship as any);
         alert('Offre modifiée avec succès !');
       } else {
-        const internshipData = {
-          title: newInternship.title,
-          company: newInternship.company,
-          location: newInternship.location,
-          type: newInternship.type,
-          description: newInternship.description,
-          applicationMethod: newInternship.applicationMethod,
-          applicationValue: newInternship.applicationValue,
-          deadline: newInternship.deadline,
+        await addInternship({
+          ...newInternship,
           authorId: user.id,
-          postedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        };
-        await addDoc(collection(db, 'internships'), internshipData);
+          postedAt: new Date().toISOString(),
+        } as any);
         alert('Offre publiée avec succès !');
       }
       setShowPostModal(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'internships');
       alert('Une erreur est survenue lors de la publication.');
     } finally {
       setIsSubmitting(false);
@@ -235,10 +213,9 @@ export default function Internships() {
   const handleDeleteInternship = async (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette offre ?')) {
       try {
-        await deleteDoc(doc(db, 'internships', id));
+        await deleteInternship(id);
         alert('Offre supprimée avec succès !');
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `internships/${id}`);
         alert('Une erreur est survenue lors de la suppression.');
       }
     }

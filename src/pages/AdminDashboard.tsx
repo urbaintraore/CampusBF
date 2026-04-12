@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 export default function AdminDashboard() {
   const { 
@@ -68,7 +69,7 @@ export default function AdminDashboard() {
     logs
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats'>('overview');
   const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests'>('documents');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -305,6 +306,15 @@ export default function AdminDashboard() {
             )}
           >
             Journaux
+          </button>
+          <button 
+            onClick={() => setActiveTab('stats')}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-bold transition-all",
+              activeTab === 'stats' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Statistiques
           </button>
         </div>
       </div>
@@ -2408,6 +2418,142 @@ export default function AdminDashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'stats' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* User Distribution */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Users className="text-blue-600" size={20} />
+                Répartition des Utilisateurs
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Étudiants', value: users.filter(u => u.role === 'student').length },
+                        { name: 'Répétiteurs', value: users.filter(u => u.role === 'tutor').length },
+                        { name: 'Enseignants', value: users.filter(u => u.role === 'teacher').length },
+                        { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      <Cell fill="#3b82f6" />
+                      <Cell fill="#f59e0b" />
+                      <Cell fill="#10b981" />
+                      <Cell fill="#8b5cf6" />
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <span className="text-xs text-gray-600">Étudiants ({users.filter(u => u.role === 'student').length})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span className="text-xs text-gray-600">Répétiteurs ({users.filter(u => u.role === 'tutor').length})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-xs text-gray-600">Enseignants ({users.filter(u => u.role === 'teacher').length})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500" />
+                  <span className="text-xs text-gray-600">Admins ({users.filter(u => u.role === 'admin').length})</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Document Distribution */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <FileText className="text-emerald-600" size={20} />
+                Types de Documents
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { name: 'Examens', count: documents.filter(d => d.type === 'exam').length },
+                      { name: 'Exercices', count: documents.filter(d => d.type === 'exercise').length },
+                      { name: 'Résumés', count: documents.filter(d => d.type === 'summary').length },
+                      { name: 'Mémoires', count: documents.filter(d => d.type === 'Mémoire' || d.type === 'thesis').length },
+                    ]}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                    <Tooltip cursor={{ fill: '#f9fafb' }} />
+                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Platform Activity */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Activity className="text-purple-600" size={20} />
+                Activité Récente (Derniers 7 jours)
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={Array.from({ length: 7 }).map((_, i) => {
+                      const date = new Date();
+                      date.setDate(date.getDate() - (6 - i));
+                      const dateStr = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                      const count = logs.filter(l => {
+                        const logDate = new Date(l.createdAt);
+                        return logDate.toDateString() === date.toDateString();
+                      }).length;
+                      return { name: dateStr, actions: count };
+                    })}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="actions" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6' }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Financial Summary (Placeholder for Investors) */}
+          <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-8 rounded-3xl text-white shadow-xl">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+              <div>
+                <h3 className="text-2xl font-bold mb-2">Résumé Financier & Croissance</h3>
+                <p className="text-emerald-100 max-w-md">
+                  Ces données sont essentielles pour vos rapports aux investisseurs. Elles montrent la viabilité économique du projet.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-8 w-full md:w-auto">
+                <div className="text-center">
+                  <span className="block text-3xl font-bold">{(subscriptionRequests.filter(r => r.status === 'approved').reduce((acc, r) => acc + r.amount, 0)).toLocaleString()} FCFA</span>
+                  <span className="text-sm text-emerald-200">Revenus Totaux</span>
+                </div>
+                <div className="text-center">
+                  <span className="block text-3xl font-bold">{((subscriptionRequests.filter(r => r.status === 'approved').length / (users.length || 1)) * 100).toFixed(1)}%</span>
+                  <span className="text-sm text-emerald-200">Taux de Conversion</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

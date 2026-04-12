@@ -2,6 +2,20 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { documentService } from '@/services/documentService';
+import { motoRideService } from '@/services/motoRideService';
+import { logService } from '@/services/logService';
+import { notificationService } from '@/services/notificationService';
+import { internshipService } from '@/services/internshipService';
+import { marketplaceService } from '@/services/marketplaceService';
+import { contentService } from '@/services/contentService';
+import { reportService } from '@/services/reportService';
+import { applicationService } from '@/services/applicationService';
+import { userService } from '@/services/userService';
+import { communityService } from '@/services/communityService';
+import { adService } from '@/services/adService';
+import { trainingService } from '@/services/trainingService';
+import { contestService } from '@/services/contestService';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -62,7 +76,10 @@ interface AuthContextType {
   addDocument: (data: any) => Promise<void>;
   deleteInternship: (id: string) => Promise<void>;
   updateInternship: (id: string, data: Partial<Internship>) => Promise<void>;
+  addInternship: (data: Omit<Internship, 'id' | 'createdAt'>) => Promise<void>;
   deleteMarketplaceItem: (id: string) => Promise<void>;
+  updateMarketplaceItem: (id: string, data: Partial<MarketplaceItem>) => Promise<void>;
+  addMarketplaceItem: (data: Omit<MarketplaceItem, 'id' | 'createdAt'>) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   deleteNews: (id: string) => Promise<void>;
@@ -184,72 +201,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logAction = async (action: string, details?: string) => {
-    if (!user) return;
-    try {
-      await addDoc(collection(db, 'logs'), {
-        userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-        action,
-        details: details || '',
-        createdAt: serverTimestamp()
-      });
-    } catch (error) {
-      console.error("Error logging action:", error);
-    }
+    await logService.logAction(user, action, details);
   };
 
-  const createAd = async (adData: Partial<Ad>) => {
+  const createAd = async (adData: Omit<Ad, 'id'>) => {
     if (!user) return;
-    try {
-      await addDoc(collection(db, 'ads'), {
-        ...adData,
-        userId: user.id,
-        createdAt: serverTimestamp(),
-        active: true
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'ads');
-    }
+    await adService.createAd(user, adData);
   };
 
   const addGroupMember = async (groupId: string, userId: string) => {
     if (!user || user.role !== 'admin') return;
-    try {
-      const groupRef = doc(db, 'groups', groupId);
-      await updateDoc(groupRef, {
-        members: arrayUnion(userId)
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
-    }
+    await communityService.addGroupMember(user, groupId, userId);
   };
 
   const removeGroupMember = async (groupId: string, userId: string) => {
     if (!user || user.role !== 'admin') return;
-    try {
-      const groupRef = doc(db, 'groups', groupId);
-      await updateDoc(groupRef, {
-        members: arrayRemove(userId)
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
-    }
+    await communityService.removeGroupMember(user, groupId, userId);
   };
 
   const updateAd = async (id: string, data: Partial<Ad>) => {
-    try {
-      await updateDoc(doc(db, 'ads', id), data);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `ads/${id}`);
-    }
+    if (!user) return;
+    await adService.updateAd(user, id, data);
   };
 
   const deleteAd = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'ads', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `ads/${id}`);
-    }
+    if (!user) return;
+    await adService.deleteAd(user, id);
   };
 
   useEffect(() => {
@@ -350,17 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("User set:", initialUserData);
 
           // Log login
-          try {
-            await addDoc(collection(db, 'logs'), {
-              userId: initialUserData.id,
-              userName: `${initialUserData.firstName} ${initialUserData.lastName}`,
-              action: 'Connexion',
-              details: 'Session ouverte',
-              createdAt: serverTimestamp()
-            });
-          } catch (e) {
-            console.error("Failed to log login:", e);
-          }
+          await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
 
           // Set up real-time listener for the user's own document
           unsubscribes.push(onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
@@ -544,66 +511,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const ensureUserInCommunityGroup = async (userId: string) => {
-    try {
-      const groupsRef = collection(db, 'groups');
-      const q = query(groupsRef, where('name', '==', 'Communauté'));
-      const querySnapshot = await getDocs(q);
-      
-      let communityGroupId = '';
-      if (querySnapshot.empty) {
-        // Create the group if it doesn't exist
-        const newGroup = await addDoc(groupsRef, {
-          name: 'Communauté',
-          description: 'Groupe général pour toute la communauté CampusBF',
-          category: 'university',
-          members: [userId],
-          createdAt: new Date().toISOString(),
-          createdBy: 'system'
-        });
-        communityGroupId = newGroup.id;
-      } else {
-        // Update existing group
-        const groupDoc = querySnapshot.docs[0];
-        communityGroupId = groupDoc.id;
-        const members = groupDoc.data().members || [];
-        if (!members.includes(userId)) {
-          await updateDoc(doc(db, 'groups', communityGroupId), {
-            members: arrayUnion(userId)
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error ensuring user in community group:", error);
-    }
+    await communityService.ensureUserInCommunityGroup(userId);
   };
 
   const syncCommunityGroup = async () => {
     if (user?.role !== 'admin') return;
     try {
-      const groupsRef = collection(db, 'groups');
-      const q = query(groupsRef, where('name', '==', 'Communauté'));
-      const querySnapshot = await getDocs(q);
-      
-      const allUserIds = users.map(u => u.id);
-      
-      if (querySnapshot.empty) {
-        await addDoc(groupsRef, {
-          name: 'Communauté',
-          description: 'Groupe général pour toute la communauté CampusBF',
-          category: 'university',
-          members: allUserIds,
-          createdAt: new Date().toISOString(),
-          createdBy: user.id
-        });
-      } else {
-        const groupDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, 'groups', groupDoc.id), {
-          members: allUserIds
-        });
-      }
+      await communityService.syncCommunityGroup(user, users);
       alert('Tous les utilisateurs ont été intégrés au groupe Communauté.');
     } catch (error) {
-      console.error("Error syncing community group:", error);
       alert('Erreur lors de la synchronisation du groupe Communauté.');
     }
   };
@@ -752,149 +668,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     if (!user) return;
     try {
-      const newApp = {
-        userId: user.id,
-        user: user,
-        description,
-        documentUrl,
-        subjects,
-        hourlyRates,
-        status: 'pending',
-        appliedAt: serverTimestamp(),
-      };
-      await addDoc(collection(db, 'applications'), newApp);
+      await applicationService.submitTutorApplication(user, description, documentUrl, subjects, hourlyRates);
       await updateUser({ tutorStatus: 'pending' });
-      await logAction('Demande Tuteur', `Sujets: ${subjects.join(', ')}`);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'applications');
+      // Error handled in service
     }
   };
 
   const reviewApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
-    try {
-      const app = applications.find(a => a.id === applicationId);
-      if (!app) return;
-
-      await updateDoc(doc(db, 'applications', applicationId), { status });
-
-      const updatedUserData: Partial<User> = { tutorStatus: status };
-      if (status === 'approved') {
-        updatedUserData.tutorSubjects = app.subjects;
-        updatedUserData.tutorHourlyRates = app.hourlyRates;
-        updatedUserData.tutorDescription = app.description;
-        // Only change role to tutor if they were a student
-        if (app.user.role === 'student') {
-          updatedUserData.role = 'tutor';
-        }
-      }
-      
-      await updateDoc(doc(db, 'users', app.userId), updatedUserData);
-      await logAction('Examen demande tuteur', `ID: ${applicationId}, Statut: ${status}`);
-
-      await addNotification(app.userId, {
-        type: status === 'approved' ? 'success' : 'alert',
-        title: status === 'approved' ? 'Demande Répétiteur Approuvée' : 'Demande Répétiteur Refusée',
-        message: status === 'approved' 
-          ? 'Votre demande pour devenir répétiteur a été acceptée.' 
-          : 'Votre demande pour devenir répétiteur a été refusée.'
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `applications/${applicationId}`);
-    }
+    if (!user) return;
+    const app = applications.find(a => a.id === applicationId);
+    if (!app) return;
+    await applicationService.reviewTutorApplication(user, app, status);
   };
 
   const submitTeacherApplication = async (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => {
-    if (!user) {
-      console.error("submitTeacherApplication: No user found");
-      return;
-    }
-    console.log("submitTeacherApplication: Starting submission for user", user.id);
+    if (!user) return;
     try {
-      const newApp = {
-        userId: user.id,
-        user: user,
-        ...data,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      };
-      console.log("submitTeacherApplication: Adding doc to teacherApplications");
-      await addDoc(collection(db, 'teacherApplications'), newApp);
-      console.log("submitTeacherApplication: Updating user teacherStatus to pending_approval");
+      await applicationService.submitTeacherApplication(user, data);
       await updateUser({ teacherStatus: 'pending_approval' });
-      console.log("submitTeacherApplication: Submission successful");
-      await logAction('Demande Enseignant', `Rang: ${data.academicRank}`);
-
-      const adminUser = users.find(u => u.role === 'admin') || ADMIN_USER;
-      await addNotification(adminUser.id, {
-        type: 'message',
-        title: 'Nouveau dossier Enseignant',
-        message: `${user.firstName} ${user.lastName} a soumis un dossier pour rejoindre l'annuaire des enseignants.`
-      });
     } catch (error) {
-      console.error("submitTeacherApplication: Error", error);
-      handleFirestoreError(error, OperationType.CREATE, 'teacherApplications');
+      // Error handled in service
     }
   };
 
   const reviewTeacherApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
-    console.log("reviewTeacherApplication: Starting review for", applicationId, "status:", status);
-    try {
-      const app = teacherApplications.find(a => a.id === applicationId);
-      if (!app) {
-        console.error("reviewTeacherApplication: Application not found", applicationId);
-        return;
-      }
-      console.log("reviewTeacherApplication: Updating Firestore status");
-      await updateDoc(doc(db, 'teacherApplications', applicationId), { status });
-      console.log("reviewTeacherApplication: Firestore status updated");
-
-      const updatedUserData: Partial<User> = { teacherStatus: status };
-      if (status === 'approved') {
-        updatedUserData.teacherProfile = {
-          academicRank: app.academicRank,
-          biography: app.biography,
-          yearsOfExperience: 0,
-          languages: ['Français'],
-          specialties: app.specialties,
-          domains: app.domains,
-          publications: [],
-          courses: app.courses,
-          availability: {
-            isAvailable: true,
-            willingToTravel: false
-          }
-        };
-      }
-      
-      await updateDoc(doc(db, 'users', app.userId), updatedUserData);
-      await logAction('Examen demande enseignant', `ID: ${applicationId}, Statut: ${status}`);
-
-      await addNotification(app.userId, {
-        type: status === 'approved' ? 'success' : 'alert',
-        title: status === 'approved' ? 'Dossier Enseignant Accepté' : 'Dossier Enseignant Refusé',
-        message: status === 'approved' 
-          ? 'Votre dossier enseignant a été validé.' 
-          : 'Votre dossier enseignant a été refusé.'
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `teacherApplications/${applicationId}`);
-    }
+    if (!user) return;
+    const app = teacherApplications.find(a => a.id === applicationId);
+    if (!app) return;
+    await applicationService.reviewTeacherApplication(user, app, status);
   };
 
   const submitSubscriptionRequest = async (type: 'exam' | 'premium' | 'motoride' | 'event' | 'institution', amount: number) => {
     if (!user) return;
     try {
-      const newRequest = {
-        userId: user.id,
-        user: user,
-        type,
-        amount,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      };
-      await addDoc(collection(db, 'subscriptionRequests'), newRequest);
-      await logAction('Demande Abonnement', `Type: ${type}, Montant: ${amount} FCFA`);
-
+      await applicationService.submitSubscriptionRequest(user, type, amount);
+      
       const updateData: Partial<User> = {};
       if (type === 'exam') updateData.examSubscriptionStatus = 'pending';
       else if (type === 'premium') updateData.premiumSubscriptionStatus = 'pending';
@@ -908,91 +717,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       await updateUser(updateData);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'subscriptionRequests');
+      // Error handled in service
     }
   };
 
   const reviewSubscriptionRequest = async (requestId: string, status: 'approved' | 'rejected') => {
-    try {
-      const req = subscriptionRequests.find(r => r.id === requestId);
-      if (!req) return;
+    if (!user) return;
+    const req = subscriptionRequests.find(r => r.id === requestId);
+    if (!req) return;
+    const targetUser = users.find(u => u.id === req.userId);
+    if (!targetUser) return;
 
-      await updateDoc(doc(db, 'subscriptionRequests', requestId), { status });
-      await logAction('Examen demande abonnement', `ID: ${requestId}, Statut: ${status}`);
-
-      const targetUser = users.find(u => u.id === req.userId);
-      if (!targetUser) return;
-
-      const updatedUser: Partial<User> = {};
-      if (status === 'approved') {
-        const expiry = new Date();
-        if (req.type === 'exam') {
-          expiry.setDate(expiry.getDate() + 360);
-          updatedUser.examSubscriptionStatus = 'active';
-          updatedUser.examSubscriptionExpiry = expiry.toISOString();
-        } else if (req.type === 'premium') {
-          expiry.setDate(expiry.getDate() + 30);
-          updatedUser.premiumSubscriptionStatus = 'active';
-          updatedUser.premiumSubscriptionExpiry = expiry.toISOString();
-        } else if (req.type === 'motoride') {
-          expiry.setDate(expiry.getDate() + 30);
-          updatedUser.motoRideSubscriptionStatus = 'active';
-          updatedUser.motoRideSubscriptionExpiry = expiry.toISOString();
-        } else if (req.type === 'event') {
-          expiry.setDate(expiry.getDate() + 30);
-          updatedUser.eventSubscriptionStatus = 'active';
-          updatedUser.eventSubscriptionExpiry = expiry.toISOString();
-        } else if (req.type === 'institution') {
-          expiry.setDate(expiry.getDate() + 365);
-          updatedUser.institutionProfile = {
-            ...targetUser.institutionProfile!,
-            subscriptionStatus: 'active',
-            subscriptionExpiry: expiry.toISOString()
-          };
-        }
-      } else {
-        if (req.type === 'exam') updatedUser.examSubscriptionStatus = 'none';
-        else if (req.type === 'premium') updatedUser.premiumSubscriptionStatus = 'none';
-        else if (req.type === 'motoride') updatedUser.motoRideSubscriptionStatus = 'none';
-        else if (req.type === 'event') updatedUser.eventSubscriptionStatus = 'none';
-        else if (req.type === 'institution') {
-          updatedUser.institutionProfile = {
-            ...targetUser.institutionProfile!,
-            subscriptionStatus: 'none'
-          };
-        }
-      }
-      
-      await updateDoc(doc(db, 'users', req.userId), updatedUser);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `subscriptionRequests/${requestId}`);
-    }
+    await applicationService.reviewSubscriptionRequest(user, req, targetUser, status);
   };
 
   const updateUserRole = async (userId: string, role: User['role']) => {
-    try {
-      await updateDoc(doc(db, 'users', userId), { role });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
-    }
+    if (!user) return;
+    await userService.updateUserRole(user, userId, role);
   };
 
   const activateUser = async (userId: string) => {
-    try {
-      await updateDoc(doc(db, 'users', userId), { status: 'active' });
-      await logAction('Activation utilisateur', `Utilisateur ID: ${userId}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
-    }
+    if (!user) return;
+    await userService.activateUser(user, userId);
   };
 
   const deactivateUser = async (userId: string) => {
-    try {
-      await updateDoc(doc(db, 'users', userId), { status: 'inactive' });
-      await logAction('Désactivation utilisateur', `Utilisateur ID: ${userId}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
-    }
+    if (!user) return;
+    await userService.deactivateUser(user, userId);
   };
 
   const adminCreateUser = async (userData: Partial<User> & { password?: string }) => {
@@ -1014,348 +765,140 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user || user.role !== 'admin') {
       throw new Error('Action non autorisée. Seuls les administrateurs peuvent supprimer des utilisateurs.');
     }
-    
-    try {
-      console.log("Attempting to delete user:", userId);
-      await deleteDoc(doc(db, 'users', userId));
-      // Also delete profile
-      try {
-        await deleteDoc(doc(db, 'profiles', userId));
-      } catch (e) {
-        console.warn("Failed to delete profile, it might not exist:", e);
-      }
-      console.log("User deleted successfully");
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
-    }
+    await userService.deleteUser(user, userId);
   };
 
   const deleteDocument = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'documents', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `documents/${id}`);
-    }
+    await documentService.deleteDocument(id);
   };
 
   const updateDocument = async (id: string, data: Partial<any>) => {
-    try {
-      await updateDoc(doc(db, 'documents', id), data);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `documents/${id}`);
-    }
+    await documentService.updateDocument(id, data);
   };
 
   const addDocument = async (data: any) => {
-    try {
-      await addDoc(collection(db, 'documents'), {
-        ...data,
-        createdAt: serverTimestamp()
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'documents');
-    }
+    await documentService.addDocument(data);
   };
 
   const deleteInternship = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'internships', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `internships/${id}`);
-    }
+    await internshipService.deleteInternship(id);
   };
 
   const updateInternship = async (id: string, data: Partial<Internship>) => {
-    try {
-      await updateDoc(doc(db, 'internships', id), data);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `internships/${id}`);
-    }
+    await internshipService.updateInternship(id, data);
+  };
+
+  const addInternship = async (data: Omit<Internship, 'id' | 'createdAt'>) => {
+    await internshipService.addInternship(data);
   };
 
   const deleteMarketplaceItem = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'marketplace', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `marketplace/${id}`);
-    }
+    await marketplaceService.deleteMarketplaceItem(id);
+  };
+
+  const updateMarketplaceItem = async (id: string, data: Partial<MarketplaceItem>) => {
+    await marketplaceService.updateMarketplaceItem(id, data);
+  };
+
+  const addMarketplaceItem = async (data: Omit<MarketplaceItem, 'id' | 'createdAt'>) => {
+    await marketplaceService.addMarketplaceItem(data);
   };
 
   const reviewMarketplaceItem = async (id: string, status: 'approved' | 'rejected') => {
     if (!user || user.role !== 'admin') return;
-    try {
-      const itemRef = doc(db, 'marketplace', id);
-      await updateDoc(itemRef, { status });
-      
-      const item = marketplace.find(i => i.id === id);
-      if (item && status === 'approved') {
-        const sellerRef = doc(db, 'users', item.sellerId);
-        const seller = users.find(u => u.id === item.sellerId);
-        const currentStats = seller?.marketplaceStats || { published: 0, sold: 0, reports: 0 };
-        await updateDoc(sellerRef, {
-          'marketplaceStats.published': (currentStats.published || 0) + 1
-        });
-      }
-      
-      await logAction('Examen annonce marketplace', `ID: ${id}, Statut: ${status}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `marketplace/${id}`);
-    }
+    const item = marketplace.find(i => i.id === id);
+    if (!item) return;
+    const seller = users.find(u => u.id === item.sellerId);
+    
+    await marketplaceService.reviewMarketplaceItem(user, item, seller, status);
   };
 
   const reportMarketplaceItem = async (id: string, reason: string) => {
     if (!user) return;
+    const item = marketplace.find(i => i.id === id);
+    if (!item) return;
+    const seller = users.find(u => u.id === item.sellerId);
+
     try {
-      const itemRef = doc(db, 'marketplace', id);
-      const item = marketplace.find(i => i.id === id);
-      if (!item) return;
-
-      if (item.reports?.includes(user.id)) {
-        alert('Vous avez déjà signalé cette annonce.');
-        return;
-      }
-
-      const newReports = [...(item.reports || []), user.id];
-      const newReportCount = (item.reportCount || 0) + 1;
-      
-      const updateData: any = {
-        reports: arrayUnion(user.id),
-        reportCount: newReportCount
-      };
-
-      // Auto-hide if 3 or more reports
-      if (newReportCount >= 3) {
-        updateData.status = 'pending'; // Back to pending for admin review
-      }
-
-      await updateDoc(itemRef, updateData);
-
-      // Update seller stats
-      const sellerRef = doc(db, 'users', item.sellerId);
-      const seller = users.find(u => u.id === item.sellerId);
-      const currentStats = seller?.marketplaceStats || { published: 0, sold: 0, reports: 0 };
-      await updateDoc(sellerRef, {
-        'marketplaceStats.reports': (currentStats.reports || 0) + 1
-      });
-
-      // Notify admin
-      await addDoc(collection(db, 'notifications'), {
-        userId: 'admin',
-        type: 'alert',
-        title: 'Annonce signalée',
-        message: `L'annonce "${item.title}" a été signalée pour: ${reason}.`,
-        read: false,
-        createdAt: serverTimestamp()
-      });
-
-      await logAction('Signalement annonce', `Annonce: ${item.title}, Raison: ${reason}`);
+      await marketplaceService.reportMarketplaceItem(user, item, seller, reason);
       alert('Merci pour votre signalement. Nos administrateurs vont examiner cette annonce.');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `marketplace/${id}`);
+    } catch (error: any) {
+      if (error.message === 'Vous avez déjà signalé cette annonce.') {
+        alert(error.message);
+      }
     }
   };
 
   const deletePost = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'posts', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `posts/${id}`);
-    }
+    await contentService.deleteContent('posts', id);
   };
 
   const deleteEvent = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'events', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
-    }
+    await contentService.deleteContent('events', id);
   };
 
   const deleteNews = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'news', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `news/${id}`);
-    }
+    await contentService.deleteContent('news', id);
   };
 
   const deleteLostAndFound = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'lostAndFound', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `lostAndFound/${id}`);
-    }
+    await contentService.deleteContent('lostAndFound', id);
   };
 
   const deleteReport = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'reports', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `reports/${id}`);
-    }
+    await reportService.deleteReport(id);
   };
 
   const deleteMotoRide = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'motoRides', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `motoRides/${id}`);
-    }
+    await motoRideService.deleteMotoRide(id);
   };
 
   const addReport = async (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => {
-    try {
-      await addDoc(collection(db, 'reports'), {
-        ...report,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'reports');
-    }
+    await reportService.addReport(report);
   };
 
   const addMotoRide = async (ride: Omit<MotoRide, 'id' | 'createdAt'>) => {
     if (!user) return;
-    if (user.motoRideStatus === 'suspended') {
-      alert('Votre compte MotoRide est suspendu. Vous ne pouvez pas proposer de trajets.');
-      return;
-    }
-    if (!user.isVerified) {
-      alert('Vous devez vérifier votre compte avant de proposer un trajet.');
-      return;
-    }
-    if (!user.isDriverVerified) {
-      alert('Vous devez être un conducteur vérifié pour proposer un trajet.');
-      return;
-    }
-
     try {
-      await addDoc(collection(db, 'motoRides'), {
-        ...ride,
-        university: user.university,
-        status: 'active',
-        passengers: [],
-        createdAt: new Date().toISOString()
-      });
-      await logAction('Nouveau trajet MotoRide', `De ${ride.departure} vers ${ride.destination}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'motoRides');
+      await motoRideService.addMotoRide(user, ride);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
   const reportRideUser = async (userId: string, rideId: string, reason: string) => {
     if (!user) return;
+    const reportedUser = users.find(u => u.id === userId);
+    if (!reportedUser) return;
+    
     try {
-      // Add report to user document
-      const userRef = doc(db, 'users', userId);
-      const reportedUser = users.find(u => u.id === userId);
-      const currentReports = (reportedUser?.motoRideStats?.totalReports || 0) + 1;
-      
-      const updateData: any = {
-        'motoRideStats.totalReports': currentReports
-      };
-
-      // Auto-suspend if 3 or more reports
-      if (currentReports >= 3) {
-        updateData.motoRideStatus = 'suspended';
-      }
-
-      await updateDoc(userRef, updateData);
-
-      // Add report to ride document if applicable
-      if (rideId) {
-        const rideRef = doc(db, 'motoRides', rideId);
-        await updateDoc(rideRef, {
-          reports: arrayUnion({
-            reporterId: user.id,
-            reason,
-            createdAt: new Date().toISOString()
-          })
-        });
-      }
-
-      // Notify admin
-      await addDoc(collection(db, 'notifications'), {
-        userId: 'admin',
-        type: 'alert',
-        title: 'Utilisateur MotoRide signalé',
-        message: `L'utilisateur ${reportedUser?.firstName} ${reportedUser?.lastName} a été signalé pour: ${reason}.`,
-        read: false,
-        createdAt: serverTimestamp()
-      });
-
-      await logAction('Signalement utilisateur MotoRide', `Utilisateur: ${userId}, Raison: ${reason}`);
+      await motoRideService.reportRideUser(user, reportedUser, rideId, reason);
       alert('Signalement enregistré. Merci de contribuer à la sécurité de CampusBF.');
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      // Error handled in service
     }
   };
 
   const reviewRide = async (rideId: string, revieweeId: string, rating: number, comment: string) => {
     if (!user) return;
+    const reviewee = users.find(u => u.id === revieweeId);
+    if (!reviewee) return;
+
     try {
-      const reviewId = `review_${Date.now()}`;
-      await setDoc(doc(db, 'rideReviews', reviewId), {
-        id: reviewId,
-        rideId,
-        reviewerId: user.id,
-        revieweeId,
-        rating,
-        comment,
-        createdAt: new Date().toISOString()
-      });
-
-      // Update user stats
-      const userRef = doc(db, 'users', revieweeId);
-      const reviewee = users.find(u => u.id === revieweeId);
-      const currentStats = reviewee?.motoRideStats || { ridesCompleted: 0, averageRating: 0, totalReports: 0 };
-      
-      const newRidesCompleted = (currentStats.ridesCompleted || 0) + 1;
-      const newAverageRating = ((currentStats.averageRating || 0) * (currentStats.ridesCompleted || 0) + rating) / newRidesCompleted;
-
-      await updateDoc(userRef, {
-        'motoRideStats.ridesCompleted': newRidesCompleted,
-        'motoRideStats.averageRating': newAverageRating
-      });
-
-      await logAction('Avis MotoRide', `Note: ${rating} pour ${revieweeId}`);
+      await motoRideService.reviewRide(user, reviewee, rideId, rating, comment);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'rideReviews');
+      // Error handled in service
     }
   };
 
   const updateRideStatus = async (rideId: string, status: MotoRide['status']) => {
     if (!user) return;
-    try {
-      const rideRef = doc(db, 'motoRides', rideId);
-      await updateDoc(rideRef, { status });
-      await logAction('Mise à jour statut trajet', `ID: ${rideId}, Statut: ${status}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `motoRides/${rideId}`);
-    }
+    await motoRideService.updateRideStatus(user, rideId, status);
   };
 
   const verifyDriver = async (userId: string, vehicleDetails: User['vehicleDetails']) => {
-    if (!user || user.role !== 'admin') return;
-    try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        isDriverVerified: true,
-        vehicleDetails
-      });
-      
-      await addNotification(userId, {
-        type: 'success',
-        title: 'Conducteur vérifié',
-        message: 'Votre profil de conducteur a été vérifié. Vous pouvez maintenant proposer des trajets sur MotoRide.'
-      });
-
-      await logAction('Vérification conducteur', `Utilisateur: ${userId}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
-    }
+    if (!user) return;
+    await motoRideService.verifyDriver(user, userId, vehicleDetails);
   };
 
   const reserveMotoRide = async (rideId: string, clientWhatsapp: string) => {
@@ -1383,48 +926,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'read' | 'createdAt'>) => {
-    try {
-      await addDoc(collection(db, 'notifications'), {
-        ...notification,
-        userId,
-        read: false,
-        createdAt: new Date().toISOString()
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'notifications');
-    }
+    await notificationService.addNotification(userId, notification);
   };
 
   const markNotificationAsRead = async (notificationId: string) => {
-    try {
-      await updateDoc(doc(db, 'notifications', notificationId), { read: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `notifications/${notificationId}`);
-    }
+    await notificationService.markNotificationAsRead(notificationId);
   };
 
   const addTeacherReview = async (teacherId: string, rating: number, comment: string) => {
     if (!user) return;
-    try {
-      const reviewData = {
-        authorId: user.id,
-        authorName: `${user.firstName} ${user.lastName}`,
-        rating,
-        comment,
-        createdAt: serverTimestamp()
-      };
-
-      await addDoc(collection(db, 'users', teacherId, 'reviews'), reviewData);
-      
-      // Notification for the teacher
-      await addNotification(teacherId, {
-        type: 'success',
-        title: 'Nouvel avis reçu',
-        message: `${user.firstName} ${user.lastName} a laissé un avis sur votre profil.`
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `users/${teacherId}/reviews`);
-    }
+    await userService.addTeacherReview(user, teacherId, rating, comment);
+    
+    // Notification for the teacher
+    await addNotification(teacherId, {
+      type: 'success',
+      title: 'Nouvel avis reçu',
+      message: `${user.firstName} ${user.lastName} a laissé un avis sur votre profil.`
+    });
   };
 
   const addTraining = async (trainingData: Omit<Training, 'id' | 'createdAt' | 'status' | 'participants'>) => {
@@ -1433,256 +951,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       alert("Vous devez vérifier votre compte avant de publier une formation.");
       return;
     }
-    try {
-      await addDoc(collection(db, 'trainings'), {
-        ...trainingData,
-        status: 'pending',
-        participants: [],
-        createdAt: new Date().toISOString()
-      });
-      await logAction('Publication formation', trainingData.title);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'trainings');
-    }
+    await trainingService.addTraining(user, trainingData);
   };
 
   const enrollInTraining = async (trainingId: string) => {
     if (!user) return;
-    try {
-      const training = trainings.find(t => t.id === trainingId);
-      if (!training) return;
-      if (training.participants.includes(user.id)) {
-        alert("Vous êtes déjà inscrit à cette formation.");
-        return;
-      }
-      if (training.participants.length >= training.maxParticipants) {
-        alert("Cette formation est complète.");
-        return;
-      }
-
-      await updateDoc(doc(db, 'trainings', trainingId), {
-        participants: arrayUnion(user.id)
-      });
-
-      await addDoc(collection(db, 'training_enrollments'), {
-        trainingId,
-        userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-        userAvatar: user.avatarUrl,
-        enrolledAt: new Date().toISOString()
-      });
-
-      await addNotification(user.id, {
-        type: 'success',
-        title: 'Inscription réussie',
-        message: `Vous êtes inscrit à la formation : ${training.title}`
-      });
-
-      await logAction('Inscription formation', training.title);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `trainings/${trainingId}`);
+    const training = trainings.find(t => t.id === trainingId);
+    if (!training) return;
+    if (training.participants.includes(user.id)) {
+      alert("Vous êtes déjà inscrit à cette formation.");
+      return;
     }
+    if (training.participants.length >= training.maxParticipants) {
+      alert("Cette formation est complète.");
+      return;
+    }
+    await trainingService.enrollInTraining(user, training);
   };
 
   const reviewTraining = async (trainingId: string, rating: number, comment: string) => {
     if (!user) return;
-    try {
-      await addDoc(collection(db, 'training_reviews'), {
-        trainingId,
-        userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-        rating,
-        comment,
-        createdAt: new Date().toISOString()
-      });
-
-      // Update trainer stats
-      const training = trainings.find(t => t.id === trainingId);
-      if (training) {
-        const trainerRef = doc(db, 'users', training.trainerId);
-        const trainer = users.find(u => u.id === training.trainerId);
-        const currentStats = trainer?.trainingStats || { trainingsOrganized: 0, averageRating: 0 };
-        const newRating = ((currentStats.averageRating || 0) * (currentStats.trainingsOrganized || 0) + rating) / (currentStats.trainingsOrganized || 1);
-        
-        await updateDoc(trainerRef, {
-          'trainingStats.averageRating': newRating
-        });
-      }
-
-      await logAction('Avis formation', `Note: ${rating}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'training_reviews');
-    }
+    const training = trainings.find(t => t.id === trainingId);
+    if (!training) return;
+    const trainer = users.find(u => u.id === training.trainerId);
+    await trainingService.reviewTraining(user, training, rating, comment, trainer);
   };
 
   const reportTraining = async (trainingId: string, reason: string, details: string) => {
     if (!user) return;
-    try {
-      await addDoc(collection(db, 'training_reports'), {
-        trainingId,
-        reporterId: user.id,
-        reason,
-        details,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
-      await logAction('Signalement formation', `ID: ${trainingId}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'training_reports');
-    }
+    await trainingService.reportTraining(user, trainingId, reason, details);
   };
 
   const updateTrainingStatus = async (trainingId: string, status: Training['status']) => {
     if (!user || user.role !== 'admin') return;
-    try {
-      await updateDoc(doc(db, 'trainings', trainingId), { status });
-      
-      const training = trainings.find(t => t.id === trainingId);
-      if (training) {
-        if (status === 'approved') {
-          const trainerRef = doc(db, 'users', training.trainerId);
-          const trainer = users.find(u => u.id === training.trainerId);
-          const currentStats = trainer?.trainingStats || { trainingsOrganized: 0, averageRating: 0 };
-          await updateDoc(trainerRef, {
-            'trainingStats.trainingsOrganized': (currentStats.trainingsOrganized || 0) + 1
-          });
-        }
-
-        await addNotification(training.trainerId, {
-          type: status === 'approved' ? 'success' : 'alert',
-          title: status === 'approved' ? 'Formation validée' : 'Formation refusée',
-          message: `Votre formation "${training.title}" a été ${status === 'approved' ? 'validée' : 'refusée'} par l'administration.`
-        });
-      }
-      
-      await logAction('Statut formation', `ID: ${trainingId}, Statut: ${status}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `trainings/${trainingId}`);
-    }
+    const training = trainings.find(t => t.id === trainingId);
+    if (!training) return;
+    const trainer = users.find(u => u.id === training.trainerId);
+    await trainingService.updateTrainingStatus(user, training, trainer, status);
   };
 
   const deleteTraining = async (trainingId: string) => {
     if (!user) return;
-    try {
-      const training = trainings.find(t => t.id === trainingId);
-      if (!training) return;
-      if (user.role !== 'admin' && training.trainerId !== user.id) return;
-
-      await deleteDoc(doc(db, 'trainings', trainingId));
-      
-      // Notify participants if cancelled
-      for (const participantId of training.participants) {
-        await addNotification(participantId, {
-          type: 'alert',
-          title: 'Formation annulée',
-          message: `La formation "${training.title}" a été annulée.`
-        });
-      }
-
-      await logAction('Suppression formation', training.title);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `trainings/${trainingId}`);
-    }
+    const training = trainings.find(t => t.id === trainingId);
+    if (!training) return;
+    if (user.role !== 'admin' && training.trainerId !== user.id) return;
+    await trainingService.deleteTraining(user, training);
   };
 
   const createContest = async (contest: Omit<Contest, 'id' | 'createdAt'>) => {
-    try {
-      const contestData = {
-        ...contest,
-        createdAt: serverTimestamp()
-      };
-      await addDoc(collection(db, 'contests'), contestData);
-      await logAction('Création concours', `Titre: ${contest.title}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'contests');
-    }
+    if (!user) return;
+    await contestService.createContest(user, contest);
   };
 
   const updateContest = async (id: string, data: Partial<Contest>) => {
-    try {
-      await updateDoc(doc(db, 'contests', id), data);
-      await logAction('Modification concours', `ID: ${id}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `contests/${id}`);
-    }
+    if (!user) return;
+    await contestService.updateContest(user, id, data);
   };
 
   const deleteContest = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'contests', id));
-      // Also delete participants
-      const participantsQuery = query(collection(db, 'contest_participants'), where('contestId', '==', id));
-      const participantsSnapshot = await getDocs(participantsQuery);
-      for (const participantDoc of participantsSnapshot.docs) {
-        await deleteDoc(participantDoc.ref);
-      }
-      await logAction('Suppression concours', `ID: ${id}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `contests/${id}`);
-    }
+    if (!user) return;
+    await contestService.deleteContest(user, id);
   };
 
   const registerForContest = async (contestId: string) => {
     if (!user) return;
-    try {
-      const contest = contests.find(c => c.id === contestId);
-      if (!contest) throw new Error('Concours non trouvé');
-
-      // Check conditions
-      if (contest.conditions.requireVerifiedProfile && !user.isVerified) {
-        throw new Error('Votre profil doit être vérifié pour participer à ce concours');
-      }
-
-      // Check max participants
-      const participantsCount = contestParticipants.filter(p => p.contestId === contestId).length;
-      if (participantsCount >= contest.maxParticipants) {
-        throw new Error('Le nombre maximum de participants est atteint');
-      }
-
-      // Check if already registered
-      const alreadyRegistered = contestParticipants.some(p => p.contestId === contestId && p.userId === user.id);
-      if (alreadyRegistered) {
-        throw new Error('Vous êtes déjà inscrit à ce concours');
-      }
-
-      const participantData: Omit<ContestParticipant, 'id'> = {
-        contestId,
-        userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-        userAvatar: user.avatarUrl,
-        status: 'pending',
-        registrationDate: new Date().toISOString(),
-        stats: {},
-        totalScore: 0
-      };
-
-      await addDoc(collection(db, 'contest_participants'), participantData);
-      await logAction('Inscription concours', `Concours: ${contest.title}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'contest_participants');
-      throw error;
-    }
+    const contest = contests.find(c => c.id === contestId);
+    if (!contest) return;
+    const participantsCount = contestParticipants.filter(p => p.contestId === contestId).length;
+    const alreadyRegistered = contestParticipants.some(p => p.contestId === contestId && p.userId === user.id);
+    await contestService.registerForContest(user, contest, participantsCount, alreadyRegistered);
   };
 
   const updateParticipantStatus = async (participantId: string, status: ContestParticipant['status']) => {
-    try {
-      await updateDoc(doc(db, 'contest_participants', participantId), { status });
-      await logAction('Mise à jour statut participant', `ID: ${participantId}, Statut: ${status}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `contest_participants/${participantId}`);
-    }
+    if (!user) return;
+    await contestService.updateParticipantStatus(user, participantId, status);
   };
 
   const publishContestResults = async (contestId: string, winners: ContestWinner[]) => {
-    try {
-      await updateDoc(doc(db, 'contests', contestId), { 
-        status: 'results_published',
-        winners 
-      });
-      await logAction('Publication résultats concours', `ID: ${contestId}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `contests/${contestId}`);
-    }
+    if (!user) return;
+    await contestService.publishContestResults(user, contestId, winners);
   };
 
   return (
@@ -1709,7 +1056,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     addDocument,
       deleteInternship,
       updateInternship,
+      addInternship,
       deleteMarketplaceItem,
+      updateMarketplaceItem,
+      addMarketplaceItem,
+      reviewMarketplaceItem,
       deletePost,
       deleteEvent,
       deleteNews,
@@ -1760,7 +1111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteUser,
       addGroupMember,
       removeGroupMember,
-      reviewMarketplaceItem,
       reportMarketplaceItem,
       applications,
       teacherApplications,
