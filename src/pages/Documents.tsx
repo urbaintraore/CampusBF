@@ -64,16 +64,42 @@ export default function Documents() {
     'mémoires': 'Mémoire',
   };
 
-  const subjects = Array.from(new Set(documents.map(doc => doc.subject)));
+  const getUniqueValues = (values: string[]) => {
+    const seen = new Set<string>();
+    return values
+      .map(v => v?.trim())
+      .filter(v => {
+        if (!v) return false;
+        const lower = v.toLowerCase();
+        if (seen.has(lower)) return false;
+        seen.add(lower);
+        return true;
+      })
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  const subjects = getUniqueValues(documents.map(doc => doc.subject));
+  const universities = getUniqueValues(documents.map(doc => doc.university));
+  const majors = getUniqueValues(documents.map(doc => doc.department || doc.major));
+  const years = getUniqueValues(documents.map(doc => doc.year)).sort((a, b) => b.localeCompare(a));
 
   const filteredDocuments = documents.filter(doc => {
     const matchesFilter = filter === 'tout' || doc.type === filterMap[filter];
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          doc.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesUniversity = selectedUniversity === 'Toutes les universités' || doc.university === selectedUniversity;
-    const matchesMajor = selectedMajor === 'Toutes les filières' || doc.major === selectedMajor;
-    const matchesYear = selectedYear === 'Toutes les années' || doc.year === selectedYear;
-    const matchesSubject = selectedSubject === 'Toutes les matières' || doc.subject === selectedSubject;
+    
+    const matchesUniversity = selectedUniversity === 'Toutes les universités' || 
+                             doc.university?.trim().toLowerCase() === selectedUniversity.toLowerCase();
+    
+    const matchesMajor = selectedMajor === 'Toutes les filières' || 
+                        (doc.department?.trim().toLowerCase() === selectedMajor.toLowerCase() || 
+                         doc.major?.trim().toLowerCase() === selectedMajor.toLowerCase());
+    
+    const matchesYear = selectedYear === 'Toutes les années' || 
+                       doc.year?.trim().toLowerCase() === selectedYear.toLowerCase();
+    
+    const matchesSubject = selectedSubject === 'Toutes les matières' || 
+                          doc.subject?.trim().toLowerCase() === selectedSubject.toLowerCase();
 
     return matchesFilter && matchesSearch && matchesUniversity && matchesMajor && matchesYear && matchesSubject;
   });
@@ -536,9 +562,9 @@ export default function Documents() {
                 className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les universités</option>
-                <option>Université Joseph Ki-Zerbo</option>
-                <option>Université Thomas Sankara</option>
-                <option>Université Aube Nouvelle</option>
+                {universities.map(uni => (
+                  <option key={uni} value={uni}>{uni}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
@@ -549,12 +575,9 @@ export default function Documents() {
                 className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les filières</option>
-                <option>Informatique</option>
-                <option>Mathématiques</option>
-                <option>Droit</option>
-                <option>Médecine</option>
-                <option>Physique</option>
-                <option>Économie</option>
+                {majors.map(major => (
+                  <option key={major} value={major}>{major}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
@@ -578,9 +601,9 @@ export default function Documents() {
                 className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les années</option>
-                <option>2024</option>
-                <option>2023</option>
-                <option>2022</option>
+                {years.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
               </select>
             </div>
             <div className="lg:col-span-4 flex justify-end pt-2">

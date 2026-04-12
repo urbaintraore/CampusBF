@@ -434,6 +434,7 @@ export interface MotoRide {
   lng: number;
   status: 'active' | 'completed' | 'cancelled' | 'suspended';
   passengers: string[]; // User IDs
+  university?: string;
   reports?: {
     reporterId: string;
     reason: string;

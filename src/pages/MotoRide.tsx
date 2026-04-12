@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Navigation, Clock, Users, Star, Shield, Search, Plus, Bike, CreditCard, ChevronRight, AlertCircle, Lock, Flag, CheckCircle, UserCheck, Car } from 'lucide-react';
+import { MapPin, Navigation, Clock, Users, Star, Shield, Search, Plus, Bike, CreditCard, ChevronRight, AlertCircle, Lock, Flag, CheckCircle, UserCheck, Car, School } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
@@ -187,6 +187,15 @@ export default function MotoRide() {
             <h2 className="text-lg font-bold text-slate-900 mb-4">
               {activeTab === 'search' ? 'Où allez-vous ?' : 'Détails de votre trajet'}
             </h2>
+
+            {activeTab === 'offer' && (
+              <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl mb-4 flex items-start gap-3">
+                <Shield size={18} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-blue-700">
+                  Par mesure de sécurité, votre trajet ne sera visible que par les étudiants de <strong>{user?.university || 'votre université'}</strong>.
+                </p>
+              </div>
+            )}
             
             <form className="space-y-4">
                 <div className="relative">
@@ -385,6 +394,15 @@ export default function MotoRide() {
                           <span>{ride.driverRating.toFixed(1)}</span>
                           <span className="mx-1">•</span>
                           <span>{ride.motorcycle}</span>
+                          {ride.university && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span className="flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                <School size={10} />
+                                {ride.university}
+                              </span>
+                            </>
+                          )}
                         </div>
                         {ride.vehicleDetails?.plateNumber && (
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5">

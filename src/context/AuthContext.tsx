@@ -416,7 +416,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const motoRideQuery = initialUserData.role === 'admin'
               ? collection(db, 'motoRides')
-              : query(collection(db, 'motoRides'), where('status', '==', 'active'));
+              : query(
+                  collection(db, 'motoRides'), 
+                  where('status', '==', 'active'),
+                  where('university', '==', initialUserData.university)
+                );
 
             unsubscribes.push(onSnapshot(motoRideQuery, (snapshot) => {
               setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
@@ -1230,6 +1234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await addDoc(collection(db, 'motoRides'), {
         ...ride,
+        university: user.university,
         status: 'active',
         passengers: [],
         createdAt: new Date().toISOString()

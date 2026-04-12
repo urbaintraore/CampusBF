@@ -247,7 +247,7 @@ service cloud.firestore {
     }
 
     function isValidMotoRide(data) {
-      return hasRequiredFields(['driverId', 'driverName', 'driverRating', 'departure', 'destination', 'time', 'date', 'price', 'distance', 'motorcycle', 'helmetAvailable', 'whatsappNumber', 'lat', 'lng', 'createdAt', 'status', 'passengers', 'reports']) &&
+      return hasRequiredFields(['driverId', 'driverName', 'driverRating', 'departure', 'destination', 'time', 'date', 'price', 'distance', 'motorcycle', 'helmetAvailable', 'whatsappNumber', 'lat', 'lng', 'createdAt', 'status', 'passengers', 'reports', 'university']) &&
              data.driverId is string &&
              data.driverName is string && data.driverName.size() <= 200 &&
              (!('driverAvatar' in data) || (data.driverAvatar is string && data.driverAvatar.size() <= 1000)) &&
@@ -267,6 +267,7 @@ service cloud.firestore {
              data.status in ['active', 'completed', 'cancelled', 'suspended'] &&
              data.passengers is list &&
              data.reports is list &&
+             data.university is string &&
              (!('vehicleDetails' in data) || data.vehicleDetails is map);
     }
 
@@ -561,16 +562,21 @@ service cloud.firestore {
     }
 
     match /motoRides/{rideId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.university == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university);
       allow create: if isVerifiedDriver() && isMotoRideActive() && isValidMotoRide(request.resource.data) && 
                       request.resource.data.driverId == request.auth.uid &&
+                      request.resource.data.university == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university &&
                       isRecent(request.resource.data.createdAt);
       allow update: if isAuthenticated() && (
         ((resource.data.driverId == request.auth.uid || isAdmin()) && 
          isValidMotoRide(request.resource.data) &&
          request.resource.data.driverId == resource.data.driverId &&
+         request.resource.data.university == resource.data.university &&
          request.resource.data.createdAt == resource.data.createdAt) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['passengers', 'reports', 'status']))
+        (
+          (isAdmin() || resource.data.university == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['passengers', 'reports', 'status'])
+        )
       );
       allow delete: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isAdmin());
     }
