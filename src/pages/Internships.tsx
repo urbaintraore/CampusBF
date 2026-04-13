@@ -3,19 +3,10 @@ import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, Alert
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { handleFirestoreError, OperationType } from '@/lib/firebase';
+import { serverTimestamp } from 'firebase/firestore';
 
 export default function Internships() {
-  const { user, internships, addInternship, updateInternship, deleteInternship } = useAuth();
+  const { user, internships, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -77,8 +68,8 @@ export default function Internships() {
     // Sort
     if (sortBy === 'date') {
       result.sort((a, b) => {
-        const dateA = a.postedAt?.toDate?.() || new Date(0);
-        const dateB = b.postedAt?.toDate?.() || new Date(0);
+        const dateA = a.postedAt?.toDate ? a.postedAt.toDate() : new Date(a.postedAt || 0);
+        const dateB = b.postedAt?.toDate ? b.postedAt.toDate() : new Date(b.postedAt || 0);
         return dateB.getTime() - dateA.getTime();
       });
     } else if (sortBy === 'relevance') {
@@ -167,18 +158,16 @@ export default function Internships() {
         studentName: `${user.firstName} ${user.lastName}`,
         studentEmail: user.email,
         status: 'pending',
-        appliedAt: serverTimestamp(),
         resumeUrl: 'https://placeholder-url.com/resume.pdf', // Placeholder
       };
 
-      await addDoc(collection(db, 'applications'), applicationData);
+      await applyInternship(applicationData);
 
       setShowApplyModal(false);
       setShowApplySuccess(true);
       setApplyFile(null);
       setTimeout(() => setShowApplySuccess(false), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'applications');
       alert('Une erreur est survenue lors de l\'envoi de votre candidature.');
     } finally {
       setIsSubmitting(false);
@@ -198,7 +187,7 @@ export default function Internships() {
         await addInternship({
           ...newInternship,
           authorId: user.id,
-          postedAt: new Date().toISOString(),
+          postedAt: serverTimestamp(),
         } as any);
         alert('Offre publiée avec succès !');
       }
@@ -420,7 +409,7 @@ export default function Internships() {
                       </span>
                       <span className="text-sm text-slate-500 flex items-center gap-1.5">
                         <Clock size={14} />
-                        {job.postedAt?.toDate?.() ? job.postedAt.toDate().toLocaleDateString() : job.postedAt}
+                        {job.postedAt?.toDate ? job.postedAt.toDate().toLocaleDateString() : (job.postedAt ? new Date(job.postedAt).toLocaleDateString() : 'Date inconnue')}
                       </span>
                     </div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
@@ -535,7 +524,7 @@ export default function Internships() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date de publication</p>
                   <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Clock size={16} className="text-slate-400" />
-                    {selectedJob.postedAt?.toDate?.() ? selectedJob.postedAt.toDate().toLocaleDateString() : selectedJob.postedAt}
+                    {selectedJob.postedAt?.toDate ? selectedJob.postedAt.toDate().toLocaleDateString() : (selectedJob.postedAt ? new Date(selectedJob.postedAt).toLocaleDateString() : 'Date inconnue')}
                   </p>
                 </div>
                 {selectedJob.deadline && (

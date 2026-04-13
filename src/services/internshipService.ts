@@ -38,5 +38,17 @@ export const internshipService = {
       handleFirestoreError(error, OperationType.DELETE, `internships/${id}`);
       throw error;
     }
+  },
+
+  async applyInternship(applicationData: any) {
+    try {
+      await addDoc(collection(db, 'applications'), {
+        ...applicationData,
+        appliedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'applications');
+      throw error;
+    }
   }
 };

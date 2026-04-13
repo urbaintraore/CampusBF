@@ -77,6 +77,7 @@ interface AuthContextType {
   deleteInternship: (id: string) => Promise<void>;
   updateInternship: (id: string, data: Partial<Internship>) => Promise<void>;
   addInternship: (data: Omit<Internship, 'id' | 'createdAt'>) => Promise<void>;
+  applyInternship: (data: any) => Promise<void>;
   deleteMarketplaceItem: (id: string) => Promise<void>;
   updateMarketplaceItem: (id: string, data: Partial<MarketplaceItem>) => Promise<void>;
   addMarketplaceItem: (data: Omit<MarketplaceItem, 'id' | 'createdAt'>) => Promise<void>;
@@ -792,6 +793,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await internshipService.addInternship(data);
   };
 
+  const applyInternship = async (data: any) => {
+    await internshipService.applyInternship(data);
+  };
+
   const deleteMarketplaceItem = async (id: string) => {
     await marketplaceService.deleteMarketplaceItem(id);
   };
@@ -1057,6 +1062,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteInternship,
       updateInternship,
       addInternship,
+      applyInternship,
       deleteMarketplaceItem,
       updateMarketplaceItem,
       addMarketplaceItem,
