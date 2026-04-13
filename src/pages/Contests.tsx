@@ -7,14 +7,22 @@ import { Contest, ContestParticipant } from '@/types';
 export default function Contests() {
   const { contests, contestParticipants, user, registerForContest } = useAuth();
   const [activeTab, setActiveTab] = useState<'active' | 'finished'>('active');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const filteredContests = contests.filter(c => 
-    activeTab === 'active' ? (c.status === 'active' || c.status === 'draft') : (c.status === 'finished' || c.status === 'results_published')
-  ).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  const filteredContests = contests.filter(c => {
+    const matchesTab = activeTab === 'active' 
+      ? (c.status === 'active' || (user?.role === 'admin' && c.status === 'draft'))
+      : (c.status === 'finished' || c.status === 'results_published');
+    
+    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         c.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesTab && matchesSearch;
+  }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
   const getParticipantCount = (contestId: string) => {
     return contestParticipants.filter(p => p.contestId === contestId).length;
@@ -49,6 +57,9 @@ export default function Contests() {
       .sort((a, b) => b.totalScore - a.totalScore);
   };
 
+  const activeCount = contests.filter(c => c.status === 'active' || (user?.role === 'admin' && c.status === 'draft')).length;
+  const finishedCount = contests.filter(c => c.status === 'finished' || c.status === 'results_published').length;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -78,20 +89,32 @@ export default function Contests() {
           <button
             onClick={() => setActiveTab('active')}
             className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
               activeTab === 'active' ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
             Concours Actifs
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-[10px]",
+              activeTab === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+            )}>
+              {activeCount}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('finished')}
             className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
               activeTab === 'finished' ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
             Concours Passés
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-[10px]",
+              activeTab === 'finished' ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+            )}>
+              {finishedCount}
+            </span>
           </button>
         </div>
 
@@ -101,6 +124,8 @@ export default function Contests() {
             <input
               type="text"
               placeholder="Rechercher un concours..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
           </div>
