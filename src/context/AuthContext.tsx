@@ -1019,9 +1019,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const registerForContest = async (contestId: string) => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('Veuillez vous connecter pour participer au concours');
+    }
     const contest = contests.find(c => c.id === contestId);
-    if (!contest) return;
+    if (!contest) {
+      throw new Error('Concours non trouvé');
+    }
     const participantsCount = contestParticipants.filter(p => p.contestId === contestId).length;
     const alreadyRegistered = contestParticipants.some(p => p.contestId === contestId && p.userId === user.id);
     await contestService.registerForContest(user, contest, participantsCount, alreadyRegistered);

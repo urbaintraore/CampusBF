@@ -25,6 +25,11 @@ export default function Contests() {
   };
 
   const handleRegister = async (contestId: string) => {
+    if (!user) {
+      setError('Veuillez vous connecter pour participer au concours.');
+      return;
+    }
+    
     setIsRegistering(true);
     setError(null);
     setSuccess(null);
