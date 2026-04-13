@@ -14,15 +14,23 @@ export default function Contests() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const filteredContests = contests.filter(c => {
+    const isUserAdmin = user?.role === 'admin';
+    
+    // Admin sees everything except finished/published in 'active' tab, and vice versa
+    // Students only see 'active'
     const matchesTab = activeTab === 'active' 
-      ? (c.status === 'active' || (user?.role === 'admin' && c.status === 'draft'))
+      ? (c.status === 'active' || (isUserAdmin && c.status === 'draft'))
       : (c.status === 'finished' || c.status === 'results_published');
     
     const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesTab && matchesSearch;
-  }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  }).sort((a, b) => {
+    const dateA = new Date(a.startDate).getTime();
+    const dateB = new Date(b.startDate).getTime();
+    return dateB - dateA;
+  });
 
   const getParticipantCount = (contestId: string) => {
     return contestParticipants.filter(p => p.contestId === contestId).length;
