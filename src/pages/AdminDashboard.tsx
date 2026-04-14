@@ -1,3 +1,4 @@
+import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState } from 'react';
 import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -1874,6 +1875,23 @@ export default function AdminDashboard() {
                               >
                                 <Users size={16} />
                                 Participants
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if(confirm('Charger 20 participants fictifs ?')) {
+                                    try {
+                                      await seedContestParticipants(contest.id);
+                                      alert('Participants chargés !');
+                                    } catch (error) {
+                                      console.error('Erreur lors du chargement:', error);
+                                      alert('Erreur lors du chargement des participants. Vérifiez la console.');
+                                    }
+                                  }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-lg text-sm font-bold hover:bg-purple-100 transition-colors"
+                              >
+                                <Users size={16} />
+                                Charger Participants
                               </button>
                               <button 
                                 onClick={() => { setEditingContest(contest); setShowAddContestModal(true); }}
