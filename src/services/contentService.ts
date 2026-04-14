@@ -10,9 +10,12 @@ import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 
 export const contentService = {
   async deleteContent(collectionName: 'posts' | 'events' | 'news' | 'lostAndFound', id: string) {
+    console.log(`ContentService: Attempting to delete ${collectionName}/${id}`);
     try {
       await deleteDoc(doc(db, collectionName, id));
+      console.log(`ContentService: ${collectionName}/${id} deleted successfully`);
     } catch (error) {
+      console.error(`ContentService: Error deleting ${collectionName}/${id}:`, error);
       handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${id}`);
       throw error;
     }

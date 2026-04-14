@@ -446,26 +446,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               unsubscribes.push(onSnapshot(collection(db, 'training_reports'), (snapshot) => {
                 setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
               }, (error) => handleFirestoreError(error, OperationType.LIST, 'training_reports')));
+            }
 
             unsubscribes.push(onSnapshot(collection(db, 'contests'), (snapshot) => {
               setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'contests')));
 
-            unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
-              setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'contest_participants')));
+            if (initialUserData.role === 'admin') {
+              console.log("User is admin, starting admin listeners");
+              unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
+                setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'contest_participants')));
 
-            unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
-              setLogs(snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                  id: doc.id,
-                  ...data,
-                  createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
-                } as Log;
-              }));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'logs')));
-          } else {
+              unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
+                setLogs(snapshot.docs.map(doc => {
+                  const data = doc.data();
+                  return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+                  } as Log;
+                }));
+              }, (error) => handleFirestoreError(error, OperationType.LIST, 'logs')));
+            } else {
             console.log("User is not admin, starting user listeners");
             // Non-admins see their own applications
             const qApps = query(collection(db, 'applications'), where('userId', '==', firebaseUser.uid));
@@ -844,7 +847,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteEvent = async (id: string) => {
-    await contentService.deleteContent('events', id);
+    console.log('AuthContext: Attempting to delete event:', id);
+    try {
+      await contentService.deleteContent('events', id);
+      console.log('AuthContext: Event deleted successfully:', id);
+    } catch (error) {
+      console.error('AuthContext: Error deleting event:', id, error);
+      throw error;
+    }
   };
 
   const deleteNews = async (id: string) => {

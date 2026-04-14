@@ -983,7 +983,8 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => {
-                        if(confirm('Supprimer cet événement ?')) deleteEvent(event.id);
+                        console.log('Attempting to delete event:', event.id);
+                        deleteEvent(event.id).then(() => console.log('Event deleted')).catch(err => console.error('Delete error:', err));
                       }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
