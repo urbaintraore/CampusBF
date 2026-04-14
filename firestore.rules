@@ -638,7 +638,7 @@ service cloud.firestore {
 
     match /contest_participants/{participantId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (isAdmin() || (isValidContestParticipant(request.resource.data) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.inviteCount >= get(/databases/$(database)/documents/contests/$(request.resource.data.contestId)).data.conditions.minInvites));
+      allow create: if isAuthenticated() && (isAdmin() || (isValidContestParticipant(request.resource.data) && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.inviteCount >= get(/databases/$(database)/documents/contests/$(request.resource.data.contestId)).data.conditions.minInvites));
       allow update: if isAdmin() || (
         isAuthenticated() && 
         resource.data.userId == request.auth.uid && 
