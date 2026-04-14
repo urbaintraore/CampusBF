@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, increment, arrayUnion, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Referral } from '@/types';
 
@@ -9,6 +9,13 @@ export const referralService = {
         referrerId,
         referredId,
         createdAt: serverTimestamp()
+      });
+
+      // Update referrer's user document
+      const referrerRef = doc(db, 'users', referrerId);
+      await updateDoc(referrerRef, {
+        inviteCount: increment(1),
+        invitedUsers: arrayUnion(referredId)
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'referrals');

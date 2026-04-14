@@ -2069,12 +2069,33 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500">Score: {participant.totalScore}</p>
                     </div>
                   </div>
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-1 rounded-full uppercase",
-                    participant.status === 'validated' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                  )}>
-                    {participant.status}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-1 rounded-full uppercase",
+                      participant.status === 'validated' ? "bg-emerald-100 text-emerald-700" : 
+                      participant.status === 'excluded' ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                    )}>
+                      {participant.status}
+                    </span>
+                    {participant.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => updateParticipantStatus(participant.id, 'validated')}
+                          className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+                          title="Valider"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button 
+                          onClick={() => updateParticipantStatus(participant.id, 'excluded')}
+                          className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                          title="Exclure"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
               {contestParticipants.filter(p => p.contestId === showParticipantsModal.id).length === 0 && (

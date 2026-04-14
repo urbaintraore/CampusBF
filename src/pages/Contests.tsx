@@ -355,6 +355,17 @@ export default function Contests() {
                       ) : (
                         <>
                           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-center">Prêt à relever le défi ?</h3>
+                          {(user?.inviteCount || 0) < (selectedContest.conditions.minInvites || 0) && (
+                            <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-3">
+                              <p className="text-xs text-amber-800 font-medium">
+                                Pour participer à ce concours, vous devez d'abord inviter au moins {selectedContest.conditions.minInvites} étudiants sur CampusBF. Partagez votre lien d'invitation avec vos amis pour débloquer votre participation.
+                              </p>
+                              <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                                <span>Invitations :</span>
+                                <span>{user?.inviteCount || 0} / {selectedContest.conditions.minInvites}</span>
+                              </div>
+                            </div>
+                          )}
                           {error && (
                             <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl flex items-start gap-2">
                               <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />

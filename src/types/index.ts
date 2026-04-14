@@ -58,6 +58,8 @@ export interface User {
     imageUrl?: string;
   };
   createdAt?: any;
+  inviteCount?: number;
+  invitedUsers?: string[];
 }
 
 export interface Training {
