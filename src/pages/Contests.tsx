@@ -366,7 +366,7 @@ export default function Contests() {
                               </div>
                               <button
                                 onClick={() => {
-                                  const inviteUrl = `${window.location.origin}/invite/${user?.id}`;
+                                  const inviteUrl = `${window.location.origin}/signup?ref=${user?.id}`;
                                   navigator.clipboard.writeText(inviteUrl);
                                   alert('Lien d\'invitation copié !');
                                 }}
