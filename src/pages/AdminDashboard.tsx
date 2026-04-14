@@ -86,6 +86,7 @@ export default function AdminDashboard() {
   const [showEditInternshipModal, setShowEditInternshipModal] = useState(false);
   const [editingInternship, setEditingInternship] = useState<any>(null);
   const [showAddContestModal, setShowAddContestModal] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState<Contest | null>(null);
   const [editingContest, setEditingContest] = useState<any>(null);
   const [newContest, setNewContest] = useState<Partial<Contest>>({
     title: '',
@@ -1867,6 +1868,13 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex flex-col gap-2 min-w-[150px]">
                               <button 
+                                onClick={() => setShowParticipantsModal(contest)}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                              >
+                                <Users size={16} />
+                                Participants
+                              </button>
+                              <button 
                                 onClick={() => { setEditingContest(contest); setShowAddContestModal(true); }}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
                               >
@@ -1875,7 +1883,8 @@ export default function AdminDashboard() {
                               </button>
                               <button 
                                 onClick={() => {
-                                  if(confirm('Supprimer ce concours et tous ses participants ?')) deleteContest(contest.id);
+                                  console.log('Attempting to delete contest:', contest.id);
+                                  deleteContest(contest.id).then(() => console.log('Contest deleted')).catch(err => console.error('Delete error:', err));
                                 }}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
                               >
@@ -2010,6 +2019,48 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contest Participants Modal */}
+      {showParticipantsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                Participants: {showParticipantsModal.title}
+              </h2>
+              <button 
+                onClick={() => setShowParticipantsModal(null)} 
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+              {contestParticipants.filter(p => p.contestId === showParticipantsModal.id).map(participant => (
+                <div key={participant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <img src={participant.userAvatar || `https://ui-avatars.com/api/?name=${participant.userName}`} alt="" className="w-10 h-10 rounded-full" />
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">{participant.userName}</h3>
+                      <p className="text-xs text-gray-500">Score: {participant.totalScore}</p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-1 rounded-full uppercase",
+                    participant.status === 'validated' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  )}>
+                    {participant.status}
+                  </span>
+                </div>
+              ))}
+              {contestParticipants.filter(p => p.contestId === showParticipantsModal.id).length === 0 && (
+                <p className="text-center text-gray-400 py-4">Aucun participant pour le moment.</p>
+              )}
             </div>
           </div>
         </div>

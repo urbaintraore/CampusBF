@@ -12,6 +12,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { User, Contest, ContestParticipant, ContestWinner } from '@/types';
 import { logService } from './logService';
+import { referralService } from './referralService';
 
 export const contestService = {
   async createContest(user: User, contest: Omit<Contest, 'id' | 'createdAt'>) {
@@ -67,6 +68,13 @@ export const contestService = {
 
       if (alreadyRegistered) {
         throw new Error('Vous êtes déjà inscrit à ce concours');
+      }
+
+      if (contest.conditions.minInvites > 0) {
+        const referralCount = await referralService.getReferralCount(user.id);
+        if (referralCount < contest.conditions.minInvites) {
+          throw new Error(`Vous devez inviter au moins ${contest.conditions.minInvites} personnes pour participer.`);
+        }
       }
 
       const participantData: Omit<ContestParticipant, 'id'> = {

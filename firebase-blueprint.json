@@ -343,6 +343,10 @@
     "/logs/{logId}": {
       "schema": "Log",
       "description": "User activity logs"
+    },
+    "/referrals/{referralId}": {
+      "schema": "object",
+      "description": "Referral tracking"
     }
   }
 }

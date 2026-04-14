@@ -12,6 +12,7 @@ export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], []);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -48,6 +49,7 @@ export default function Signup() {
         email: formData.email,
         password: formData.password,
         role: accountType,
+        referrerId: searchParams.get('ref') || undefined,
       };
 
       if (accountType === 'student') {

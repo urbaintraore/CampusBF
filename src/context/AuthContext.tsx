@@ -16,6 +16,7 @@ import { communityService } from '@/services/communityService';
 import { adService } from '@/services/adService';
 import { trainingService } from '@/services/trainingService';
 import { contestService } from '@/services/contestService';
+import { referralService } from '@/services/referralService';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -573,7 +574,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (userData: Partial<User> & { password?: string }) => {
+  const signup = async (userData: Partial<User> & { password?: string; referrerId?: string }) => {
     if (!userData.email || !userData.password) {
       throw new Error('Email et mot de passe requis');
     }
@@ -614,6 +615,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       await syncProfile(firebaseUser.uid, newUser);
       await ensureUserInCommunityGroup(firebaseUser.uid);
+      
+      if (userData.referrerId) {
+        await referralService.createReferral(userData.referrerId, firebaseUser.uid);
+      }
       
       // Connexion directe après inscription
       setUser({ id: firebaseUser.uid, ...newUser } as User);
@@ -1014,8 +1019,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteContest = async (id: string) => {
-    if (!user) return;
+    console.log('AuthContext: deleteContest called for:', id);
+    if (!user) {
+      console.log('AuthContext: deleteContest failed: no user');
+      return;
+    }
+    console.log('AuthContext: Calling contestService.deleteContest');
     await contestService.deleteContest(user, id);
+    console.log('AuthContext: contestService.deleteContest called');
   };
 
   const registerForContest = async (contestId: string) => {

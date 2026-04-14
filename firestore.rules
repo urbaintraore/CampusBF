@@ -649,9 +649,10 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
-    match /contest_scores/{scoreId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() && (resource.data.referrerId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.referredId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     match /contest_rules/{ruleId} {

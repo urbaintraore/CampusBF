@@ -462,6 +462,13 @@ export interface Log {
   createdAt: string;
 }
 
+export interface Referral {
+  id: string;
+  referrerId: string; // The user who invited
+  referredId: string; // The user who was invited
+  createdAt: string;
+}
+
 export interface Contest {
   id: string;
   title: string;
