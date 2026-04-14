@@ -449,8 +449,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             unsubscribes.push(onSnapshot(collection(db, 'contests'), (snapshot) => {
+              console.log("AuthContext: contests updated, count:", snapshot.size);
               setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'contests')));
+            }, (error) => {
+              console.error("Error loading contests:", error);
+              handleFirestoreError(error, OperationType.LIST, 'contests');
+            }));
 
             if (initialUserData.role === 'admin') {
               console.log("User is admin, starting admin listeners");

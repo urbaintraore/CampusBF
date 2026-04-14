@@ -19,7 +19,7 @@ export default function Contests() {
     // Admin sees everything except finished/published in 'active' tab, and vice versa
     // Students only see 'active'
     const matchesTab = activeTab === 'active' 
-      ? (c.status === 'active' || (isUserAdmin && c.status === 'draft'))
+      ? (c.status === 'active' || c.status === 'draft')
       : (c.status === 'finished' || c.status === 'results_published');
     
     const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
