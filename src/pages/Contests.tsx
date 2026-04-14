@@ -364,6 +364,16 @@ export default function Contests() {
                                 <span>Invitations :</span>
                                 <span>{user?.inviteCount || 0} / {selectedContest.conditions.minInvites}</span>
                               </div>
+                              <button
+                                onClick={() => {
+                                  const inviteUrl = `${window.location.origin}/invite/${user?.id}`;
+                                  navigator.clipboard.writeText(inviteUrl);
+                                  alert('Lien d\'invitation copié !');
+                                }}
+                                className="w-full py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors"
+                              >
+                                Copier mon lien d'invitation
+                              </button>
                             </div>
                           )}
                           {error && (
