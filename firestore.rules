@@ -366,6 +366,56 @@ service cloud.firestore {
              data.totalScore is number;
     }
 
+    function isValidDeal(data) {
+      return hasRequiredFields(['title', 'description', 'category', 'discount', 'partnerName', 'partnerLogo', 'createdAt', 'active']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 1000 &&
+             data.category is string &&
+             data.discount is string &&
+             data.partnerName is string &&
+             data.partnerLogo is string &&
+             data.active is bool &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidColocation(data) {
+      return hasRequiredFields(['title', 'description', 'city', 'neighborhood', 'university', 'rooms', 'roommatesNeeded', 'price', 'ownerId', 'ownerName', 'status', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 5000 &&
+             data.city is string &&
+             data.neighborhood is string &&
+             data.university is string &&
+             data.rooms is number &&
+             data.roommatesNeeded is number &&
+             data.price is number &&
+             data.ownerId == request.auth.uid &&
+             data.ownerName is string &&
+             data.status in ['active', 'filled', 'cancelled'] &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidColocationRequest(data) {
+      return hasRequiredFields(['colocationId', 'senderId', 'senderName', 'senderUniversity', 'senderLevel', 'message', 'status', 'createdAt']) &&
+             data.colocationId is string &&
+             data.senderId == request.auth.uid &&
+             data.senderName is string &&
+             data.senderUniversity is string &&
+             data.senderLevel is string &&
+             data.message is string && data.message.size() <= 1000 &&
+             data.status in ['pending', 'accepted', 'rejected'] &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidColocationReview(data) {
+      return hasRequiredFields(['targetId', 'authorId', 'authorName', 'rating', 'comment', 'createdAt']) &&
+             data.targetId is string &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000 &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -684,6 +734,41 @@ service cloud.firestore {
         allow create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants && request.resource.data.senderId == request.auth.uid;
         allow update: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       }
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isAdmin() || resource.data.creatorId == request.auth.uid);
+      allow delete: if isAuthenticated() && (isAdmin() || resource.data.creatorId == request.auth.uid || resource.data.type == 'ai');
+    }
+
+    match /deals/{dealId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidDeal(request.resource.data);
+      allow update: if isAdmin() && isValidDeal(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /colocations/{colocationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidColocation(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin()) && isValidColocation(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /colocation_requests/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.senderId == request.auth.uid || get(/databases/$(database)/documents/colocations/$(resource.data.colocationId)).data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidColocationRequest(request.resource.data);
+      allow update: if isAuthenticated() && (get(/databases/$(database)/documents/colocations/$(resource.data.colocationId)).data.ownerId == request.auth.uid || isAdmin()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isAuthenticated() && (resource.data.senderId == request.auth.uid || isAdmin());
+    }
+
+    match /colocation_reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidColocationReview(request.resource.data);
+      allow update: if false;
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
     match /logs/{logId} {

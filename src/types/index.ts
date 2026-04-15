@@ -1,3 +1,25 @@
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  pointsPerOption: number[];
+  correctAnswerIndex?: number; // Fallback for old quizzes
+  explanation?: string;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  subject: string;
+  level: string;
+  creatorId: string; // 'ai' or teacher's userId
+  creatorName: string;
+  questions: QuizQuestion[];
+  createdAt: any;
+  type: 'teacher' | 'ai';
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -414,12 +436,59 @@ export interface LostAndFound {
 export interface Report {
   id: string;
   reportedItemId: string;
-  reportedItemType: 'post' | 'comment' | 'document' | 'internship' | 'marketplace' | 'event' | 'lostAndFound' | 'news';
+  reportedItemType: 'post' | 'comment' | 'document' | 'internship' | 'marketplace' | 'event' | 'lostAndFound' | 'news' | 'colocation';
   reason: string;
   reporterId: string;
   reporterName: string;
   status: 'pending' | 'resolved' | 'ignored';
   createdAt: string;
+}
+
+export interface Colocation {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerAvatar?: string;
+  title: string;
+  description: string;
+  city: string;
+  neighborhood: string;
+  university: string;
+  distanceFromUni: number; // in km
+  roomsCount: number;
+  roommatesNeeded: number;
+  price: number; // monthly
+  imageUrls: string[];
+  preferredGender: 'male' | 'female' | 'any';
+  ageRange: string; // e.g., "18-22"
+  studyLevel: string; // e.g., "L1", "L2", etc.
+  lifestyleHabits: string[]; // e.g., ["calme", "non-fumeur"]
+  status: 'active' | 'filled' | 'cancelled';
+  createdAt: any;
+}
+
+export interface ColocationRequest {
+  id: string;
+  colocationId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  senderUniversity: string;
+  senderLevel: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: any;
+}
+
+export interface ColocationReview {
+  id: string;
+  colocationId: string;
+  authorId: string;
+  authorName: string;
+  targetId: string; // The person being reviewed
+  rating: number;
+  comment: string;
+  createdAt: any;
 }
 
 export interface MotoRide {
@@ -528,4 +597,21 @@ export interface ContestWinner {
   position: number;
   reward: string;
   score: number;
+}
+
+export interface Deal {
+  id: string;
+  title: string;
+  description: string;
+  partnerName: string;
+  partnerLogo?: string;
+  discountValue: string; // e.g., "20%", "500 CFA"
+  category: 'food' | 'transport' | 'leisure' | 'education' | 'services' | 'other';
+  validUntil?: string;
+  promoCode?: string;
+  linkUrl?: string;
+  imageUrl?: string;
+  isPremiumOnly?: boolean;
+  active: boolean;
+  createdAt: any;
 }

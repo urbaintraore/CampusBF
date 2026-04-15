@@ -1,6 +1,6 @@
 import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -67,11 +67,17 @@ export default function AdminDashboard() {
     deleteContest,
     updateParticipantStatus,
     publishContestResults,
+    deals,
+    createDeal,
+    updateDeal,
+    deleteDeal,
+    colocations,
+    deleteColocation,
     logs
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation'>('documents');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -89,6 +95,16 @@ export default function AdminDashboard() {
   const [showAddContestModal, setShowAddContestModal] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState<Contest | null>(null);
   const [editingContest, setEditingContest] = useState<any>(null);
+  const [showAddDealModal, setShowAddDealModal] = useState(false);
+  const [editingDeal, setEditingDeal] = useState<any>(null);
+  const [newDeal, setNewDeal] = useState<any>({
+    title: '',
+    description: '',
+    partnerName: '',
+    discountValue: '',
+    category: 'other',
+    active: true
+  });
   const [newContest, setNewContest] = useState<Partial<Contest>>({
     title: '',
     description: '',
@@ -159,6 +175,32 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error(error);
       alert('Erreur lors de l\'enregistrement du concours');
+    }
+  };
+
+  const handleSaveDeal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingDeal) {
+        const { id, ...data } = editingDeal;
+        await updateDeal(id, data);
+      } else {
+        await createDeal(newDeal);
+      }
+      setShowAddDealModal(false);
+      setEditingDeal(null);
+      setNewDeal({
+        title: '',
+        description: '',
+        partnerName: '',
+        discountValue: '',
+        category: 'other',
+        active: true
+      });
+      alert('Bon Plan enregistré avec succès');
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'enregistrement');
     }
   };
 
@@ -635,7 +677,7 @@ export default function AdminDashboard() {
                   <div className="space-y-3">
                     {[
                       { label: 'Étudiants', count: users.filter(u => u.role === 'student').length, color: 'bg-blue-500' },
-                      { label: 'Répétiteurs', count: users.filter(u => u.tutorStatus === 'approved').length, color: 'bg-amber-500' },
+                      { label: 'Répétiteurs & Prof de maison', count: users.filter(u => u.tutorStatus === 'approved').length, color: 'bg-amber-500' },
                       { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length, color: 'bg-emerald-500' },
                       { label: 'Entreprises', count: users.filter(u => u.role === 'company').length, color: 'bg-purple-500' },
                       { label: 'Admins', count: users.filter(u => u.role === 'admin').length, color: 'bg-red-500' },
@@ -741,11 +783,13 @@ export default function AdminDashboard() {
               { id: 'news', label: 'Actualités', icon: Newspaper },
               { id: 'ads', label: 'Publicités', icon: Megaphone },
               { id: 'teachers', label: 'Enseignants', icon: Library },
-              { id: 'tutors', label: 'Répétiteurs', icon: GraduationCap },
+              { id: 'tutors', label: 'Répétiteurs & Prof de maison', icon: GraduationCap },
               { id: 'reports', label: 'Signalements', icon: AlertTriangle },
               { id: 'motoRide', label: 'MotoRide', icon: Bike },
               { id: 'formations', label: 'Formations', icon: BookOpen },
               { id: 'contests', label: 'Concours', icon: Trophy },
+              { id: 'deals', label: 'Bons Plans', icon: Tag },
+              { id: 'colocation', label: 'Colocation', icon: Home },
               { id: 'payments', label: 'Paiements', icon: CreditCard },
             ].map((tab) => (
               <button 
@@ -781,6 +825,24 @@ export default function AdminDashboard() {
                 >
                   <Plus size={16} />
                   Nouveau Concours
+                </button>
+              )}
+              {contentTab === 'deals' && (
+                <button 
+                  onClick={() => { setEditingDeal(null); setShowAddDealModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus size={16} />
+                  Nouveau Bon Plan
+                </button>
+              )}
+              {contentTab === 'deals' && (
+                <button 
+                  onClick={() => { setEditingDeal(null); setShowAddDealModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus size={16} />
+                  Nouveau Bon Plan
                 </button>
               )}
               {contentTab === 'documents' && (
@@ -1121,7 +1183,7 @@ export default function AdminDashboard() {
                   <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2">
                       <GraduationCap className="text-emerald-600" size={18} />
-                      Demandes Répétiteurs en attente
+                      Demandes Répétiteurs & Prof de maison en attente
                     </h3>
                     <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
                       {applications.filter(a => a.status === 'pending').length} en attente
@@ -1210,7 +1272,7 @@ export default function AdminDashboard() {
                   <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-gray-50/50 mt-4">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2">
                       <UserCheck className="text-blue-600" size={18} />
-                      Répétiteurs actifs
+                      Répétiteurs & Prof de maison actifs
                     </h3>
                     <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
                       {users.filter(u => u.tutorStatus === 'approved').length} actifs
@@ -1954,6 +2016,137 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {contentTab === 'deals' && (
+                <div className="p-0">
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <Tag className="text-emerald-600" size={18} />
+                      Gestion des Bons Plans
+                    </h3>
+                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                      {deals.length} offres
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {deals.length > 0 ? (
+                      deals.map((deal) => (
+                        <div key={deal.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <img src={deal.imageUrl || `https://picsum.photos/seed/${deal.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                              <div>
+                                <h3 className="font-bold text-gray-900">{deal.title}</h3>
+                                <p className="text-xs text-gray-500 mb-1">{deal.partnerName} • {deal.discountValue}</p>
+                                <p className="text-xs text-gray-400 line-clamp-1 mb-2">{deal.description}</p>
+                                <div className="flex items-center gap-3">
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                    deal.active ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                                  )}>
+                                    {deal.active ? 'Actif' : 'Inactif'}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                                    {deal.category}
+                                  </span>
+                                  {deal.isPremiumOnly && (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase">
+                                      Premium
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[150px]">
+                              <button 
+                                onClick={() => { setEditingDeal(deal); setShowAddDealModal(true); }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                              >
+                                <Edit2 size={16} />
+                                Modifier
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if(confirm('Supprimer ce bon plan ?')) deleteDeal(deal.id);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <Trash2 size={16} />
+                                Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 text-center text-gray-400">
+                        <p>Aucun bon plan créé.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+
+
+              {contentTab === 'colocation' && (
+                <div className="p-0">
+                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <Home className="text-emerald-600" size={18} />
+                      Gestion des Colocations
+                    </h3>
+                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                      {colocations.length} annonces
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {colocations.length > 0 ? (
+                      colocations.map((coloc) => (
+                        <div key={coloc.id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <img src={coloc.imageUrls[0] || `https://picsum.photos/seed/${coloc.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                              <div>
+                                <h3 className="font-bold text-gray-900">{coloc.title}</h3>
+                                <p className="text-xs text-gray-500 mb-1">{coloc.city} • {coloc.neighborhood} • {coloc.price.toLocaleString()} CFA/mois</p>
+                                <p className="text-xs text-gray-400 line-clamp-1 mb-2">{coloc.description}</p>
+                                <div className="flex items-center gap-3">
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                    coloc.status === 'active' ? "bg-emerald-50 text-emerald-600" : 
+                                    coloc.status === 'filled' ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"
+                                  )}>
+                                    {coloc.status === 'active' ? 'Actif' : coloc.status === 'filled' ? 'Complet' : 'Annulé'}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                                    {coloc.ownerName}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[150px]">
+                              <button 
+                                onClick={() => {
+                                  if(confirm('Supprimer cette annonce de colocation ?')) deleteColocation(coloc.id);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <Trash2 size={16} />
+                                Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 text-center text-gray-400">
+                        <p>Aucune annonce de colocation.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {contentTab === 'payments' && (
                 <div className="p-0">
                   <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
@@ -2568,7 +2761,7 @@ export default function AdminDashboard() {
                     <Pie
                       data={[
                         { name: 'Étudiants', value: users.filter(u => u.role === 'student').length },
-                        { name: 'Répétiteurs', value: users.filter(u => u.role === 'tutor').length },
+                        { name: 'Répétiteurs & Prof de maison', value: users.filter(u => u.role === 'tutor').length },
                         { name: 'Enseignants', value: users.filter(u => u.role === 'teacher').length },
                         { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
                       ]}
@@ -2595,7 +2788,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-xs text-gray-600">Répétiteurs ({users.filter(u => u.role === 'tutor').length})</span>
+                  <span className="text-xs text-gray-600">Répétiteurs & Prof de maison ({users.filter(u => u.role === 'tutor').length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
@@ -2898,6 +3091,202 @@ export default function AdminDashboard() {
         contest={editingContest || newContest}
         setContest={editingContest ? setEditingContest : setNewContest}
       />
+      <AddDealModal
+        isOpen={showAddDealModal}
+        onClose={() => { setShowAddDealModal(false); setEditingDeal(null); }}
+        onSave={handleSaveDeal}
+        deal={editingDeal || newDeal}
+        setDeal={editingDeal ? setEditingDeal : setNewDeal}
+      />
+    </div>
+  );
+}
+
+function AddDealModal({ isOpen, onClose, onSave, deal, setDeal }: any) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Tag className="text-emerald-600" size={24} />
+            {deal?.id ? 'Modifier le bon plan' : 'Nouveau Bon Plan'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <form onSubmit={onSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Titre de l'offre</label>
+              <input
+                type="text"
+                required
+                value={deal.title}
+                onChange={(e) => setDeal({ ...deal, title: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="Ex: -20% sur les menus"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Partenaire</label>
+              <input
+                type="text"
+                required
+                value={deal.partnerName}
+                onChange={(e) => setDeal({ ...deal, partnerName: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="Ex: Restaurant Le Gourmet"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
+            <textarea
+              required
+              rows={3}
+              value={deal.description}
+              onChange={(e) => setDeal({ ...deal, description: e.target.value })}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm resize-none"
+              placeholder="Détails de l'offre..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Valeur de la réduction</label>
+              <input
+                type="text"
+                required
+                value={deal.discountValue}
+                onChange={(e) => setDeal({ ...deal, discountValue: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="Ex: -20%, 500 FCFA, etc."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Catégorie</label>
+              <select
+                value={deal.category}
+                onChange={(e) => setDeal({ ...deal, category: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+              >
+                <option value="food">Restauration</option>
+                <option value="transport">Transport</option>
+                <option value="leisure">Loisirs</option>
+                <option value="education">Éducation</option>
+                <option value="services">Services</option>
+                <option value="other">Autre</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Code Promo (Optionnel)</label>
+              <input
+                type="text"
+                value={deal.promoCode || ''}
+                onChange={(e) => setDeal({ ...deal, promoCode: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="Ex: CAMPUS20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Date d'expiration (Optionnel)</label>
+              <input
+                type="date"
+                value={deal.validUntil || ''}
+                onChange={(e) => setDeal({ ...deal, validUntil: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Lien (Optionnel)</label>
+              <input
+                type="url"
+                value={deal.linkUrl || ''}
+                onChange={(e) => setDeal({ ...deal, linkUrl: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="https://..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Image URL</label>
+              <input
+                type="url"
+                value={deal.imageUrl || ''}
+                onChange={(e) => setDeal({ ...deal, imageUrl: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="https://..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Logo Partenaire URL</label>
+              <input
+                type="url"
+                value={deal.partnerLogo || ''}
+                onChange={(e) => setDeal({ ...deal, partnerLogo: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 pt-2">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={deal.active}
+                  onChange={(e) => setDeal({ ...deal, active: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-emerald-500 transition-all"></div>
+                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+              </div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-emerald-600 transition-colors">Actif</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={deal.isPremiumOnly}
+                  onChange={(e) => setDeal({ ...deal, isPremiumOnly: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-amber-500 transition-all"></div>
+                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+              </div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-amber-600 transition-colors">Premium Uniquement</span>
+            </label>
+          </div>
+        </form>
+
+        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={onSave}
+            className="px-8 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+          >
+            {deal?.id ? 'Enregistrer les modifications' : 'Créer le bon plan'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -236,7 +236,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {user?.role === 'parent' ? (
           [
-            { label: 'Répétiteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
+            { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
             { label: 'Événements', count: auth.events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
           ].map((stat) => (
@@ -477,7 +477,7 @@ export default function Dashboard() {
           {/* Recommended Tutors */}
           <section>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-display font-bold text-slate-900">Répétiteurs</h2>
+              <h2 className="text-xl font-display font-bold text-slate-900">Répétiteurs & Prof de maison</h2>
               <Link to="/tutors" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm divide-y divide-slate-100 overflow-hidden">

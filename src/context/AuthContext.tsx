@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner } from '@/types';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner, Quiz, Deal, Colocation, ColocationRequest, ColocationReview } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { documentService } from '@/services/documentService';
@@ -17,6 +17,9 @@ import { adService } from '@/services/adService';
 import { trainingService } from '@/services/trainingService';
 import { contestService } from '@/services/contestService';
 import { referralService } from '@/services/referralService';
+import { quizService } from '@/services/quizService';
+import { dealService } from '@/services/dealService';
+import { colocationService } from '@/services/colocationService';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -62,12 +65,28 @@ interface AuthContextType {
   trainingReports: TrainingReport[];
   contests: Contest[];
   contestParticipants: ContestParticipant[];
+  quizzes: Quiz[];
+  deals: Deal[];
+  colocations: Colocation[];
+  colocationRequests: ColocationRequest[];
+  colocationReviews: ColocationReview[];
+  addQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt'>) => Promise<void>;
+  deleteQuiz: (id: string) => Promise<void>;
   createContest: (contest: Omit<Contest, 'id' | 'createdAt'>) => Promise<void>;
   updateContest: (id: string, data: Partial<Contest>) => Promise<void>;
   deleteContest: (id: string) => Promise<void>;
   registerForContest: (contestId: string) => Promise<void>;
   updateParticipantStatus: (participantId: string, status: ContestParticipant['status']) => Promise<void>;
   publishContestResults: (contestId: string, winners: ContestWinner[]) => Promise<void>;
+  createDeal: (deal: Omit<Deal, 'id' | 'createdAt'>) => Promise<void>;
+  updateDeal: (id: string, data: Partial<Deal>) => Promise<void>;
+  deleteDeal: (id: string) => Promise<void>;
+  createColocation: (colocation: Omit<Colocation, 'id' | 'createdAt' | 'ownerId' | 'ownerName' | 'ownerAvatar'>) => Promise<void>;
+  updateColocation: (id: string, data: Partial<Colocation>) => Promise<void>;
+  deleteColocation: (id: string) => Promise<void>;
+  sendColocationRequest: (request: Omit<ColocationRequest, 'id' | 'createdAt' | 'senderId' | 'senderName' | 'senderAvatar' | 'senderUniversity' | 'senderLevel' | 'status'>) => Promise<void>;
+  updateColocationRequestStatus: (id: string, status: 'accepted' | 'rejected') => Promise<void>;
+  addColocationReview: (review: Omit<ColocationReview, 'id' | 'createdAt' | 'authorId' | 'authorName'>) => Promise<void>;
   logAction: (action: string, details?: string) => Promise<void>;
   updateAd: (id: string, data: Partial<Ad>) => Promise<void>;
   createAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
@@ -170,6 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [trainingReports, setTrainingReports] = useState<TrainingReport[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
   const [contestParticipants, setContestParticipants] = useState<ContestParticipant[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [colocations, setColocations] = useState<Colocation[]>([]);
+  const [colocationRequests, setColocationRequests] = useState<ColocationRequest[]>([]);
+  const [colocationReviews, setColocationReviews] = useState<ColocationReview[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -383,6 +407,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'reports')));
 
+            unsubscribes.push(onSnapshot(collection(db, 'quizzes'), (snapshot) => {
+              setQuizzes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'quizzes')));
+
             const motoRideQuery = initialUserData.role === 'admin'
               ? collection(db, 'motoRides')
               : query(
@@ -455,6 +483,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error("Error loading contests:", error);
               handleFirestoreError(error, OperationType.LIST, 'contests');
             }));
+
+            unsubscribes.push(onSnapshot(collection(db, 'deals'), (snapshot) => {
+              setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'deals')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'colocations'), (snapshot) => {
+              setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocations')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'colocation_requests'), (snapshot) => {
+              setColocationRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationRequest)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocation_requests')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'colocation_reviews'), (snapshot) => {
+              setColocationReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationReview)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocation_reviews')));
 
             if (initialUserData.role === 'admin') {
               console.log("User is admin, starting admin listeners");
@@ -1043,6 +1087,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('AuthContext: contestService.deleteContest called');
   };
 
+  const addQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt'>) => {
+    if (!user) return;
+    await quizService.addQuiz(quiz);
+  };
+
+  const deleteQuiz = async (id: string) => {
+    if (!user) return;
+    await quizService.deleteQuiz(id);
+  };
+
+  const createDeal = async (deal: Omit<Deal, 'id' | 'createdAt'>) => {
+    if (!user) return;
+    await dealService.createDeal(deal);
+    await logAction('Création Bon Plan', deal.title);
+  };
+
+  const updateDeal = async (id: string, data: Partial<Deal>) => {
+    if (!user) return;
+    await dealService.updateDeal(id, data);
+    await logAction('Modification Bon Plan', `ID: ${id}`);
+  };
+
+  const deleteDeal = async (id: string) => {
+    if (!user) return;
+    await dealService.deleteDeal(id);
+    await logAction('Suppression Bon Plan', `ID: ${id}`);
+  };
+
+  const createColocation = async (colocation: Omit<Colocation, 'id' | 'createdAt' | 'ownerId' | 'ownerName' | 'ownerAvatar'>) => {
+    if (!user) return;
+    await colocationService.createColocation(user, colocation);
+    await logAction('Création Colocation', colocation.title);
+  };
+
+  const updateColocation = async (id: string, data: Partial<Colocation>) => {
+    if (!user) return;
+    await colocationService.updateColocation(id, data);
+    await logAction('Modification Colocation', `ID: ${id}`);
+  };
+
+  const deleteColocation = async (id: string) => {
+    if (!user) return;
+    await colocationService.deleteColocation(id);
+    await logAction('Suppression Colocation', `ID: ${id}`);
+  };
+
+  const sendColocationRequest = async (request: Omit<ColocationRequest, 'id' | 'createdAt' | 'senderId' | 'senderName' | 'senderAvatar' | 'senderUniversity' | 'senderLevel' | 'status'>) => {
+    if (!user) return;
+    await colocationService.sendRequest(user, request);
+    await logAction('Demande Colocation', `Coloc ID: ${request.colocationId}`);
+  };
+
+  const updateColocationRequestStatus = async (id: string, status: 'accepted' | 'rejected') => {
+    if (!user) return;
+    await colocationService.updateRequestStatus(id, status);
+    await logAction('Statut Demande Colocation', `ID: ${id}, Statut: ${status}`);
+  };
+
+  const addColocationReview = async (review: Omit<ColocationReview, 'id' | 'createdAt' | 'authorId' | 'authorName'>) => {
+    if (!user) return;
+    await colocationService.addReview(user, review);
+    await logAction('Avis Colocation', `Cible ID: ${review.targetId}`);
+  };
+
   const registerForContest = async (contestId: string) => {
     if (!user) {
       throw new Error('Veuillez vous connecter pour participer au concours');
@@ -1122,6 +1230,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteTraining,
       contests,
       contestParticipants,
+      quizzes,
+      deals,
+      colocations,
+      colocationRequests,
+      colocationReviews,
+      addQuiz,
+      deleteQuiz,
+      createDeal,
+      updateDeal,
+      deleteDeal,
+      createColocation,
+      updateColocation,
+      deleteColocation,
+      sendColocationRequest,
+      updateColocationRequestStatus,
+      addColocationReview,
       createContest,
       updateContest,
       deleteContest,

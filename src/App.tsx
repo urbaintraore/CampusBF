@@ -9,6 +9,10 @@ import Marketplace from './pages/Marketplace';
 import Internships from './pages/Internships';
 import Community from './pages/Community';
 import Profile from './pages/Profile';
+import Quizzes from './pages/Quizzes';
+import CVGenerator from './pages/CVGenerator';
+import Deals from './pages/Deals';
+import Colocation from './pages/Colocation';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -138,6 +142,26 @@ export default function App() {
           <Route path="/tutors" element={
             <ProtectedRoute>
               <Tutors />
+            </ProtectedRoute>
+          } />
+          <Route path="/quizzes" element={
+            <ProtectedRoute>
+              <Quizzes />
+            </ProtectedRoute>
+          } />
+          <Route path="/cv-generator" element={
+            <ProtectedRoute>
+              <CVGenerator />
+            </ProtectedRoute>
+          } />
+          <Route path="/deals" element={
+            <ProtectedRoute>
+              <Deals />
+            </ProtectedRoute>
+          } />
+          <Route path="/colocation" element={
+            <ProtectedRoute>
+              <Colocation />
             </ProtectedRoute>
           } />
           <Route path="/marketplace" element={

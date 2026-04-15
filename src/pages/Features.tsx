@@ -3,7 +3,7 @@ import {
   FileText, GraduationCap, ShoppingBag, Briefcase, 
   Compass, Users, Bike, Calendar, Library, 
   UserCheck, MessageSquare, Sparkles, Download, Loader2,
-  WifiOff, BookOpen, Trophy
+  WifiOff, BookOpen, Trophy, Tag, Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -21,7 +21,7 @@ const features = [
   },
   {
     icon: GraduationCap,
-    title: "Répétiteurs & Soutien",
+    title: "Répétiteurs & Prof de maison",
     description: "Trouvez des répétiteurs qualifiés pour un accompagnement personnalisé. Idéal pour les parents soucieux de la réussite de leurs enfants.",
     color: "bg-emerald-50 text-emerald-600",
     link: "/tutors",
@@ -91,6 +91,30 @@ const features = [
     color: "bg-amber-50 text-amber-600",
     link: "/contests",
     roles: ['student', 'teacher', 'admin', 'alumni']
+  },
+  {
+    icon: FileText,
+    title: "Générateur de CV",
+    description: "Créez un CV professionnel et moderne en quelques secondes à partir de vos informations de profil.",
+    color: "bg-blue-50 text-blue-600",
+    link: "/cv-generator",
+    roles: ['student', 'admin', 'alumni']
+  },
+  {
+    icon: Tag,
+    title: "Bons Plans & Réductions",
+    description: "Profitez de réductions exclusives chez nos partenaires (restauration, transport, loisirs) sur présentation de votre profil CampusBF.",
+    color: "bg-emerald-50 text-emerald-600",
+    link: "/deals",
+    roles: ['student', 'admin', 'alumni']
+  },
+  {
+    icon: Home,
+    title: "Colocation CampusBF",
+    description: "Trouvez des colocataires fiables et sécurisés près de votre université grâce à notre système de vérification étudiante.",
+    color: "bg-emerald-50 text-emerald-600",
+    link: "/colocation",
+    roles: ['student', 'admin']
   },
   {
     icon: Library,

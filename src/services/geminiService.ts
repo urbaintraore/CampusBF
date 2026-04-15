@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+import { QuizQuestion } from "@/types";
 
 // Initialisation paresseuse de l'API Gemini pour éviter les crashs au démarrage
 let aiClient: GoogleGenAI | null = null;
@@ -6,8 +7,7 @@ let aiClient: GoogleGenAI | null = null;
 const getAiClient = (): GoogleGenAI => {
   if (!aiClient) {
     // Dans Google AI Studio, la clé est automatiquement injectée via process.env.GEMINI_API_KEY
-    // On utilise import.meta.env comme fallback au cas où
-    const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
       console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner.");
@@ -53,8 +53,64 @@ export const createCampusAssistantChat = () => {
 };
 
 /**
- * Génère un résumé ou une explication pour un document
+ * Génère un quiz interactif avec Gemini
  */
+export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 5): Promise<QuizQuestion[]> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `Génère un quiz à choix multiples de niveau ${level} sur le sujet suivant : "${subject}".
+Le quiz doit contenir exactement ${numQuestions} questions.
+Chaque question doit avoir 4 options de réponse.
+Pour chaque option, tu dois attribuer un nombre de points (0 pour une réponse fausse, 1 ou plus pour une réponse correcte, ou des points partiels pour des réponses incomplètes).
+Fournis également une courte explication pour chaque question.
+Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              question: { type: Type.STRING },
+              options: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              pointsPerOption: {
+                type: Type.ARRAY,
+                items: { type: Type.NUMBER }
+              },
+              explanation: { type: Type.STRING }
+            },
+            required: ["id", "question", "options", "pointsPerOption", "explanation"]
+          }
+        }
+      }
+    });
+    
+    let text = response.text || "[]";
+    // Nettoyer le markdown si Gemini l'ajoute quand même
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    const questions: QuizQuestion[] = JSON.parse(text);
+    
+    // S'assurer que chaque question a un ID unique
+    return questions.map((q, index) => ({
+      ...q,
+      id: `ai-q-${Date.now()}-${index}`
+    }));
+  } catch (error: any) {
+    console.error("Erreur détaillée lors de la génération du quiz:", error);
+    if (error.status) console.error("Status:", error.status);
+    if (error.message) console.error("Message:", error.message);
+    throw new Error("Impossible de générer le quiz avec l'IA. Veuillez réessayer.");
+  }
+};
 export const summarizeDocument = async (documentTitle: string, documentDescription: string): Promise<string> => {
   try {
     const ai = getAiClient();
