@@ -57,6 +57,16 @@ export interface User {
     plateNumber: string;
     imageUrl?: string;
   };
+  bio?: string;
+  skills?: string[];
+  experiences?: {
+    id: string;
+    title: string;
+    company: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+  }[];
   createdAt?: any;
   inviteCount?: number;
   invitedUsers?: string[];

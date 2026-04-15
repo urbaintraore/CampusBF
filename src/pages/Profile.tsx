@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation } from 'react-router-dom';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle, FileText, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { uploadFile } from '@/services/storageService';
+import { CVGenerator } from '@/components/CVGenerator';
 
 export default function Profile() {
   const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction } = useAuth();
@@ -17,6 +18,7 @@ export default function Profile() {
   const [showTutorForm, setShowTutorForm] = useState(false);
   const [showTeacherForm, setShowTeacherForm] = useState(false);
   const [isEditingTeacher, setIsEditingTeacher] = useState(false);
+  const [showCVGenerator, setShowCVGenerator] = useState(false);
   const [tutorDescription, setTutorDescription] = useState('');
   const [tutorSubjects, setTutorSubjects] = useState('');
   const [tutorRates, setTutorRates] = useState({
@@ -47,6 +49,9 @@ export default function Profile() {
     neighborhood: user?.neighborhood || '',
     avatarUrl: user?.avatarUrl || '',
     promotion: user?.promotion || '',
+    bio: user?.bio || '',
+    skills: user?.skills?.join(', ') || '',
+    experiences: user?.experiences || [],
   });
 
   // Supabase config check
@@ -76,7 +81,13 @@ export default function Profile() {
         return;
       }
     }
-    await updateUser(formData);
+    
+    const updatedData = {
+      ...formData,
+      skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : []
+    };
+    
+    await updateUser(updatedData);
     setIsEditing(false);
     setForceComplete(false);
   };
@@ -84,6 +95,32 @@ export default function Profile() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddExperience = () => {
+    setFormData(prev => ({
+      ...prev,
+      experiences: [
+        ...prev.experiences,
+        { id: Date.now().toString(), title: '', company: '', startDate: '', endDate: '', description: '' }
+      ]
+    }));
+  };
+
+  const handleExperienceChange = (id: string, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      experiences: prev.experiences.map(exp => 
+        exp.id === id ? { ...exp, [field]: value } : exp
+      )
+    }));
+  };
+
+  const handleRemoveExperience = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      experiences: prev.experiences.filter(exp => exp.id !== id)
+    }));
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,13 +253,22 @@ export default function Profile() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Mon Profil</h1>
         {!isEditing ? (
-          <button 
-            onClick={() => setIsEditing(true)}
-            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
-          >
-            <Edit size={16} />
-            Modifier le profil
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowCVGenerator(true)}
+              className="px-5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-sm font-bold hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95"
+            >
+              <FileText size={16} />
+              Générer mon CV
+            </button>
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
+            >
+              <Edit size={16} />
+              Modifier le profil
+            </button>
+          </div>
         ) : (
           <div className="flex items-center gap-3">
             {!forceComplete && (
@@ -489,6 +535,143 @@ export default function Profile() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* CV Information Section */}
+      <div className="glass p-8 rounded-3xl border border-white/40 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '200ms' }}>
+        <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+            <FileText size={16} />
+          </div>
+          Informations CV
+        </h3>
+        
+        {isEditing ? (
+          <div className="space-y-6">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Bio / Profil</label>
+              <textarea 
+                name="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                placeholder="Décrivez-vous en quelques phrases..."
+                className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all min-h-[100px]"
+              />
+            </div>
+            
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Compétences (séparées par des virgules)</label>
+              <input 
+                type="text" 
+                name="skills"
+                value={formData.skills}
+                onChange={(e) => setFormData(prev => ({ ...prev, skills: e.target.value }))}
+                placeholder="ex: React, Gestion de projet, Anglais courant"
+                className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Expériences Professionnelles</label>
+                <button 
+                  type="button"
+                  onClick={handleAddExperience}
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                >
+                  <Plus size={14} /> Ajouter
+                </button>
+              </div>
+              
+              {formData.experiences.map((exp, index) => (
+                <div key={exp.id} className="p-4 bg-white/50 border border-slate-200 rounded-xl space-y-3 relative">
+                  <button 
+                    type="button"
+                    onClick={() => handleRemoveExperience(exp.id)}
+                    className="absolute top-3 right-3 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <div className="grid grid-cols-2 gap-3 pr-8">
+                    <input 
+                      type="text" 
+                      placeholder="Titre du poste"
+                      value={exp.title}
+                      onChange={(e) => handleExperienceChange(exp.id, 'title', e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Entreprise"
+                      value={exp.company}
+                      onChange={(e) => handleExperienceChange(exp.id, 'company', e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Date de début (ex: Jan 2023)"
+                      value={exp.startDate}
+                      onChange={(e) => handleExperienceChange(exp.id, 'startDate', e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Date de fin (laisser vide si en cours)"
+                      value={exp.endDate}
+                      onChange={(e) => handleExperienceChange(exp.id, 'endDate', e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    />
+                  </div>
+                  <textarea 
+                    placeholder="Description des missions..."
+                    value={exp.description}
+                    onChange={(e) => handleExperienceChange(exp.id, 'description', e.target.value)}
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none min-h-[80px]"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {user.bio ? (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bio / Profil</h4>
+                <p className="text-sm text-slate-700 bg-white/40 p-4 rounded-xl border border-white/50">{user.bio}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 italic">Aucune bio renseignée.</p>
+            )}
+
+            {user.skills && user.skills.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Compétences</h4>
+                <div className="flex flex-wrap gap-2">
+                  {user.skills.map((skill, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-100">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {user.experiences && user.experiences.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Expériences</h4>
+                <div className="space-y-3">
+                  {user.experiences.map((exp) => (
+                    <div key={exp.id} className="bg-white/40 p-4 rounded-xl border border-white/50">
+                      <h5 className="font-bold text-slate-900">{exp.title}</h5>
+                      <p className="text-sm font-medium text-emerald-600 mb-2">{exp.company} • {exp.startDate} - {exp.endDate || 'Présent'}</p>
+                      <p className="text-sm text-slate-600">{exp.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Subscriptions Section */}
@@ -1097,6 +1280,13 @@ export default function Profile() {
         title="Abonnement Événements"
         description="Publiez vos conférences, soutenances et activités culturelles pendant 30 jours."
       />
+
+      {showCVGenerator && (
+        <CVGenerator 
+          user={user} 
+          onClose={() => setShowCVGenerator(false)} 
+        />
+      )}
     </div>
   );
 }
