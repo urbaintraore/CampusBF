@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
@@ -7,7 +8,9 @@ import { uploadFile } from '@/services/storageService';
 
 export default function Profile() {
   const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction } = useAuth();
+  const location = useLocation();
   const [isEditing, setIsEditing] = useState(false);
+  const [forceComplete, setForceComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showPremiumPayment, setShowPremiumPayment] = useState(false);
   const [showEventPayment, setShowEventPayment] = useState(false);
@@ -49,11 +52,33 @@ export default function Profile() {
   // Supabase config check
   const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+  useEffect(() => {
+    if (location.state?.forceComplete) {
+      setForceComplete(true);
+      setIsEditing(true);
+    }
+  }, [location.state]);
+
   if (!user) return null;
 
   const handleSave = async () => {
+    if (forceComplete) {
+      const isComplete = Boolean(
+        formData.firstName && 
+        formData.lastName && 
+        formData.phone &&
+        formData.university && 
+        formData.major && 
+        formData.level
+      );
+      if (!isComplete) {
+        alert("Veuillez remplir tous les champs obligatoires (Prénom, Nom, Téléphone WhatsApp, Université, Filière, Niveau) pour continuer.");
+        return;
+      }
+    }
     await updateUser(formData);
     setIsEditing(false);
+    setForceComplete(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -200,13 +225,15 @@ export default function Profile() {
           </button>
         ) : (
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsEditing(false)}
-              className="px-5 py-2.5 bg-white/50 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-white flex items-center gap-2 transition-all shadow-sm"
-            >
-              <X size={16} />
-              Annuler
-            </button>
+            {!forceComplete && (
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="px-5 py-2.5 bg-white/50 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-white flex items-center gap-2 transition-all shadow-sm"
+              >
+                <X size={16} />
+                Annuler
+              </button>
+            )}
             <button 
               onClick={handleSave}
               className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
@@ -217,6 +244,16 @@ export default function Profile() {
           </div>
         )}
       </div>
+
+      {forceComplete && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4">
+          <AlertTriangle className="shrink-0 mt-0.5 text-amber-600" size={20} />
+          <div>
+            <h3 className="font-bold text-sm">Action requise</h3>
+            <p className="text-sm mt-1">Vous devez obligatoirement compléter votre profil (Prénom, Nom, Téléphone WhatsApp, Université, Filière, Niveau) avant de pouvoir accéder au reste de la plateforme.</p>
+          </div>
+        </div>
+      )}
 
       {/* Profile Header */}
       <div className="glass rounded-3xl border border-white/40 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">

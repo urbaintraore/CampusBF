@@ -231,6 +231,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const exportStudentContacts = () => {
+    const studentUsers = users.filter(u => u.role === 'student');
+    
+    if (studentUsers.length === 0) {
+      alert("Aucun étudiant trouvé.");
+      return;
+    }
+
+    const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Université', 'Filière'];
+    const csvRows = studentUsers.map(u => {
+      return [
+        `"${u.firstName || ''}"`,
+        `"${u.lastName || ''}"`,
+        `"${u.email || ''}"`,
+        `"${u.phone || ''}"`,
+        `"${u.university || ''}"`,
+        `"${u.major || ''}"`
+      ].join(',');
+    });
+    
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `contacts_etudiants_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const pendingApplications = applications.filter(app => app.status === 'pending');
   const pendingTeacherApplications = teacherApplications.filter(app => app.status === 'pending');
   console.log("AdminDashboard: pendingTeacherApplications:", pendingTeacherApplications.map(app => ({ id: app.id, status: app.status })));
@@ -2339,6 +2370,14 @@ export default function AdminDashboard() {
                 <Plus size={14} />
                 Créer Utilisateur
               </button>
+              <button 
+                onClick={exportStudentContacts}
+                className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors flex items-center gap-2"
+                title="Exporter les contacts des étudiants pour WhatsApp"
+              >
+                <Download size={14} />
+                Exporter Contacts (CSV)
+              </button>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -2698,6 +2737,30 @@ export default function AdminDashboard() {
                     <div className="bg-gray-50 p-3 rounded-xl">
                       <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Niveau</p>
                       <p className="text-sm font-bold text-gray-700">{selectedUser.level || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Promotion</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.promotion || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Téléphone</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.phone || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">INE</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.ine || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Ville</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.city || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Quartier</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.neighborhood || 'Non renseigné'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl">
+                      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Invitations</p>
+                      <p className="text-sm font-bold text-gray-700">{selectedUser.inviteCount || 0}</p>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-xl">
                       <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Statut Compte</p>

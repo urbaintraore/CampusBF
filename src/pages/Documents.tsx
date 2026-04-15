@@ -19,7 +19,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
-  const { user, documents: globalDocuments, logAction } = useAuth();
+  const { user, documents: globalDocuments, logAction, groups, community } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
@@ -105,6 +105,40 @@ export default function Documents() {
   });
 
   const isAdmin = user?.role === 'admin';
+  
+  const isProfileComplete = Boolean(
+    user?.firstName && 
+    user?.lastName && 
+    user?.phone &&
+    user?.university && 
+    user?.major && 
+    user?.level
+  );
+
+  const canDownloadOrView = () => {
+    if (!user) return false;
+    if (user.role !== 'student') return true;
+    
+    const isInGroup = groups.some(g => g.members.includes(user.id));
+    const hasPosted = community.some(p => 
+      p.authorId === user.id || 
+      (p.comments && p.comments.some(c => c.authorId === user.id))
+    );
+    
+    return isInGroup && hasPosted;
+  };
+
+  const handleUploadClick = () => {
+    if (user?.role === 'student') {
+      alert("Les étudiants ne sont pas autorisés à partager des documents.");
+      return;
+    }
+    if (!isProfileComplete && !isAdmin) {
+      alert("Veuillez renseigner complètement votre profil (téléphone WhatsApp, université, filière, niveau) dans les paramètres pour pouvoir partager des documents.");
+      return;
+    }
+    setShowUploadModal(true);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -233,7 +267,20 @@ export default function Documents() {
     }
   };
 
+  const handleView = (docUrl: string) => {
+    if (!canDownloadOrView()) {
+      alert("Pour voir ou télécharger un document, vous devez d'abord rejoindre un groupe dans la section Communauté et y poster ou répondre à un message.");
+      return;
+    }
+    window.open(docUrl, '_blank');
+  };
+
   const handleDownload = async (docData: any) => {
+    if (!canDownloadOrView()) {
+      alert("Pour voir ou télécharger un document, vous devez d'abord rejoindre un groupe dans la section Communauté et y poster ou répondre à un message.");
+      return;
+    }
+
     if (!docData.downloadUrl) {
       console.error("[Documents] URL de téléchargement manquante.");
       alert("Erreur: URL de téléchargement manquante.");
@@ -295,9 +342,9 @@ export default function Documents() {
           <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Documents Universitaires</h1>
           <p className="text-slate-500 text-sm mt-1">Accédez à des milliers de ressources partagées par les étudiants.</p>
         </div>
-        {isAdmin && (
+        {user && user.role !== 'student' && (
           <button 
-            onClick={() => setShowUploadModal(true)}
+            onClick={handleUploadClick}
             className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 active:scale-95"
           >
             <FileText size={18} />
@@ -721,7 +768,7 @@ export default function Documents() {
                     </div>
                     <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
                       <button 
-                        onClick={() => window.open(doc.downloadUrl, '_blank')}
+                        onClick={() => handleView(doc.downloadUrl)}
                         className="w-full md:w-auto px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
                       >
                         <Eye size={18} />

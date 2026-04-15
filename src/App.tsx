@@ -31,7 +31,7 @@ import Trainings from './pages/Trainings';
 import Contests from './pages/Contests';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -44,6 +44,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Force profile completion for students
+  if (user?.role === 'student') {
+    const isProfileComplete = Boolean(
+      user.firstName && 
+      user.lastName && 
+      user.phone &&
+      user.university && 
+      user.major && 
+      user.level
+    );
+
+    if (!isProfileComplete && location.pathname !== '/profile') {
+      return <Navigate to="/profile" state={{ forceComplete: true }} replace />;
+    }
   }
 
   return <Layout>{children}</Layout>;
