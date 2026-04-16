@@ -249,6 +249,61 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "action", "createdAt"]
+    },
+    "Deal": {
+      "title": "Deal",
+      "description": "A student deal or discount",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "partnerName": { "type": "string" },
+        "partnerLogo": { "type": "string" },
+        "discountValue": { "type": "string" },
+        "category": { "type": "string" },
+        "validUntil": { "type": "string" },
+        "promoCode": { "type": "string" },
+        "linkUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "partnerName", "discountValue", "category", "active"]
+    },
+    "Colocation": {
+      "title": "Colocation",
+      "description": "A student colocation offer",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "city": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "university": { "type": "string" },
+        "price": { "type": "number" },
+        "roomsCount": { "type": "number" },
+        "roommatesNeeded": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "title", "city", "university", "price", "status"]
+    },
+    "DealSuggestion": {
+      "title": "DealSuggestion",
+      "description": "A user suggestion for a new deal",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "title": { "type": "string" },
+        "partnerName": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "partnerName", "description", "status"]
     }
   },
   "firestore": {
@@ -347,6 +402,18 @@
     "/referrals/{referralId}": {
       "schema": "object",
       "description": "Referral tracking"
+    },
+    "/deals/{dealId}": {
+      "schema": "Deal",
+      "description": "Student deals"
+    },
+    "/colocations/{colocationId}": {
+      "schema": "Colocation",
+      "description": "Colocation offers"
+    },
+    "/deal_suggestions/{suggestionId}": {
+      "schema": "DealSuggestion",
+      "description": "User deal suggestions"
     }
   }
 }

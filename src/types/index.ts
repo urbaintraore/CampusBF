@@ -615,3 +615,14 @@ export interface Deal {
   active: boolean;
   createdAt: any;
 }
+
+export interface DealSuggestion {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  partnerName: string;
+  description: string;
+  status: 'pending' | 'reviewed' | 'rejected';
+  createdAt: any;
+}

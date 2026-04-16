@@ -5,14 +5,15 @@ import { QuizQuestion } from "@/types";
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
+  // Toujours essayer de récupérer la clé la plus récente au cas où elle ne serait pas dispo au premier chargement
+  const apiKey = process.env.GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner.");
+  }
+  
+  // Recréer le client ou le retourner s'il existe déjà
   if (!aiClient) {
-    // Dans Google AI Studio, la clé est automatiquement injectée via process.env.GEMINI_API_KEY
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner.");
-    }
-    
     aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-crash' });
   }
   return aiClient;
@@ -27,13 +28,13 @@ export const generateText = async (prompt: string): Promise<string> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
     });
     
     return response.text || "Aucune réponse générée.";
   } catch (error) {
-    console.error("Erreur lors de l'appel à Gemini:", error);
+    console.error("Erreur lors de l'appel à Gemini (generateText):", error);
     throw new Error("Impossible de générer une réponse avec l'IA.");
   }
 };
@@ -45,7 +46,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 export const createCampusAssistantChat = () => {
   const ai = getAiClient();
   return ai.chats.create({
-    model: "gemini-3-flash-preview",
+    model: "gemini-flash-latest",
     config: {
       systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire au Burkina Faso. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, l'organisation d'événements, la recherche de camarades, et la participation à des concours (Contests).\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions, NE gère PAS le paiement des frais de scolarité, et NE propose PAS de suivi pédagogique (notes, emplois du temps). Si un utilisateur pose une question sur ces sujets, réponds poliment que ces fonctionnalités ne sont pas disponibles sur CampusBF.\n3. Règles des Concours : Pour participer à certains concours, les utilisateurs doivent inviter un nombre minimum d'étudiants via leur lien d'invitation unique (disponible sur la page du concours).\n4. Règles des Documents : Seuls les utilisateurs avec un profil complet (sauf les étudiants) peuvent partager des documents. Pour qu'un étudiant puisse voir ou télécharger un document, il doit d'abord rejoindre un groupe dans la section Communauté et y publier ou répondre à un message.\n5. Sois concis, amical et utilise des emojis de temps en temps.",
     }
@@ -66,7 +67,7 @@ Fournis également une courte explication pour chaque question.
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -93,10 +94,12 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
       }
     });
     
-    let text = response.text || "[]";
-    // Nettoyer le markdown si Gemini l'ajoute quand même
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const text = response.text;
+    if (!text) {
+      throw new Error("Gemini n'a renvoyé aucun texte.");
+    }
     
+    // Si c'est déjà du JSON (responseMimeType: application/json), pas besoin de nettoyer
     const questions: QuizQuestion[] = JSON.parse(text);
     
     // S'assurer que chaque question a un ID unique
@@ -106,9 +109,7 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
     }));
   } catch (error: any) {
     console.error("Erreur détaillée lors de la génération du quiz:", error);
-    if (error.status) console.error("Status:", error.status);
-    if (error.message) console.error("Message:", error.message);
-    throw new Error("Impossible de générer le quiz avec l'IA. Veuillez réessayer.");
+    throw new Error(`Erreur lors de la génération du quiz : ${error.message || 'Erreur inconnue'}`);
   }
 };
 export const summarizeDocument = async (documentTitle: string, documentDescription: string): Promise<string> => {
@@ -117,7 +118,7 @@ export const summarizeDocument = async (documentTitle: string, documentDescripti
     const prompt = `En tant qu'assistant académique de CampusBF, donne-moi un bref aperçu de ce que pourrait contenir ce document et pourquoi il serait utile pour un étudiant, en te basant sur son titre et sa description.\n\nTitre: ${documentTitle}\nDescription: ${documentDescription}\n\nFais une réponse courte (2-3 phrases maximum) et motivante.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
     });
     

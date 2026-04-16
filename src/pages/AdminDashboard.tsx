@@ -68,9 +68,12 @@ export default function AdminDashboard() {
     updateParticipantStatus,
     publishContestResults,
     deals,
+    dealSuggestions,
     createDeal,
     updateDeal,
     deleteDeal,
+    reviewDealSuggestion,
+    deleteDealSuggestion,
     colocations,
     deleteColocation,
     logs
@@ -78,6 +81,7 @@ export default function AdminDashboard() {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats'>('overview');
   const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation'>('documents');
+  const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -2018,69 +2022,170 @@ export default function AdminDashboard() {
 
               {contentTab === 'deals' && (
                 <div className="p-0">
-                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Tag className="text-emerald-600" size={18} />
-                      Gestion des Bons Plans
-                    </h3>
-                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
-                      {deals.length} offres
-                    </span>
+                  <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
+                    <div className="flex items-center gap-4">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <Tag className="text-emerald-600" size={18} />
+                        Gestion des Bons Plans
+                      </h3>
+                      <div className="flex bg-gray-100 p-1 rounded-lg">
+                        <button 
+                          onClick={() => setDealsSubTab('list')}
+                          className={cn(
+                            "px-3 py-1 text-xs font-bold rounded-md transition-all",
+                            dealsSubTab === 'list' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                          )}
+                        >
+                          Offres
+                        </button>
+                        <button 
+                          onClick={() => setDealsSubTab('suggestions')}
+                          className={cn(
+                            "px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5",
+                            dealsSubTab === 'suggestions' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                          )}
+                        >
+                          Suggestions
+                          {dealSuggestions.filter(s => s.status === 'pending').length > 0 && (
+                            <span className="w-2 h-2 bg-red-500 rounded-full" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                        {dealsSubTab === 'list' ? `${deals.length} offres` : `${dealSuggestions.length} suggestions`}
+                      </span>
+                      {dealsSubTab === 'list' && (
+                        <button 
+                          onClick={() => { setEditingDeal(null); setShowAddDealModal(true); }}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-md"
+                        >
+                          <Plus size={16} />
+                          Ajouter
+                        </button>
+                      )}
+                    </div>
                   </div>
+
                   <div className="divide-y divide-gray-50">
-                    {deals.length > 0 ? (
-                      deals.map((deal) => (
-                        <div key={deal.id} className="p-6 hover:bg-gray-50 transition-colors">
-                          <div className="flex flex-col md:flex-row justify-between gap-6">
-                            <div className="flex gap-4">
-                              <img src={deal.imageUrl || `https://picsum.photos/seed/${deal.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
-                              <div>
-                                <h3 className="font-bold text-gray-900">{deal.title}</h3>
-                                <p className="text-xs text-gray-500 mb-1">{deal.partnerName} • {deal.discountValue}</p>
-                                <p className="text-xs text-gray-400 line-clamp-1 mb-2">{deal.description}</p>
-                                <div className="flex items-center gap-3">
-                                  <span className={cn(
-                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                                    deal.active ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
-                                  )}>
-                                    {deal.active ? 'Actif' : 'Inactif'}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
-                                    {deal.category}
-                                  </span>
-                                  {deal.isPremiumOnly && (
-                                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase">
-                                      Premium
+                    {dealsSubTab === 'list' ? (
+                      deals.length > 0 ? (
+                        deals.map((deal) => (
+                          <div key={deal.id} className="p-6 hover:bg-gray-50 transition-colors">
+                            <div className="flex flex-col md:flex-row justify-between gap-6">
+                              <div className="flex gap-4">
+                                <img src={deal.imageUrl || `https://picsum.photos/seed/${deal.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                                <div>
+                                  <h3 className="font-bold text-gray-900">{deal.title}</h3>
+                                  <p className="text-xs text-gray-500 mb-1">{deal.partnerName} • {deal.discountValue}</p>
+                                  <p className="text-xs text-gray-400 line-clamp-1 mb-2">{deal.description}</p>
+                                  <div className="flex items-center gap-3">
+                                    <span className={cn(
+                                      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                      deal.active ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                                    )}>
+                                      {deal.active ? 'Actif' : 'Inactif'}
                                     </span>
-                                  )}
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                                      {deal.category}
+                                    </span>
+                                    {deal.isPremiumOnly && (
+                                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase">
+                                        Premium
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="flex flex-col gap-2 min-w-[150px]">
-                              <button 
-                                onClick={() => { setEditingDeal(deal); setShowAddDealModal(true); }}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
-                              >
-                                <Edit2 size={16} />
-                                Modifier
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  if(confirm('Supprimer ce bon plan ?')) deleteDeal(deal.id);
-                                }}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
-                              >
-                                <Trash2 size={16} />
-                                Supprimer
-                              </button>
+                              <div className="flex flex-col gap-2 min-w-[150px]">
+                                <button 
+                                  onClick={() => { setEditingDeal(deal); setShowAddDealModal(true); }}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                                >
+                                  <Edit2 size={16} />
+                                  Modifier
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if(confirm('Supprimer ce bon plan ?')) deleteDeal(deal.id);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                  Supprimer
+                                </button>
+                              </div>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="p-12 text-center text-gray-400">
+                          <p>Aucun bon plan créé.</p>
                         </div>
-                      ))
+                      )
                     ) : (
-                      <div className="p-12 text-center text-gray-400">
-                        <p>Aucun bon plan créé.</p>
-                      </div>
+                      dealSuggestions.length > 0 ? (
+                        dealSuggestions.map((suggestion) => (
+                          <div key={suggestion.id} className="p-6 hover:bg-gray-50 transition-colors">
+                            <div className="flex flex-col md:flex-row justify-between gap-6">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-bold text-gray-900">{suggestion.title}</h3>
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                    suggestion.status === 'pending' ? "bg-amber-50 text-amber-600" : 
+                                    suggestion.status === 'reviewed' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                                  )}>
+                                    {suggestion.status === 'pending' ? 'En attente' : 
+                                     suggestion.status === 'reviewed' ? 'Examiné' : 'Rejeté'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-1">Partenaire : <span className="font-bold">{suggestion.partnerName}</span></p>
+                                <p className="text-sm text-gray-600 mb-3">{suggestion.description}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                  <span className="font-bold text-gray-500 uppercase">Suggéré par : {suggestion.userName}</span>
+                                  <span>•</span>
+                                  <span>{suggestion.createdAt ? new Date(suggestion.createdAt).toLocaleDateString() : 'Date inconnue'}</span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2 min-w-[150px]">
+                                {suggestion.status === 'pending' && (
+                                  <>
+                                    <button 
+                                      onClick={() => reviewDealSuggestion(suggestion.id, 'reviewed')}
+                                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-colors"
+                                    >
+                                      <Check size={16} />
+                                      Marquer examiné
+                                    </button>
+                                    <button 
+                                      onClick={() => reviewDealSuggestion(suggestion.id, 'rejected')}
+                                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                                    >
+                                      <X size={16} />
+                                      Rejeter
+                                    </button>
+                                  </>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    if(confirm('Supprimer cette suggestion ?')) deleteDealSuggestion(suggestion.id);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-400 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                  Supprimer
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-12 text-center text-gray-400">
+                          <p>Aucune suggestion de bon plan.</p>
+                        </div>
+                      )
                     )}
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import { Quiz, QuizQuestion } from '@/types';
 import { QuizPlayer } from '@/components/QuizPlayer';
 import { FlashcardPlayer } from '@/components/FlashcardPlayer';
 import { QuizCreator } from '@/components/QuizCreator';
+import toast from 'react-hot-toast';
 
 export default function Quizzes() {
   const { user, quizzes, addQuiz } = useAuth();
@@ -23,6 +24,7 @@ export default function Quizzes() {
     e.preventDefault();
     if (!aiSubject.trim()) return;
 
+    const loadingToast = toast.loading('Génération du quiz par l\'IA...');
     try {
       setIsGenerating(true);
       const questions = await generateQuizWithAI(aiSubject, aiLevel, 5);
@@ -40,11 +42,11 @@ export default function Quizzes() {
 
       await addQuiz(newQuiz);
       setAiSubject('');
-      alert('Quiz généré avec succès ! Vous pouvez le retrouver dans l\'onglet Explorer.');
+      toast.success('Quiz généré avec succès !', { id: loadingToast });
       setActiveTab('explore');
-    } catch (error) {
-      console.error(error);
-      alert('Erreur lors de la génération du quiz.');
+    } catch (error: any) {
+      console.error('Quiz Generation Error:', error);
+      toast.error(error.message || 'Erreur lors de la génération du quiz.', { id: loadingToast });
     } finally {
       setIsGenerating(false);
     }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner, Quiz, Deal, Colocation, ColocationRequest, ColocationReview } from '@/types';
+import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner, Quiz, Deal, DealSuggestion, Colocation, ColocationRequest, ColocationReview } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { documentService } from '@/services/documentService';
@@ -67,6 +67,7 @@ interface AuthContextType {
   contestParticipants: ContestParticipant[];
   quizzes: Quiz[];
   deals: Deal[];
+  dealSuggestions: DealSuggestion[];
   colocations: Colocation[];
   colocationRequests: ColocationRequest[];
   colocationReviews: ColocationReview[];
@@ -81,6 +82,8 @@ interface AuthContextType {
   createDeal: (deal: Omit<Deal, 'id' | 'createdAt'>) => Promise<void>;
   updateDeal: (id: string, data: Partial<Deal>) => Promise<void>;
   deleteDeal: (id: string) => Promise<void>;
+  reviewDealSuggestion: (id: string, status: 'reviewed' | 'rejected') => Promise<void>;
+  deleteDealSuggestion: (id: string) => Promise<void>;
   createColocation: (colocation: Omit<Colocation, 'id' | 'createdAt' | 'ownerId' | 'ownerName' | 'ownerAvatar'>) => Promise<void>;
   updateColocation: (id: string, data: Partial<Colocation>) => Promise<void>;
   deleteColocation: (id: string) => Promise<void>;
@@ -191,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [contestParticipants, setContestParticipants] = useState<ContestParticipant[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealSuggestions, setDealSuggestions] = useState<DealSuggestion[]>([]);
   const [colocations, setColocations] = useState<Colocation[]>([]);
   const [colocationRequests, setColocationRequests] = useState<ColocationRequest[]>([]);
   const [colocationReviews, setColocationReviews] = useState<ColocationReview[]>([]);
@@ -487,6 +491,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             unsubscribes.push(onSnapshot(collection(db, 'deals'), (snapshot) => {
               setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'deals')));
+
+            unsubscribes.push(onSnapshot(collection(db, 'deal_suggestions'), (snapshot) => {
+              setDealSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DealSuggestion)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'deal_suggestions')));
 
             unsubscribes.push(onSnapshot(collection(db, 'colocations'), (snapshot) => {
               setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
@@ -1115,6 +1123,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logAction('Suppression Bon Plan', `ID: ${id}`);
   };
 
+  const reviewDealSuggestion = async (id: string, status: 'reviewed' | 'rejected') => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const suggestionRef = doc(db, 'deal_suggestions', id);
+      await updateDoc(suggestionRef, { status });
+      await logAction('Modération Suggestion Bon Plan', `ID: ${id} - Status: ${status}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `deal_suggestions/${id}`);
+    }
+  };
+
+  const deleteDealSuggestion = async (id: string) => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      await deleteDoc(doc(db, 'deal_suggestions', id));
+      await logAction('Suppression Suggestion Bon Plan', `ID: ${id}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `deal_suggestions/${id}`);
+    }
+  };
+
   const createColocation = async (colocation: Omit<Colocation, 'id' | 'createdAt' | 'ownerId' | 'ownerName' | 'ownerAvatar'>) => {
     if (!user) return;
     await colocationService.createColocation(user, colocation);
@@ -1232,6 +1261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       contestParticipants,
       quizzes,
       deals,
+      dealSuggestions,
       colocations,
       colocationRequests,
       colocationReviews,
@@ -1240,6 +1270,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createDeal,
       updateDeal,
       deleteDeal,
+      reviewDealSuggestion,
+      deleteDealSuggestion,
       createColocation,
       updateColocation,
       deleteColocation,

@@ -11,7 +11,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { Deal } from '@/types';
+import { Deal, DealSuggestion } from '@/types';
 
 export const dealService = {
   async createDeal(deal: Omit<Deal, 'id' | 'createdAt'>) {
@@ -42,6 +42,18 @@ export const dealService = {
       await deleteDoc(doc(db, 'deals', id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `deals/${id}`);
+    }
+  },
+
+  async suggestDeal(suggestion: Omit<DealSuggestion, 'id' | 'status' | 'createdAt'>) {
+    try {
+      await addDoc(collection(db, 'deal_suggestions'), {
+        ...suggestion,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'deal_suggestions');
     }
   }
 };
