@@ -29,7 +29,7 @@ export const generateText = async (prompt: string): Promise<string> => {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-flash-latest",
-      contents: prompt,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
     
     return response.text || "Aucune réponse générée.";
@@ -68,7 +68,7 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
     
     const response = await ai.models.generateContent({
       model: "gemini-flash-latest",
-      contents: prompt,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -119,7 +119,7 @@ export const summarizeDocument = async (documentTitle: string, documentDescripti
     
     const response = await ai.models.generateContent({
       model: "gemini-flash-latest",
-      contents: prompt,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
     
     return response.text || "Résumé non disponible.";

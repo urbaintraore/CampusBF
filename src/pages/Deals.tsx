@@ -340,7 +340,10 @@ function SuggestDealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      toast.error('Vous devez être connecté pour suggérer une offre');
+      return;
+    }
 
     setIsSubmitting(true);
     try {

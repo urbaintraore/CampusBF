@@ -102,12 +102,6 @@ export const CVGenerator: React.FC<CVGeneratorProps> = ({ user, onClose, isModal
                   Expériences (au moins une)
                 </div>
               )}
-              {!hasExperiences && (
-                <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl text-sm text-slate-700 border border-slate-100">
-                  <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-                  Expériences (au moins une)
-                </div>
-              )}
             </div>
 
             <button 
