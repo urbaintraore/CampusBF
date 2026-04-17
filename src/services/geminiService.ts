@@ -59,11 +59,23 @@ export const createCampusAssistantChat = () => {
 export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 20): Promise<QuizQuestion[]> => {
   try {
     const ai = getAiClient();
-    const prompt = `Génère un quiz à choix multiples de niveau ${level} sur le sujet suivant : "${subject}".
+    const prompt = `Génère un quiz interactif riche de niveau ${level} sur le sujet suivant : "${subject}".
 Le quiz doit contenir exactement ${numQuestions} questions.
-Chaque question doit avoir 4 options de réponse.
-Pour chaque option, tu dois attribuer un nombre de points (0 pour une réponse fausse, 1 ou plus pour une réponse correcte, ou des points partiels pour des réponses incomplètes).
-Fournis également une courte explication pour chaque question.
+Utilise une variété de types de questions inspirés de Moodle pour rendre le quiz engageant :
+1. multiple_choice : Choix multiples classiques (QCM).
+2. true_false : Vrai ou Faux.
+3. short_answer : L'étudiant doit taper un mot ou une phrase courte (fournis correctTextAnswer).
+4. numerical : L'étudiant doit fournir un nombre (fournis correctNumericAnswer et tolerance).
+5. matching : Associer des éléments (fournis matchingPairs).
+6. description : Un bloc informatif ou une consigne entre des questions (ne nécessite pas de réponse).
+7. cloze : Texte à trous (fournis clozeTemplate avec des [[gap1]] et clozeAnswers comme un tableau d'objets { gapId: "gap1", answer: "réponse" }).
+8. calculated : Question numérique avec une formule simple (fournis formula et correctNumericAnswer pour un exemple).
+
+Pour chaque question :
+- Attribue des points appropriés dans pointsPerOption ou via le score global.
+- Fournis une explication pédagogique claire.
+- Assure-toi que les questions sont pertinentes au niveau ${level}.
+
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
@@ -77,6 +89,10 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
             type: Type.OBJECT,
             properties: {
               id: { type: Type.STRING },
+              type: { 
+                type: Type.STRING, 
+                enum: ['multiple_choice', 'true_false', 'matching', 'short_answer', 'numerical', 'calculated', 'essay', 'cloze', 'description']
+              },
               question: { type: Type.STRING },
               options: {
                 type: Type.ARRAY,
@@ -86,27 +102,66 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
                 type: Type.ARRAY,
                 items: { type: Type.NUMBER }
               },
-              explanation: { type: Type.STRING }
+              explanation: { type: Type.STRING },
+              matchingPairs: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    left: { type: Type.STRING },
+                    right: { type: Type.STRING }
+                  }
+                }
+              },
+              correctTextAnswer: { type: Type.STRING },
+              correctNumericAnswer: { type: Type.NUMBER },
+              tolerance: { type: Type.NUMBER },
+              formula: { type: Type.STRING },
+              clozeTemplate: { type: Type.STRING },
+              clozeAnswers: { 
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    gapId: { type: Type.STRING },
+                    answer: { type: Type.STRING }
+                  },
+                  required: ["gapId", "answer"]
+                }
+              }
             },
-            required: ["id", "question", "options", "pointsPerOption", "explanation"]
+            required: ["id", "type", "question", "explanation"]
           }
         }
       }
     });
-    
+
     const text = response.text;
     if (!text) {
       throw new Error("Gemini n'a renvoyé aucun texte.");
     }
     
-    // Si c'est déjà du JSON (responseMimeType: application/json), pas besoin de nettoyer
-    const questions: QuizQuestion[] = JSON.parse(text);
+    const rawQuestions: any[] = JSON.parse(text);
     
-    // S'assurer que chaque question a un ID unique
-    return questions.map((q, index) => ({
-      ...q,
-      id: `ai-q-${Date.now()}-${index}`
-    }));
+    // Conversion et nettoyage
+    const questions: QuizQuestion[] = rawQuestions.map((q, index) => {
+      const sanitized: any = {
+        ...q,
+        id: `ai-q-${Date.now()}-${index}`
+      };
+
+      // Si c'est un Cloze, convertir le tableau de réponses en objet
+      if (q.type === 'cloze' && Array.isArray(q.clozeAnswers)) {
+        sanitized.clozeAnswers = {};
+        q.clozeAnswers.forEach((item: any) => {
+          sanitized.clozeAnswers[item.gapId] = item.answer;
+        });
+      }
+
+      return sanitized as QuizQuestion;
+    });
+    
+    return questions;
   } catch (error: any) {
     console.error("Erreur détaillée lors de la génération du quiz:", error);
     throw new Error(`Erreur lors de la génération du quiz : ${error.message || 'Erreur inconnue'}`);

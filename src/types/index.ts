@@ -1,10 +1,34 @@
+export type QuizQuestionType = 
+  | 'multiple_choice' 
+  | 'true_false' 
+  | 'matching' 
+  | 'short_answer' 
+  | 'numerical' 
+  | 'calculated' 
+  | 'drag_drop' 
+  | 'essay' 
+  | 'cloze' 
+  | 'description';
+
 export interface QuizQuestion {
   id: string;
+  type?: QuizQuestionType; // Optional for backward compatibility
   question: string;
-  options: string[];
-  pointsPerOption: number[];
-  correctAnswerIndex?: number; // Fallback for old quizzes
+  options: string[]; // Still used for multiple choice
+  pointsPerOption: number[]; 
+  correctAnswerIndex?: number; // Legacy
   explanation?: string;
+  
+  // Specific fields for new types
+  matchingPairs?: { left: string; right: string; leftImage?: string; rightImage?: string }[];
+  correctTextAnswer?: string; // For short answer
+  correctNumericAnswer?: number; // For numerical/calculated
+  tolerance?: number; // For numerical
+  formula?: string; // For calculated
+  clozeTemplate?: string; // Text with gaps like [[1]]
+  clozeAnswers?: { [key: string]: string | string[] | number };
+  backgroundImage?: string; // For drag and drop
+  dropZones?: { id: string; x: number; y: number; label: string; answer: string }[];
 }
 
 export interface Quiz {

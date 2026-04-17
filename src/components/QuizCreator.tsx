@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Quiz, QuizQuestion } from '@/types';
-import { X, Plus, Trash2, Save } from 'lucide-react';
+import { X, Plus, Trash2, Save, ArrowRight } from 'lucide-react';
 
 interface QuizCreatorProps {
   onClose: () => void;
@@ -14,12 +14,32 @@ export const QuizCreator: React.FC<QuizCreatorProps> = ({ onClose }) => {
   const [subject, setSubject] = useState('');
   const [level, setLevel] = useState('Licence 1');
   const [questions, setQuestions] = useState<Omit<QuizQuestion, 'id'>[]>([
-    { question: '', options: ['', '', '', ''], pointsPerOption: [0, 0, 0, 0], explanation: '' }
+    { 
+      type: 'multiple_choice',
+      question: '', 
+      options: ['', '', '', ''], 
+      pointsPerOption: [0, 0, 0, 0], 
+      explanation: '',
+      matchingPairs: [],
+      correctTextAnswer: '',
+      correctNumericAnswer: 0,
+      tolerance: 0
+    }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddQuestion = () => {
-    setQuestions([...questions, { question: '', options: ['', '', '', ''], pointsPerOption: [0, 0, 0, 0], explanation: '' }]);
+    setQuestions([...questions, { 
+      type: 'multiple_choice',
+      question: '', 
+      options: ['', '', '', ''], 
+      pointsPerOption: [0, 0, 0, 0], 
+      explanation: '',
+      matchingPairs: [],
+      correctTextAnswer: '',
+      correctNumericAnswer: 0,
+      tolerance: 0
+    }]);
   };
 
   const handleRemoveQuestion = (index: number) => {
@@ -55,8 +75,16 @@ export const QuizCreator: React.FC<QuizCreatorProps> = ({ onClose }) => {
     }
 
     for (const q of questions) {
-      if (!q.question || q.options.some(opt => !opt)) {
-        alert('Toutes les questions et options doivent être remplies.');
+      if (!q.question && q.type !== 'description') {
+        alert('Toutes les questions doivent avoir une consigne.');
+        return;
+      }
+      if (q.type === 'multiple_choice' && q.options.some(opt => !opt)) {
+        alert('Toutes les options du QCM doivent être remplies.');
+        return;
+      }
+      if (q.type === 'matching' && (q.matchingPairs || []).length === 0) {
+        alert('Veuillez ajouter au moins une paire pour l\'appariement.');
         return;
       }
     }
@@ -181,53 +209,230 @@ export const QuizCreator: React.FC<QuizCreatorProps> = ({ onClose }) => {
                 </button>
               )}
               
-              <div className="space-y-2 pr-8">
-                <label className="text-sm font-bold text-slate-700">Question {qIndex + 1} *</label>
-                <input
-                  type="text"
-                  value={q.question}
-                  onChange={(e) => handleQuestionChange(qIndex, 'question', e.target.value)}
-                  placeholder="Posez votre question ici..."
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Type de question *</label>
+                  <select
+                    value={q.type}
+                    onChange={(e) => handleQuestionChange(qIndex, 'type', e.target.value)}
+                    className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-emerald-500"
+                  >
+                    <option value="multiple_choice">Choix multiples (QCM)</option>
+                    <option value="true_false">Vrai/Faux</option>
+                    <option value="short_answer">Réponse courte</option>
+                    <option value="numerical">Numérique</option>
+                    <option value="matching">Appariement (Matching)</option>
+                    <option value="cloze">Texte à trous (Cloze)</option>
+                    <option value="essay">Essai / Composition</option>
+                    <option value="description">Description (Consigne)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Question / Consigne {qIndex + 1} *</label>
+                  <input
+                    type="text"
+                    value={q.question}
+                    onChange={(e) => handleQuestionChange(qIndex, 'question', e.target.value)}
+                    placeholder="Posez votre question ici..."
+                    className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-bold text-slate-700">Options de réponse et points attribués *</label>
-                  <span className="text-xs text-slate-500">Attribuez des points à chaque réponse (ex: 1 pour la bonne, 0 pour les autres)</span>
+              {/* Dynamic fields based on type */}
+              {q.type === 'cloze' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Modèle de texte (Utilisez [[gap1]], [[gap2]]...)</label>
+                    <textarea
+                      value={q.clozeTemplate}
+                      onChange={(e) => handleQuestionChange(qIndex, 'clozeTemplate', e.target.value)}
+                      placeholder="Ex: La [[gap1]] est la capitale de la France."
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-emerald-500 min-h-[100px]"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-sm font-bold text-slate-700">Réponses pour chaque trou</label>
+                    {q.clozeTemplate?.match(/\[\[(gap\d+)\]\]/g)?.map((match) => {
+                      const gapId = match.replace('[[', '').replace(']]', '');
+                      return (
+                        <div key={gapId} className="flex items-center gap-3">
+                          <span className="text-sm font-bold text-slate-500 w-16">{gapId}:</span>
+                          <input
+                            type="text"
+                            value={(q.clozeAnswers?.[gapId] as string) || ''}
+                            onChange={(e) => {
+                              const newAnswers = { ...(q.clozeAnswers || {}), [gapId]: e.target.value };
+                              handleQuestionChange(qIndex, 'clozeAnswers', newAnswers);
+                            }}
+                            placeholder="Réponse correcte"
+                            className="flex-1 p-2 bg-white border border-slate-200 rounded-xl outline-none"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                {q.options.map((opt, optIndex) => (
-                  <div key={optIndex} className="flex items-center gap-3">
-                    <div className="relative">
+              )}
+              {q.type === 'multiple_choice' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-slate-700">Options de réponse et points attribués *</label>
+                    <span className="text-xs text-slate-500">Attribuez des points (ex: 1 pour la bonne)</span>
+                  </div>
+                  {q.options.map((opt, optIndex) => (
+                    <div key={optIndex} className="flex items-center gap-3">
                       <input
                         type="number"
                         value={q.pointsPerOption[optIndex]}
                         onChange={(e) => handlePointsChange(qIndex, optIndex, Number(e.target.value))}
-                        className="w-20 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-center font-bold text-emerald-600"
+                        className="w-20 p-3 bg-white border border-slate-200 rounded-xl text-center font-bold text-emerald-600"
                         placeholder="0"
                         min="0"
                         step="0.25"
+                      />
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
+                        placeholder={`Option ${optIndex + 1}`}
+                        className="flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none"
                         required
                       />
-                      <span className="absolute -top-2 -right-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1 rounded">pts</span>
                     </div>
+                  ))}
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const newQuestions = [...questions];
+                      newQuestions[qIndex].options.push('');
+                      newQuestions[qIndex].pointsPerOption.push(0);
+                      setQuestions(newQuestions);
+                    }}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Ajouter une option
+                  </button>
+                </div>
+              )}
+
+              {q.type === 'true_false' && (
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-700">Vrai ou Faux ?</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-xl border border-slate-200 flex-1">
+                      <input 
+                        type="radio" 
+                        name={`tf-${qIndex}`} 
+                        checked={q.correctAnswerIndex === 0} 
+                        onChange={() => handleQuestionChange(qIndex, 'correctAnswerIndex', 0)}
+                      />
+                      <span className="font-bold text-slate-900">Vrai</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-xl border border-slate-200 flex-1">
+                      <input 
+                        type="radio" 
+                        name={`tf-${qIndex}`} 
+                        checked={q.correctAnswerIndex === 1} 
+                        onChange={() => handleQuestionChange(qIndex, 'correctAnswerIndex', 1)}
+                      />
+                      <span className="font-bold text-slate-900">Faux</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {q.type === 'short_answer' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Réponse attendue *</label>
+                  <input
+                    type="text"
+                    value={q.correctTextAnswer}
+                    onChange={(e) => handleQuestionChange(qIndex, 'correctTextAnswer', e.target.value)}
+                    placeholder="Le mot ou la phrase exacte..."
+                    className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    required
+                  />
+                </div>
+              )}
+
+              {q.type === 'numerical' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Valeur numérique *</label>
                     <input
-                      type="text"
-                      value={opt}
-                      onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
-                      placeholder={`Option ${optIndex + 1}`}
-                      className={`flex-1 p-3 bg-white border rounded-xl outline-none transition-all ${
-                        q.pointsPerOption[optIndex] > 0 
-                          ? 'border-emerald-500 ring-2 ring-emerald-500/20 font-medium' 
-                          : 'border-slate-200 focus:border-emerald-500'
-                      }`}
+                      type="number"
+                      value={q.correctNumericAnswer}
+                      onChange={(e) => handleQuestionChange(qIndex, 'correctNumericAnswer', Number(e.target.value))}
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none"
                       required
                     />
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Marge d'erreur (Tolérance)</label>
+                    <input
+                      type="number"
+                      value={q.tolerance}
+                      onChange={(e) => handleQuestionChange(qIndex, 'tolerance', Number(e.target.value))}
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {q.type === 'matching' && (
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-700">Paires d'appariement *</label>
+                  {(q.matchingPairs || []).map((pair, pIdx) => (
+                    <div key={pIdx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={pair.left}
+                        onChange={(e) => {
+                          const newPairs = [...(q.matchingPairs || [])];
+                          newPairs[pIdx].left = e.target.value;
+                          handleQuestionChange(qIndex, 'matchingPairs', newPairs);
+                        }}
+                        placeholder="Côté gauche"
+                        className="flex-1 p-2 bg-white border border-slate-200 rounded-lg outline-none"
+                      />
+                      <ArrowRight size={16} className="text-slate-400" />
+                      <input
+                        type="text"
+                        value={pair.right}
+                        onChange={(e) => {
+                          const newPairs = [...(q.matchingPairs || [])];
+                          newPairs[pIdx].right = e.target.value;
+                          handleQuestionChange(qIndex, 'matchingPairs', newPairs);
+                        }}
+                        placeholder="Côté droit"
+                        className="flex-1 p-2 bg-white border border-slate-200 rounded-lg outline-none"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const newPairs = (q.matchingPairs || []).filter((_, i) => i !== pIdx);
+                          handleQuestionChange(qIndex, 'matchingPairs', newPairs);
+                        }}
+                        className="text-red-500 p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const newPairs = [...(q.matchingPairs || []), { left: '', right: '' }];
+                      handleQuestionChange(qIndex, 'matchingPairs', newPairs);
+                    }}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Ajouter une paire
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-2 pt-2">
                 <label className="text-sm font-bold text-slate-700">Explication (Optionnel)</label>

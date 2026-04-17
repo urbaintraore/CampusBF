@@ -59,15 +59,56 @@ export const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ quiz, onClose 
           {/* Back (Answer) */}
           <div className="absolute inset-0 backface-hidden bg-emerald-50 rounded-3xl border border-emerald-200 shadow-sm p-8 flex flex-col items-center justify-center text-center rotate-y-180">
             <span className="absolute top-6 left-6 text-xs font-bold text-emerald-600 uppercase tracking-wider">Réponse</span>
-            <h3 className="text-xl font-bold text-emerald-900 mb-4">
-              {currentCard.options[
-                currentCard.pointsPerOption 
-                  ? currentCard.pointsPerOption.indexOf(Math.max(...currentCard.pointsPerOption))
-                  : currentCard.correctAnswerIndex
-              ]}
-            </h3>
+            <div className="text-xl font-bold text-emerald-900 mb-4">
+              {(() => {
+                const type = currentCard.type || 'multiple_choice';
+                switch (type) {
+                  case 'multiple_choice':
+                  case 'true_false':
+                    if (type === 'true_false') return currentCard.correctAnswerIndex === 0 ? 'Vrai' : 'Faux';
+                    const index = currentCard.pointsPerOption 
+                      ? currentCard.pointsPerOption.indexOf(Math.max(...currentCard.pointsPerOption))
+                      : currentCard.correctAnswerIndex;
+                    return currentCard.options?.[index as number] || 'Pas de réponse définie';
+                  
+                  case 'short_answer':
+                    return currentCard.correctTextAnswer;
+                  
+                  case 'numerical':
+                  case 'calculated':
+                    return `${currentCard.correctNumericAnswer} (±${currentCard.tolerance || 0})`;
+                  
+                  case 'matching':
+                    return (
+                      <div className="text-sm space-y-1">
+                        {currentCard.matchingPairs?.map((pair, i) => (
+                          <div key={i}>{pair.left} → {pair.right}</div>
+                        ))}
+                      </div>
+                    );
+                  
+                  case 'essay':
+                    return "Question ouverte (nécessite une réflexion personnelle)";
+                  
+                  case 'cloze':
+                    return (
+                      <div className="text-sm space-y-1">
+                        {Object.entries(currentCard.clozeAnswers || {}).map(([gap, ans]) => (
+                          <div key={gap}>{gap} : {ans as string}</div>
+                        ))}
+                      </div>
+                    );
+
+                  case 'description':
+                    return "Consigne / Information";
+
+                  default:
+                    return 'Voir explication';
+                }
+              })()}
+            </div>
             {currentCard.explanation && (
-              <p className="text-emerald-700 text-sm leading-relaxed max-w-lg">
+              <p className="text-emerald-700 text-sm leading-relaxed max-w-lg italic">
                 {currentCard.explanation}
               </p>
             )}
