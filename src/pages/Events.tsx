@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, MapPin, Clock, Users, Plus, Search, Filter, Shield, AlertCircle, Lock, GraduationCap, Trophy, Music, Info, X } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Plus, Search, Filter, Shield, AlertCircle, Lock, GraduationCap, Trophy, Music, Info, X, Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { CampusEvent } from '@/types';
@@ -14,6 +14,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { contestService } from '@/services/contestService';
 import toast from 'react-hot-toast';
+import { deleteDoc } from 'firebase/firestore';
 
 export default function Events() {
   const { user, events, users, logAction, contests, contestParticipants, registerForContest } = useAuth();
@@ -32,6 +33,9 @@ export default function Events() {
     date: '',
     time: ''
   });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -136,36 +140,86 @@ export default function Events() {
     if (!user) return;
 
     try {
-      await addDoc(collection(db, 'events'), {
-        ...newEvent,
-        organizerId: user.id,
-        organizer: {
-          id: user.id,
-          firstName: user.firstName || 'Utilisateur',
-          lastName: user.lastName || '',
-          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
-          role: user.role || 'student'
-        },
-        attendees: [user.id],
-        createdAt: new Date().toISOString()
-      });
+      if (isEditing && editingEventId) {
+        await updateDoc(doc(db, 'events', editingEventId), {
+          ...newEvent,
+          updatedAt: new Date().toISOString()
+        });
+        toast.success('Événement mis à jour !');
+        if (logAction) {
+          logAction('Modification événement', `Événement: ${newEvent.title}`);
+        }
+      } else {
+        await addDoc(collection(db, 'events'), {
+          ...newEvent,
+          organizerId: user.id,
+          organizer: {
+            id: user.id,
+            firstName: user.firstName || 'Utilisateur',
+            lastName: user.lastName || '',
+            avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+            role: user.role || 'student'
+          },
+          attendees: [user.id],
+          createdAt: new Date().toISOString()
+        });
 
-      if (logAction) {
-        logAction('Création événement', `Événement: ${newEvent.title}`);
+        if (logAction) {
+          logAction('Création événement', `Événement: ${newEvent.title}`);
+        }
+        toast.success('Événement publié !');
       }
 
       setShowCreateModal(false);
-      setNewEvent({
-        title: '',
-        description: '',
-        type: 'conference',
-        location: '',
-        date: '',
-        time: ''
-      });
+      resetForm();
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error saving event:', error);
+      toast.error('Erreur lors de l\'enregistrement');
     }
+  };
+
+  const handleEditInit = (event: CampusEvent) => {
+    setNewEvent({
+      title: event.title,
+      description: event.description,
+      type: event.type,
+      location: event.location,
+      date: event.date,
+      time: event.time
+    });
+    setEditingEventId(event.id);
+    setIsEditing(true);
+    setShowCreateModal(true);
+    setSelectedEvent(null);
+  };
+
+  const handleDeleteEvent = async (eventId: string, title: string) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'événement "${title}" ?`)) return;
+
+    try {
+      await deleteDoc(doc(db, 'events', eventId));
+      toast.success('Événement supprimé');
+      if (logAction) {
+        logAction('Suppression événement', `Événement: ${title}`);
+      }
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const resetForm = () => {
+    setNewEvent({
+      title: '',
+      description: '',
+      type: 'conference',
+      location: '',
+      date: '',
+      time: ''
+    });
+    setIsEditing(false);
+    setEditingEventId(null);
   };
 
   const getTypeIcon = (type: string) => {
@@ -281,7 +335,7 @@ export default function Events() {
                   lastName: '',
                 };
                 const isRegistered = user && event.attendees.includes(user.id);
-                const isOrganizer = user && event.organizerId === user.id;
+                const isOrganizer = user && (event.organizerId === user.id || user.role === 'admin');
 
                 return (
                   <div key={event.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-indigo-200 transition-all group">
@@ -329,6 +383,30 @@ export default function Events() {
                       </div>
                       
                       <div className="flex gap-2">
+                        {isOrganizer && (
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditInit(event);
+                              }}
+                              className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"
+                              title="Modifier"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.id, event.title);
+                              }}
+                              className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
                         <button 
                           onClick={() => setSelectedEvent(event)}
                           className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
@@ -398,7 +476,10 @@ export default function Events() {
             <div className="space-y-4">
               <p className="text-xs text-slate-500">Partagez votre événement avec toute la communauté étudiante.</p>
               <button 
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => {
+                  resetForm();
+                  setShowCreateModal(true);
+                }}
                 className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
               >
                 <Plus size={18} />
@@ -503,6 +584,22 @@ export default function Events() {
             </div>
             
             <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+              {user && (selectedEvent.organizerId === user.id || user.role === 'admin') && (
+                <>
+                  <button 
+                    onClick={() => handleDeleteEvent(selectedEvent.id, selectedEvent.title)}
+                    className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                  <button 
+                    onClick={() => handleEditInit(selectedEvent)}
+                    className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-colors"
+                  >
+                    <Edit size={20} />
+                  </button>
+                </>
+              )}
               <button 
                 onClick={() => setSelectedEvent(null)}
                 className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-xl transition-colors"
@@ -535,7 +632,7 @@ export default function Events() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
-              <h2 className="font-bold text-slate-900">Créer un événement</h2>
+              <h2 className="font-bold text-slate-900">{isEditing ? 'Modifier l\'événement' : 'Créer un événement'}</h2>
               <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
                 <X size={18} />
               </button>
@@ -620,7 +717,7 @@ export default function Events() {
                 type="submit"
                 className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 mt-4"
               >
-                Publier l'événement
+                {isEditing ? 'Mettre à jour l\'événement' : 'Publier l\'événement'}
               </button>
             </form>
           </div>
