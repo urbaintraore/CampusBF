@@ -9,6 +9,8 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { generateDevReport, generateSummaryReport, generateFullReport } from '@/services/devReportService';
+import { toast } from 'react-hot-toast';
 
 export default function AdminDashboard() {
   const { 
@@ -396,6 +398,16 @@ export default function AdminDashboard() {
             Statistiques
           </button>
         </div>
+          <button 
+            onClick={() => {
+              toast.loading("Génération du rapport...", { duration: 2000 });
+              generateDevReport();
+            }}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+          >
+            <FileText size={18} />
+            Rapport de Développement
+          </button>
       </div>
 
       {activeTab === 'overview' && (
@@ -663,11 +675,23 @@ export default function AdminDashboard() {
                 Rapports & Statistiques Plateforme
               </h2>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    toast.success("Génération du rapport résumé...");
+                    generateSummaryReport({ users, documents, community, marketplace });
+                  }}
+                  className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center gap-2"
+                >
                   <Download size={14} />
                   Rapport résumé
                 </button>
-                <button className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    toast.success("Génération du rapport complet...");
+                    generateFullReport({ users, documents, community, marketplace, logs });
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                >
                   <Download size={14} />
                   Rapport complet
                 </button>

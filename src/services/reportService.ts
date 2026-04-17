@@ -1,19 +1,20 @@
 import { 
-  collection, 
-  addDoc, 
   deleteDoc, 
-  doc 
+  doc, 
+  collection, 
+  addDoc,
+  serverTimestamp 
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Report } from '@/types';
 
 export const reportService = {
-  async addReport(report: Omit<Report, 'id' | 'createdAt' | 'status'>) {
+  async addReport(report: Omit<Report, 'id' | 'createdAt' | 'status'> & { status?: Report['status'] }) {
     try {
       await addDoc(collection(db, 'reports'), {
-        ...report,
         status: 'pending',
-        createdAt: new Date().toISOString()
+        ...report,
+        createdAt: serverTimestamp()
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'reports');
