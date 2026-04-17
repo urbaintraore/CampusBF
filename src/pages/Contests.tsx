@@ -40,6 +40,24 @@ export default function Contests() {
     return contestParticipants.some(p => p.contestId === contestId && p.userId === user?.id);
   };
 
+  const formatDate = (dateString: string) => {
+    try {
+      if (!dateString) return '';
+      // Manual parsing to avoid timezone shifts
+      const parts = dateString.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   const handleRegister = async (contestId: string) => {
     if (!user) {
       setError('Veuillez vous connecter pour participer au concours.');
@@ -189,7 +207,7 @@ export default function Contests() {
                     <Calendar size={16} className="text-emerald-500" />
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fin</span>
-                      <span className="text-xs font-bold">{new Date(contest.endDate).toLocaleDateString()}</span>
+                      <span className="text-xs font-bold">{formatDate(contest.endDate)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-slate-600">
@@ -270,7 +288,7 @@ export default function Contests() {
                     {selectedContest.type}
                   </span>
                   <span className="text-white/80 text-xs font-medium">
-                    Du {new Date(selectedContest.startDate).toLocaleDateString()} au {new Date(selectedContest.endDate).toLocaleDateString()}
+                    Du {formatDate(selectedContest.startDate)} au {formatDate(selectedContest.endDate)}
                   </span>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-display font-bold text-white">{selectedContest.title}</h2>

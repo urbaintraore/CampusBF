@@ -12,9 +12,11 @@ import {
   arrayRemove 
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { contestService } from '@/services/contestService';
+import toast from 'react-hot-toast';
 
 export default function Events() {
-  const { user, events, users, logAction } = useAuth();
+  const { user, events, users, logAction, contests, contestParticipants, registerForContest } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
@@ -47,11 +49,54 @@ export default function Events() {
     return matchesSearch && matchesType;
   });
 
+  const getContestForEvent = (eventTitle: string) => {
+    return contests.find(c => c.title.toLowerCase().trim() === eventTitle.toLowerCase().trim());
+  };
+
+  const getEventParticipantCount = (event: CampusEvent) => {
+    const linkedContest = getContestForEvent(event.title);
+    if (linkedContest) {
+      // Return count of participants in the contest
+      return contestParticipants.filter(p => p.contestId === linkedContest.id).length;
+    }
+    return event.attendees?.length || 0;
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      if (!dateString) return '';
+      // Manual parsing to avoid timezone shifts (e.g., 2026-05-02)
+      const parts = dateString.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+      return new Date(dateString).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   const handleRegister = async (eventId: string) => {
-    if (!user) return;
+    if (!user) {
+      toast.error('Vous devez être connecté pour vous inscrire');
+      return;
+    }
     
     const event = events.find(e => e.id === eventId);
     if (!event) return;
+
+    // Check if it's a competition linked to a contest
+    const linkedContest = getContestForEvent(event.title);
+    if (linkedContest) {
+      if (linkedContest.conditions.minInvites > 0 && (user.inviteCount || 0) < linkedContest.conditions.minInvites) {
+        toast.error(`Pour vous inscrire à cet événement (Concours), vous devez avoir invité au moins ${linkedContest.conditions.minInvites} étudiants.`);
+        return;
+      }
+    }
 
     const isRegistered = event.attendees.includes(user.id);
 
@@ -59,11 +104,30 @@ export default function Events() {
       await updateDoc(doc(db, 'events', eventId), {
         attendees: isRegistered ? arrayRemove(user.id) : arrayUnion(user.id)
       });
+      
+      if (linkedContest && !isRegistered) {
+        const isParticipant = contestParticipants.some(p => p.contestId === linkedContest.id && p.userId === user.id);
+        if (!isParticipant) {
+          try {
+            await registerForContest(linkedContest.id);
+            toast.success('Inscrit à l\'événement et au concours !');
+          } catch (err: any) {
+            console.error('Auto-contest registration failed:', err);
+            toast.success('Inscrit à l\'événement (le concours nécessite plus d\'invitations)');
+          }
+        } else {
+          toast.success('Inscription réussie');
+        }
+      } else {
+        toast.success(isRegistered ? 'Désinscription réussie' : 'Inscription réussie');
+      }
+
       if (logAction) {
         logAction(isRegistered ? 'Désinscription événement' : 'Inscription événement', `Événement: ${event.title}`);
       }
     } catch (error) {
       console.error('Error registering for event:', error);
+      toast.error('Erreur lors de l\'inscription');
     }
   };
 
@@ -240,7 +304,7 @@ export default function Events() {
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <Calendar size={14} className="text-indigo-500" />
-                        <span>{new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        <span>{formatDate(event.date)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <Clock size={14} className="text-indigo-500" />
@@ -252,7 +316,7 @@ export default function Events() {
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <Users size={14} className="text-indigo-500" />
-                        <span>{event.attendees?.length || 0} inscrits</span>
+                        <span>{getEventParticipantCount(event)} inscrits</span>
                       </div>
                     </div>
 
@@ -386,7 +450,7 @@ export default function Events() {
                     <span className="text-xs font-bold uppercase">Date</span>
                   </div>
                   <p className="text-sm font-medium text-slate-900">
-                    {new Date(selectedEvent.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {formatDate(selectedEvent.date)}
                   </p>
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
@@ -408,7 +472,7 @@ export default function Events() {
                     <Users size={16} />
                     <span className="text-xs font-bold uppercase">Inscrits</span>
                   </div>
-                  <p className="text-sm font-medium text-slate-900">{selectedEvent.attendees?.length || 0} personnes</p>
+                  <p className="text-sm font-medium text-slate-900">{getEventParticipantCount(selectedEvent)} personnes</p>
                 </div>
               </div>
 
