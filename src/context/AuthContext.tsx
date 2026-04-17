@@ -508,12 +508,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setColocationReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationReview)));
             }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocation_reviews')));
 
+            unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
+              setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
+            }, (error) => handleFirestoreError(error, OperationType.LIST, 'contest_participants')));
+
             if (initialUserData.role === 'admin') {
               console.log("User is admin, starting admin listeners");
-              unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
-                setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'contest_participants')));
-
               unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
                 setLogs(snapshot.docs.map(doc => {
                   const data = doc.data();

@@ -27,10 +27,10 @@ export default function Quizzes() {
     const loadingToast = toast.loading('Génération du quiz par l\'IA...');
     try {
       setIsGenerating(true);
-      const questions = await generateQuizWithAI(aiSubject, aiLevel, 5);
+      const questions = await generateQuizWithAI(aiSubject, aiLevel, 20);
       
       const newQuiz: Omit<Quiz, 'id' | 'createdAt'> = {
-        title: `Quiz IA : ${aiSubject}`,
+        title: `Quiz IA : ${aiSubject} (20 questions)`,
         description: `Quiz généré par l'IA pour le niveau ${aiLevel}.`,
         subject: aiSubject,
         level: aiLevel,
@@ -157,7 +157,7 @@ export default function Quizzes() {
               <Sparkles size={32} />
             </div>
             <h2 className="text-2xl font-bold text-slate-900">Générateur de Quiz IA</h2>
-            <p className="text-slate-500 mt-2">Entrez un sujet et l'IA créera un quiz sur mesure pour vous entraîner.</p>
+            <p className="text-slate-500 mt-2">Entrez un sujet et l'IA créera un quiz de 20 questions sur mesure pour vous entraîner.</p>
           </div>
 
           <form onSubmit={handleGenerateAIQuiz} className="space-y-6">

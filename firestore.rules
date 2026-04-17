@@ -456,6 +456,9 @@ service cloud.firestore {
         (!('examSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.examSubscriptionStatus == 'pending') &&
         (!('motoRideSubscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.motoRideSubscriptionStatus == 'pending') &&
         (!('institutionProfile' in request.resource.data.diff(resource.data).affectedKeys()) || !('subscriptionStatus' in request.resource.data.institutionProfile) || !('institutionProfile' in resource.data) || !('subscriptionStatus' in resource.data.institutionProfile) || request.resource.data.institutionProfile.subscriptionStatus == resource.data.institutionProfile.subscriptionStatus || request.resource.data.institutionProfile.subscriptionStatus == 'pending')
+      ) || (
+        isAuthenticated() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inviteCount', 'invitedUsers'])
       );
       allow delete: if isAdmin();
 

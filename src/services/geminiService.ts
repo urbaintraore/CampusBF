@@ -28,7 +28,7 @@ export const generateText = async (prompt: string): Promise<string> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: "gemini-3-flash-preview",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
     
@@ -46,7 +46,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 export const createCampusAssistantChat = () => {
   const ai = getAiClient();
   return ai.chats.create({
-    model: "gemini-flash-latest",
+    model: "gemini-3-flash-preview",
     config: {
       systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire au Burkina Faso. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, l'organisation d'événements, la recherche de camarades, et la participation à des concours (Contests).\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions, NE gère PAS le paiement des frais de scolarité, et NE propose PAS de suivi pédagogique (notes, emplois du temps). Si un utilisateur pose une question sur ces sujets, réponds poliment que ces fonctionnalités ne sont pas disponibles sur CampusBF.\n3. Règles des Concours : Pour participer à certains concours, les utilisateurs doivent inviter un nombre minimum d'étudiants via leur lien d'invitation unique (disponible sur la page du concours).\n4. Règles des Documents : Seuls les utilisateurs avec un profil complet (sauf les étudiants) peuvent partager des documents. Pour qu'un étudiant puisse voir ou télécharger un document, il doit d'abord rejoindre un groupe dans la section Communauté et y publier ou répondre à un message.\n5. Sois concis, amical et utilise des emojis de temps en temps.",
     }
@@ -56,7 +56,7 @@ export const createCampusAssistantChat = () => {
 /**
  * Génère un quiz interactif avec Gemini
  */
-export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 5): Promise<QuizQuestion[]> => {
+export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 20): Promise<QuizQuestion[]> => {
   try {
     const ai = getAiClient();
     const prompt = `Génère un quiz à choix multiples de niveau ${level} sur le sujet suivant : "${subject}".
@@ -67,7 +67,7 @@ Fournis également une courte explication pour chaque question.
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: "gemini-3-flash-preview",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -118,7 +118,7 @@ export const summarizeDocument = async (documentTitle: string, documentDescripti
     const prompt = `En tant qu'assistant académique de CampusBF, donne-moi un bref aperçu de ce que pourrait contenir ce document et pourquoi il serait utile pour un étudiant, en te basant sur son titre et sa description.\n\nTitre: ${documentTitle}\nDescription: ${documentDescription}\n\nFais une réponse courte (2-3 phrases maximum) et motivante.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: "gemini-3-flash-preview",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
     

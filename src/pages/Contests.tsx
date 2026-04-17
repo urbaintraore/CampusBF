@@ -199,6 +199,14 @@ export default function Contests() {
                       <span className="text-xs font-bold">{getParticipantCount(contest.id)} / {contest.maxParticipants}</span>
                     </div>
                   </div>
+                  {contest.conditions.minInvites > 0 && !isUserRegistered(contest.id) && (
+                    <div className="col-span-2 mt-2 px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-emerald-800">Invitations requises :</span>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-white px-2 py-0.5 rounded-full border border-emerald-100">
+                        {user?.inviteCount || 0} / {contest.conditions.minInvites}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 mt-auto">

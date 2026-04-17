@@ -4,6 +4,7 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  setDoc,
   serverTimestamp,
   query,
   where,
@@ -77,6 +78,7 @@ export const contestService = {
         }
       }
 
+      const participantId = `${contest.id}_${user.id}`;
       const participantData: Omit<ContestParticipant, 'id'> = {
         contestId: contest.id,
         userId: user.id,
@@ -88,7 +90,7 @@ export const contestService = {
         totalScore: 0
       };
 
-      await addDoc(collection(db, 'contest_participants'), participantData);
+      await setDoc(doc(db, 'contest_participants', participantId), participantData);
       await logService.logAction(user, 'Inscription concours', `Concours: ${contest.title}`);
     } catch (error: any) {
       if (error.message.includes('Votre profil') || error.message.includes('Le nombre maximum') || error.message.includes('Vous êtes déjà')) {
