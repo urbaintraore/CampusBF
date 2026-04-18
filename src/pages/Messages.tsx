@@ -191,35 +191,45 @@ export default function Messages() {
       // Add message to subcollection
       await addDoc(collection(db, `conversations/${convId}/messages`), newMessage);
 
-      // Update conversation metadata
-      await updateDoc(doc(db, 'conversations', convId), {
+      // Update or Create conversation metadata safely
+      const convRef = doc(db, 'conversations', convId);
+      await setDoc(convRef, {
+        participants: [currentUser.id, selectedChat],
         lastMessage: {
           content: fileUrl ? (fileType?.startsWith('image/') ? 'Image' : 'Fichier') : content,
           senderId: currentUser.id,
           timestamp: new Date().toISOString()
         },
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
       
       // Log message sending
       if (typeof logAction === 'function') {
         await logAction('Envoi message', `Destinataire ID: ${selectedChat}`);
       }
       
-      // We can use a transaction to increment unread count safely
-      const convRef = doc(db, 'conversations', convId);
       const convSnap = await getDoc(convRef);
       if (convSnap.exists()) {
         const currentUnread = convSnap.data().unreadCount?.[selectedChat] || 0;
-        await updateDoc(convRef, {
-          [`unreadCount.${selectedChat}`]: currentUnread + 1
-        });
+        await setDoc(convRef, {
+          unreadCount: {
+            [selectedChat]: currentUnread + 1
+          }
+        }, { merge: true });
+      } else {
+        await setDoc(convRef, {
+          unreadCount: {
+            [currentUser.id]: 0,
+            [selectedChat]: 1
+          }
+        }, { merge: true });
       }
 
     } catch (error) {
       console.error("Error sending message:", error);
-      // Handle error (maybe restore input)
+      // Handle error (restore input)
       setMessageInput(content);
+      alert("Une erreur s'est produite lors de l'envoi du message.");
     }
   };
 
@@ -304,12 +314,15 @@ export default function Messages() {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.id !== currentUser?.id && 
-    (u.firstName.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
-     u.lastName.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-     u.university?.toLowerCase().includes(userSearchQuery.toLowerCase()))
-  );
+  const filteredUsers = users.filter(u => {
+    if (u.id === currentUser?.id) return false;
+    const search = userSearchQuery.toLowerCase();
+    const fname = (u.firstName || '').toLowerCase();
+    const lname = (u.lastName || '').toLowerCase();
+    const uni = (u.university || '').toLowerCase();
+    
+    return fname.includes(search) || lname.includes(search) || uni.includes(search);
+  });
 
   return (
     <div className="h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
