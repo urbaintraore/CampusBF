@@ -350,11 +350,14 @@ export interface Post {
   id: string;
   groupId: string;
   authorId: string;
-  author: User;
+  author: Partial<User>;
   content: string;
+  fileUrl?: string;
+  fileType?: string;
+  fileName?: string;
   likes: number;
   likedBy: string[];
-  comments: Comment[];
+  comments?: Comment[];
   createdAt: any;
 }
 

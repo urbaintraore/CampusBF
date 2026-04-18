@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, MessageSquare, Share2, AlertCircle, Send, X, Plus, CheckCircle2, Download } from 'lucide-react';
+import { Users, MessageSquare, Share2, Send, X, Plus, CheckCircle2, Download, Paperclip } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { 
@@ -19,6 +19,7 @@ import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Post, Comment, Group, CampusEvent } from '@/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { uploadFile } from '@/services/storageService';
 
 export default function Community() {
   const { user, groups, users, addGroupMember, removeGroupMember, logAction } = useAuth();
@@ -34,6 +35,9 @@ export default function Community() {
   const [showSuccessToast, setShowSuccessToast] = useState<{show: boolean, message: string}>({ show: false, message: '' });
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentContent, setCommentContent] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const joinedGroupIds = user ? groups.filter(g => g.members.includes(user.id)).map(g => g.id) : [];
@@ -77,8 +81,8 @@ export default function Community() {
   const handleCreatePost = async () => {
     if (!user) return;
     
-    if (!postContent.trim()) {
-      alert('Veuillez entrer du contenu pour votre publication.');
+    if (!postContent.trim() && !selectedFile) {
+      alert('Veuillez entrer du contenu ou sélectionner un fichier pour votre publication.');
       return;
     }
 
@@ -88,7 +92,19 @@ export default function Community() {
     }
 
     try {
-      await addDoc(collection(db, 'posts'), {
+      setIsUploading(true);
+      let fileUrl = '';
+      let fileType = '';
+      let fileName = '';
+
+      if (selectedFile && user.role === 'admin') {
+        const uploadResult = await uploadFile(selectedFile, 'community');
+        fileUrl = uploadResult.url;
+        fileName = uploadResult.fileName;
+        fileType = selectedFile.type;
+      }
+
+      const newPost: any = {
         groupId: selectedGroupId,
         authorId: user.id,
         author: {
@@ -102,15 +118,27 @@ export default function Community() {
         likes: 0,
         likedBy: [],
         createdAt: serverTimestamp(),
-      });
+      };
+
+      if (fileUrl) {
+        newPost.fileUrl = fileUrl;
+        newPost.fileType = fileType;
+        newPost.fileName = fileName;
+      }
+
+      await addDoc(collection(db, 'posts'), newPost);
 
       setPostContent('');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       if (logAction) {
         logAction('Nouvelle publication', `Groupe ID: ${selectedGroupId}`);
       }
       showToast('Publication partagée avec succès !');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'posts');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -376,13 +404,42 @@ export default function Community() {
               />
             </div>
           </div>
-          <div className="flex items-center justify-end pt-2 border-t border-gray-50">
+          <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+            <div className="flex items-center gap-2">
+              {user?.role === 'admin' && (
+                <>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors flex items-center gap-1"
+                    title="Joindre un fichier"
+                  >
+                    <Paperclip size={18} />
+                  </button>
+                  {selectedFile && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md max-w-[150px] md:max-w-xs">
+                      <span className="truncate">{selectedFile.name}</span>
+                      <button onClick={() => {
+                        setSelectedFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }} className="hover:text-red-500"><X size={14}/></button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             <button 
               onClick={handleCreatePost}
-              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-md"
+              disabled={isUploading}
+              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-md disabled:opacity-50"
             >
               <Send size={16} />
-              Publier
+              {isUploading ? 'Publication...' : 'Publier'}
             </button>
           </div>
         </div>
@@ -435,6 +492,23 @@ export default function Community() {
                 <p className="text-gray-800 mb-4 leading-relaxed whitespace-pre-wrap">
                   {post.content}
                 </p>
+
+                {post.fileUrl && (
+                  <div className="mb-4">
+                    {post.fileType?.startsWith('image/') ? (
+                      <div className="rounded-xl overflow-hidden border border-gray-100 max-h-96 relative bg-gray-50 flex items-center justify-center">
+                        <img src={post.fileUrl} alt={post.fileName} className="max-h-96 object-contain" />
+                      </div>
+                    ) : (
+                      <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl hover:bg-gray-100 hover:border-gray-200 transition-colors w-fit group">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-emerald-600 shadow-sm group-hover:scale-105 transition-transform">
+                          <Paperclip size={20} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 group-hover:text-emerald-700 line-clamp-1 max-w-xs">{post.fileName || 'Fichier joint'}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-6 pt-4 border-t border-gray-50">
                   <button 
