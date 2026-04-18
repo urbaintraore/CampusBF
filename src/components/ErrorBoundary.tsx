@@ -11,17 +11,20 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null
-  };
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    console.error('Caught by ErrorBoundary:', error, errorInfo);
   }
 
   private handleReset = () => {
@@ -40,16 +43,20 @@ export class ErrorBoundary extends Component<Props, State> {
       let isFirestoreError = false;
 
       try {
-        if (this.state.error?.message) {
-          const parsed = JSON.parse(this.state.error.message);
-          if (parsed.error) {
-            errorMessage = parsed.error;
-            isFirestoreError = true;
+        if (this.state.error && this.state.error.message) {
+          // Check if it's our JSON error format
+          if (this.state.error.message.startsWith('{')) {
+            const parsed = JSON.parse(this.state.error.message);
+            if (parsed.error) {
+              errorMessage = parsed.error;
+              isFirestoreError = true;
+            }
+          } else {
+            errorMessage = this.state.error.message;
           }
         }
       } catch (e) {
-        // Not a JSON error
-        errorMessage = this.state.error?.message || errorMessage;
+        console.warn("Failed to parse error message in ErrorBoundary:", e);
       }
 
       return (
@@ -60,17 +67,17 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             
             <div className="space-y-3">
-              <h1 className="text-2xl font-display font-bold text-slate-900">Oups ! Quelque chose a mal tourné</h1>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Oups ! Quelque chose a mal tourné</h1>
               <p className="text-slate-500 font-medium leading-relaxed">
                 {isFirestoreError 
-                  ? "Un problème de communication avec la base de données est survenu."
+                  ? "Un problème de communication avec la base de données est survenu (Permissions ou Quota)."
                   : "Nous sommes désolés pour ce désagrément. L'application a rencontré une erreur critique."}
               </p>
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-4 text-left border border-slate-100">
-              <p className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">Détails de l'erreur</p>
-              <p className="text-xs font-mono text-slate-600 break-words leading-relaxed">
+              <p className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">Détails techniques</p>
+              <p className="text-xs font-mono text-slate-600 break-words leading-relaxed max-h-32 overflow-y-auto">
                 {errorMessage}
               </p>
             </div>
@@ -99,3 +106,5 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;

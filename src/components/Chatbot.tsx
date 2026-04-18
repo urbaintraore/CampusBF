@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { createCampusAssistantChat } from '../services/geminiService';
 import Markdown from 'react-markdown';
 
@@ -63,9 +63,12 @@ export default function Chatbot() {
           <div className="p-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white flex justify-between items-center shadow-sm">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <MessageCircle size={16} />
+                <Sparkles size={16} />
               </div>
-              <h3 className="font-display font-bold tracking-wide">Assistant CampusBF</h3>
+              <div className="flex flex-col">
+                <h3 className="font-display font-bold tracking-wide text-sm">Assistant CampusBF</h3>
+                <span className="text-[10px] opacity-80 font-bold uppercase tracking-widest">Propulsé par Gemini IA</span>
+              </div>
             </div>
             <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1.5 rounded-full transition-colors"><X size={20} /></button>
           </div>
@@ -114,9 +117,13 @@ export default function Chatbot() {
       ) : (
         <button 
           onClick={() => setIsOpen(true)} 
-          className="bg-emerald-600 text-white p-4 rounded-full shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+          className="chatbot-trigger bg-emerald-600 text-white p-4 rounded-full shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 hover:scale-110 transition-all duration-300 flex items-center justify-center group relative"
         >
           <MessageCircle size={26} className="group-hover:animate-pulse" />
+          <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded-full border-2 border-white shadow-sm flex items-center gap-1">
+            <Sparkles size={10} />
+            IA
+          </div>
         </button>
       )}
     </div>

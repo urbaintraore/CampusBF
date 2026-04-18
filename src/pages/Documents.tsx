@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
+import { summarizeDocument } from '@/services/geminiService';
+import toast from 'react-hot-toast';
 import { db, storage } from '@/lib/firebase';
 import { 
   collection, 
@@ -45,6 +47,8 @@ export default function Documents() {
   const [uploadError, setUploadError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const [loadingSummary, setLoadingSummary] = useState<string | null>(null);
 
   useEffect(() => {
     const docsList = globalDocuments.map(doc => ({
@@ -332,6 +336,22 @@ export default function Documents() {
       }
     } catch (error) {
       console.error("Error liking document:", error);
+    }
+  };
+
+  const handleSummarize = async (docId: string, title: string, subject: string, university: string) => {
+    if (summaries[docId]) return;
+    
+    setLoadingSummary(docId);
+    try {
+      const description = `Un document de type ${subject} provenant de ${university}.`;
+      const summary = await summarizeDocument(title, description);
+      setSummaries(prev => ({ ...prev, [docId]: summary }));
+    } catch (error) {
+      console.error("Error summarizing document:", error);
+      toast.error("Impossible de générer le résumé IA.");
+    } finally {
+      setLoadingSummary(null);
     }
   };
 
@@ -763,6 +783,34 @@ export default function Documents() {
                           <div className="text-xs text-slate-400 ml-auto flex items-center gap-1.5">
                             Ajouté par <span className="text-slate-700 font-medium bg-slate-100/50 px-2 py-0.5 rounded-md">{doc.authorId === user?.id ? `${user?.firstName} ${user?.lastName?.charAt(0)}.` : 'Admin'}</span>
                           </div>
+                        </div>
+
+                        {/* AI Summary Section */}
+                        <div className="mt-4">
+                          {!summaries[doc.id] ? (
+                            <button
+                              onClick={() => handleSummarize(doc.id, doc.title, doc.subject, doc.university)}
+                              disabled={loadingSummary === doc.id}
+                              className="text-[10px] uppercase tracking-wider font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1.5 bg-purple-50 px-2 py-1 rounded-md transition-all active:scale-95 disabled:opacity-50"
+                            >
+                              {loadingSummary === doc.id ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <Sparkles size={12} />
+                              )}
+                              Aperçu IA
+                            </button>
+                          ) : (
+                            <div className="bg-purple-50/50 border border-purple-100 p-3 rounded-xl animate-in fade-in slide-in-from-top-1 text-xs">
+                              <div className="flex items-center gap-1.5 text-purple-700 font-bold mb-1 uppercase tracking-wider text-[9px]">
+                                <Sparkles size={10} />
+                                Résumé Gemini
+                              </div>
+                              <p className="text-slate-600 leading-relaxed italic">
+                                "{summaries[doc.id]}"
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

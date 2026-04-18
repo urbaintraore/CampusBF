@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin, Sparkles, Brain } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -286,6 +286,53 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      {/* AI Magic Section */}
+      <section className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-purple-200 overflow-hidden relative group">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:animate-pulse transition-all"></div>
+        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-10">
+          <div className="lg:w-2/3 space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-xs font-bold uppercase tracking-widest shadow-lg">
+              <Sparkles size={14} />
+              Nouveau : Magie de l'IA
+            </div>
+            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight">Booste tes études avec l'Assistant Intelligent 🎓</h2>
+            <p className="text-purple-50 text-lg leading-relaxed max-w-2xl opacity-90">
+              Génère des quiz de révision sur mesure, obtiens des résumés de documents instantanés et pose toutes tes questions académiques à notre IA CampusBF.
+            </p>
+            <div className="flex flex-wrap gap-4 pt-4">
+              <button 
+                onClick={() => navigate('/quizzes')}
+                className="px-8 py-3.5 bg-white text-purple-700 rounded-2xl font-bold hover:bg-purple-50 transition-all shadow-lg flex items-center gap-2 active:scale-95"
+              >
+                <Brain size={20} />
+                Générateur de Quiz
+              </button>
+              <button 
+                onClick={() => {
+                  const chatbotTrigger = document.querySelector('.chatbot-trigger') as HTMLButtonElement;
+                  if (chatbotTrigger) chatbotTrigger.click();
+                  // Alternative: find a way to open it via state if possible, but trigger click is simpler if ID/class is there
+                  // Actually I'll use a better way later if needed, for now navigate to Quizzes is good enough
+                }}
+                className="px-8 py-3.5 bg-white/10 backdrop-blur-md text-white border border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
+              >
+                Parler à l'Assistant
+              </button>
+            </div>
+          </div>
+          <div className="lg:w-1/3 flex justify-center">
+            <div className="relative">
+              <div className="w-48 h-48 bg-white/10 backdrop-blur-2xl rounded-[3rem] border border-white/20 flex items-center justify-center rotate-6 group-hover:rotate-12 transition-transform duration-700 shadow-2xl">
+                <Sparkles size={80} className="text-white drop-shadow-lg" />
+              </div>
+              <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-purple-400/30 backdrop-blur-xl rounded-2xl border border-white/20 -rotate-12 flex items-center justify-center shadow-xl">
+                <Brain size={40} className="text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Main Feed Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

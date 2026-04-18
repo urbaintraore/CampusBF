@@ -145,7 +145,6 @@ export const generateDevReport = () => {
     doc.save(`Rapport_Developpement_CampusBF_${date.replace(/\//g, '-')}.pdf`);
   } catch (error) {
     console.error("Error generating dev report:", error);
-    alert("Erreur lors de la génération du PDF. Vérifiez la console pour plus de détails.");
   }
 };
 
@@ -187,7 +186,6 @@ export const generateSummaryReport = (data: {
     doc.save(`Rapport_Synthese_CampusBF_${date.replace(/\//g, '-')}.pdf`);
   } catch (error) {
     console.error("Error generating summary report:", error);
-    alert("Erreur lors de la génération du rapport résumé.");
   }
 };
 
@@ -251,6 +249,5 @@ export const generateFullReport = (data: {
     doc.save(`Rapport_Complet_CampusBF_${date.replace(/\//g, '-')}.pdf`);
   } catch (error) {
     console.error("Error generating full report:", error);
-    alert("Erreur lors de la génération du rapport complet.");
   }
 };
