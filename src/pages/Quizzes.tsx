@@ -18,6 +18,10 @@ export default function Quizzes() {
   // AI Generator State
   const [aiSubject, setAiSubject] = useState('');
   const [aiLevel, setAiLevel] = useState('Licence 1');
+  const [aiNumQuestions, setAiNumQuestions] = useState<number>(20);
+  const [aiDifficulty, setAiDifficulty] = useState('Moyen');
+  const [aiLanguage, setAiLanguage] = useState('Français');
+  const [aiInstructions, setAiInstructions] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerateAIQuiz = async (e: React.FormEvent) => {
@@ -27,10 +31,14 @@ export default function Quizzes() {
     const loadingToast = toast.loading('Génération du quiz par l\'IA...');
     try {
       setIsGenerating(true);
-      const questions = await generateQuizWithAI(aiSubject, aiLevel, 20);
+      const questions = await generateQuizWithAI(aiSubject, aiLevel, aiNumQuestions, {
+        difficulty: aiDifficulty,
+        language: aiLanguage,
+        instructions: aiInstructions
+      });
       
       const newQuiz: Omit<Quiz, 'id' | 'createdAt'> = {
-        title: `Quiz IA : ${aiSubject} (20 questions)`,
+        title: `Quiz IA : ${aiSubject} (${aiNumQuestions} questions)`,
         description: `Quiz généré par l'IA pour le niveau ${aiLevel}.`,
         subject: aiSubject,
         level: aiLevel,
@@ -156,13 +164,13 @@ export default function Quizzes() {
             <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Sparkles size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Générateur de Quiz IA</h2>
-            <p className="text-slate-500 mt-2">Entrez un sujet et l'IA créera un quiz de 20 questions sur mesure pour vous entraîner.</p>
+            <h2 className="text-2xl font-bold text-slate-900">Générateur de Quiz IA Avancé</h2>
+            <p className="text-slate-500 mt-2">Paramétrez votre quiz sur mesure pris en charge par Gemini 3.1 Pro.</p>
           </div>
 
           <form onSubmit={handleGenerateAIQuiz} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Sujet à réviser</label>
+              <label className="text-sm font-bold text-slate-700">Sujet à réviser <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={aiSubject}
@@ -172,21 +180,76 @@ export default function Quizzes() {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Niveau d'études</label>
-              <select
-                value={aiLevel}
-                onChange={(e) => setAiLevel(e.target.value)}
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
-              >
-                <option value="Lycée">Lycée</option>
-                <option value="Licence 1">Licence 1</option>
-                <option value="Licence 2">Licence 2</option>
-                <option value="Licence 3">Licence 3</option>
-                <option value="Master 1">Master 1</option>
-                <option value="Master 2">Master 2</option>
-              </select>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Niveau d'études</label>
+                <select
+                  value={aiLevel}
+                  onChange={(e) => setAiLevel(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                >
+                  <option value="Collège">Collège</option>
+                  <option value="Lycée">Lycée</option>
+                  <option value="Licence 1">Licence 1</option>
+                  <option value="Licence 2">Licence 2</option>
+                  <option value="Licence 3">Licence 3</option>
+                  <option value="Master 1">Master 1</option>
+                  <option value="Master 2">Master 2</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Nombre de questions</label>
+                <select
+                  value={aiNumQuestions}
+                  onChange={(e) => setAiNumQuestions(Number(e.target.value))}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                >
+                  <option value={5}>5 questions (Quiz rapide)</option>
+                  <option value={10}>10 questions (Standard)</option>
+                  <option value={15}>15 questions</option>
+                  <option value={20}>20 questions (Examen)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Difficulté</label>
+                <select
+                  value={aiDifficulty}
+                  onChange={(e) => setAiDifficulty(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                >
+                  <option value="Facile">Facile (Révisions de base)</option>
+                  <option value="Moyen">Moyen (Standard)</option>
+                  <option value="Difficile">Difficile (Apprentissage avancé)</option>
+                  <option value="Expert">Expert (Questions pièges/complexes)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Langue</label>
+                <select
+                  value={aiLanguage}
+                  onChange={(e) => setAiLanguage(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                >
+                  <option value="Français">Français</option>
+                  <option value="Anglais">Anglais</option>
+                </select>
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Instructions supplémentaires <span className="text-slate-400 font-normal">(Optionnel)</span></label>
+              <textarea
+                value={aiInstructions}
+                onChange={(e) => setAiInstructions(e.target.value)}
+                placeholder="Ex: Concentre-toi particulièrement sur les dates clés. N'utilise pas de questions Vrai/Faux..."
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all resize-y min-h-[100px]"
+              />
+            </div>
+
             <button
               type="submit"
               disabled={isGenerating || !aiSubject.trim()}

@@ -56,11 +56,21 @@ export const createCampusAssistantChat = () => {
 /**
  * Génère un quiz interactif avec Gemini
  */
-export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 20): Promise<QuizQuestion[]> => {
+export interface GenerateQuizOptions {
+  difficulty?: string;
+  instructions?: string;
+  language?: string;
+}
+
+export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 20, options?: GenerateQuizOptions): Promise<QuizQuestion[]> => {
   try {
     const ai = getAiClient();
+    const difficultyStr = options?.difficulty ? `\nDifficulté souhaitée : ${options.difficulty}.` : '';
+    const instructionsStr = options?.instructions ? `\nInstructions spécifiques de l'utilisateur : ${options.instructions}` : '';
+    const languageStr = options?.language ? `\nLa langue du quiz doit être : ${options.language}.` : '\nLa langue du quiz doit être : Français.';
+
     const prompt = `Génère un quiz interactif riche de niveau ${level} sur le sujet suivant : "${subject}".
-Le quiz doit contenir exactement ${numQuestions} questions.
+Le quiz doit contenir exactement ${numQuestions} questions.${difficultyStr}${languageStr}${instructionsStr}
 Utilise une variété de types de questions inspirés de Moodle pour rendre le quiz engageant :
 1. multiple_choice : Choix multiples classiques (QCM).
 2. true_false : Vrai ou Faux.
@@ -79,7 +89,7 @@ Pour chaque question :
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview", // Mise à jour vers le modèle Pro pour de meilleures capacités de raisonnement
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
