@@ -223,7 +223,11 @@ service cloud.firestore {
       return hasRequiredFields(['groupId', 'authorId', 'content', 'createdAt', 'likes', 'likedBy']) &&
              data.groupId is string && data.groupId.size() <= 100 &&
              data.authorId is string &&
-             data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
+             data.content is string && data.content.size() <= 5000 &&
+             (data.content.size() > 0 || ('fileUrl' in data && data.fileUrl is string && data.fileUrl.size() > 0)) &&
+             (!('fileUrl' in data) || (data.fileUrl is string && data.fileUrl.size() <= 1000)) &&
+             (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 200)) &&
+             (!('fileType' in data) || (data.fileType is string && data.fileType.size() <= 100)) &&
              data.likes is number &&
              data.likedBy is list &&
              data.createdAt is timestamp;

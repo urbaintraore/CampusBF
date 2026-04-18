@@ -98,7 +98,7 @@ export default function Community() {
       let fileName = '';
 
       if (selectedFile && user.role === 'admin') {
-        const uploadResult = await uploadFile(selectedFile, 'community');
+        const uploadResult = await uploadFile(selectedFile, 'documents');
         fileUrl = uploadResult.url;
         fileName = uploadResult.fileName;
         fileType = selectedFile.type;
