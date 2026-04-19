@@ -97,7 +97,7 @@ export default function Community() {
       let fileType = '';
       let fileName = '';
 
-      if (selectedFile && user.role === 'admin') {
+      if (selectedFile) {
         const uploadResult = await uploadFile(selectedFile, 'documents');
         fileUrl = uploadResult.url;
         fileName = uploadResult.fileName;
@@ -406,31 +406,27 @@ export default function Community() {
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-gray-50">
             <div className="flex items-center gap-2">
-              {user?.role === 'admin' && (
-                <>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
-                    className="hidden" 
-                  />
-                  <button 
-                    onClick={() => fileInputRef.current?.click()} 
-                    className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors flex items-center gap-1"
-                    title="Joindre un fichier"
-                  >
-                    <Paperclip size={18} />
-                  </button>
-                  {selectedFile && (
-                    <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md max-w-[150px] md:max-w-xs">
-                      <span className="truncate">{selectedFile.name}</span>
-                      <button onClick={() => {
-                        setSelectedFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }} className="hover:text-red-500"><X size={14}/></button>
-                    </div>
-                  )}
-                </>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
+                className="hidden" 
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors flex items-center gap-1"
+                title="Joindre un fichier"
+              >
+                <Paperclip size={18} />
+              </button>
+              {selectedFile && (
+                <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md max-w-[150px] md:max-w-xs">
+                  <span className="truncate">{selectedFile.name}</span>
+                  <button onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }} className="hover:text-red-500"><X size={14}/></button>
+                </div>
               )}
             </div>
             <button 

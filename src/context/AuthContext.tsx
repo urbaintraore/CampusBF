@@ -201,12 +201,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const ADMIN_EMAILS = [
+    'urbain.traoreurb@gmail.com',
+    'urbain.traoreurb@gmail',
+    'urbain.traoreurb@gmail.com.',
+    'urbain.traore@yahoo.fr'
+  ];
+
   const isAdminEmail = (email: string | null | undefined) => {
     if (!email) return false;
     const lowerEmail = email.toLowerCase().trim();
-    return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-           lowerEmail === 'urbain.traoreurb@gmail' || 
-           lowerEmail === 'urbain.traoreurb@gmail.com.';
+    return ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim());
   };
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
@@ -260,7 +265,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Test connection
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
@@ -272,304 +276,251 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     testConnection();
 
-    let unsubscribes: (() => void)[] = [];
-
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email);
-      // Clear existing listeners when auth state changes
-      unsubscribes.forEach(unsub => unsub());
-      unsubscribes = [];
-
-      if (firebaseUser) {
-        // Listener pour les publicités (accessible à tous les utilisateurs authentifiés)
-        unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
-          console.log("Ads snapshot received, count:", snapshot.size);
-          setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
-        }, (error) => {
-          console.error("Error loading ads:", error);
-          handleFirestoreError(error, OperationType.LIST, 'ads');
-        }));
-
-        try {
-          console.log("Fetching user doc for:", firebaseUser.uid);
-          let userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          let retries = 0;
-          while (!userDoc.exists() && retries < 5) {
-            console.log("User doc not found, waiting...");
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-            retries++;
-          }
-          
-          let initialUserData: User;
-
-          if (userDoc.exists()) {
-            console.log("User doc exists");
-            const data = userDoc.data();
-            initialUserData = { id: firebaseUser.uid, ...data } as User;
-            
-            // Sync profile for existing users to ensure they appear in "Find Classmates"
-            await syncProfile(firebaseUser.uid, data);
-
-            // Force admin role for the owner email if not already set
-            console.log("Checking admin email for:", firebaseUser.email);
-            if (isAdminEmail(firebaseUser.email)) {
-              console.log("Email matches admin list");
-              if (initialUserData.role !== 'admin') {
-                console.log("Forcing admin role in local state and Firestore");
-                initialUserData.role = 'admin';
-                try {
-                  await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
-                  console.log("Firestore updated with admin role");
-                } catch (e) {
-                  console.error("Failed to auto-upgrade to admin:", e);
-                }
-              } else {
-                console.log("User already has admin role in Firestore");
-              }
-            } else {
-              console.log("Email does not match admin list");
-            }
-          } else {
-            console.log("User doc does not exist, creating default");
-            const newUser: Partial<User> = {
-              firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
-              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
-              email: firebaseUser.email || '',
-              university: '',
-              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
-            };
-            try {
-              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-              await syncProfile(firebaseUser.uid, newUser);
-              initialUserData = { id: firebaseUser.uid, ...newUser } as User;
-              await ensureUserInCommunityGroup(firebaseUser.uid);
-            } catch (err) {
-              console.error("Failed to create default user doc", err);
-              await signOut(auth);
-              setUser(null);
-              return;
-            }
-          }
-
-          setUser(initialUserData);
-          console.log("User set:", initialUserData);
-
-          // Log login
-          await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
-
-          // Set up real-time listener for the user's own document
-          unsubscribes.push(onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
-            if (docSnap.exists()) {
-              setUser({ id: firebaseUser.uid, ...docSnap.data() } as User);
-            }
-          }, (error) => {
-            console.error("Error listening to user doc:", error);
-          }));
-
-          // Start listeners only after we have the user data and role
-          
-          // Public/Authenticated lists
-          unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
-              setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'documents')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'internships'), (snapshot) => {
-              setInternships(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Internship)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'internships')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'events'), (snapshot) => {
-              setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'events')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'groups'), (snapshot) => {
-              setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'groups')));
-
-            const marketplaceQuery = initialUserData.role === 'admin' 
-              ? collection(db, 'marketplace')
-              : query(collection(db, 'marketplace'), where('status', '==', 'approved'));
-
-            unsubscribes.push(onSnapshot(marketplaceQuery, (snapshot) => {
-              setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'marketplace')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'posts'), (snapshot) => {
-              setCommunity(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'news'), (snapshot) => {
-              setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'news')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'lostAndFound'), (snapshot) => {
-              setLostAndFound(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LostAndFound)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'lostAndFound')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'reports'), (snapshot) => {
-              setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'reports')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'quizzes'), (snapshot) => {
-              setQuizzes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'quizzes')));
-
-            const motoRideQuery = initialUserData.role === 'admin'
-              ? collection(db, 'motoRides')
-              : query(
-                  collection(db, 'motoRides'), 
-                  where('status', '==', 'active'),
-                  where('university', '==', initialUserData.university)
-                );
-
-            unsubscribes.push(onSnapshot(motoRideQuery, (snapshot) => {
-              setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'motoRides')));
-
-            const trainingsQuery = initialUserData.role === 'admin'
-              ? collection(db, 'trainings')
-              : query(collection(db, 'trainings'), where('status', '==', 'approved'));
-
-            unsubscribes.push(onSnapshot(trainingsQuery, (snapshot) => {
-              setTrainings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Training)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'trainings')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'training_enrollments'), (snapshot) => {
-              setTrainingEnrollments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingEnrollment)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'training_enrollments')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'training_reviews'), (snapshot) => {
-              setTrainingReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReview)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'training_reviews')));
-
-            // Public users list (only teachers and tutors for non-admins)
-            const usersQuery = initialUserData.role === 'admin'
-              ? collection(db, 'users')
-              : query(collection(db, 'users'), where('role', 'in', ['teacher', 'tutor']));
-
-            unsubscribes.push(onSnapshot(usersQuery, (snapshot) => {
-              setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'users')));
-
-            // User-specific notifications
-            const qNotifs = query(collection(db, 'notifications'), where('userId', '==', firebaseUser.uid));
-            unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
-              setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'notifications')));
-
-            // Admin-only or restricted lists
-          if (initialUserData.role === 'admin') {
-            console.log("User is admin, starting admin listeners");
-              unsubscribes.push(onSnapshot(collection(db, 'applications'), (snapshot) => {
-                setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
-
-              unsubscribes.push(onSnapshot(collection(db, 'teacherApplications'), (snapshot) => {
-                const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication));
-                console.log("AuthContext: teacherApplications updated:", apps);
-                setTeacherApplications(apps);
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
-
-              unsubscribes.push(onSnapshot(collection(db, 'subscriptionRequests'), (snapshot) => {
-                setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'subscriptionRequests')));
-
-              unsubscribes.push(onSnapshot(collection(db, 'training_reports'), (snapshot) => {
-                setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'training_reports')));
-            }
-
-            unsubscribes.push(onSnapshot(collection(db, 'contests'), (snapshot) => {
-              console.log("AuthContext: contests updated, count:", snapshot.size);
-              setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
-            }, (error) => {
-              console.error("Error loading contests:", error);
-              handleFirestoreError(error, OperationType.LIST, 'contests');
-            }));
-
-            unsubscribes.push(onSnapshot(collection(db, 'deals'), (snapshot) => {
-              setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'deals')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'deal_suggestions'), (snapshot) => {
-              setDealSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DealSuggestion)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'deal_suggestions')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'colocations'), (snapshot) => {
-              setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocations')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'colocation_requests'), (snapshot) => {
-              setColocationRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationRequest)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocation_requests')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'colocation_reviews'), (snapshot) => {
-              setColocationReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationReview)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'colocation_reviews')));
-
-            unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
-              setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'contest_participants')));
-
-            if (initialUserData.role === 'admin') {
-              console.log("User is admin, starting admin listeners");
-              unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
-                setLogs(snapshot.docs.map(doc => {
-                  const data = doc.data();
-                  return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
-                  } as Log;
-                }));
-              }, (error) => handleFirestoreError(error, OperationType.LIST, 'logs')));
-            } else {
-            console.log("User is not admin, starting user listeners");
-            // Non-admins see their own applications
-            const qApps = query(collection(db, 'applications'), where('userId', '==', firebaseUser.uid));
-            unsubscribes.push(onSnapshot(qApps, (snapshot) => {
-              setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'applications')));
-
-            const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', firebaseUser.uid));
-            unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
-              setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
-            }, (error) => handleFirestoreError(error, OperationType.LIST, 'teacherApplications')));
-          }
-        } catch (error) {
-          console.error("Error fetching user doc:", error);
-          // Don't throw here to allow app to load even if user doc fetch fails
-          // handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
-          setUser(null);
-        }
-      } else {
+      
+      if (!firebaseUser) {
         console.log("No firebase user");
         setUser(null);
-        setUsers([]);
-        setAds([]);
-        setDocuments([]);
-        setApplications([]);
-        setTeacherApplications([]);
-        setSubscriptionRequests([]);
-        setNotifications([]);
-        setInternships([]);
-        setEvents([]);
-        setNews([]);
-        setLostAndFound([]);
-        setMarketplace([]);
-        setCommunity([]);
-        setGroups([]);
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
-      console.log("Auth state changed processing complete");
+
+      try {
+        console.log("Fetching user doc for:", firebaseUser.uid);
+        let userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        
+        let initialUserData: User;
+
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          initialUserData = { id: firebaseUser.uid, ...data } as User;
+          
+          if (isAdminEmail(firebaseUser.email) && initialUserData.role !== 'admin') {
+            initialUserData.role = 'admin';
+            await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+          }
+        } else {
+          const newUser: Partial<User> = {
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            email: firebaseUser.email || '',
+            university: '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+            status: 'active',
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+          initialUserData = { id: firebaseUser.uid, ...newUser } as User;
+          await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+        }
+
+        setUser(initialUserData);
+        // Log login
+        await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
+      } catch (error) {
+        console.error("Error in onAuthStateChanged:", error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
     });
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribes.forEach(unsub => unsub());
-    };
+    return () => unsubscribeAuth();
   }, []);
+
+  // Listeners for data fetching - re-runs when user role changes
+  useEffect(() => {
+    if (!user) {
+      // Clear data state on logout
+      setUsers([]);
+      setAds([]);
+      setDocuments([]);
+      setApplications([]);
+      setTeacherApplications([]);
+      setSubscriptionRequests([]);
+      setNotifications([]);
+      setInternships([]);
+      setEvents([]);
+      setNews([]);
+      setLostAndFound([]);
+      setMarketplace([]);
+      setCommunity([]);
+      setGroups([]);
+      setLogs([]);
+      setTrainings([]);
+      setTrainingEnrollments([]);
+      setTrainingReviews([]);
+      setTrainingReports([]);
+      setContests([]);
+      setContestParticipants([]);
+      setQuizzes([]);
+      setDeals([]);
+      setDealSuggestions([]);
+      setColocations([]);
+      setColocationRequests([]);
+      setColocationReviews([]);
+      return;
+    }
+
+    console.log("Starting listeners for user role:", user.role);
+    const unsubscribes: (() => void)[] = [];
+
+    // User document listener (already covered for current user basically, but let's keep it robust)
+    unsubscribes.push(onSnapshot(doc(db, 'users', user.id), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUser(prev => prev ? { ...prev, ...data } : null);
+      }
+    }));
+
+    // Public/Authenticated lists
+    unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
+      setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
+      setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'internships'), (snapshot) => {
+      setInternships(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Internship)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'events'), (snapshot) => {
+      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'groups'), (snapshot) => {
+      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'posts'), (snapshot) => {
+      setCommunity(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'news'), (snapshot) => {
+      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'lostAndFound'), (snapshot) => {
+      setLostAndFound(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LostAndFound)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'reports'), (snapshot) => {
+      setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'quizzes'), (snapshot) => {
+      setQuizzes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'contests'), (snapshot) => {
+      setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'deals'), (snapshot) => {
+      setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'deal_suggestions'), (snapshot) => {
+      setDealSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DealSuggestion)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'colocations'), (snapshot) => {
+      setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'colocation_requests'), (snapshot) => {
+      setColocationRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationRequest)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'colocation_reviews'), (snapshot) => {
+      setColocationReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationReview)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
+      setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'training_enrollments'), (snapshot) => {
+      setTrainingEnrollments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingEnrollment)));
+    }));
+
+    unsubscribes.push(onSnapshot(collection(db, 'training_reviews'), (snapshot) => {
+      setTrainingReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReview)));
+    }));
+
+    // Restricted/Conditional lists
+    const marketplaceQuery = user.role === 'admin' 
+      ? collection(db, 'marketplace')
+      : query(collection(db, 'marketplace'), where('status', '==', 'approved'));
+    unsubscribes.push(onSnapshot(marketplaceQuery, (snapshot) => {
+      setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
+    }));
+
+    const motoRideQuery = user.role === 'admin'
+      ? collection(db, 'motoRides')
+      : query(collection(db, 'motoRides'), where('status', '==', 'active'));
+    unsubscribes.push(onSnapshot(motoRideQuery, (snapshot) => {
+      setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
+    }));
+
+    const trainingsQuery = user.role === 'admin'
+      ? collection(db, 'trainings')
+      : query(collection(db, 'trainings'), where('status', '==', 'approved'));
+    unsubscribes.push(onSnapshot(trainingsQuery, (snapshot) => {
+      setTrainings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Training)));
+    }));
+
+    const usersQuery = collection(db, 'users');
+    unsubscribes.push(onSnapshot(usersQuery, (snapshot) => {
+      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+    }));
+
+    // Notifications for current user
+    const qNotifs = query(collection(db, 'notifications'), where('userId', '==', user.id));
+    unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+    }));
+
+    // Admin only lists
+    if (user.role === 'admin') {
+      unsubscribes.push(onSnapshot(collection(db, 'applications'), (snapshot) => {
+        setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+      }));
+
+      unsubscribes.push(onSnapshot(collection(db, 'teacherApplications'), (snapshot) => {
+        setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+      }));
+
+      unsubscribes.push(onSnapshot(collection(db, 'subscriptionRequests'), (snapshot) => {
+        setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
+      }));
+
+      unsubscribes.push(onSnapshot(collection(db, 'training_reports'), (snapshot) => {
+        setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
+      }));
+
+      unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
+        setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Log)));
+      }));
+    } else {
+      // Non-admins see their own applications
+      const qApps = query(collection(db, 'applications'), where('userId', '==', user.id));
+      unsubscribes.push(onSnapshot(qApps, (snapshot) => {
+        setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+      }));
+
+      const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id));
+      unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
+        setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+      }));
+    }
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [user?.id, user?.role]);
 
   const ensureUserInCommunityGroup = async (userId: string) => {
     await communityService.ensureUserInCommunityGroup(userId);
@@ -585,21 +536,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (email?: string, password?: string, asAdmin?: boolean) => {
-    const normalizedEmail = email?.toLowerCase().trim();
-    
-    if (asAdmin || (normalizedEmail === 'admin@campusbf.bf' && password === 'admin')) {
-      // For testing purposes, we allow mock admin login
-      console.log("Mock login successful for:", normalizedEmail);
-      setUser(ADMIN_USER);
-      setIsLoading(false);
-      return;
-    }
-
+  const login = async (email?: string, password?: string) => {
     if (!email || !password) {
       throw new Error('Email et mot de passe requis');
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+    
     try {
       console.log("Attempting Firebase login for:", normalizedEmail);
       await auth.authStateReady();
@@ -645,14 +588,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // L'envoi automatique de l'email de vérification a été retiré pour ne pas obliger l'utilisateur à vérifier son email immédiatement
       // await sendEmailVerification(firebaseUser);
-
-      const isAdminEmail = (email: string | null | undefined) => {
-        if (!email) return false;
-        const lowerEmail = email.toLowerCase();
-        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-               lowerEmail === 'urbain.traoreurb@gmail' || 
-               lowerEmail === 'urbain.traoreurb@gmail.com.';
-      };
 
       const newUser: Partial<User> = {
         firstName: userData.firstName || '',
