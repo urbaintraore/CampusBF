@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { uploadFile } from '@/services/storageService';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -201,28 +201,13 @@ export default function Messages() {
           timestamp: new Date().toISOString()
         },
         updatedAt: serverTimestamp(),
+        [`unreadCount.${selectedChat}`]: increment(1),
+        [`unreadCount.${currentUser.id}`]: 0
       }, { merge: true });
       
       // Log message sending
       if (typeof logAction === 'function') {
         await logAction('Envoi message', `Destinataire ID: ${selectedChat}`);
-      }
-      
-      const convSnap = await getDoc(convRef);
-      if (convSnap.exists()) {
-        const currentUnread = convSnap.data().unreadCount?.[selectedChat] || 0;
-        await setDoc(convRef, {
-          unreadCount: {
-            [selectedChat]: currentUnread + 1
-          }
-        }, { merge: true });
-      } else {
-        await setDoc(convRef, {
-          unreadCount: {
-            [currentUser.id]: 0,
-            [selectedChat]: 1
-          }
-        }, { merge: true });
       }
 
     } catch (error) {

@@ -343,6 +343,9 @@ export interface Comment {
   authorId: string;
   author: User;
   content: string;
+  fileUrl?: string;
+  fileType?: string;
+  fileName?: string;
   createdAt: any;
 }
 

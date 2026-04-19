@@ -36,8 +36,10 @@ export default function Community() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentContent, setCommentContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedCommentFile, setSelectedCommentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentFileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const joinedGroupIds = user ? groups.filter(g => g.members.includes(user.id)).map(g => g.id) : [];
@@ -198,9 +200,23 @@ export default function Community() {
   };
 
   const handleSubmitComment = async (postId: string) => {
-    if (!user || !commentContent.trim()) return;
+    if (!user || (!commentContent.trim() && !selectedCommentFile)) return;
 
     try {
+      setIsUploading(true);
+      let fileUrl = '';
+      let fileType = '';
+      let fileName = '';
+
+      if (selectedCommentFile) {
+        console.log("[Community] Uploading comment file:", selectedCommentFile.name);
+        const uploadResult = await uploadFile(selectedCommentFile, 'documents');
+        fileUrl = uploadResult.url;
+        fileName = uploadResult.fileName;
+        fileType = selectedCommentFile.type;
+        console.log("[Community] Comment file uploaded:", fileUrl);
+      }
+
       await addDoc(collection(db, 'comments'), {
         postId,
         authorId: user.id,
@@ -212,14 +228,22 @@ export default function Community() {
           role: user.role || 'student'
         },
         content: commentContent,
+        fileUrl,
+        fileType,
+        fileName,
         createdAt: serverTimestamp(),
       });
 
       setCommentContent('');
+      setSelectedCommentFile(null);
+      if (commentFileInputRef.current) commentFileInputRef.current.value = '';
       setActiveCommentPostId(null);
       showToast('Commentaire ajouté !');
     } catch (error) {
+      console.error("[Community] Error submtiting comment:", error);
       handleFirestoreError(error, OperationType.CREATE, 'comments');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -542,30 +566,57 @@ export default function Community() {
 
                 {showComments && (
                   <div className="mt-4 pt-4 border-t border-gray-50">
-                    <div className="flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
-                      <img src={user?.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-emerald-100 flex-shrink-0" />
-                      <div className="flex-1 flex gap-2">
-                        <input 
-                          id={`comment-input-${post.id}`}
-                          type="text" 
-                          value={commentContent}
-                          onChange={(e) => setCommentContent(e.target.value)}
-                          placeholder="Écrivez un commentaire..." 
-                          className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSubmitComment(post.id);
-                            }
-                          }}
-                        />
-                        <button 
-                          onClick={() => handleSubmitComment(post.id)}
-                          disabled={!commentContent.trim()}
-                          className="p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <Send size={16} />
-                        </button>
+                    <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
+                      {selectedCommentFile && (
+                        <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md self-start ml-11">
+                          <Paperclip size={14} />
+                          <span className="truncate max-w-[200px]">{selectedCommentFile.name}</span>
+                          <button onClick={() => {
+                            setSelectedCommentFile(null);
+                            if (commentFileInputRef.current) commentFileInputRef.current.value = '';
+                          }} className="hover:text-red-500"><X size={14}/></button>
+                        </div>
+                      )}
+                      <div className="flex gap-3 items-start">
+                        <img src={user?.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-emerald-100 flex-shrink-0" />
+                        <div className="flex-1 flex gap-2">
+                          <input 
+                            type="file" 
+                            ref={commentFileInputRef} 
+                            onChange={(e) => setSelectedCommentFile(e.target.files?.[0] || null)} 
+                            className="hidden" 
+                          />
+                          <button 
+                            onClick={() => commentFileInputRef.current?.click()} 
+                            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-xl transition-colors"
+                            title="Joindre un fichier"
+                            disabled={isUploading}
+                          >
+                            <Paperclip size={18} />
+                          </button>
+                          <input 
+                            id={`comment-input-${post.id}`}
+                            type="text" 
+                            value={commentContent}
+                            onChange={(e) => setCommentContent(e.target.value)}
+                            placeholder="Écrivez un commentaire..." 
+                            className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmitComment(post.id);
+                              }
+                            }}
+                            disabled={isUploading}
+                          />
+                          <button 
+                            onClick={() => handleSubmitComment(post.id)}
+                            disabled={isUploading || (!commentContent.trim() && !selectedCommentFile)}
+                            className="p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Send size={16} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -928,15 +979,33 @@ function PostComments({ postId, showComments, onReply }: { postId: string, showC
             role: 'student'
           };
 
+          const createdAtDate = comment.createdAt?.toDate ? comment.createdAt.toDate() : (comment.createdAt ? new Date(comment.createdAt) : new Date());
+          
           return (
             <div key={comment.id} className="flex gap-3">
               <img src={author.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0" />
               <div className="bg-gray-50 rounded-2xl rounded-tl-none p-3 flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-gray-900">{author.firstName} {author.lastName}</span>
-                  <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  <span className="text-[10px] text-gray-400">{createdAtDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                 </div>
-                <p className="text-sm text-gray-700">{comment.content}</p>
+                {comment.content && <p className="text-sm text-gray-700">{comment.content}</p>}
+                
+                {comment.fileUrl && (
+                  <div className="mt-2">
+                    {comment.fileType?.startsWith('image/') ? (
+                      <div className="rounded-lg overflow-hidden border border-gray-100 max-h-48 relative bg-gray-50 flex items-center justify-center">
+                        <img src={comment.fileUrl} alt={comment.fileName} className="max-h-48 object-contain" />
+                      </div>
+                    ) : (
+                      <a href={comment.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors w-fit group">
+                        <Paperclip size={14} className="text-emerald-600" />
+                        <span className="text-[10px] font-medium text-gray-700 group-hover:text-emerald-700 line-clamp-1 max-w-[150px]">{comment.fileName || 'Fichier'}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+                
                 <button 
                   onClick={() => onReply(comment)}
                   className="text-[10px] font-medium text-emerald-600 hover:text-emerald-700 mt-1"

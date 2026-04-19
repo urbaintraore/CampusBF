@@ -237,7 +237,11 @@ service cloud.firestore {
       return hasRequiredFields(['postId', 'authorId', 'content', 'createdAt']) &&
              data.postId is string && data.postId.size() <= 100 &&
              data.authorId is string &&
-             data.content is string && data.content.size() > 0 && data.content.size() <= 1000 &&
+             data.content is string && data.content.size() <= 1000 &&
+             (data.content.size() > 0 || ('fileUrl' in data && data.fileUrl is string && data.fileUrl.size() > 0)) &&
+             (!('fileUrl' in data) || (data.fileUrl is string && data.fileUrl.size() <= 1000)) &&
+             (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 200)) &&
+             (!('fileType' in data) || (data.fileType is string && data.fileType.size() <= 100)) &&
              data.createdAt is timestamp;
     }
 
@@ -436,11 +440,7 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && (
-        isOwner(userId) || 
-        isAdmin() || 
-        resource.data.role in ['teacher', 'tutor']
-      );
+      allow read: if isAuthenticated();
       allow create: if isAdmin() || (
         isOwner(userId) && 
         isValidUser(request.resource.data) && 
