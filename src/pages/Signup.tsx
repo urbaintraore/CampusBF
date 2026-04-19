@@ -97,7 +97,18 @@ export default function Signup() {
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue lors de l\'inscription');
+      console.error("Signup error:", err.code, err.message);
+      let errorMessage = err.message || 'Une erreur est survenue lors de l\'inscription';
+      
+      if (err.code === 'auth/unauthorized-domain') {
+        errorMessage = "Ce domaine n'est pas autorisé dans la console Firebase. Veuillez ajouter " + window.location.hostname + " aux domaines autorisés dans Firebase Auth.";
+      } else if (err.code === 'auth/email-already-in-use') {
+        errorMessage = "Cet email est déjà utilisé par un autre compte.";
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = "Le mot de passe est trop faible (6 caractères minimum).";
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

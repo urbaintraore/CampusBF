@@ -35,7 +35,16 @@ export default function Login() {
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.message || 'Erreur de connexion');
+      console.error("Login error:", err.code, err.message);
+      let errorMessage = err.message || 'Erreur de connexion';
+      
+      if (err.code === 'auth/unauthorized-domain') {
+        errorMessage = "Ce domaine n'est pas autorisé dans la console Firebase. Veuillez ajouter " + window.location.hostname + " aux domaines autorisés dans Firebase Auth.";
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        errorMessage = "Email ou mot de passe incorrect.";
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

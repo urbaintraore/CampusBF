@@ -5,11 +5,13 @@ import { QuizQuestion } from "@/types";
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
-  // Toujours essayer de récupérer la clé la plus récente au cas où elle ne serait pas dispo au premier chargement
-  const apiKey = process.env.GEMINI_API_KEY;
+  // Try to get key from multiple sources (process.env for server/node, import.meta.env for browser)
+  const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
+                 (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                 (import.meta as any).env?.GEMINI_API_KEY;
   
-  if (!apiKey) {
-    console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner.");
+  if (!apiKey && !aiClient) {
+    console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner hors de l'aperçu AI Studio.");
   }
   
   // Recréer le client ou le retourner s'il existe déjà
