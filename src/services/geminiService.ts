@@ -16,7 +16,8 @@ const getAiClient = (): GoogleGenAI => {
   
   // Recréer le client ou le retourner s'il existe déjà
   if (!aiClient) {
-    aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-crash' });
+    const isPlaceholder = !apiKey || apiKey.toLowerCase() === 'free' || apiKey === 'dummy-key-to-prevent-crash';
+    aiClient = isPlaceholder ? new GoogleGenAI() : new GoogleGenAI({ apiKey });
   }
   return aiClient;
 };
@@ -91,7 +92,7 @@ Pour chaque question :
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Modifié de pro vers flash
+      model: "gemini-1.5-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",

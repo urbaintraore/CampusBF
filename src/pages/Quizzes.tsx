@@ -165,7 +165,7 @@ export default function Quizzes() {
               <Sparkles size={32} />
             </div>
             <h2 className="text-2xl font-bold text-slate-900">Générateur de Quiz IA Avancé</h2>
-            <p className="text-slate-500 mt-2">Paramétrez votre quiz sur mesure pris en charge par Gemini 1.5 Pro.</p>
+            <p className="text-slate-500 mt-2">Paramétrez votre quiz sur mesure pris en charge par Gemini 1.5 Flash.</p>
           </div>
 
           <form onSubmit={handleGenerateAIQuiz} className="space-y-6">

@@ -46,11 +46,8 @@ export class ErrorBoundary extends Component<Props, State> {
       let isFirestoreError = false;
 
       try {
-        if (this.state.error && this.state.error.message) {
-          // Check if it's our JSON error format or generic API error
+        if (this.state.error?.message) {
           const msg = this.state.error.message;
-          
-          // Try to handle ApiError JSON strings
           const jsonMatch = msg.match(/\{.*\}/);
           if (jsonMatch) {
             try {
@@ -59,8 +56,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
                 isFirestoreError = msg.includes("Firebase") || msg.includes("Firestore");
               }
-            } catch (e) {
-              // Not actual JSON, just keep the message
+            } catch {
+              // Ignore parsing errors
             }
           } else {
             errorMessage = msg;
