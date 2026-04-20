@@ -22,7 +22,7 @@ export const uploadFile = async (file: File | Blob, bucket: string = 'documents'
   console.log(`[StorageService] Tentative d'upload vers Supabase Storage (bucket: ${bucket}) pour: ${fileName} (${file.size} octets)`);
 
   try {
-    // Sanitize filename: remove spaces, special characters, and normalize accented characters
+    // Sanitize filename
     const sanitizedFileName = fileName
       .normalize('NFD') // Normalize to NFD form to separate accents
       .replace(/[\u0300-\u036f]/g, '') // Remove accent marks
@@ -30,6 +30,7 @@ export const uploadFile = async (file: File | Blob, bucket: string = 'documents'
       
     const filePath = `${Date.now()}_${sanitizedFileName}`;
     
+    console.log(`[StorageService] Uploading to bucket: ${bucket}, path: ${filePath}`);
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file);
@@ -50,7 +51,7 @@ export const uploadFile = async (file: File | Blob, bucket: string = 'documents'
       fileName
     };
   } catch (supabaseError: any) {
-    console.error("[StorageService] Erreur Supabase Storage:", supabaseError.message, supabaseError);
+    console.error(`[StorageService] Erreur Supabase Storage (bucket: ${bucket}):`, supabaseError.message, supabaseError);
     throw new Error(`Erreur Supabase: ${supabaseError.message || "Erreur lors de l'upload du fichier."}`);
   }
 };
