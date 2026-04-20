@@ -176,15 +176,15 @@ export default function Messages() {
     setMessageInput(''); // Clear input immediately for better UX
 
     const convId = getConversationId(currentUser.id, selectedChat);
-    const newMessage: Message = {
+    const newMessage: any = {
       senderId: currentUser.id,
       receiverId: selectedChat,
       content,
-      timestamp: serverTimestamp() as any,
+      timestamp: serverTimestamp(),
       read: false,
-      fileUrl,
-      fileType,
-      fileName
+      ...(fileUrl && { fileUrl }),
+      ...(fileType && { fileType }),
+      ...(fileName && { fileName })
     };
 
     try {
