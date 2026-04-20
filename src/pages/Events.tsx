@@ -103,12 +103,20 @@ export default function Events() {
     }
 
     const isRegistered = event.attendees.includes(user.id);
+    const newAttendees = isRegistered 
+      ? event.attendees.filter(id => id !== user.id)
+      : [...event.attendees, user.id];
 
     try {
       await updateDoc(doc(db, 'events', eventId), {
         attendees: isRegistered ? arrayRemove(user.id) : arrayUnion(user.id)
       });
       
+      // Update local state (optimistic update if needed, or trigger refresh)
+      // Since events list is managed via AuthContext's onSnapshot, it should technically refresh
+      // but if Firestore is delayed, we can force a re-render or local check.
+      // Given the list in AuthContext follows onSnapshot, it should work.
+
       if (linkedContest && !isRegistered) {
         const isParticipant = contestParticipants.some(p => p.contestId === linkedContest.id && p.userId === user.id);
         if (!isParticipant) {
