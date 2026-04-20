@@ -309,11 +309,7 @@ export default function Profile() {
         <div className="px-8 pb-8">
           <div className="relative flex justify-between items-end -mt-16 mb-6">
             <div className="relative group">
-              {!isSupabaseConfigured && isEditing && (
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded-xl text-[10px] leading-tight z-10 shadow-lg">
-                  Stockage non configuré. Veuillez contacter l'administrateur.
-                </div>
-              )}
+
               <img 
                 src={isEditing ? formData.avatarUrl : user.avatarUrl} 
                 alt={user.firstName} 
@@ -322,10 +318,9 @@ export default function Profile() {
                   isUploading && "opacity-50 blur-sm"
                 )}
               />
-              {isEditing && (
+                {isEditing && (
                 <label className={cn(
-                  "absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-3xl flex items-center justify-center transition-all duration-300 border-4 border-transparent",
-                  isSupabaseConfigured ? "cursor-pointer opacity-0 group-hover:opacity-100" : "cursor-not-allowed opacity-40"
+                  "absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-3xl flex items-center justify-center transition-all duration-300 border-4 border-transparent cursor-pointer opacity-0 group-hover:opacity-100"
                 )}>
                   {isUploading ? (
                     <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -340,7 +335,7 @@ export default function Profile() {
                     accept="image/*" 
                     className="hidden" 
                     onChange={handleImageChange}
-                    disabled={isUploading || !isSupabaseConfigured}
+                    disabled={isUploading}
                   />
                 </label>
               )}

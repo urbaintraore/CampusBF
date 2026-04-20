@@ -91,7 +91,7 @@ Pour chaque question :
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-pro", // Mise à jour vers le modèle Pro pour de meilleures capacités de raisonnement
+      model: "gemini-1.5-flash", // Modifié de pro vers flash
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",

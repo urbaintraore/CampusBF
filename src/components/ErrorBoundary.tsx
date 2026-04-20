@@ -19,8 +19,11 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  public static getDerivedStateFromError(error: unknown): State {
+    return { 
+      hasError: true, 
+      error: error instanceof Error ? error : new Error(String(error)) 
+    };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -44,15 +47,23 @@ export class ErrorBoundary extends Component<Props, State> {
 
       try {
         if (this.state.error && this.state.error.message) {
-          // Check if it's our JSON error format
-          if (this.state.error.message.startsWith('{')) {
-            const parsed = JSON.parse(this.state.error.message);
-            if (parsed.error) {
-              errorMessage = parsed.error;
-              isFirestoreError = true;
+          // Check if it's our JSON error format or generic API error
+          const msg = this.state.error.message;
+          
+          // Try to handle ApiError JSON strings
+          const jsonMatch = msg.match(/\{.*\}/);
+          if (jsonMatch) {
+            try {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.error) {
+                errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+                isFirestoreError = msg.includes("Firebase") || msg.includes("Firestore");
+              }
+            } catch (e) {
+              // Not actual JSON, just keep the message
             }
           } else {
-            errorMessage = this.state.error.message;
+            errorMessage = msg;
           }
         }
       } catch (e) {
