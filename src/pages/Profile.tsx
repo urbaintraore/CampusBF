@@ -128,7 +128,7 @@ export default function Profile() {
     if (file && user) {
       try {
         setIsUploading(true);
-        const { url: downloadUrl } = await uploadFile(file, 'avatars');
+        const { url: downloadUrl } = await uploadFile(file, 'documents');
         setFormData(prev => ({ ...prev, avatarUrl: downloadUrl }));
         // Update user immediately for avatar
         await updateUser({ avatarUrl: downloadUrl });
