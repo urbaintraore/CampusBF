@@ -96,7 +96,7 @@ export default function Chatbot() {
             )}
             <div ref={messagesEndRef} />
           </div>
-          <div className="p-4 bg-white border-t border-slate-200/60 flex gap-2">
+          <div className="p-4 bg-white border-t border-slate-200/60 flex items-center gap-2">
             <input 
               value={input} 
               onChange={e => setInput(e.target.value)} 
@@ -108,7 +108,7 @@ export default function Chatbot() {
             <button 
               onClick={handleSend} 
               disabled={isLoading || !input.trim()}
-              className="bg-emerald-600 text-white p-2.5 rounded-full hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:hover:scale-100"
+              className="bg-emerald-600 text-white min-w-[40px] h-[40px] rounded-full hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:hover:scale-100"
             >
               <Send size={18} className="ml-0.5" />
             </button>
