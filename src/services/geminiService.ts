@@ -77,6 +77,120 @@ export interface GenerateQuizOptions {
   language?: string;
 }
 
+export const generateAdvancedQuizWithAI = async (
+  courseText: string,
+  subject: string,
+  level: string,
+  numQuestions: number,
+  options?: {
+    difficulty?: string;
+    language?: string;
+    instructions?: string;
+    questionTypes?: string[];
+  }
+): Promise<{ title: string; questions: QuizQuestion[] }> => {
+  try {
+    const ai = getAiClient();
+    const lang = options?.language || 'Français';
+    const typesStr = options?.questionTypes?.join(', ') || 'multiple_choice, true_false, short_answer';
+    
+    const prompt = `Génère un quiz universitaire à partir du texte source ci-dessous.
+
+Matière : ${subject}
+Niveau universitaire : ${level}
+Nombre de questions : ${numQuestions}
+Langue requise : ${lang}
+${options?.difficulty ? `Difficulté : ${options.difficulty}` : ''}
+${options?.instructions ? `Instructions : ${options.instructions}` : ''}
+Types de questions autorisés : ${typesStr}
+
+Texte source :
+"""
+${courseText}
+"""
+
+Contraintes strictes :
+- Renvoie un objet JSON contenant "title" et "questions".
+- Chaque question doit être claire, extraite du texte fourni.
+- Fournir une explication complète ("explanation") pour chaque question.
+- Utilise des questions de types variés si possible selon les types demandés.
+
+Modèle de format attendu pour l'output :
+{
+  "title": "Titre suggéré du quiz",
+  "questions": [
+    // format standard attendu pour vos questions (id, type, question, options, pointsPerOption, correctAnswerIndex, explanation, etc.)
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash", // Utilisation de flash pour éviter l'erreur 404 liée à l'accès pro
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            questions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  type: { 
+                    type: Type.STRING, 
+                    enum: ['multiple_choice', 'true_false', 'short_answer', 'matching', 'numerical', 'cloze', 'calculated', 'drag_drop', 'essay', 'description']
+                  },
+                  question: { type: Type.STRING },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  pointsPerOption: { type: Type.ARRAY, items: { type: Type.NUMBER } },
+                  correctAnswerIndex: { type: Type.NUMBER },
+                  explanation: { type: Type.STRING },
+                  correctTextAnswer: { type: Type.STRING },
+                  correctNumericAnswer: { type: Type.NUMBER },
+                },
+                required: ["id", "type", "question", "explanation"]
+              }
+            }
+          },
+          required: ["title", "questions"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) {
+      throw new Error("L'IA n'a renvoyé aucun résultat.");
+    }
+
+    const data = JSON.parse(resultText);
+    
+    // Traitement post-génération pour assurer la compatibilité
+    const processedQuestions = data.questions.map((q: any) => {
+      if (!q.options) q.options = [];
+      if (!q.id) q.id = 'q_' + Math.random().toString(36).substring(2, 9);
+      if (q.type === 'true_false' && q.options.length !== 2) {
+        q.options = ['Vrai', 'Faux'];
+      }
+      return q as QuizQuestion;
+    });
+
+    return {
+      title: data.title || `Quiz généré : ${subject}`,
+      questions: processedQuestions
+    };
+  } catch (error: any) {
+    console.error("Advanced Quiz Generation Error:", error);
+    if (error.status === 403) {
+      throw new Error("Erreur d'autorisation. Veuillez vérifier votre clé API Gemini.");
+    } else if (error.message && error.message.includes('JSON')) {
+      throw new Error("L'IA n'a pas répondu dans un format valide. Veuillez réessayer avec moins de questions.");
+    }
+    throw new Error(`La génération a échoué: ${error.message || "Erreur inconnue"}`);
+  }
+};
+
 export const generateQuizWithAI = async (subject: string, level: string, numQuestions: number = 20, options?: GenerateQuizOptions): Promise<QuizQuestion[]> => {
   try {
     const ai = getAiClient();

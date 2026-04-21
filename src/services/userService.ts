@@ -10,6 +10,15 @@ import { User } from '@/types';
 import { logService } from './logService';
 
 export const userService = {
+  async updateUser(userId: string, data: Partial<User>) {
+    try {
+      await updateDoc(doc(db, 'users', userId), data as any);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      throw error;
+    }
+  },
+
   async updateUserRole(adminUser: User, userId: string, role: User['role']) {
     try {
       await updateDoc(doc(db, 'users', userId), { role });

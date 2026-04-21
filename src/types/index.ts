@@ -42,6 +42,32 @@ export interface Quiz {
   questions: QuizQuestion[];
   createdAt: any;
   type: 'teacher' | 'ai';
+  duration?: number; // minutes
+  settings?: {
+    shuffleQuestions?: boolean;
+    shuffleAnswers?: boolean;
+    attemptsLimit?: number;
+    penaltyPerWrongAnswer?: number;
+    showCorrections?: 'always' | 'never' | 'after_submit';
+  };
+}
+
+export interface QuizResult {
+  id: string;
+  quizId: string;
+  userId: string;
+  score: number;
+  totalPoints: number;
+  answers: Record<string, any>;
+  timeSpent: number;
+  createdAt: any;
+}
+
+export interface QuestionBankItem extends Omit<QuizQuestion, 'id'> {
+  id: string;
+  subject: string;
+  level: string;
+  createdAt: any;
 }
 
 export interface User {

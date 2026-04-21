@@ -351,7 +351,7 @@ export default function Dashboard() {
                 className="px-8 py-3.5 bg-white text-purple-700 rounded-2xl font-bold hover:bg-purple-50 transition-all shadow-lg flex items-center gap-2 active:scale-95"
               >
                 <Brain size={20} />
-                Générateur de Quiz
+                Révisions & Quiz
               </button>
               <button 
                 onClick={() => {
