@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin, Sparkles, Brain } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import TeacherOnboarding from '@/components/TeacherOnboarding';
+import { InviteFriendsModal } from '@/components/InviteFriendsModal';
+import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { User as UserType } from '@/types';
@@ -18,8 +20,41 @@ export default function Dashboard() {
   console.log("Dashboard activeAds length:", activeAds.length);
   const [currentAd, setCurrentAd] = useState(0);
   const [suggestedFriends, setSuggestedFriends] = useState<UserType[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedDocForPayment, setSelectedDocForPayment] = useState<any>(null);
 
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
+
+  const isAdmin = user?.role === 'admin';
+  const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
+
+  const isDocumentLocked = (doc: any) => {
+    if (isAdmin) return false;
+    if (doc.isForSale && !isPremium) return true;
+    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) return true;
+    return false;
+  };
+
+  const handleDocClick = (doc: any) => {
+    if (isAdmin) {
+      window.open(doc.downloadUrl, '_blank');
+      return;
+    }
+
+    if (doc.isForSale && !isPremium) {
+      setSelectedDocForPayment(doc);
+      setShowPaymentModal(true);
+      return;
+    }
+
+    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) {
+      setShowInviteModal(true);
+      return;
+    }
+
+    window.open(doc.downloadUrl, '_blank');
+  };
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -358,26 +393,36 @@ export default function Dashboard() {
             </div>
             <div className="space-y-4">
               {documents.slice(0, 3).map((doc) => (
-                <a 
+                <div 
                   key={doc.id} 
-                  href={doc.downloadUrl} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-start gap-5 group block"
+                  onClick={() => handleDocClick(doc)}
+                  className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-start gap-5 group cursor-pointer"
                 >
-                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0 ring-1 ring-emerald-200/50 group-hover:scale-105 transition-transform">
+                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0 ring-1 ring-emerald-200/50 group-hover:scale-105 transition-transform relative">
                     <span className="font-bold text-sm uppercase tracking-wider">{doc.type.slice(0, 3)}</span>
+                    {isDocumentLocked(doc) && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                        <Lock size={10} />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                    <div className="flex items-center gap-2">
+                       <h3 className="font-semibold text-slate-900 truncate text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                       {doc.isForSale && (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded uppercase">Payant</span>
+                       )}
+                    </div>
                     <p className="text-sm text-slate-500 mt-1 font-medium">{doc.subject} • {doc.year}</p>
                     <div className="flex items-center gap-3 mt-3 text-xs text-slate-400 font-medium">
                       <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-600">{doc.university}</span>
                       <span>•</span>
-                      <span className="flex items-center gap-1"><FileText size={12} /> {doc.downloads} téléchargements</span>
+                      <span className="flex items-center gap-1">
+                        <FileText size={12} /> {doc.downloads} téléchargements
+                      </span>
                     </div>
                   </div>
-                </a>
+                </div>
               ))}
               {documents.length === 0 && (
                 <p className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
@@ -590,6 +635,19 @@ export default function Dashboard() {
 
         </div>
       </div>
+
+      {showInviteModal && <InviteFriendsModal onClose={() => setShowInviteModal(false)} />}
+      
+      {showPaymentModal && selectedDocForPayment && (
+        <ManualPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          type="exam"
+          amount={selectedDocForPayment.price || 1000}
+          title={selectedDocForPayment.title}
+          description={`Accès complet au document : ${selectedDocForPayment.title}. Un abonnement "Examen" ou "Premium" active tous les documents.`}
+        />
+      )}
     </div>
   );
 }

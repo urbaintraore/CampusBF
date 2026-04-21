@@ -19,7 +19,9 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
     year: '',
     type: 'exam',
     downloadUrl: '',
-    fileName: ''
+    fileName: '',
+    isForSale: false,
+    price: 0
   });
 
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,9 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
         year: document.year || '',
         type: document.type || 'exam',
         downloadUrl: document.downloadUrl || '',
-        fileName: document.fileName || ''
+        fileName: document.fileName || '',
+        isForSale: document.isForSale || false,
+        price: document.price || 0
       });
     } else if (isOpen) {
       setFormData({
@@ -51,7 +55,9 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
         year: '',
         type: 'exam',
         downloadUrl: '',
-        fileName: ''
+        fileName: '',
+        isForSale: false,
+        price: 0
       });
     }
   }, [document, isOpen]);
@@ -199,6 +205,35 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
               />
             </div>
           </div>
+
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="space-y-0.5">
+              <label className="text-sm font-bold text-slate-900">Mettre en vente</label>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Le document sera payant</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, isForSale: !formData.isForSale })}
+              className={`w-12 h-6 rounded-full transition-all relative ${formData.isForSale ? 'bg-emerald-600' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.isForSale ? 'left-7' : 'left-1'}`} />
+            </button>
+          </div>
+
+          {formData.isForSale && (
+            <div className="space-y-1 animate-in slide-in-from-top-2">
+              <label className="text-xs font-bold text-gray-500 uppercase">Prix (CFA)</label>
+              <input
+                type="number"
+                placeholder="Ex: 500"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+                disabled={loading}
+              />
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}

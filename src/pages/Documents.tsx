@@ -33,6 +33,8 @@ export default function Documents() {
   const [selectedSubject, setSelectedSubject] = useState('Toutes les matières');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedDocForPayment, setSelectedDocForPayment] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadUniversity, setUploadUniversity] = useState('Université Joseph Ki-Zerbo');
   const [customUniversity, setCustomUniversity] = useState('');
@@ -112,6 +114,8 @@ export default function Documents() {
 
   const isAdmin = user?.role === 'admin';
   
+  const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
+
   const isProfileComplete = Boolean(
     user?.firstName && 
     user?.lastName && 
@@ -273,18 +277,52 @@ export default function Documents() {
     }
   };
 
-  const handleView = (docUrl: string) => {
-    if ((user?.referralsCount || 0) < 5) {
+  const isDocumentLocked = (doc: any) => {
+    if (isAdmin) return false;
+    
+    // If for sale, check subscription
+    if (doc.isForSale && !isPremium) return true;
+    
+    // Referral block for students
+    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) return true;
+    
+    return false;
+  };
+
+  const handleView = (doc: any) => {
+    if (isAdmin) {
+      window.location.href = doc.downloadUrl;
+      return;
+    }
+
+    if (doc.isForSale && !isPremium) {
+      setSelectedDocForPayment(doc);
+      setShowPaymentModal(true);
+      return;
+    }
+
+    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) {
       setShowInviteModal(true);
       return;
     }
-    window.location.href = docUrl; // Open in same tab
+    
+    window.location.href = doc.downloadUrl;
   };
 
   const handleDownload = async (docData: any) => {
-    if ((user?.referralsCount || 0) < 5) {
-      setShowInviteModal(true);
-      return;
+    if (isAdmin) {
+      // Direct download for admin
+    } else {
+      if (docData.isForSale && !isPremium) {
+        setSelectedDocForPayment(docData);
+        setShowPaymentModal(true);
+        return;
+      }
+
+      if (user?.role === 'student' && (user?.referralsCount || 0) < 5) {
+        setShowInviteModal(true);
+        return;
+      }
     }
 
     if (!docData.downloadUrl) {
@@ -376,6 +414,17 @@ export default function Documents() {
       </div>
 
       {showInviteModal && <InviteFriendsModal onClose={() => setShowInviteModal(false)} />}
+      
+      {showPaymentModal && selectedDocForPayment && (
+        <ManualPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          type="exam"
+          amount={selectedDocForPayment.price || 1000}
+          title={selectedDocForPayment.title}
+          description={`Accès complet au document : ${selectedDocForPayment.title}. Un abonnement "Examen" ou "Premium" active tous les documents.`}
+        />
+      )}
       
       {/* Upload Modal */}
 
@@ -754,6 +803,12 @@ export default function Documents() {
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
                             <h3 className="font-display font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                            {isDocumentLocked(doc) && <Lock size={16} className="text-amber-500" />}
+                            {doc.isForSale && (
+                              <span className="flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                <Sparkles size={8} /> Payant
+                              </span>
+                            )}
                           </div>
                           <span className="text-xs font-medium px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-lg border border-slate-200/60">{doc.type.toUpperCase()}</span>
                         </div>
@@ -821,17 +876,25 @@ export default function Documents() {
                     </div>
                     <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
                       <button 
-                        onClick={() => handleView(doc.downloadUrl)}
-                        className="w-full md:w-auto px-4 py-3 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95"
+                        onClick={() => handleView(doc)}
+                        className={cn(
+                          "w-full md:w-auto px-4 py-3 border border-slate-200 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95",
+                          isDocumentLocked(doc) ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "bg-white text-slate-700 hover:bg-slate-50"
+                        )}
                       >
-                        <Eye size={18} />
+                        {isDocumentLocked(doc) ? <Lock size={18} /> : <Eye size={18} />}
                         Voir
                       </button>
                       <button 
                         onClick={() => handleDownload(doc)}
-                        className="w-full md:w-auto px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-lg bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
+                        className={cn(
+                          "w-full md:w-auto px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95",
+                          isDocumentLocked(doc) 
+                            ? "bg-slate-200 text-slate-500 shadow-none cursor-not-allowed" 
+                            : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
+                        )}
                       >
-                        <Download size={18} />
+                        {isDocumentLocked(doc) ? <Lock size={18} /> : <Download size={18} />}
                         Télécharger
                       </button>
                     </div>
