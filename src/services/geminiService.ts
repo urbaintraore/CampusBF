@@ -194,8 +194,14 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
     if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('API key not valid')) {
        throw new Error("La Clé API Gemini est invalide ou incorrecte. Vérifiez qu'elle est bien copiée.");
     }
+    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota') || error.message?.toLowerCase().includes('exhausted')) {
+       throw new Error("Votre quota d'utilisation gratuite de l'API Gemini est dépassé. Veuillez réessayer plus tard ou configurer la facturation sur votre projet Google.");
+    }
+    if (error.message?.includes('403') || error.message?.toLowerCase().includes('permission')) {
+       throw new Error("L'API Gemini n'est pas accessible. Assurez-vous que l'API 'Generative Language API' est bien activée sur votre projet Google, ou que votre région est supportée.");
+    }
     if (error.message?.includes('NOT_FOUND') || error.message?.includes('not found for API version')) {
-       throw new Error("L'API Gemini n'est pas activée pour cette clé, ou la clé n'a pas accès à Gemini 1.5 Flash.");
+       throw new Error("Erreur de modèle ou l'API n'est pas complètement activée. Si vous avez créé la clé dans un projet existant (comme CampusBF), vous devez activer la 'Generative Language API' manuellement.");
     }
     
     throw new Error(`Erreur lors de la génération du quiz : ${error.message || 'Erreur inconnue'}`);
