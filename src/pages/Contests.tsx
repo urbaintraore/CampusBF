@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Contest, ContestParticipant } from '@/types';
 
 export default function Contests() {
-  const { contests, contestParticipants, user, registerForContest } = useAuth();
+  const { contests, contestParticipants, user, registerForContest, incrementActivity } = useAuth();
   const [activeTab, setActiveTab] = useState<'active' | 'finished'>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
@@ -70,6 +70,9 @@ export default function Contests() {
     try {
       await registerForContest(contestId);
       setSuccess('Inscription réussie ! Bonne chance pour le concours.');
+      if (incrementActivity) {
+        incrementActivity('contestParticipations').catch(console.error);
+      }
     } catch (err: any) {
       setError(err.message || "Une erreur est survenue lors de l'inscription.");
     } finally {

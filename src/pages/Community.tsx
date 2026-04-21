@@ -22,7 +22,7 @@ import autoTable from 'jspdf-autotable';
 import { uploadFile } from '@/services/storageService';
 
 export default function Community() {
-  const { user, groups, users, addGroupMember, removeGroupMember, logAction, addComment } = useAuth();
+  const { user, groups, users, addGroupMember, removeGroupMember, logAction, addComment, incrementActivity } = useAuth();
   const [postContent, setPostContent] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -129,6 +129,10 @@ export default function Community() {
       }
 
       await addDoc(collection(db, 'posts'), newPost);
+      
+      if (incrementActivity) {
+        incrementActivity('groupMessages').catch(console.error);
+      }
 
       setPostContent('');
       setSelectedFile(null);
@@ -218,6 +222,10 @@ export default function Community() {
       }
 
       await addComment(postId, commentContent, fileUrl, fileType, fileName);
+      
+      if (incrementActivity) {
+        incrementActivity('groupMessages').catch(console.error);
+      }
 
       setCommentContent('');
       setSelectedCommentFile(null);

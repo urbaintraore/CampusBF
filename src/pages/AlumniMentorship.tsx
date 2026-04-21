@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { AlumniProfile } from '../types';
@@ -7,6 +8,7 @@ import { cn } from '../lib/utils';
 
 export default function AlumniMentorship() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [alumni, setAlumni] = useState<AlumniProfile[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
   const [bio, setBio] = useState('');
@@ -156,7 +158,7 @@ export default function AlumniMentorship() {
               </div>
               
               <button 
-                onClick={() => window.location.href = `/messages?chat=${alum.userId}`}
+                onClick={() => navigate(`/messages?userId=${alum.userId}`)}
                 className="w-full py-3 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95 flex items-center justify-center gap-2"
               >
                 Contacter ce mentor

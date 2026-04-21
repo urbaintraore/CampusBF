@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Quiz } from '@/types';
 import { X, CheckCircle, XCircle, ArrowRight, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -9,6 +10,7 @@ interface QuizPlayerProps {
 }
 
 export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
+  const { incrementActivity } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [userInput, setUserInput] = useState<any>(null);
@@ -92,6 +94,9 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       setIsAnswered(false);
     } else {
       setIsFinished(true);
+      if (incrementActivity) {
+        incrementActivity('quizzesCompleted').catch(console.error);
+      }
     }
   };
 

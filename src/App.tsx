@@ -110,6 +110,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import Rankings from './pages/Ranking';
+
 export default function App() {
   return (
     <AuthProvider>
@@ -122,6 +124,11 @@ export default function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/ranking" element={
+            <ProtectedRoute>
+              <Rankings />
             </ProtectedRoute>
           } />
           <Route path="/messages" element={

@@ -81,7 +81,7 @@ export default function AdminDashboard() {
     logs
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
   const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
@@ -397,6 +397,15 @@ export default function AdminDashboard() {
           >
             Statistiques
           </button>
+          <button 
+            onClick={() => setActiveTab('rankings')}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-bold transition-all",
+              activeTab === 'rankings' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Classement Étudiants
+          </button>
         </div>
           <button 
             onClick={() => {
@@ -409,6 +418,115 @@ export default function AdminDashboard() {
             Rapport de Développement
           </button>
       </div>
+
+      {activeTab === 'rankings' && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 text-xl">
+                  <Trophy size={24} className="text-amber-500" />
+                  Classement de l'Activité Étudiante
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">Basé sur les interactions réelles sur la plateforme.</p>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-inner flex items-center gap-2">
+                <Search size={18} className="text-gray-400 ml-2" />
+                <input 
+                  type="text" 
+                  placeholder="Chercher un étudiant..."
+                  className="bg-transparent border-none focus:ring-0 text-sm w-64"
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100">
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rang</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Étudiant</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Connexions</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Docs (V/T)</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Quiz</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Marketplace</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">MotoRide</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Messages</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Score Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {users
+                    .filter(u => u.role === 'student' && (
+                      u.firstName?.toLowerCase().includes(userSearch.toLowerCase()) || 
+                      u.lastName?.toLowerCase().includes(userSearch.toLowerCase())
+                    ))
+                    .sort((a, b) => (b.rankingScore || 0) - (a.rankingScore || 0))
+                    .map((student, idx) => {
+                      const stats = (student.activityStats || {}) as any;
+                      return (
+                        <tr key={student.id} className="hover:bg-gray-50/80 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs",
+                              idx === 0 ? "bg-amber-100 text-amber-700" :
+                              idx === 1 ? "bg-slate-200 text-slate-700" :
+                              idx === 2 ? "bg-orange-100 text-orange-700" : "text-gray-400"
+                            )}>
+                              #{idx + 1}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <img src={student.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.firstName}`} alt="" className="w-10 h-10 rounded-full bg-gray-100 object-cover" />
+                              <div className="min-w-0">
+                                <div className="font-bold text-gray-900 text-sm truncate">{student.firstName} {student.lastName}</div>
+                                <div className="text-[10px] text-gray-500 font-medium truncate">{student.major} @ {student.university}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-bold text-gray-700">{stats.logins || 0}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-gray-700">{stats.docsViewed || 0}</span>
+                              <span className="text-[10px] text-gray-400">{stats.docsDownloaded || 0} télechargés</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-bold text-gray-700">{stats.quizzesCompleted || 0}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex flex-col text-[10px] font-bold">
+                              <span className="text-blue-600">{stats.marketplacePosts || 0} posts</span>
+                              <span className="text-emerald-600">{stats.marketplaceContacts || 0} contacts</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex flex-col text-[10px] font-bold">
+                              <span className="text-orange-600">{stats.motoRideOffers || 0} offres</span>
+                              <span className="text-purple-600">{stats.motoRideContacts || 0} contacts</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-bold text-emerald-600">{stats.groupMessages || 0}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg inline-block font-bold text-sm">
+                              {student.rankingScore || 0} pts
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'overview' && (
         <>

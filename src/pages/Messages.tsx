@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon, Download, ChevronLeft, MessageCircle, Plus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
@@ -19,18 +19,21 @@ interface Conversation {
 }
 
 export default function Messages() {
-  const { user: currentUser, users, logAction } = useAuth();
+  const { user: currentUser, users, logAction, isLoading: isAuthLoading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
 
   // Helper to generate conversation ID
   const getConversationId = (uid1: string, uid2: string) => {
@@ -75,8 +78,12 @@ export default function Messages() {
 
   // Fetch messages for selected chat
   useEffect(() => {
-    if (!currentUser || !selectedChat) return;
+    if (!currentUser || !selectedChat) {
+      setMessages([]);
+      return;
+    }
 
+    setIsLoadingMessages(true);
     const convId = getConversationId(currentUser.id, selectedChat);
     const q = query(
       collection(db, `conversations/${convId}/messages`),
@@ -90,6 +97,7 @@ export default function Messages() {
         timestamp: doc.data().timestamp?.toDate().toISOString() || new Date().toISOString()
       })) as Message[];
       setMessages(msgs);
+      setIsLoadingMessages(false);
 
       // Mark messages as read
       if (msgs.length > 0) {
@@ -99,10 +107,11 @@ export default function Messages() {
           updateDoc(doc(db, 'conversations', convId), {
             [`unreadCount.${currentUser.id}`]: 0
           }).catch(console.error);
-          
-          // We could also mark individual messages as read here
         }
       }
+    }, (error) => {
+      console.error("Error fetching messages:", error);
+      setIsLoadingMessages(false);
     });
 
     return () => unsubscribe();
@@ -113,32 +122,27 @@ export default function Messages() {
     if (loading || !currentUser) return;
 
     const params = new URLSearchParams(location.search);
-    const chatId = params.get('chat');
+    const chatId = params.get('chat') || params.get('userId');
     
-    if (chatId) {
+    if (chatId && chatId !== selectedChat) {
       const existingConv = conversations.find(c => c.user.id === chatId);
       
       if (existingConv) {
         setSelectedChat(chatId);
       } else {
+        // Even if not in local users list, we try to fetch or just set selectedChat
+        // startNewConversation will handle the doc creation if needed
         const userToChat = users.find(u => u.id === chatId);
         
         if (userToChat) {
-          // Create conversation document if it doesn't exist
-          const convId = getConversationId(currentUser.id, chatId);
-          getDoc(doc(db, 'conversations', convId)).then(docSnap => {
-            if (!docSnap.exists()) {
-              setDoc(doc(db, 'conversations', convId), {
-                participants: [currentUser.id, chatId],
-                updatedAt: serverTimestamp(),
-                unreadCount: {
-                  [currentUser.id]: 0,
-                  [chatId]: 0
-                }
-              });
+          setSelectedChat(chatId);
+        } else {
+          // Try to fetch the user document directly if they're not in the pre-loaded users list
+          getDoc(doc(db, 'users', chatId)).then(userSnap => {
+            if (userSnap.exists()) {
+              setSelectedChat(chatId);
             }
           });
-          setSelectedChat(chatId);
         }
       }
     } else if (!selectedChat && conversations.length > 0) {
@@ -147,7 +151,7 @@ export default function Messages() {
         setSelectedChat(conversations[0].user.id);
       }
     }
-  }, [location.search, users, conversations.length, loading, currentUser]);
+  }, [location.search, users, conversations, loading, currentUser, selectedChat]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -219,12 +223,24 @@ export default function Messages() {
   };
 
   const activeConversation = conversations.find(c => c.user.id === selectedChat);
+  const otherUser = useMemo(() => 
+    activeConversation?.user || users.find(u => u.id === selectedChat),
+    [activeConversation, users, selectedChat]
+  );
+
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(conv => {
+      const search = sidebarSearchQuery.toLowerCase();
+      const name = `${conv.user.firstName} ${conv.user.lastName}`.toLowerCase();
+      return name.includes(search);
+    });
+  }, [conversations, sidebarSearchQuery]);
 
   const exportToPDF = () => {
     if (!activeConversation || messages.length === 0 || !currentUser) return;
     
     const doc = new jsPDF();
-    const userName = `${activeConversation.user.firstName} ${activeConversation.user.lastName}`;
+    const userName = otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : 'Utilisateur';
     const currentUserName = `${currentUser.firstName} ${currentUser.lastName}`;
     
     // Title
@@ -270,54 +286,58 @@ export default function Messages() {
   // Filter messages for the current chat
   const currentChatMessages = messages;
 
-  const startNewConversation = async (userId: string) => {
+  const startNewConversation = (userId: string) => {
     if (!currentUser) return;
     
-    // Check if conversation already exists
-    const existingConv = conversations.find(c => c.user.id === userId);
-    if (existingConv) {
-      setSelectedChat(userId);
-      setShowNewMessageModal(false);
-      return;
-    }
+    // Immediate UI feedback
+    setSelectedChat(userId);
+    setShowNewMessageModal(false);
+    navigate(`/messages?userId=${userId}`, { replace: true });
 
-    // Create new conversation
+    // Background work to ensure the conversation document exists
     const convId = getConversationId(currentUser.id, userId);
-    try {
-      await setDoc(doc(db, 'conversations', convId), {
-        participants: [currentUser.id, userId],
-        updatedAt: serverTimestamp(),
-        unreadCount: {
-          [currentUser.id]: 0,
-          [userId]: 0
-        }
-      });
-      setSelectedChat(userId);
-      setShowNewMessageModal(false);
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-    }
+    
+    getDoc(doc(db, 'conversations', convId)).then(convSnap => {
+      if (!convSnap.exists()) {
+        setDoc(doc(db, 'conversations', convId), {
+          participants: [currentUser.id, userId],
+          updatedAt: serverTimestamp(),
+          unreadCount: {
+            [currentUser.id]: 0,
+            [userId]: 0
+          }
+        }).catch(err => console.error("Error creating conversation doc:", err));
+      }
+    }).catch(error => {
+      console.error("Error checking conversation existence:", error);
+    });
   };
 
-  const filteredUsers = users.filter(u => {
-    if (u.id === currentUser?.id) return false;
-    const search = userSearchQuery.toLowerCase();
-    const fname = (u.firstName || '').toLowerCase();
-    const lname = (u.lastName || '').toLowerCase();
-    const uni = (u.university || '').toLowerCase();
-    
-    return fname.includes(search) || lname.includes(search) || uni.includes(search);
-  });
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      if (u.id === currentUser?.id) return false;
+      const search = userSearchQuery.toLowerCase();
+      const fname = (u.firstName || '').toLowerCase();
+      const lname = (u.lastName || '').toLowerCase();
+      const uni = (u.university || '').toLowerCase();
+      
+      return fname.includes(search) || lname.includes(search) || uni.includes(search);
+    }).slice(0, 50); // Limit results for performance
+  }, [users, userSearchQuery, currentUser?.id]);
 
   return (
-    <div className="h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
+    <>
+      <div className="h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
       {/* Sidebar List */}
       <div className={cn("w-full md:w-80 border-r border-gray-200 flex-col", selectedChat ? "hidden md:flex" : "flex")}>
         <div className="p-4 border-b border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900">Messages</h2>
             <button 
-              onClick={() => setShowNewMessageModal(true)}
+              onClick={() => {
+                setUserSearchQuery('');
+                setShowNewMessageModal(true);
+              }}
               className="p-2 bg-emerald-100 text-emerald-700 rounded-full hover:bg-emerald-200 transition-colors"
               title="Nouveau message"
             >
@@ -329,14 +349,16 @@ export default function Messages() {
             <input 
               type="text" 
               placeholder="Rechercher..." 
+              value={sidebarSearchQuery}
+              onChange={(e) => setSidebarSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
             />
           </div>
         </div>
         
         <div className="flex-1 overflow-y-auto">
-          {conversations.length > 0 ? (
-            conversations.map((conv) => (
+          {filteredConversations.length > 0 ? (
+            filteredConversations.map((conv) => (
               <button
                 key={conv.user.id}
                 onClick={() => setSelectedChat(conv.user.id)}
@@ -391,9 +413,9 @@ export default function Messages() {
               >
                 <ChevronLeft size={24} />
               </button>
-              <img src={activeConversation?.user.avatarUrl} alt="" className="w-10 h-10 rounded-full bg-gray-200" />
+              <img src={otherUser?.avatarUrl} alt="" className="w-10 h-10 rounded-full bg-gray-200" />
               <div>
-                <h3 className="font-bold text-gray-900">{activeConversation?.user.firstName} {activeConversation?.user.lastName}</h3>
+                <h3 className="font-bold text-gray-900">{otherUser?.firstName} {otherUser?.lastName}</h3>
                 <p className="text-xs text-green-600 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                   En ligne
@@ -416,7 +438,11 @@ export default function Messages() {
 
           {/* Messages Feed */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
-            {currentChatMessages.length > 0 ? (
+            {isLoadingMessages ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : currentChatMessages.length > 0 ? (
               currentChatMessages.map((msg) => {
                 const isMe = msg.senderId === currentUser?.id;
                 return (
@@ -511,57 +537,85 @@ export default function Messages() {
           </div>
         </div>
       )}
-      {/* New Message Modal */}
-      {showNewMessageModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="font-bold text-gray-900">Nouvelle conversation</h3>
-              <button 
-                onClick={() => setShowNewMessageModal(false)}
-                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-              >
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-            
-            <div className="p-4 border-b border-gray-100">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Rechercher un utilisateur..." 
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-            </div>
+    </div>
 
-            <div className="flex-1 overflow-y-auto p-2">
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={() => startNewConversation(u.id)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors text-left"
-                  >
-                    <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full bg-gray-200 object-cover" />
-                    <div>
-                      <p className="font-semibold text-gray-900">{u.firstName} {u.lastName}</p>
-                      <p className="text-xs text-gray-500">{u.university || u.role}</p>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="p-8 text-center text-gray-500">
-                  <p>Aucun utilisateur trouvé</p>
-                </div>
-              )}
+    {/* New Message Modal - Moved outside for better stacking context */}
+    {showNewMessageModal && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-200">
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <h3 className="font-bold text-gray-900">Nouvelle conversation</h3>
+            <button 
+              type="button"
+              onClick={() => setShowNewMessageModal(false)}
+              className="p-2 hover:bg-gray-200 rounded-full transition-colors focus:ring-2 focus:ring-gray-200 outline-none"
+            >
+              <X size={20} className="text-gray-500" />
+            </button>
+          </div>
+          
+          <div className="p-4 border-b border-gray-100 bg-white">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Rechercher un utilisateur..." 
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                autoFocus
+              />
             </div>
           </div>
+
+          <div className="flex-1 overflow-y-auto p-2 bg-white">
+            {isAuthLoading ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-sm font-medium text-gray-500">Chargement des utilisateurs...</p>
+              </div>
+            ) : filteredUsers.length > 0 ? (
+              <div className="space-y-1">
+                {filteredUsers.map(u => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => startNewConversation(u.id)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-emerald-50 rounded-xl transition-all text-left group cursor-pointer border border-transparent hover:border-emerald-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={u.avatarUrl} 
+                        alt="" 
+                        className="w-10 h-10 rounded-full bg-gray-200 object-cover ring-2 ring-transparent group-hover:ring-emerald-200 transition-all" 
+                        referrerPolicy="no-referrer"
+                      />
+                      <div>
+                        <p className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                          {u.firstName} {u.lastName}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium">{u.university || u.role}</p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                      Sélectionner
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center text-gray-500">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search className="text-gray-300" size={24} />
+                </div>
+                <p className="font-medium">Aucun utilisateur trouvé</p>
+                <p className="text-xs mt-1 text-gray-400">Vérifiez l'orthographe ou essayez un autre nom.</p>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </>
+);
 }

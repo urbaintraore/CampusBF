@@ -18,7 +18,7 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
-  const { user, marketplace: ads, logAction, reportMarketplaceItem } = useAuth();
+  const { user, marketplace: ads, logAction, reportMarketplaceItem, incrementActivity } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +170,9 @@ export default function Marketplace() {
       };
 
       await addDoc(collection(db, 'marketplace'), newItem);
+      if (incrementActivity) {
+        incrementActivity('marketplacePosts').catch(console.error);
+      }
       if (logAction) {
         logAction('Nouvelle annonce marketplace', `Annonce: ${sellTitle} (${sellPrice} FCFA) - En attente de validation`);
       }
@@ -202,6 +205,9 @@ export default function Marketplace() {
   };
 
   const handleContact = (sellerId: string, itemTitle: string) => {
+    if (incrementActivity) {
+      incrementActivity('marketplaceContacts').catch(console.error);
+    }
     if (logAction) {
       logAction('Contact vendeur', `Annonce: ${itemTitle}`);
     }

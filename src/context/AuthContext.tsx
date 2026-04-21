@@ -43,7 +43,8 @@ import {
   serverTimestamp,
   getDocs,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  increment
 } from 'firebase/firestore';
 
 interface AuthContextType {
@@ -165,6 +166,7 @@ interface AuthContextType {
   groups: Group[];
   addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
+  incrementActivity: (activity: keyof NonNullable<User['activityStats']>) => Promise<void>;
   addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -243,6 +245,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logService.logAction(user, action, details);
   };
 
+  const incrementActivity = async (activity: keyof NonNullable<User['activityStats']>) => {
+    if (!user) return;
+    
+    // Weighted points for each activity
+    const weights: Record<string, number> = {
+      logins: 1,
+      docsViewed: 2,
+      docsDownloaded: 5,
+      eventsViewed: 1,
+      eventParticipations: 10,
+      contestParticipations: 15,
+      marketplacePosts: 10,
+      marketplaceContacts: 5,
+      quizzesCompleted: 12,
+      cvGenerated: 10,
+      motoRideOffers: 15,
+      motoRideContacts: 5,
+      groupMessages: 2
+    };
+
+    const pointValue = weights[activity] || 1;
+
+    try {
+      await updateDoc(doc(db, 'users', user.id), {
+        [`activityStats.${activity}`]: increment(1),
+        rankingScore: increment(pointValue)
+      });
+    } catch (error) {
+      console.error(`Error incrementing activity ${activity}:`, error);
+    }
+  };
+
   const createAd = async (adData: Omit<Ad, 'id'>) => {
     if (!user) return;
     await adService.createAd(user, adData);
@@ -309,14 +343,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data = userDoc.data();
           initialUserData = { id: firebaseUser.uid, ...data } as User;
           
-          // Mise à jour de la dernière activité
+          // Mise à jour de la dernière activité et stats de connexion
           try {
             await updateDoc(doc(db, 'users', firebaseUser.uid), {
-              lastActiveAt: serverTimestamp()
+              lastActiveAt: serverTimestamp(),
+              'activityStats.logins': increment(1),
+              rankingScore: increment(1)
             });
           } catch (err: any) {
-             console.error("Firestore updateDoc error for lastActiveAt:", err);
-             // Non-critical, continue
+             console.error("Firestore updateDoc error for lastActiveAt/stats:", err);
           }
 
           // Demande de permission pour les notifications
@@ -347,7 +382,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
             referralsCount: 0,
             inviteCount: 0,
-            invitedUsers: []
+            invitedUsers: [],
+            activityStats: {
+              logins: 1,
+              docsViewed: 0,
+              docsDownloaded: 0,
+              eventsViewed: 0,
+              eventParticipations: 0,
+              contestParticipations: 0,
+              marketplacePosts: 0,
+              marketplaceContacts: 0,
+              quizzesCompleted: 0,
+              cvGenerated: 0,
+              motoRideOffers: 0,
+              motoRideContacts: 0,
+              groupMessages: 0
+            },
+            rankingScore: 1
           };
           try {
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
@@ -1388,6 +1439,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       groups,
       addNotification,
       markNotificationAsRead,
+      incrementActivity,
       addTeacherReview,
       isAuthenticated: !!user, 
       isLoading 

@@ -5,6 +5,7 @@ import { Download, X, Mail, Phone, MapPin, Briefcase, GraduationCap, Award, Aler
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 interface CVGeneratorProps {
   user: User;
@@ -13,6 +14,7 @@ interface CVGeneratorProps {
 }
 
 export const CVGenerator: React.FC<CVGeneratorProps> = ({ user, onClose, isModal = true }) => {
+  const { incrementActivity } = useAuth();
   const componentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -37,6 +39,11 @@ export const CVGenerator: React.FC<CVGeneratorProps> = ({ user, onClose, isModal
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: `CV_${user.firstName}_${user.lastName}`,
+    onAfterPrint: () => {
+      if (incrementActivity) {
+        incrementActivity('cvGenerated').catch(console.error);
+      }
+    }
   });
 
   const content = (

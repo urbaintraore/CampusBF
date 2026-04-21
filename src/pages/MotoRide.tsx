@@ -6,7 +6,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user, addMotoRide, motoRides, reserveMotoRide, logAction, reportRideUser, reviewRide, updateRideStatus, users } = useAuth();
+  const { user, addMotoRide, motoRides, reserveMotoRide, logAction, reportRideUser, reviewRide, updateRideStatus, users, incrementActivity } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states
@@ -90,6 +90,10 @@ export default function MotoRide() {
       passengers: []
     });
     
+    if (incrementActivity) {
+      incrementActivity('motoRideOffers').catch(console.error);
+    }
+
     alert("Trajet publié avec succès !");
     setDeparture('');
     setDestination('');
@@ -452,6 +456,9 @@ export default function MotoRide() {
                           const clientWhatsapp = prompt("Veuillez entrer votre numéro WhatsApp pour que le conducteur puisse vous contacter :");
                           if (clientWhatsapp) {
                             reserveMotoRide(ride.id, clientWhatsapp);
+                            if (incrementActivity) {
+                              incrementActivity('motoRideContacts').catch(console.error);
+                            }
                             alert("Réservation envoyée ! Le conducteur a été notifié.");
                           }
                         }

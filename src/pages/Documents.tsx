@@ -22,7 +22,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
-  const { user, documents: globalDocuments, logAction, groups, community, addDocument } = useAuth();
+  const { user, documents: globalDocuments, logAction, groups, community, addDocument, incrementActivity } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
@@ -290,6 +290,10 @@ export default function Documents() {
   };
 
   const handleView = (doc: any) => {
+    if (incrementActivity) {
+      incrementActivity('docsViewed').catch(console.error);
+    }
+
     if (isAdmin) {
       window.location.href = doc.downloadUrl;
       return;
@@ -310,6 +314,10 @@ export default function Documents() {
   };
 
   const handleDownload = async (docData: any) => {
+    if (incrementActivity) {
+      incrementActivity('docsDownloaded').catch(console.error);
+    }
+
     if (isAdmin) {
       // Direct download for admin
     } else {

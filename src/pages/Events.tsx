@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import { deleteDoc } from 'firebase/firestore';
 
 export default function Events() {
-  const { user, events, users, logAction, contests, contestParticipants, registerForContest, addEvent } = useAuth();
+  const { user, events, users, logAction, contests, contestParticipants, registerForContest, addEvent, incrementActivity } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
@@ -132,6 +132,10 @@ export default function Events() {
         }
       } else {
         toast.success(isRegistered ? 'Désinscription réussie' : 'Inscription réussie');
+      }
+
+      if (!isRegistered && incrementActivity) {
+        incrementActivity('eventParticipations').catch(console.error);
       }
 
       if (logAction) {
@@ -400,7 +404,12 @@ export default function Events() {
                           </div>
                         )}
                         <button 
-                          onClick={() => setSelectedEvent(event)}
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            if (incrementActivity) {
+                              incrementActivity('eventsViewed').catch(console.error);
+                            }
+                          }}
                           className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
                         >
                           <Info size={14} />

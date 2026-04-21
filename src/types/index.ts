@@ -127,6 +127,22 @@ export interface User {
     events: boolean;
   };
   lastActiveAt?: any;
+  activityStats?: {
+    logins: number;
+    docsViewed: number;
+    docsDownloaded: number;
+    eventsViewed: number;
+    eventParticipations: number;
+    contestParticipations: number;
+    marketplacePosts: number;
+    marketplaceContacts: number;
+    quizzesCompleted: number;
+    cvGenerated: number;
+    motoRideOffers: number;
+    motoRideContacts: number;
+    groupMessages: number;
+  };
+  rankingScore?: number;
 }
 
 export interface Training {

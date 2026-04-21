@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { User } from '@/types';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment } from 'firebase/firestore';
 
 export default function TeachersDirectory() {
   const { user, users, submitSubscriptionRequest, addTeacherReview } = useAuth();
@@ -67,11 +67,40 @@ export default function TeachersDirectory() {
     }
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim()) return;
-    alert('Message envoyé avec succès à ' + selectedTeacher?.firstName);
-    setMessageText('');
-    setShowMessageModal(false);
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedTeacher || !user) return;
+    
+    const convId = [user.id, selectedTeacher.id].sort().join('_');
+    const msgRef = collection(db, `conversations/${convId}/messages`);
+    
+    try {
+      await addDoc(msgRef, {
+        senderId: user.id,
+        receiverId: selectedTeacher.id,
+        content: messageText,
+        timestamp: serverTimestamp(),
+        read: false
+      });
+      
+      await setDoc(doc(db, 'conversations', convId), {
+        participants: [user.id, selectedTeacher.id],
+        lastMessage: {
+          content: messageText,
+          senderId: user.id,
+          timestamp: new Date().toISOString()
+        },
+        updatedAt: serverTimestamp(),
+        [`unreadCount.${selectedTeacher.id}`]: increment(1),
+        [`unreadCount.${user.id}`]: 0
+      }, { merge: true });
+
+      alert('Message envoyé avec succès !');
+      setMessageText('');
+      setShowMessageModal(false);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Erreur lors de l'envoi du message.");
+    }
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
