@@ -262,8 +262,9 @@ export default function Quizzes() {
                 <Key size={18} className="text-purple-600" />
                 Clé API Gemini (Optionnel)
               </label>
-              <p className="text-xs text-slate-600 mb-3">
-                Si vous obtenez des erreurs "Quota exceeded", vous pouvez saisir votre propre clé API Google Gemini. Elle sera sauvegardée uniquement dans votre navigateur actuel.
+              <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                Si vous obtenez des erreurs "Quota exceeded", vous pouvez saisir votre propre clé API Google Gemini. Elle sera sauvegardée uniquement dans votre navigateur actuel.<br/>
+                👉 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 font-bold hover:underline">Cliquez ici pour obtenir une clé API gratuite</a> sur Google AI Studio.
               </p>
               <input
                 type="password"
