@@ -141,6 +141,7 @@ export interface User {
     motoRideOffers: number;
     motoRideContacts: number;
     groupMessages: number;
+    invitations: number;
   };
   rankingScore?: number;
 }

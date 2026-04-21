@@ -48,16 +48,23 @@ export class ErrorBoundary extends Component<Props, State> {
       try {
         if (this.state.error?.message) {
           const msg = this.state.error.message;
-          const jsonMatch = msg.match(/\{.*\}/);
-          if (jsonMatch) {
+          
+          // Improved Firestore error detection
+          isFirestoreError = /firebase|firestore/i.test(msg);
+
+          // Extract JSON if present
+          const start = msg.indexOf('{');
+          const end = msg.lastIndexOf('}');
+          
+          if (start !== -1 && end !== -1 && start < end) {
             try {
-              const parsed = JSON.parse(jsonMatch[0]);
+              const jsonPart = msg.substring(start, end + 1);
+              const parsed = JSON.parse(jsonPart);
               if (parsed.error) {
                 errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
-                isFirestoreError = msg.includes("Firebase") || msg.includes("Firestore");
               }
             } catch {
-              // Ignore parsing errors
+              errorMessage = msg;
             }
           } else {
             errorMessage = msg;

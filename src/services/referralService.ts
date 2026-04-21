@@ -15,7 +15,10 @@ export const referralService = {
       const referrerRef = doc(db, 'users', referrerId);
       await updateDoc(referrerRef, {
         inviteCount: increment(1),
-        invitedUsers: arrayUnion(referredId)
+        referralsCount: increment(1),
+        invitedUsers: arrayUnion(referredId),
+        'activityStats.invitations': increment(1),
+        rankingScore: increment(50)
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'referrals');

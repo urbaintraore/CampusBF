@@ -110,6 +110,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import { Toaster } from 'react-hot-toast';
 import Rankings from './pages/Ranking';
 
 export default function App() {
@@ -252,6 +253,7 @@ export default function App() {
         </Routes>
         <Chatbot />
         <SubscriptionNotification />
+        <Toaster position="top-right" />
       </ThemeProvider>
     </AuthProvider>
   );

@@ -262,7 +262,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cvGenerated: 10,
       motoRideOffers: 15,
       motoRideContacts: 5,
-      groupMessages: 2
+      groupMessages: 2,
+      invitations: 50
     };
 
     const pointValue = weights[activity] || 1;
@@ -396,7 +397,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               cvGenerated: 0,
               motoRideOffers: 0,
               motoRideContacts: 0,
-              groupMessages: 0
+              groupMessages: 0,
+              invitations: 0
             },
             rankingScore: 1
           };

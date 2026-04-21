@@ -1,45 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Trophy, TrendingUp, Target, Award, Star, BookOpen, Download, Users, MessageSquare, ShoppingBag, Bike, ClipboardCheck, FileUser, Calendar, Info, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User } from '@/types';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 export default function Ranking() {
-  const { user } = useAuth();
-  const [students, setStudents] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRankings = async () => {
-      try {
-        const q = query(
-          collection(db, 'profiles'),
-          where('role', '==', 'student'),
-          orderBy('rankingScore', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const studentsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as User[];
-        setStudents(studentsData);
-      } catch (error) {
-        console.error("Error fetching rankings:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRankings();
-  }, []);
+  const { user, users } = useAuth();
+  
+  // Filter and sort students from the users list in memory
+  // This avoids index issues and collection name mismatches
+  const students = users
+    .filter(u => u.role === 'student' && u.rankingScore !== undefined)
+    .sort((a, b) => (b.rankingScore || 0) - (a.rankingScore || 0));
 
   if (!user) return null;
 
   const userRank = students.findIndex(s => s.id === user.id) + 1;
   const totalStudents = students.length;
-  const percentile = totalStudents > 0 ? Math.round(((totalStudents - userRank + 1) / totalStudents) * 100) : 0;
+  const percentile = totalStudents > 0 && userRank > 0 ? Math.round(((totalStudents - userRank + 1) / totalStudents) * 100) : 0;
 
   const score = user.rankingScore || 0;
   const stats = (user.activityStats || {}) as any;
@@ -93,6 +71,13 @@ export default function Ranking() {
       icon: Bike,
       color: "text-orange-500",
       bg: "bg-orange-50"
+    },
+    {
+      condition: (stats.invitations || 0) === 0,
+      text: "Invitez vos amis à rejoindre CampusBF pour gagner un grand nombre de points !",
+      icon: Users,
+      color: "text-violet-500",
+      bg: "bg-violet-50"
     }
   ].filter(r => r.condition).slice(0, 3);
 
@@ -110,6 +95,7 @@ export default function Ranking() {
     { label: 'Offres MotoRide', value: stats.motoRideOffers || 0, icon: Bike, color: 'text-orange-600', bg: 'bg-orange-50' },
     { label: 'Contacts MotoRide', value: stats.motoRideContacts || 0, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Messages Groupes', value: stats.groupMessages || 0, icon: MessageSquare, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Amis invités', value: stats.invitations || 0, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
   ];
 
   return (
@@ -138,18 +124,12 @@ export default function Ranking() {
               Votre Position
             </h2>
             
-            {loading ? (
-              <div className="h-20 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-4">
-                 <div className="text-6xl font-bold text-center mb-2">
-                    #{userRank}
-                 </div>
-                 <p className="text-slate-400 font-medium">Sur {totalStudents} étudiants</p>
-              </div>
-            )}
+            <div className="flex flex-col items-center py-4">
+               <div className="text-6xl font-bold text-center mb-2">
+                  #{userRank || '?'}
+               </div>
+               <p className="text-slate-400 font-medium">Sur {totalStudents} étudiants</p>
+            </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
               <div className="flex justify-between items-center mb-2">
