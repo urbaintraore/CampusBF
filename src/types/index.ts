@@ -114,7 +114,9 @@ export interface User {
     description: string;
   }[];
   createdAt?: any;
-  inviteCount?: number;
+  referralCode?: string;
+  referralsCount?: number;
+  inviteCount?: number; // Added back for compatibility
   invitedUsers?: string[];
 }
 

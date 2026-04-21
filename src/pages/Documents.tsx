@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock } from 'lucide-react';
+import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
@@ -31,6 +32,7 @@ export default function Documents() {
   const [selectedYear, setSelectedYear] = useState('Toutes les années');
   const [selectedSubject, setSelectedSubject] = useState('Toutes les matières');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadUniversity, setUploadUniversity] = useState('Université Joseph Ki-Zerbo');
   const [customUniversity, setCustomUniversity] = useState('');
@@ -272,16 +274,16 @@ export default function Documents() {
   };
 
   const handleView = (docUrl: string) => {
-    if (!canDownloadOrView()) {
-      alert("Pour voir ou télécharger un document, vous devez d'abord rejoindre un groupe dans la section Communauté et y poster ou répondre à un message.");
+    if ((user?.referralsCount || 0) < 5) {
+      setShowInviteModal(true);
       return;
     }
-    window.open(docUrl, '_blank');
+    window.location.href = docUrl; // Open in same tab
   };
 
   const handleDownload = async (docData: any) => {
-    if (!canDownloadOrView()) {
-      alert("Pour voir ou télécharger un document, vous devez d'abord rejoindre un groupe dans la section Communauté et y poster ou répondre à un message.");
+    if ((user?.referralsCount || 0) < 5) {
+      setShowInviteModal(true);
       return;
     }
 
@@ -373,7 +375,10 @@ export default function Documents() {
         )}
       </div>
 
+      {showInviteModal && <InviteFriendsModal onClose={() => setShowInviteModal(false)} />}
+      
       {/* Upload Modal */}
+
       {showUploadModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-xl border border-white/20 rounded-[2rem] max-w-lg w-full p-6 md:p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
@@ -817,14 +822,14 @@ export default function Documents() {
                     <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
                       <button 
                         onClick={() => handleView(doc.downloadUrl)}
-                        className="w-full md:w-auto px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
+                        className="w-full md:w-auto px-4 py-3 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95"
                       >
                         <Eye size={18} />
                         Voir
                       </button>
                       <button 
                         onClick={() => handleDownload(doc)}
-                        className="w-full md:w-auto px-4 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
+                        className="w-full md:w-auto px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-lg bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-95"
                       >
                         <Download size={18} />
                         Télécharger

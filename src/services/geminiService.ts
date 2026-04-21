@@ -17,7 +17,7 @@ const getAiClient = (): GoogleGenAI => {
   // Recréer le client ou le retourner s'il existe déjà
   if (!aiClient) {
     const isPlaceholder = !apiKey || apiKey.toLowerCase() === 'free' || apiKey === 'dummy-key-to-prevent-crash';
-    aiClient = isPlaceholder ? new GoogleGenAI() : new GoogleGenAI({ apiKey });
+    aiClient = isPlaceholder ? new GoogleGenAI({}) : new GoogleGenAI({ apiKey });
   }
   return aiClient;
 };

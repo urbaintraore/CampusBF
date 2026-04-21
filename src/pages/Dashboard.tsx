@@ -248,8 +248,18 @@ export default function Dashboard() {
         ) : (
           [
             { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
-            { label: 'Stages & Emplois', count: internships.length.toString(), color: 'bg-emerald-50/80 text-emerald-700 ring-emerald-100', link: '/internships' },
-            { label: 'Groupes', count: groups.length.toString(), color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/community' },
+            {
+              label: 'Stages & Emplois', 
+              count: internships.length.toString(), 
+              color: 'bg-emerald-600 text-white ring-emerald-600', 
+              link: '/internships' 
+            },
+            { 
+              label: 'Groupes Communautaires', 
+              count: groups.length.toString(), 
+              color: 'bg-purple-600 text-white ring-purple-600', 
+              link: '/community' 
+            },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Formations', count: trainings.filter(t => t.status === 'approved').length.toString(), color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
           ].map((stat) => (
