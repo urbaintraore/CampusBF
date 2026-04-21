@@ -9,19 +9,23 @@ const getAiClient = (): GoogleGenAI => {
   const customKey = typeof window !== 'undefined' ? localStorage.getItem('CAMPUSBF_QUIZ_API_KEY') : null;
   
   // Try to get key from multiple sources
-  const apiKey = customKey ||
+  const rawKey = customKey ||
                  (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
                  (import.meta as any).env?.VITE_GEMINI_API_KEY || 
                  (import.meta as any).env?.GEMINI_API_KEY;
   
-  if (!apiKey && !aiClient) {
-    console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner hors de l'aperçu AI Studio.");
+  // Provide a dummy key if none is found to prevent synchronous crashes in the browser
+  const apiKey = (!rawKey || rawKey.toLowerCase() === 'free' || rawKey === 'dummy-key-to-prevent-crash') 
+                 ? 'AIzaSyDummyKey_To_Prevent_Browser_Crash' 
+                 : rawKey;
+
+  if (apiKey === 'AIzaSyDummyKey_To_Prevent_Browser_Crash' && !aiClient) {
+    console.warn("Clé API Gemini valide non trouvée. Veuillez configurer la clé API.");
   }
   
   // Re-create the client if the key has changed or it doesn't exist
   if (!aiClient || (aiClient as any)._apiKey !== apiKey) {
-    const isPlaceholder = !apiKey || apiKey.toLowerCase() === 'free' || apiKey === 'dummy-key-to-prevent-crash';
-    aiClient = isPlaceholder ? new GoogleGenAI({}) : new GoogleGenAI({ apiKey });
+    aiClient = new GoogleGenAI({ apiKey });
     // Tag the instance with the key so we can detect changes
     if (aiClient) {
        (aiClient as any)._apiKey = apiKey;
@@ -185,6 +189,15 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
     return questions;
   } catch (error: any) {
     console.error("Erreur détaillée lors de la génération du quiz:", error);
+    
+    // Check for specific API Key errors
+    if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('API key not valid')) {
+       throw new Error("La Clé API Gemini est invalide ou incorrecte. Vérifiez qu'elle est bien copiée.");
+    }
+    if (error.message?.includes('NOT_FOUND') || error.message?.includes('not found for API version')) {
+       throw new Error("L'API Gemini n'est pas activée pour cette clé, ou la clé n'a pas accès à Gemini 1.5 Flash.");
+    }
+    
     throw new Error(`Erreur lors de la génération du quiz : ${error.message || 'Erreur inconnue'}`);
   }
 };
