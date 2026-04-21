@@ -453,6 +453,7 @@ export default function AdminDashboard() {
                     <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Marketplace</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">MotoRide</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Messages</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Invitations</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Score Total</th>
                   </tr>
                 </thead>
@@ -512,6 +513,9 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className="text-sm font-bold text-emerald-600">{stats.groupMessages || 0}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-bold text-violet-600">{stats.invitations || 0}</span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg inline-block font-bold text-sm">

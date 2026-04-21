@@ -5,8 +5,12 @@ import { QuizQuestion } from "@/types";
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
-  // Try to get key from multiple sources (process.env for server/node, import.meta.env for browser)
-  const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
+  // Check for a custom API key saved by the user in localStorage first
+  const customKey = typeof window !== 'undefined' ? localStorage.getItem('CAMPUSBF_QUIZ_API_KEY') : null;
+  
+  // Try to get key from multiple sources
+  const apiKey = customKey ||
+                 (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
                  (import.meta as any).env?.VITE_GEMINI_API_KEY || 
                  (import.meta as any).env?.GEMINI_API_KEY;
   
@@ -14,10 +18,14 @@ const getAiClient = (): GoogleGenAI => {
     console.warn("Clé API Gemini non trouvée. L'assistant IA pourrait ne pas fonctionner hors de l'aperçu AI Studio.");
   }
   
-  // Recréer le client ou le retourner s'il existe déjà
-  if (!aiClient) {
+  // Re-create the client if the key has changed or it doesn't exist
+  if (!aiClient || (aiClient as any)._apiKey !== apiKey) {
     const isPlaceholder = !apiKey || apiKey.toLowerCase() === 'free' || apiKey === 'dummy-key-to-prevent-crash';
     aiClient = isPlaceholder ? new GoogleGenAI({}) : new GoogleGenAI({ apiKey });
+    // Tag the instance with the key so we can detect changes
+    if (aiClient) {
+       (aiClient as any)._apiKey = apiKey;
+    }
   }
   return aiClient;
 };

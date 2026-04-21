@@ -22,11 +22,18 @@ export default function Quizzes() {
   const [aiDifficulty, setAiDifficulty] = useState('Moyen');
   const [aiLanguage, setAiLanguage] = useState('Français');
   const [aiInstructions, setAiInstructions] = useState('');
+  const [customApiKey, setCustomApiKey] = useState(typeof window !== 'undefined' ? localStorage.getItem('CAMPUSBF_QUIZ_API_KEY') || '' : '');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerateAIQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiSubject.trim()) return;
+
+    if (customApiKey) {
+      localStorage.setItem('CAMPUSBF_QUIZ_API_KEY', customApiKey.trim());
+    } else {
+      localStorage.removeItem('CAMPUSBF_QUIZ_API_KEY');
+    }
 
     const loadingToast = toast.loading('Génération du quiz par l\'IA...');
     try {
@@ -247,6 +254,22 @@ export default function Quizzes() {
                 onChange={(e) => setAiInstructions(e.target.value)}
                 placeholder="Ex: Concentre-toi particulièrement sur les dates clés. N'utilise pas de questions Vrai/Faux..."
                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all resize-y min-h-[100px]"
+              />
+            </div>
+
+            <div className="space-y-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                Clé API Gemini (Optionnel)
+              </label>
+              <p className="text-xs text-slate-500 mb-2">
+                Si vous avez des erreurs de quota, vous pouvez utiliser votre propre clé API Google Gemini. Elle sera sauvegardée localement sur votre navigateur.
+              </p>
+              <input
+                type="password"
+                value={customApiKey}
+                onChange={(e) => setCustomApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full p-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-sm"
               />
             </div>
 
