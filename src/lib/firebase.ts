@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -10,6 +11,11 @@ export const auth = getAuth(app);
 auth.languageCode = 'fr';
 export const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
+
+export const messaging = async () => {
+  const supported = await isSupported();
+  return supported ? getMessaging(app) : null;
+};
 
 export enum OperationType {
   CREATE = 'create',

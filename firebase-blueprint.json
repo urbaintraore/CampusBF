@@ -9,6 +9,9 @@
         "university": { "type": "string" },
         "referralCode": { "type": "string" },
         "referralsCount": { "type": "number" },
+        "fcmToken": { "type": "string" },
+        "notificationPreferences": { "type": "object" },
+        "lastActiveAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["referralCode", "referralsCount", "createdAt"]
@@ -23,6 +26,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["inviterId", "invitedUserId", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Historique des notifications utilisateur",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["documents", "internships", "forums", "contests", "events", "system"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "type", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -33,6 +50,10 @@
     "/referrals/{referralId}": {
       "schema": "Referral",
       "description": "Suivi des parrainages"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Historique des notifications"
     }
   }
 }

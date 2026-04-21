@@ -5,62 +5,70 @@ service cloud.firestore {
     // Helper functions
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function getUser(userId) { return get(/databases/$(database)/documents/users/$(userId)).data; }
 
-    // Collections with default access for authenticated users
-    match /ads/{document=**} { allow read: if isSignedIn(); }
-    match /documents/{document=**} { allow read: if isSignedIn(); }
-    match /internships/{document=**} { allow read: if isSignedIn(); }
-    match /events/{document=**} { allow read: if isSignedIn(); }
-    match /groups/{document=**} { allow read: if isSignedIn(); }
-    match /posts/{document=**} { allow read: if isSignedIn(); }
-    match /news/{document=**} { allow read: if isSignedIn(); }
-    match /lostAndFound/{document=**} { allow read: if isSignedIn(); }
-    match /reports/{document=**} { allow read: if isSignedIn(); }
-    match /quizzes/{document=**} { allow read: if isSignedIn(); }
-    match /contests/{document=**} { allow read: if isSignedIn(); }
-    match /deals/{document=**} { allow read: if isSignedIn(); }
-    match /deal_suggestions/{document=**} { allow read: if isSignedIn(); }
-    match /colocations/{document=**} { allow read: if isSignedIn(); }
-    match /colocation_requests/{document=**} { allow read: if isSignedIn(); }
-    match /colocation_reviews/{document=**} { allow read: if isSignedIn(); }
-    match /contest_participants/{document=**} { allow read: if isSignedIn(); }
-    match /training_enrollments/{document=**} { allow read: if isSignedIn(); }
-    match /training_reviews/{document=**} { allow read: if isSignedIn(); }
-    match /marketplace/{document=**} { allow read: if isSignedIn(); }
-    match /motoRides/{document=**} { allow read: if isSignedIn(); }
-    match /trainings/{document=**} { allow read: if isSignedIn(); }
-    match /notifications/{document=**} { allow read: if isSignedIn(); }
-    match /applications/{document=**} { allow read: if isSignedIn(); }
-    match /teacherApplications/{document=**} { allow read: if isSignedIn(); }
-    match /subscriptionRequests/{document=**} { allow read: if isSignedIn(); }
-    match /training_reports/{document=**} { allow read: if isSignedIn(); }
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Test connection
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Public/Authenticated Base Collections
+    match /ads/{document=**} { allow read, write: if isSignedIn(); }
+    match /documents/{document=**} { allow read, write: if isSignedIn(); }
+    match /internships/{document=**} { allow read, write: if isSignedIn(); }
+    match /events/{document=**} { allow read, write: if isSignedIn(); }
+    match /groups/{document=**} { allow read, write: if isSignedIn(); }
+    match /communityGroups/{document=**} { allow read, write: if isSignedIn(); }
+    match /posts/{document=**} { allow read, write: if isSignedIn(); }
+    match /news/{document=**} { allow read, write: if isSignedIn(); }
+    match /lostAndFound/{document=**} { allow read, write: if isSignedIn(); }
+    match /reports/{document=**} { allow read, write: if isSignedIn(); }
+    match /quizzes/{document=**} { allow read, write: if isSignedIn(); }
+    match /contests/{document=**} { allow read, write: if isSignedIn(); }
+    match /deals/{document=**} { allow read, write: if isSignedIn(); }
+    match /deal_suggestions/{document=**} { allow read, write: if isSignedIn(); }
+    match /colocations/{document=**} { allow read, write: if isSignedIn(); }
+    match /colocation_requests/{document=**} { allow read, write: if isSignedIn(); }
+    match /colocation_reviews/{document=**} { allow read, write: if isSignedIn(); }
+    match /contest_participants/{document=**} { allow read, write: if isSignedIn(); }
+    match /training_enrollments/{document=**} { allow read, write: if isSignedIn(); }
+    match /training_reviews/{document=**} { allow read, write: if isSignedIn(); }
+    match /marketplace/{document=**} { allow read, write: if isSignedIn(); }
+    match /motoRides/{document=**} { allow read, write: if isSignedIn(); }
+    match /trainings/{document=**} { allow read, write: if isSignedIn(); }
+    match /notifications/{document=**} { 
+      allow read: if isOwner(resource.data.userId); 
+      allow update: if isOwner(resource.data.userId);
+      allow create: if isSignedIn();
+      allow delete: if isOwner(resource.data.userId);
+    }
+    match /applications/{document=**} { allow read, write: if isSignedIn(); }
+    match /teacherApplications/{document=**} { allow read, write: if isSignedIn(); }
+    match /subscriptionRequests/{document=**} { allow read, write: if isSignedIn(); }
+    match /training_reports/{document=**} { allow read, write: if isSignedIn(); }
     match /logs/{document=**} { allow read, create: if isSignedIn(); }
-
-    // Users collection
-    match /users {
-      allow list: if isSignedIn();
-      match /{userId} {
-        allow read: if isSignedIn();
-        allow create: if isOwner(userId) && request.resource.data.referralsCount == 0;
-        allow update: if isOwner(userId) && request.resource.data.referralsCount >= resource.data.referralsCount;
-      }
+    
+    // Profiles collection
+    match /profiles/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); 
     }
 
     // Referrals collection
-    match /referrals {
-      allow list: if isSignedIn();
-      match /{referralId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() 
-          && request.resource.data.inviterId != request.resource.data.invitedUserId
-          && request.resource.data.invitedUserId == request.auth.uid;
-      }
+    match /referrals/{document=**} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
     }
 
-    // Documents collection (Protected)
-    match /documents/{docId} {
+    // Users collection
+    match /users/{document=**} {
       allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn(); // Broaden for referral updates
     }
   }
 }

@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import { deleteDoc } from 'firebase/firestore';
 
 export default function Events() {
-  const { user, events, users, logAction, contests, contestParticipants, registerForContest } = useAuth();
+  const { user, events, users, logAction, contests, contestParticipants, registerForContest, addEvent } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'organized'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventAttendees, setSelectedEventAttendees] = useState<CampusEvent | null>(null);
@@ -158,23 +158,7 @@ export default function Events() {
           logAction('Modification événement', `Événement: ${newEvent.title}`);
         }
       } else {
-        await addDoc(collection(db, 'events'), {
-          ...newEvent,
-          organizerId: user.id,
-          organizer: {
-            id: user.id,
-            firstName: user.firstName || 'Utilisateur',
-            lastName: user.lastName || '',
-            avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
-            role: user.role || 'student'
-          },
-          attendees: [user.id],
-          createdAt: new Date().toISOString()
-        });
-
-        if (logAction) {
-          logAction('Création événement', `Événement: ${newEvent.title}`);
-        }
+        await addEvent(newEvent);
         toast.success('Événement publié !');
       }
 

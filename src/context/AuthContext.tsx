@@ -20,6 +20,7 @@ import { referralService } from '@/services/referralService';
 import { quizService } from '@/services/quizService';
 import { dealService } from '@/services/dealService';
 import { colocationService } from '@/services/colocationService';
+import { requestNotificationPermission } from '@/services/messagingService';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -98,6 +99,7 @@ interface AuthContextType {
   updateDocument: (id: string, data: Partial<any>) => Promise<void>;
   addDocument: (data: any) => Promise<void>;
   deleteInternship: (id: string) => Promise<void>;
+  triggerNotification: (type: 'document' | 'internship' | 'contest' | 'event' | 'reply', data: any) => Promise<void>;
   updateInternship: (id: string, data: Partial<Internship>) => Promise<void>;
   addInternship: (data: Omit<Internship, 'id' | 'createdAt'>) => Promise<void>;
   applyInternship: (data: any) => Promise<void>;
@@ -107,6 +109,8 @@ interface AuthContextType {
   deletePost: (id: string) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   deleteNews: (id: string) => Promise<void>;
+  addEvent: (event: Omit<CampusEvent, 'id' | 'createdAt' | 'organizerId' | 'organizer' | 'attendees'>) => Promise<void>;
+  addComment: (postId: string, content: string, fileUrl?: string, fileType?: string, fileName?: string) => Promise<void>;
   deleteLostAndFound: (id: string) => Promise<void>;
   deleteReport: (id: string) => Promise<void>;
   deleteMotoRide: (id: string) => Promise<void>;
@@ -287,20 +291,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        console.log("Fetching user doc for:", firebaseUser.uid);
-        let userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        
+        console.log("Auth State Changed for user:", firebaseUser.uid);
         let initialUserData: User;
+        
+        console.log("Fetching user doc for:", firebaseUser.uid);
+        let userDoc;
+        try {
+          userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        } catch (err: any) {
+          console.error("Firestore getDoc error for users collection:", err);
+          handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
+          return;
+        }
 
         if (userDoc.exists()) {
+          console.log("User doc exists, updating last active...");
           const data = userDoc.data();
           initialUserData = { id: firebaseUser.uid, ...data } as User;
           
-          if (isAdminEmail(firebaseUser.email) && initialUserData.role !== 'admin') {
-            initialUserData.role = 'admin';
-            await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+          // Mise à jour de la dernière activité
+          try {
+            await updateDoc(doc(db, 'users', firebaseUser.uid), {
+              lastActiveAt: serverTimestamp()
+            });
+          } catch (err: any) {
+             console.error("Firestore updateDoc error for lastActiveAt:", err);
+             // Non-critical, continue
+          }
+
+          // Demande de permission pour les notifications
+          setTimeout(() => {
+            requestNotificationPermission(firebaseUser.uid);
+          }, 3000);
+          
+          if (isAdminEmail(firebaseUser.email) && (initialUserData as any).role !== 'admin') {
+            console.log("Upgrading user to admin...");
+            (initialUserData as any).role = 'admin';
+            try {
+              await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+            } catch (err: any) {
+               console.error("Firestore updateDoc error for role upgrade:", err);
+            }
           }
         } else {
+          console.log("User doc does not exist, creating new user...");
           const newUser: Partial<User> = {
             firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
             lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
@@ -309,18 +343,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
             avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
             status: 'active',
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+            referralsCount: 0,
+            inviteCount: 0,
+            invitedUsers: []
           };
-          await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-          initialUserData = { id: firebaseUser.uid, ...newUser } as User;
-          await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+          try {
+            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+            initialUserData = { id: firebaseUser.uid, ...newUser } as User;
+            await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+          } catch (err: any) {
+             console.error("Firestore setDoc error for new user creation:", err);
+             handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
+             return;
+          }
         }
 
+        console.log("Setting user state:", initialUserData.id);
         setUser(initialUserData);
         // Log login
-        await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
-      } catch (error) {
-        console.error("Error in onAuthStateChanged:", error);
+        try {
+          await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
+        } catch (err: any) {
+          console.error("Error logging login action:", err);
+        }
+      } catch (error: any) {
+        console.error("Unexpected error in onAuthStateChanged:", error);
+        if (error.message && error.message.includes('{')) {
+          // Already handled by handleFirestoreError and caught here
+          throw error;
+        }
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -596,6 +649,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         university: userData.university || '',
         role: isAdminEmail(userData.email) ? 'admin' : (userData.role || 'student'),
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+        referralsCount: 0,
+        inviteCount: 0,
+        invitedUsers: []
       };
 
       if (userData.major) newUser.major = userData.major;
@@ -778,10 +837,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addDocument = async (data: any) => {
     await documentService.addDocument(data);
+    await triggerNotification('document', {
+      title: data.title,
+      subject: data.subject,
+      university: data.university,
+      major: data.major
+    });
   };
 
   const deleteInternship = async (id: string) => {
     await internshipService.deleteInternship(id);
+  };
+
+  const triggerNotification = async (type: 'document' | 'internship' | 'contest' | 'event' | 'reply', data: any) => {
+    try {
+      await fetch(`/api/notify/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      console.error(`Error triggering ${type} notification:`, error);
+    }
   };
 
   const updateInternship = async (id: string, data: Partial<Internship>) => {
@@ -790,6 +867,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addInternship = async (data: Omit<Internship, 'id' | 'createdAt'>) => {
     await internshipService.addInternship(data);
+    await triggerNotification('internship', {
+      title: data.title,
+      company: data.company,
+      major: (data as any).major || 'Autre',
+      level: (data as any).level || ''
+    });
   };
 
   const applyInternship = async (data: any) => {
@@ -850,6 +933,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteNews = async (id: string) => {
     await contentService.deleteContent('news', id);
+  };
+
+  const addEvent = async (eventData: Omit<CampusEvent, 'id' | 'createdAt' | 'organizerId' | 'organizer' | 'attendees'>) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'events'), {
+        ...eventData,
+        organizerId: user.id,
+        organizer: {
+          id: user.id,
+          firstName: user.firstName || 'Utilisateur',
+          lastName: user.lastName || '',
+          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+          role: user.role || 'student'
+        },
+        attendees: [user.id],
+        createdAt: new Date().toISOString()
+      });
+      await logAction('Création événement', `Événement: ${eventData.title}`);
+      await triggerNotification('event', { title: eventData.title, university: user.university });
+    } catch (error) {
+      console.error('Error adding event:', error);
+      throw error;
+    }
+  };
+
+  const addComment = async (postId: string, content: string, fileUrl?: string, fileType?: string, fileName?: string) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'comments'), {
+        postId,
+        authorId: user.id,
+        author: {
+          id: user.id,
+          firstName: user.firstName || 'Utilisateur',
+          lastName: user.lastName || '',
+          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+          role: user.role || 'student'
+        },
+        content,
+        fileUrl: fileUrl || '',
+        fileType: fileType || '',
+        fileName: fileName || '',
+        createdAt: serverTimestamp(),
+      });
+      
+      const post = community.find(p => p.id === postId);
+      if (post && post.authorId !== user.id) {
+        await triggerNotification('reply', {
+          userId: post.authorId,
+          discussionTitle: post.content.substring(0, 30) + '...'
+        });
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
   };
 
   const deleteLostAndFound = async (id: string) => {
@@ -1161,6 +1301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateDocument,
     addDocument,
       deleteInternship,
+      triggerNotification,
       updateInternship,
       addInternship,
       applyInternship,
@@ -1170,6 +1311,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reviewMarketplaceItem,
       deletePost,
       deleteEvent,
+      addEvent,
+      addComment,
       deleteNews,
       deleteLostAndFound,
       deleteReport,

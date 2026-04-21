@@ -118,6 +118,15 @@ export interface User {
   referralsCount?: number;
   inviteCount?: number; // Added back for compatibility
   invitedUsers?: string[];
+  fcmToken?: string;
+  notificationPreferences?: {
+    documents: boolean;
+    internships: boolean;
+    forums: boolean;
+    contests: boolean;
+    events: boolean;
+  };
+  lastActiveAt?: any;
 }
 
 export interface Training {

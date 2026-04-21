@@ -22,7 +22,7 @@ import autoTable from 'jspdf-autotable';
 import { uploadFile } from '@/services/storageService';
 
 export default function Community() {
-  const { user, groups, users, addGroupMember, removeGroupMember, logAction } = useAuth();
+  const { user, groups, users, addGroupMember, removeGroupMember, logAction, addComment } = useAuth();
   const [postContent, setPostContent] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -217,22 +217,7 @@ export default function Community() {
         console.log("[Community] Comment file uploaded:", fileUrl);
       }
 
-      await addDoc(collection(db, 'comments'), {
-        postId,
-        authorId: user.id,
-        author: {
-          id: user.id,
-          firstName: user.firstName || 'Utilisateur',
-          lastName: user.lastName || '',
-          avatarUrl: user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
-          role: user.role || 'student'
-        },
-        content: commentContent,
-        fileUrl,
-        fileType,
-        fileName,
-        createdAt: serverTimestamp(),
-      });
+      await addComment(postId, commentContent, fileUrl, fileType, fileName);
 
       setCommentContent('');
       setSelectedCommentFile(null);

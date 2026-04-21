@@ -22,7 +22,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
-  const { user, documents: globalDocuments, logAction, groups, community } = useAuth();
+  const { user, documents: globalDocuments, logAction, groups, community, addDocument } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
@@ -256,7 +256,7 @@ export default function Documents() {
       }
 
       console.log("[Documents] Ajout à Firestore:", newDoc);
-      await addDoc(collection(db, 'documents'), newDoc);
+      await addDocument(newDoc);
       console.log("[Documents] Document ajouté avec succès.");
       
       if (logAction) {

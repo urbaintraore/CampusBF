@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
 
+import { NotificationsCenter } from '@/components/NotificationsCenter';
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -248,59 +250,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                <div className="p-4 border-b border-slate-50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-900">Notifications</h3>
-                  <button 
-                    onClick={() => {
-                      userNotifications.forEach(n => {
-                        if (!n.read) markNotificationAsRead(n.id);
-                      });
-                    }}
-                    className="text-xs text-emerald-600 font-medium hover:underline"
-                  >
-                    Tout marquer comme lu
-                  </button>
-                </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {userNotifications.length > 0 ? (
-                    userNotifications.map((notif) => (
-                      <div 
-                        key={notif.id} 
-                        className={cn("p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer", !notif.read && "bg-emerald-50/30")}
-                        onClick={() => {
-                          if (!notif.read) markNotificationAsRead(notif.id);
-                        }}
-                      >
-                        <div className="flex gap-3">
-                          {!notif.read && (
-                            <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-red-500"></div>
-                          )}
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{notif.title}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{notif.message}</p>
-                            <p className="text-[10px] text-slate-400 mt-2">{new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-slate-400 text-sm">
-                      Aucune notification
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 bg-slate-50 text-center border-t border-slate-100">
-                  <button 
-                    onClick={() => {
-                      setShowNotifications(false);
-                      navigate('/notifications');
-                    }}
-                    className="text-xs font-medium text-slate-600 hover:text-emerald-600"
-                  >
-                    Voir tout l'historique
-                  </button>
-                </div>
+              <div className="absolute right-0 mt-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                <NotificationsCenter onClose={() => setShowNotifications(false)} />
               </div>
             )}
           </div>
