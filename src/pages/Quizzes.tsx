@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { generateQuizWithAI } from '@/services/geminiService';
-import { Brain, Sparkles, BookOpen, Plus, Play, Layers } from 'lucide-react';
+import { Brain, Sparkles, BookOpen, Plus, Play, Layers, Key } from 'lucide-react';
 import { Quiz, QuizQuestion } from '@/types';
 import { QuizPlayer } from '@/components/QuizPlayer';
 import { FlashcardPlayer } from '@/components/FlashcardPlayer';
@@ -257,19 +257,20 @@ export default function Quizzes() {
               />
             </div>
 
-            <div className="space-y-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+            <div className="space-y-2 p-5 bg-purple-50 rounded-2xl border border-purple-100">
+              <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Key size={18} className="text-purple-600" />
                 Clé API Gemini (Optionnel)
               </label>
-              <p className="text-xs text-slate-500 mb-2">
-                Si vous avez des erreurs de quota, vous pouvez utiliser votre propre clé API Google Gemini. Elle sera sauvegardée localement sur votre navigateur.
+              <p className="text-xs text-slate-600 mb-3">
+                Si vous obtenez des erreurs "Quota exceeded", vous pouvez saisir votre propre clé API Google Gemini. Elle sera sauvegardée uniquement dans votre navigateur actuel.
               </p>
               <input
                 type="password"
                 value={customApiKey}
                 onChange={(e) => setCustomApiKey(e.target.value)}
-                placeholder="AIzaSy..."
-                className="w-full p-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-sm"
+                placeholder="Ex: AIzaSy..."
+                className="w-full p-4 bg-white border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-sm font-mono"
               />
             </div>
 
