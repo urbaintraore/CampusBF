@@ -110,6 +110,7 @@ Modèle de format attendu pour l'output :
       contents: prompt,
       config: {
         responseMimeType: "application/json",
+        maxOutputTokens: 8192, // Augmentation pour éviter les troncatures sur de longs quiz
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -119,7 +120,6 @@ Modèle de format attendu pour l'output :
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  id: { type: Type.STRING },
                   type: { 
                     type: Type.STRING, 
                     enum: ['multiple_choice', 'true_false', 'short_answer', 'matching', 'numerical', 'cloze', 'calculated', 'drag_drop', 'essay', 'description']
@@ -132,7 +132,7 @@ Modèle de format attendu pour l'output :
                   correctTextAnswer: { type: Type.STRING },
                   correctNumericAnswer: { type: Type.NUMBER },
                 },
-                required: ["id", "type", "question", "explanation"]
+                required: ["type", "question", "explanation"]
               }
             }
           },
@@ -146,12 +146,18 @@ Modèle de format attendu pour l'output :
       throw new Error("L'IA n'a renvoyé aucun résultat.");
     }
 
-    const data = JSON.parse(resultText);
+    let data;
+    try {
+      data = JSON.parse(resultText);
+    } catch (e) {
+      console.error("JSON Parse Error. Full text:", resultText);
+      throw new Error("L'IA a généré une réponse trop longue ou malformée. Essayez de réduire le nombre de questions demandées.");
+    }
     
     // Traitement post-génération pour assurer la compatibilité
     const processedQuestions = data.questions.map((q: any) => {
       if (!q.options) q.options = [];
-      if (!q.id) q.id = 'q_' + Math.random().toString(36).substring(2, 9);
+      q.id = 'q_' + Math.random().toString(36).substring(2, 9);
       if (q.type === 'true_false' && q.options.length !== 2) {
         q.options = ['Vrai', 'Faux'];
       }
@@ -204,12 +210,12 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
       contents: prompt,
       config: {
         responseMimeType: "application/json",
+        maxOutputTokens: 8192,
         responseSchema: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              id: { type: Type.STRING },
               type: { 
                 type: Type.STRING, 
                 enum: ['multiple_choice', 'true_false', 'matching', 'short_answer', 'numerical', 'calculated', 'essay', 'cloze', 'description']
@@ -251,7 +257,7 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
                 }
               }
             },
-            required: ["id", "type", "question", "explanation"]
+            required: ["type", "question", "explanation"]
           }
         }
       }
@@ -262,7 +268,13 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
       throw new Error("Gemini n'a renvoyé aucun texte.");
     }
     
-    const rawQuestions: any[] = JSON.parse(text);
+    let rawQuestions: any[];
+    try {
+      rawQuestions = JSON.parse(text);
+    } catch (e) {
+      console.error("JSON Parse Error (Simple Generator):", text);
+      throw new Error("Réponse de l'IA tronquée. Essayez de demander moins de questions.");
+    }
     
     // Conversion et nettoyage
     const questions: QuizQuestion[] = rawQuestions.map((q, index) => {

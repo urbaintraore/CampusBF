@@ -229,8 +229,16 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Questions à générer</label>
-                    <input type="number" min={1} max={50} value={numQuestions} onChange={e => setNumQuestions(Number(e.target.value))} className="w-full p-3 bg-white/10 border border-white/20 rounded-xl outline-none" />
+                    <label className="block text-sm font-medium mb-1">Questions à générer (max recommandé: 20)</label>
+                    <input 
+                      type="number" 
+                      min={1} 
+                      max={50} 
+                      value={numQuestions} 
+                      onChange={e => setNumQuestions(Number(e.target.value))} 
+                      className={`w-full p-3 bg-white/10 border rounded-xl outline-none transition-colors ${numQuestions > 20 ? 'border-orange-400' : 'border-white/20'}`} 
+                    />
+                    {numQuestions > 20 && <p className="text-[10px] text-orange-200 mt-1 font-medium">⚠️ Trop de questions peuvent être tronquées par l'IA.</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Difficulté IA</label>
