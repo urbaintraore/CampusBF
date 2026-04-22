@@ -10,7 +10,7 @@ export default function Ranking() {
   // Filter and sort students from the users list in memory
   // This avoids index issues and collection name mismatches
   const students = users
-    .filter(u => u.role === 'student' && u.rankingScore !== undefined)
+    .filter(u => u.role === 'student')
     .sort((a, b) => (b.rankingScore || 0) - (a.rankingScore || 0));
 
   if (!user) return null;

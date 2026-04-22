@@ -72,9 +72,9 @@ export const contestService = {
       }
 
       if (contest.conditions.minInvites > 0) {
-        const referralCount = await referralService.getReferralCount(user.id);
+        const referralCount = user.inviteCount || 0;
         if (referralCount < contest.conditions.minInvites) {
-          throw new Error(`Vous devez inviter au moins ${contest.conditions.minInvites} personnes pour participer.`);
+          throw new Error(`Vous devez inviter au moins ${contest.conditions.minInvites} personnes pour participer. (Actuel: ${referralCount})`);
         }
       }
 

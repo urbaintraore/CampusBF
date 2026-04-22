@@ -707,7 +707,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
         referralsCount: 0,
         inviteCount: 0,
-        invitedUsers: []
+        invitedUsers: [],
+        rankingScore: 1,
+        activityStats: {
+          logins: 1,
+          docsViewed: 0,
+          docsDownloaded: 0,
+          eventsViewed: 0,
+          eventParticipations: 0,
+          contestParticipations: 0,
+          marketplacePosts: 0,
+          marketplaceContacts: 0,
+          quizzesCompleted: 0,
+          cvGenerated: 0,
+          motoRideOffers: 0,
+          motoRideContacts: 0,
+          groupMessages: 0,
+          invitations: 0
+        }
       };
 
       if (userData.major) newUser.major = userData.major;

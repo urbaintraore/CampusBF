@@ -57,13 +57,25 @@ export default function Events() {
     return contests.find(c => c.title.toLowerCase().trim() === eventTitle.toLowerCase().trim());
   };
 
-  const getEventParticipantCount = (event: CampusEvent) => {
+  const getEventParticipants = (event: CampusEvent) => {
+    const attendees = event.attendees || [];
     const linkedContest = getContestForEvent(event.title);
+    
     if (linkedContest) {
-      // Return count of participants in the contest
-      return contestParticipants.filter(p => p.contestId === linkedContest.id).length;
+      const participants = contestParticipants
+        .filter(p => p.contestId === linkedContest.id)
+        .map(p => p.userId);
+        
+      // Merge and remove duplicates
+      const allParticipantIds = Array.from(new Set([...attendees, ...participants]));
+      return allParticipantIds;
     }
-    return event.attendees?.length || 0;
+    
+    return attendees;
+  };
+
+  const getEventParticipantCount = (event: CampusEvent) => {
+    return getEventParticipants(event).length;
   };
 
   const formatDate = (dateString: string) => {
@@ -741,8 +753,8 @@ export default function Events() {
             
             <div className="p-6 overflow-y-auto">
               <div className="space-y-4">
-                {(selectedEventAttendees.attendees?.length || 0) > 0 ? (
-                  selectedEventAttendees.attendees.map((attendeeId) => {
+                {getEventParticipants(selectedEventAttendees).length > 0 ? (
+                  getEventParticipants(selectedEventAttendees).map((attendeeId) => {
                     const attendee = users.find(u => u.id === attendeeId);
                     return (
                       <div key={attendeeId} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">

@@ -45,7 +45,7 @@ export const createCampusAssistantChat = () => {
   return ai.chats.create({
     model: "gemini-3-flash-preview",
     config: {
-      systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire au Burkina Faso. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, l'organisation d'événements, la recherche de camarades, et la participation à des concours (Contests).\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions, NE gère PAS le paiement des frais de scolarité, et NE propose PAS de suivi pédagogique (notes, emplois du temps). Si un utilisateur pose une question sur ces sujets, réponds poliment que ces fonctionnalités ne sont pas disponibles sur CampusBF.\n3. Règles des Concours : Pour participer à certains concours, les utilisateurs doivent inviter un nombre minimum d'étudiants via leur lien d'invitation unique (disponible sur la page du concours).\n4. Règles des Documents : Seuls les utilisateurs avec un profil complet (sauf les étudiants) peuvent partager des documents. Pour qu'un étudiant puisse voir ou télécharger un document, il doit d'abord rejoindre un groupe dans la section Communauté et y publier ou répondre à un message.\n5. Sois concis, amical et utilise des emojis de temps en temps.",
+      systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire au Burkina Faso. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, l'organisation d'événements, la recherche de camarades, et la participation à des concours (Contests).\n\nEXPERTISE ACADÉMIQUE :\nTu as une expertise particulière dans les programmes universitaires francophones, particulièrement en Mathématiques. Applique une distinction stricte dans le domaine de l'Algèbre :\n- Algèbre Structurelle/Générale : Logique, Théorie des ensembles, Relations, Structures (Groupes, Anneaux, Corps), Polynômes, Fractions rationnelles.\n- Algèbre Linéaire : Matrices, Espaces vectoriels, Systèmes linéaires.\nRéponds avec précision aux questions académiques en utilisant ce vocabulaire spécialisé.\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions.\n3. Sois concis, amical et utilise des emojis.",
     }
   });
 };
@@ -76,7 +76,8 @@ export const generateAdvancedQuizWithAI = async (
     const lang = options?.language || 'Français';
     const typesStr = options?.questionTypes?.join(', ') || 'multiple_choice, true_false, short_answer';
     
-    const prompt = `Génère un quiz universitaire à partir du texte source ci-dessous.
+    const prompt = `Tu es un Professeur Expert en Mathématiques et concepteur de quiz académiques. Ta spécialité est l'Algèbre universitaire (Structures algébriques et Algèbre générale).
+Génère un quiz universitaire de haute précision à partir du texte source ci-dessous.
 
 Matière : ${subject}
 Niveau universitaire : ${level}
@@ -85,6 +86,13 @@ Langue requise : ${lang}
 ${options?.difficulty ? `Difficulté : ${options.difficulty}` : ''}
 ${options?.instructions ? `Instructions : ${options.instructions}` : ''}
 Types de questions autorisés : ${typesStr}
+
+### Expertise Spécifique (Catégorisation des matières) :
+Si le sujet est "Algèbre", tu dois faire une distinction TRÈS stricte entre :
+1. Algèbre Générale/Structurelle : Logique, Théorie des ensembles, Relations (équivalence, ordre), Groupes, Anneaux (Rings), Corps (Fields), Polynômes, Algèbre de Boole, et Fractions rationnelles.
+2. Algèbre Linéaire : Espaces vectoriels, Matrices, Applications linéaires, Déterminants, Systèmes linéaires.
+
+NE MÉLANGE PAS ces deux domaines. Si l'utilisateur demande une matière de la liste 1 (ex: Anneaux), ne pose aucune question sur la liste 2 (ex: Matrices).
 
 Texte source :
 """
@@ -187,7 +195,15 @@ export const generateQuizWithAI = async (subject: string, level: string, numQues
     const instructionsStr = options?.instructions ? `\nInstructions spécifiques de l'utilisateur : ${options.instructions}` : '';
     const languageStr = options?.language ? `\nLa langue du quiz doit être : ${options.language}.` : '\nLa langue du quiz doit être : Français.';
 
-    const prompt = `Génère un quiz interactif riche de niveau ${level} sur le sujet suivant : "${subject}".
+    const prompt = `Tu es un Professeur Expert en Mathématiques et concepteur de quiz académiques spécialisé dans l'enseignement universitaire en Afrique francophone.
+Génère un quiz interactif riche de niveau ${level} sur le sujet suivant : "${subject}".
+
+### Expertise Mathématique (Classification des matières) :
+Si le sujet concerne l'Algèbre, respecte strictement cette classification :
+- Algèbre de base/générale : Logique mathématique, Relations binaires (équivalence, ordre), Structures (Groupes, Anneaux, Corps), Algèbre de Boole, Polynômes et Fractions rationnelles.
+- Algèbre Linéaire : Espaces vectoriels, Matrices, Déterminants, Réduction d'endomorphismes.
+RESTE focalisé uniquement sur le sujet "${subject}". Ne dérive pas vers l'algèbre linéaire si le sujet appartient à l'algèbre générale.
+
 Le quiz doit contenir exactement ${numQuestions} questions.${difficultyStr}${languageStr}${instructionsStr}
 Utilise une variété de types de questions inspirés de Moodle pour rendre le quiz engageant :
 1. multiple_choice : Choix multiples classiques (QCM).
