@@ -92,16 +92,18 @@ ${courseText}
 """
 
 Contraintes strictes :
-- Renvoie un objet JSON contenant "title" et "questions".
-- Chaque question doit être claire, extraite du texte fourni.
-- Fournir une explication complète ("explanation") pour chaque question.
-- Utilise des questions de types variés si possible selon les types demandés.
+- Renvoie un objet JSON valide et complet.
+- Chaque question doit être extraite ou basée sur le texte fourni.
+- Fournir une explication pédagogique concise ("explanation") pour chaque question.
+- Utilise des questions de types variés.
+- Ne pas générer de champs inutiles ou de tableaux excessivement longs.
+- Pour les QCM, fournis exactement une 'correctAnswerIndex' correspondant à l'index de la bonne réponse.
 
 Modèle de format attendu pour l'output :
 {
-  "title": "Titre suggéré du quiz",
+  "title": "Titre du quiz",
   "questions": [
-    // format standard attendu pour vos questions (id, type, question, options, pointsPerOption, correctAnswerIndex, explanation, etc.)
+    { "type": "multiple_choice", "question": "...", "options": ["...", "..."], "correctAnswerIndex": 0, "explanation": "..." }
   ]
 }`;
 
@@ -126,7 +128,6 @@ Modèle de format attendu pour l'output :
                   },
                   question: { type: Type.STRING },
                   options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  pointsPerOption: { type: Type.ARRAY, items: { type: Type.NUMBER } },
                   correctAnswerIndex: { type: Type.NUMBER },
                   explanation: { type: Type.STRING },
                   correctTextAnswer: { type: Type.STRING },
@@ -225,10 +226,7 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
                 type: Type.ARRAY,
                 items: { type: Type.STRING }
               },
-              pointsPerOption: {
-                type: Type.ARRAY,
-                items: { type: Type.NUMBER }
-              },
+              correctAnswerIndex: { type: Type.NUMBER },
               explanation: { type: Type.STRING },
               matchingPairs: {
                 type: Type.ARRAY,
