@@ -1,50 +1,33 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion } from "@/types";
 
-// Initialisation paresseuse de l'API Gemini pour éviter les crashs au démarrage
+// Initialisation paresseuse de l'API Gemini
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
-  // Check for a custom API key saved by the user in localStorage first
-  const customKey = typeof window !== 'undefined' ? localStorage.getItem('CAMPUSBF_QUIZ_API_KEY') : null;
-  
-  // Try to get key from multiple sources
-  const rawKey = customKey ||
-                 (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
-                 (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-                 (import.meta as any).env?.GEMINI_API_KEY;
-  
-  // Provide a dummy key if none is found to prevent synchronous crashes in the browser
-  const apiKey = (!rawKey || rawKey.toLowerCase() === 'free' || rawKey === 'dummy-key-to-prevent-crash') 
-                 ? 'AIzaSyDummyKey_To_Prevent_Browser_Crash' 
-                 : rawKey;
-
-  if (apiKey === 'AIzaSyDummyKey_To_Prevent_Browser_Crash' && !aiClient) {
-    console.warn("Clé API Gemini valide non trouvée. Veuillez configurer la clé API.");
-  }
-  
-  // Re-create the client if the key has changed or it doesn't exist
-  if (!aiClient || (aiClient as any)._apiKey !== apiKey) {
-    aiClient = new GoogleGenAI({ apiKey });
-    // Tag the instance with the key so we can detect changes
-    if (aiClient) {
-       (aiClient as any)._apiKey = apiKey;
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY || 
+                   (import.meta as any).env.VITE_GEMINI_API_KEY || 
+                   (import.meta as any).env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error("Clé API Gemini non trouvée dans l'environnement.");
     }
+    
+    aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
   }
   return aiClient;
 };
 
 /**
- * Fonction d'exemple pour générer du texte avec Gemini
- * @param prompt Le texte ou la question à envoyer à l'IA
- * @returns La réponse générée par l'IA
+ * Fonction pour générer du texte avec Gemini
  */
 export const generateText = async (prompt: string): Promise<string> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      model: "gemini-3-flash-preview",
+      contents: prompt,
     });
     
     return response.text || "Aucune réponse générée.";
@@ -56,12 +39,11 @@ export const generateText = async (prompt: string): Promise<string> => {
 
 /**
  * Crée une session de chat avec l'assistant CampusBF
- * Cela permet à l'IA de se souvenir du contexte de la conversation
  */
 export const createCampusAssistantChat = () => {
   const ai = getAiClient();
   return ai.chats.create({
-    model: "gemini-1.5-flash",
+    model: "gemini-3-flash-preview",
     config: {
       systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire au Burkina Faso. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, l'organisation d'événements, la recherche de camarades, et la participation à des concours (Contests).\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions, NE gère PAS le paiement des frais de scolarité, et NE propose PAS de suivi pédagogique (notes, emplois du temps). Si un utilisateur pose une question sur ces sujets, réponds poliment que ces fonctionnalités ne sont pas disponibles sur CampusBF.\n3. Règles des Concours : Pour participer à certains concours, les utilisateurs doivent inviter un nombre minimum d'étudiants via leur lien d'invitation unique (disponible sur la page du concours).\n4. Règles des Documents : Seuls les utilisateurs avec un profil complet (sauf les étudiants) peuvent partager des documents. Pour qu'un étudiant puisse voir ou télécharger un document, il doit d'abord rejoindre un groupe dans la section Communauté et y publier ou répondre à un message.\n5. Sois concis, amical et utilise des emojis de temps en temps.",
     }
@@ -124,8 +106,8 @@ Modèle de format attendu pour l'output :
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Utilisation de flash pour éviter l'erreur 404 liée à l'accès pro
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      model: "gemini-3-flash-preview",
+      contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -218,8 +200,8 @@ Pour chaque question :
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      model: "gemini-3-flash-preview",
+      contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -306,29 +288,24 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
     
     // Check for specific API Key errors
     if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('API key not valid')) {
-       throw new Error("La Clé API Gemini est invalide ou incorrecte. Vérifiez qu'elle est bien copiée.");
+       throw new Error("La Clé API Gemini est invalide ou incorrecte.");
     }
-    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota') || error.message?.toLowerCase().includes('exhausted')) {
-       throw new Error("Votre quota d'utilisation gratuite de l'API Gemini est dépassé. Veuillez réessayer plus tard ou configurer la facturation sur votre projet Google.");
-    }
-    if (error.message?.includes('403') || error.message?.toLowerCase().includes('permission')) {
-       throw new Error("L'API Gemini n'est pas accessible. Assurez-vous que l'API 'Generative Language API' est bien activée sur votre projet Google, ou que votre région est supportée.");
-    }
-    if (error.message?.includes('NOT_FOUND') || error.message?.includes('not found for API version')) {
-       throw new Error("Erreur de modèle ou l'API n'est pas complètement activée. Si vous avez créé la clé dans un projet existant (comme CampusBF), vous devez activer la 'Generative Language API' manuellement.");
+    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota')) {
+       throw new Error("Votre quota d'utilisation gratuite de l'API Gemini est dépassé.");
     }
     
     throw new Error(`Erreur lors de la génération du quiz : ${error.message || 'Erreur inconnue'}`);
   }
 };
+
 export const summarizeDocument = async (documentTitle: string, documentDescription: string): Promise<string> => {
   try {
     const ai = getAiClient();
-    const prompt = `En tant qu'assistant académique de CampusBF, donne-moi un bref aperçu de ce que pourrait contenir ce document et pourquoi il serait utile pour un étudiant, en te basant sur son titre et sa description.\n\nTitre: ${documentTitle}\nDescription: ${documentDescription}\n\nFais une réponse courte (2-3 phrases maximum) et motivante.`;
+    const prompt = `En tant qu'assistant académique de CampusBF, donne-moi un bref aperçu de ce que pourrait contenir ce document et pourquoi il serait utile pour un étudiant, en te basant sur son titre et sa description.\n\nTitre: ${documentTitle}\nDescription: ${documentDescription}\n\nFais une réponse courte (2-3 sentences maximum) et motivante.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      model: "gemini-3-flash-preview",
+      contents: prompt,
     });
     
     return response.text || "Résumé non disponible.";
