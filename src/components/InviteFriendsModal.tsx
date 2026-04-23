@@ -13,8 +13,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ onClose 
   const referralsCount = user?.inviteCount || user?.referralsCount || 0;
   const contributionCount = user?.contributionCount || 0;
   
-  // Progress is based on the highest achievement towards the goal
-  const viewUnlockProgress = Math.min(((referralsCount / 3) + (contributionCount / 1)) * 50, 100);
+  // Progress for downloading is based on the highest achievement towards the goal
   const downloadUnlockProgress = Math.min(((referralsCount / 5) + (contributionCount / 2)) * 50, 100);
 
   const referralLink = user?.referralCode 
@@ -57,22 +56,20 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ onClose 
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
             <Users size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">📚 Débloquez les documents</h2>
+          <h2 className="text-2xl font-bold text-slate-900">📚 Téléchargez les documents</h2>
           <p className="text-slate-500 text-sm">
-            Accédez aux ressources en invitant vos amis ou en envoyant vos propres documents à l'administrateur via WhatsApp.
+            Vous pouvez désormais lire tous les documents. Débloquez le téléchargement PDF en invitant vos amis ou en envoyant vos propres documents à l'administrateur via WhatsApp.
           </p>
         </div>
 
         <div className="space-y-4">
-          <div className="bg-slate-50 p-4 rounded-xl space-y-3">
+          <div className="bg-slate-50 p-4 rounded-xl space-y-3 opacity-60">
             <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
               <span className="text-slate-500">Lecture (Aperçu complet)</span>
-              <span className={referralsCount >= 3 || contributionCount >= 1 ? "text-emerald-600" : "text-slate-400"}>
-                {referralsCount >= 3 || contributionCount >= 1 ? 'DÉBLOQUÉ' : `${referralsCount}/3 invités ou 1 document envoyé`}
-              </span>
+              <span className="text-emerald-600">DÉBLOQUÉ</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
-              <div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${viewUnlockProgress}%` }}></div>
+              <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `100%` }}></div>
             </div>
           </div>
 

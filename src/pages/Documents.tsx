@@ -290,10 +290,10 @@ export default function Documents() {
 
     if (user?.role === 'student') {
       if (mode === 'view') {
-        // Unlock if 3 invites OR 1 contribution
-        return inviteCount < 3 && contributionCount < 1;
+        // Viewing is now always unlocked for students (unless it's for sale)
+        return false;
       } else {
-        // Unlock if 5 invites OR 2 contributions
+        // Downloading still requires 5 invites OR 2 contributions
         return inviteCount < 5 && contributionCount < 2;
       }
     }

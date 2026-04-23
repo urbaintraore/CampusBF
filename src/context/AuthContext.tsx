@@ -21,6 +21,7 @@ import { quizService } from '@/services/quizService';
 import { dealService } from '@/services/dealService';
 import { colocationService } from '@/services/colocationService';
 import { requestNotificationPermission } from '@/services/messagingService';
+import toast from 'react-hot-toast';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -344,6 +345,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
         } catch (err: any) {
           console.error("Firestore getDoc error for users collection:", err);
+          if (err.message?.includes('Quota limit exceeded')) {
+            toast.error("Quota Firestore dépassé. L'application risque de ne pas fonctionner correctement jusqu'à demain.");
+            setIsLoading(false);
+            return;
+          }
           handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
           return;
         }
