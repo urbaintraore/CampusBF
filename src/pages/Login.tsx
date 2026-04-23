@@ -21,27 +21,31 @@ export default function Login() {
     
     try {
       await login(email, password);
-      const isAdminEmail = (email: string | null | undefined) => {
+      const adminEmailCheck = (email: string | null | undefined) => {
         if (!email) return false;
-        const lowerEmail = email.toLowerCase();
+        const lowerEmail = email.toLowerCase().trim();
         return lowerEmail === 'urbain.traoreurb@gmail.com' || 
                lowerEmail === 'urbain.traoreurb@gmail' || 
-               lowerEmail === 'urbain.traoreurb@gmail.com.';
+               lowerEmail === 'urbain.traoreurb@gmail.com.' ||
+               lowerEmail === 'admin@campusbf.bf';
       };
 
-      if (email.toLowerCase() === 'admin@campusbf.bf' || isAdminEmail(email)) {
+      if (adminEmailCheck(email)) {
         navigate('/admin');
       } else {
         navigate('/');
       }
     } catch (err: any) {
-      console.error("Login error:", err.code, err.message);
-      let errorMessage = err.message || 'Erreur de connexion';
+      console.error("Login component caught error:", err);
       
-      if (err.code === 'auth/unauthorized-domain') {
-        errorMessage = "Ce domaine n'est pas autorisé dans la console Firebase. Veuillez ajouter " + window.location.hostname + " aux domaines autorisés dans Firebase Auth.";
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        errorMessage = "Email ou mot de passe incorrect.";
+      // Handle different error formats (Firebase Error, AuthContext Error, or generic Error)
+      let errorMessage = err.message || 'Erreur de connexion';
+      const errorCode = err.code || (err.message?.includes('auth/') ? err.message : null);
+
+      if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('unauthorized-domain')) {
+        errorMessage = `Ce domaine (${window.location.hostname}) n'est pas autorisé. Allez dans Firebase Console > Auth > Paramètres > Domaines autorisés et ajoutez ce domaine.`;
+      } else if (errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed')) {
+        errorMessage = "Erreur réseau. Vérifiez votre connexion internet ou si Google est accessible.";
       }
       
       setError(errorMessage);

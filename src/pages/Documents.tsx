@@ -140,9 +140,11 @@ export default function Documents() {
 
   const handleUploadClick = () => {
     if (user?.role === 'student') {
-      alert("Les étudiants ne sont pas autorisés à partager des documents.");
+      const message = encodeURIComponent(`Bonjour ! Je souhaite partager un document académique sur CampusBF.\nTitre: \nMatière: \nUniversité: `);
+      window.open(`https://wa.me/22663375257?text=${message}`, '_blank');
       return;
     }
+    
     if (!isProfileComplete && !isAdmin) {
       alert("Veuillez renseigner complètement votre profil (téléphone WhatsApp, université, filière, niveau) dans les paramètres pour pouvoir partager des documents.");
       return;
@@ -277,14 +279,24 @@ export default function Documents() {
     }
   };
 
-  const isDocumentLocked = (doc: any) => {
+  const isDocumentLocked = (doc: any, mode: 'view' | 'download' = 'view') => {
     if (isAdmin) return false;
     
     // If for sale, check subscription
     if (doc.isForSale && !isPremium) return true;
     
-    // Referral block for students
-    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) return true;
+    const inviteCount = user?.inviteCount || user?.referralsCount || 0;
+    const contributionCount = user?.contributionCount || 0;
+
+    if (user?.role === 'student') {
+      if (mode === 'view') {
+        // Unlock if 3 invites OR 1 contribution
+        return inviteCount < 3 && contributionCount < 1;
+      } else {
+        // Unlock if 5 invites OR 2 contributions
+        return inviteCount < 5 && contributionCount < 2;
+      }
+    }
     
     return false;
   };
@@ -295,7 +307,7 @@ export default function Documents() {
     }
 
     if (isAdmin) {
-      window.location.href = doc.downloadUrl;
+      window.open(doc.downloadUrl, '_blank');
       return;
     }
 
@@ -305,12 +317,12 @@ export default function Documents() {
       return;
     }
 
-    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) {
+    if (isDocumentLocked(doc, 'view')) {
       setShowInviteModal(true);
       return;
     }
     
-    window.location.href = doc.downloadUrl;
+    window.open(doc.downloadUrl, '_blank');
   };
 
   const handleDownload = async (docData: any) => {
@@ -327,7 +339,7 @@ export default function Documents() {
         return;
       }
 
-      if (user?.role === 'student' && (user?.referralsCount || 0) < 5) {
+      if (isDocumentLocked(docData, 'download')) {
         setShowInviteModal(true);
         return;
       }
@@ -410,13 +422,24 @@ export default function Documents() {
           <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Documents Universitaires</h1>
           <p className="text-slate-500 text-sm mt-1">Accédez à des milliers de ressources partagées par les étudiants.</p>
         </div>
-        {user && user.role !== 'student' && (
+        {user && (
           <button 
             onClick={handleUploadClick}
             className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 active:scale-95"
           >
-            <FileText size={18} />
-            Partager un document
+            {user.role === 'student' ? (
+              <>
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">
+                  <path d="M17.498 14.382c-.301-.15-1.767-.867-2.04-.966-.273-.101-.473-.15-.673.15-.197.295-.771.964-.944 1.162-.175.195-.349.21-.646.065-.301-.15-1.265-.462-2.406-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.019-.465.13-.615.136-.135.301-.345.451-.523.146-.181.194-.301.297-.496.1-.21.049-.375-.025-.524-.075-.15-.672-1.62-.922-2.206-.24-.584-.487-.51-.672-.51-.172-.015-.371-.015-.571-.015-.2 0-.523.074-.797.359-.273.3-1.045 1.02-1.045 2.475s1.07 2.865 1.219 3.075c.149.21 2.095 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.195-.572-.345z"/>
+                </svg>
+                <span>Suggérer un document</span>
+              </>
+            ) : (
+              <>
+                <FileText size={18} />
+                <span>Publier un document</span>
+              </>
+            )}
           </button>
         )}
       </div>
@@ -811,7 +834,7 @@ export default function Documents() {
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
                             <h3 className="font-display font-bold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
-                            {isDocumentLocked(doc) && <Lock size={16} className="text-amber-500" />}
+                            {isDocumentLocked(doc, 'view') && <Lock size={16} className="text-amber-500" />}
                             {doc.isForSale && (
                               <span className="flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                 <Sparkles size={8} /> Payant
@@ -887,22 +910,22 @@ export default function Documents() {
                         onClick={() => handleView(doc)}
                         className={cn(
                           "w-full md:w-auto px-4 py-3 border border-slate-200 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95",
-                          isDocumentLocked(doc) ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "bg-white text-slate-700 hover:bg-slate-50"
+                          isDocumentLocked(doc, 'view') ? "bg-slate-50 text-slate-400" : "bg-white text-slate-700 hover:bg-slate-50"
                         )}
                       >
-                        {isDocumentLocked(doc) ? <Lock size={18} /> : <Eye size={18} />}
+                        {isDocumentLocked(doc, 'view') ? <Lock size={18} /> : <Eye size={18} />}
                         Voir
                       </button>
                       <button 
                         onClick={() => handleDownload(doc)}
                         className={cn(
                           "w-full md:w-auto px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95",
-                          isDocumentLocked(doc) 
-                            ? "bg-slate-200 text-slate-500 shadow-none cursor-not-allowed" 
+                          isDocumentLocked(doc, 'download') 
+                            ? "bg-slate-200 text-slate-500 shadow-none hover:bg-slate-300" 
                             : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
                         )}
                       >
-                        {isDocumentLocked(doc) ? <Lock size={18} /> : <Download size={18} />}
+                        {isDocumentLocked(doc, 'download') ? <Lock size={18} /> : <Download size={18} />}
                         Télécharger
                       </button>
                     </div>

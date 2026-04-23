@@ -304,12 +304,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Safety timeout to prevent stuck loading state
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn("Auth loading took too long, forcing state change");
+        setIsLoading(false);
+      }
+    }, 8000);
+
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error) {
         if (error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
+          console.error("Please check your Firebase configuration or internet connection.");
         }
       }
     };
@@ -317,6 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email);
+      clearTimeout(loadingTimeout);
       
       if (!firebaseUser) {
         console.log("No firebase user");
@@ -709,6 +718,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         inviteCount: 0,
         invitedUsers: [],
         rankingScore: 1,
+        contributionCount: 0,
         activityStats: {
           logins: 1,
           docsViewed: 0,
@@ -907,6 +917,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addDocument = async (data: any) => {
     await documentService.addDocument(data);
+    
+    // Increment user contribution count
+    if (user) {
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, {
+        contributionCount: increment(1),
+        rankingScore: increment(100) // Reward for sharing
+      });
+      setUser(prev => prev ? { ...prev, contributionCount: (prev.contributionCount || 0) + 1, rankingScore: (prev.rankingScore || 0) + 100 } : null);
+    }
+
     await triggerNotification('document', {
       title: data.title,
       subject: data.subject,

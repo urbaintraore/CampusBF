@@ -170,6 +170,7 @@ export interface User {
     invitations: number;
   };
   rankingScore?: number;
+  contributionCount?: number;
 }
 
 export interface Training {
