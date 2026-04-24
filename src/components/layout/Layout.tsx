@@ -20,7 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
-    { icon: Trophy, label: 'Mon classement dans CampusBF', to: '/ranking', roles: ['student'] },
+    { icon: Trophy, label: 'Classements', to: '/ranking', roles: ['student', 'teacher', 'alumni', 'admin'] },
     { icon: MessageCircle, label: 'Messages', to: '/messages' },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent'] },
