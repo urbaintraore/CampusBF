@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock, Trophy, School } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -357,8 +357,6 @@ export default function Dashboard() {
                 onClick={() => {
                   const chatbotTrigger = document.querySelector('.chatbot-trigger') as HTMLButtonElement;
                   if (chatbotTrigger) chatbotTrigger.click();
-                  // Alternative: find a way to open it via state if possible, but trigger click is simpler if ID/class is there
-                  // Actually I'll use a better way later if needed, for now navigate to Quizzes is good enough
                 }}
                 className="px-8 py-3.5 bg-white/10 backdrop-blur-md text-white border border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
               >
@@ -376,6 +374,30 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* University Ranking Highlight */}
+      <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Trophy size={32} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-display font-bold text-slate-900">Classement des Universités</h2>
+              <p className="text-slate-500 mt-1 max-w-md">
+                Découvrez quelles institutions dominent le classement CampusBF ce mois-ci par leur activité.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/ranking?tab=universities')}
+            className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+          >
+            <School size={20} className="text-emerald-400" />
+            Voir le classement complet
+          </button>
         </div>
       </section>
 

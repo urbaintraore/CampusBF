@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy, Brain, Tag, Home } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy, Brain, Tag, Home, School } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
@@ -20,7 +20,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
-    { icon: Trophy, label: 'Classements', to: '/ranking', roles: ['student', 'teacher', 'alumni', 'admin'] },
+    { icon: School, label: 'Classement Universités', to: '/ranking', roles: ['student', 'teacher', 'alumni', 'admin'] },
+    { icon: Trophy, label: 'Challenge & Concours', to: '/contests' },
     { icon: MessageCircle, label: 'Messages', to: '/messages' },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent'] },
@@ -35,10 +36,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: FileText, label: 'Générateur de CV', to: '/cv-generator', roles: ['student', 'admin', 'alumni'] },
     { icon: Tag, label: 'Bons Plans', to: '/deals', roles: ['student', 'admin', 'alumni'] },
     { icon: Home, label: 'Colocation', to: '/colocation', roles: ['student', 'admin'] },
-    { icon: User, label: 'Portfolio', to: '/portfolio', roles: ['teacher', 'admin', 'student'] },
+    { icon: User, label: 'Portfolio', roles: ['teacher', 'admin', 'student'], to: '/portfolio' },
     { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['student', 'admin', 'alumni'] },
     { icon: BookOpen, label: 'Formations', to: '/trainings' },
-    { icon: Trophy, label: 'Concours', to: '/contests' },
     { icon: Sparkles, label: 'Fonctionnalités', to: '/features' },
   ];
 

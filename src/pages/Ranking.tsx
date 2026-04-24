@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Trophy, TrendingUp, Target, Award, Star, BookOpen, Download, Users, MessageSquare, ShoppingBag, Bike, ClipboardCheck, FileUser, Calendar, Info, ArrowUpRight, School, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
@@ -7,7 +8,9 @@ import { rankingService, UniversityStat } from '@/services/rankingService';
 
 export default function Ranking() {
   const { user, users } = useAuth();
-  const [activeTab, setActiveTab] = useState<'individual' | 'universities'>('individual');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'universities' ? 'universities' : 'individual';
+  const [activeTab, setActiveTab] = useState<'individual' | 'universities'>(initialTab);
   const [uniRankings, setUniRankings] = useState<UniversityStat[]>([]);
   const [loadingUnis, setLoadingUnis] = useState(false);
   
@@ -16,7 +19,7 @@ export default function Ranking() {
       const fetchUniRankings = async () => {
         setLoadingUnis(true);
         try {
-          const rankings = await rankingService.getUniversityRankings(users);
+          const rankings = await rankingService.getUniversityRankings(users as User[]);
           setUniRankings(rankings);
         } catch (error) {
           console.error("Error loading uni rankings:", error);
@@ -141,7 +144,7 @@ export default function Ranking() {
           </div>
 
           {/* Individual Leaderboard Table */}
-          <section className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+          <section className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden mt-8">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Top 10 Étudiants</h2>
