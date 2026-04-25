@@ -126,11 +126,11 @@ const features = [
   },
   {
     icon: UserCheck,
-    title: "Mentorat Alumni",
-    description: "Profitez de l'expérience des anciens étudiants pour booster votre carrière et votre réseau.",
+    title: "Mentorat & Accompagnement",
+    description: "Connectez-vous avec des mentors qualifiés (Alumni, Enseignants, Parents, Masters et Doctorants) pour guider votre parcours.",
     color: "bg-violet-50 text-violet-600",
     link: "/mentorship",
-    roles: ['student', 'alumni', 'admin']
+    roles: ['student', 'alumni', 'admin', 'teacher', 'parent', 'institution']
   },
   {
     icon: WifiOff,

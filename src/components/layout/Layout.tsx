@@ -37,7 +37,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Tag, label: 'Bons Plans', to: '/deals', roles: ['student', 'admin', 'alumni'] },
     { icon: Home, label: 'Colocation', to: '/colocation', roles: ['student', 'admin'] },
     { icon: User, label: 'Portfolio', roles: ['teacher', 'admin', 'student'], to: '/portfolio' },
-    { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['student', 'admin', 'alumni'] },
+    { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['student', 'admin', 'alumni', 'teacher', 'parent', 'institution'] },
     { icon: BookOpen, label: 'Formations', to: '/trainings' },
     { icon: Sparkles, label: 'Fonctionnalités', to: '/features' },
   ];

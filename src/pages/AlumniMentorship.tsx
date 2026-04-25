@@ -57,19 +57,21 @@ export default function AlumniMentorship() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Mentorat & Accompagnement</h1>
-          <p className="text-slate-500 mt-1">Connectez-vous avec des mentors (Alumni et Parents) pour guider votre parcours.</p>
+          <p className="text-slate-500 mt-1">Connectez-vous avec des mentors qualifiés (Enseignants, Parents, Établissements, Masters et Doctorants) pour guider votre parcours.</p>
         </div>
-        <button 
-          onClick={() => setIsRegistering(!isRegistering)} 
-          className={cn(
-            "px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2",
-            isRegistering 
-              ? "bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-slate-200/20" 
-              : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/20"
-          )}
-        >
-          {isRegistering ? 'Annuler' : 'Devenir Mentor'}
-        </button>
+        {user && (['admin', 'teacher', 'parent', 'institution'].includes(user.role) || (user.role === 'student' && (user.level?.startsWith('M') || user.level?.startsWith('D')))) && (
+          <button 
+            onClick={() => setIsRegistering(!isRegistering)} 
+            className={cn(
+              "px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2",
+              isRegistering 
+                ? "bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-slate-200/20" 
+                : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/20"
+            )}
+          >
+            {isRegistering ? 'Annuler' : 'Devenir Mentor'}
+          </button>
+        )}
       </div>
 
       {isRegistering && (
@@ -175,12 +177,14 @@ export default function AlumniMentorship() {
           </div>
           <h3 className="text-xl font-bold text-slate-900">Aucun mentor pour le moment</h3>
           <p className="text-slate-500 mt-2">Soyez le premier à partager votre expérience avec la communauté !</p>
-          <button 
-            onClick={() => setIsRegistering(true)}
-            className="mt-6 px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all"
-          >
-            Devenir Mentor
-          </button>
+          {user && (['admin', 'teacher', 'parent', 'institution'].includes(user.role) || (user.role === 'student' && (user.level?.startsWith('M') || user.level?.startsWith('D')))) && (
+            <button 
+              onClick={() => setIsRegistering(true)}
+              className="mt-6 px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all"
+            >
+              Devenir Mentor
+            </button>
+          )}
         </div>
       )}
     </div>
