@@ -40,6 +40,7 @@ import {
   addDoc,
   deleteDoc,
   query,
+  or,
   where,
   serverTimestamp,
   getDocs,
@@ -582,21 +583,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Restricted/Conditional lists
     const marketplaceQuery = user.role === 'admin' 
       ? collection(db, 'marketplace')
-      : query(collection(db, 'marketplace'), where('status', '==', 'approved'));
+      : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)));
     unsubscribes.push(onSnapshot(marketplaceQuery, (snapshot) => {
       setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
     }));
 
     const motoRideQuery = user.role === 'admin'
       ? collection(db, 'motoRides')
-      : query(collection(db, 'motoRides'), where('status', '==', 'active'));
+      : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)));
     unsubscribes.push(onSnapshot(motoRideQuery, (snapshot) => {
       setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
     }));
 
     const trainingsQuery = user.role === 'admin'
       ? collection(db, 'trainings')
-      : query(collection(db, 'trainings'), where('status', '==', 'approved'));
+      : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)));
     unsubscribes.push(onSnapshot(trainingsQuery, (snapshot) => {
       setTrainings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Training)));
     }));

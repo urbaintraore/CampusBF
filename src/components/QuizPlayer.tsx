@@ -344,6 +344,149 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           </div>
         );
 
+      case 'matching':
+        const currentMatches = (userInput as { [key: string]: string }) || {};
+        const showMatchingCorr = isAnswered && quiz.settings?.showCorrections !== 'never';
+        return (
+          <div className="space-y-4">
+            {currentQuestion.matchingPairs?.map((pair, idx) => (
+              <div key={idx} className="flex items-center gap-4">
+                <div className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium">
+                  {pair.left}
+                </div>
+                <ArrowRight size={20} className="text-slate-400" />
+                <select
+                  disabled={isAnswered}
+                  value={currentMatches[pair.left] || ''}
+                  onChange={(e) => {
+                    const newMatches = { ...currentMatches, [pair.left]: e.target.value };
+                    setUserInput(newMatches);
+                  }}
+                  className={cn(
+                    "flex-1 p-3 rounded-xl border-2 transition-all font-medium",
+                    isAnswered
+                      ? (showMatchingCorr && currentMatches[pair.left] === pair.right ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-500 bg-red-50 text-red-700")
+                      : "border-slate-200 focus:border-indigo-500"
+                  )}
+                >
+                  <option value="">Choisir...</option>
+                  {shuffleArray(currentQuestion.matchingPairs?.map(p => p.right) || []).map((right, rIdx) => (
+                    <option key={rIdx} value={right}>{right}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+            {!isAnswered && (
+              <button 
+                onClick={() => handleSubmitAnswer(currentMatches)}
+                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+              >
+                Valider l'appariement
+              </button>
+            )}
+            {showMatchingCorr && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <p className="text-sm text-slate-500 mb-1 font-bold uppercase">Corrections :</p>
+                {currentQuestion.matchingPairs?.map((pair, idx) => (
+                  <p key={idx} className="text-sm font-medium">
+                    <span className="text-slate-600">{pair.left}</span> = <span className="text-emerald-600">{pair.right}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'cloze':
+        const currentGaps = (userInput as { [key: string]: string }) || {};
+        const showClozeCorr = isAnswered && quiz.settings?.showCorrections !== 'never';
+        
+        // Split template by gaps
+        const parts = currentQuestion.clozeTemplate?.split(/(\[\[gap\d+\]\])/g) || [];
+        
+        return (
+          <div className="space-y-6">
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl leading-loose text-lg">
+              {parts.map((part, idx) => {
+                const gapMatch = part.match(/\[\[(gap\d+)\]\]/);
+                if (gapMatch) {
+                  const gapId = gapMatch[1];
+                  const isGapCorrect = currentGaps[gapId]?.toLowerCase().trim() === (currentQuestion.clozeAnswers?.[gapId] as string)?.toLowerCase().trim();
+                  
+                  return (
+                    <input
+                      key={idx}
+                      type="text"
+                      disabled={isAnswered}
+                      value={currentGaps[gapId] || ''}
+                      onChange={(e) => {
+                        const newGaps = { ...currentGaps, [gapId]: e.target.value };
+                        setUserInput(newGaps);
+                      }}
+                      placeholder="..."
+                      className={cn(
+                        "mx-1 px-2 py-1 rounded border-b-2 text-center transition-all focus:outline-none min-w-[80px]",
+                        isAnswered
+                          ? (showClozeCorr && isGapCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-500 bg-red-50 text-red-700")
+                          : "border-slate-300 focus:border-indigo-500 bg-white"
+                      )}
+                    />
+                  );
+                }
+                return <span key={idx}>{part}</span>;
+              })}
+            </div>
+            {!isAnswered && (
+              <button 
+                onClick={() => handleSubmitAnswer(currentGaps)}
+                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+              >
+                Valider le texte
+              </button>
+            )}
+            {showClozeCorr && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <p className="text-sm text-slate-500 mb-1 font-bold uppercase">Réponses attendues :</p>
+                {Object.entries(currentQuestion.clozeAnswers || {}).map(([gap, correct]) => (
+                  <p key={gap} className="text-sm font-medium">
+                    <span className="text-slate-600">{gap} : </span> 
+                    <span className="text-emerald-600">{correct as string}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'essay':
+        return (
+          <div className="space-y-4">
+            <textarea
+              disabled={isAnswered}
+              value={userInput || ''}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder="Rédigez votre réponse ici..."
+              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none min-h-[200px]"
+            />
+            {!isAnswered && (
+              <button 
+                onClick={() => handleSubmitAnswer(userInput)}
+                disabled={!userInput}
+                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+              >
+                Enregistrer la réponse
+              </button>
+            )}
+            {isAnswered && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> Les essais nécessitent une correction manuelle par un enseignant. Votre score actuel ne reflète pas encore cette question.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
       // Remaining types fallbacks...
       default:
         return <div>Type de question {questionType} non supporté dans le lecteur actuel.</div>;

@@ -140,6 +140,28 @@ Modèle de format attendu pour l'output :
                   explanation: { type: Type.STRING },
                   correctTextAnswer: { type: Type.STRING },
                   correctNumericAnswer: { type: Type.NUMBER },
+                  tolerance: { type: Type.NUMBER },
+                  matchingPairs: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        left: { type: Type.STRING },
+                        right: { type: Type.STRING }
+                      }
+                    }
+                  },
+                  clozeTemplate: { type: Type.STRING },
+                  clozeAnswers: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        gapId: { type: Type.STRING },
+                        answer: { type: Type.STRING }
+                      }
+                    }
+                  }
                 },
                 required: ["type", "question", "explanation"]
               }
@@ -170,6 +192,18 @@ Modèle de format attendu pour l'output :
       if (q.type === 'true_false' && q.options.length !== 2) {
         q.options = ['Vrai', 'Faux'];
       }
+      
+      // Cloze answers conversion: if it was returned as an array of {gapId, answer}, convert to Record<string, string>
+      if (q.type === 'cloze' && Array.isArray(q.clozeAnswers)) {
+        const answersObj: Record<string, string> = {};
+        q.clozeAnswers.forEach((item: any) => {
+          if (item.gapId && item.answer) {
+            answersObj[item.gapId] = item.answer;
+          }
+        });
+        q.clozeAnswers = answersObj;
+      }
+      
       return q as QuizQuestion;
     });
 

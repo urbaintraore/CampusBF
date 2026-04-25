@@ -33,10 +33,15 @@ export default function Signup() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    let finalValue = value;
+    if (name === 'university' || name === 'institutionName') {
+      finalValue = value.toUpperCase();
+    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: finalValue
+    }));
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -55,7 +60,7 @@ export default function Signup() {
       if (accountType === 'student') {
         signupData.firstName = formData.firstName;
         signupData.lastName = formData.lastName;
-        signupData.university = formData.university;
+        signupData.university = formData.university.toUpperCase().trim();
         signupData.major = formData.major;
         signupData.level = formData.level;
         signupData.promotion = formData.promotion;
@@ -68,13 +73,13 @@ export default function Signup() {
       } else if (accountType === 'teacher') {
         signupData.firstName = formData.firstName;
         signupData.lastName = formData.lastName;
-        signupData.university = formData.university;
+        signupData.university = formData.university.toUpperCase().trim();
         signupData.teacherStatus = 'pending_dossier';
       } else {
         // Institution
         signupData.firstName = 'Direction';
         signupData.lastName = formData.institutionName;
-        signupData.university = formData.institutionName;
+        signupData.university = formData.institutionName.toUpperCase().trim();
         signupData.institutionProfile = {
           type: formData.institutionType,
           subscriptionStatus: 'none',
@@ -115,7 +120,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-start justify-center p-4 relative py-12">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-start p-4 relative py-12 overflow-y-auto">
       {/* Decorative background elements */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl"></div>
@@ -211,9 +216,25 @@ export default function Signup() {
                           required
                           value={formData.university}
                           onChange={handleChange}
+                          list="universities-list"
                           placeholder="Ex: Université Joseph Ki-Zerbo"
                           className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
                         />
+                        <datalist id="universities-list">
+                          <option value="UNIVERSITÉ JOSEPH KI-ZERBO (UJKZ)" />
+                          <option value="UNIVERSITÉ THOMAS SANKARA (UTS)" />
+                          <option value="UNIVERSITÉ NAZI BONI (UNB)" />
+                          <option value="UNIVERSITÉ NORBERT ZONGO (UNZ)" />
+                          <option value="UNIVERSITÉ VIRTUELLE DU BURKINA FASO (UVBF)" />
+                          <option value="UNIVERSITÉ DE FADA N'GOURMA" />
+                          <option value="UNIVERSITÉ DE DÉDOUGOU" />
+                          <option value="UNIVERSITÉ DE OUAHIGOUYA" />
+                          <option value="AUBE NOUVELLE (U-AUBEN)" />
+                          <option value="INSTITUT SUPÉRIEUR DE TECHNOLOGIES (IST)" />
+                          <option value="BOUIS-PASTEUR" />
+                          <option value="IAM" />
+                          <option value="ISIG" />
+                        </datalist>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-medium text-slate-700 ml-1">Filière</label>

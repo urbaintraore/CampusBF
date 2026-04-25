@@ -42,7 +42,7 @@ export default function Quizzes() {
           </h1>
           <p className="text-slate-500 mt-2">Générez et révisez avec les quiz créés par les enseignants et l'IA.</p>
         </div>
-        {(user?.role === 'teacher' || user?.role === 'admin') && (
+        {(user?.role === 'teacher' || user?.role === 'admin' || user?.role === 'student') && (
           <div className="flex gap-2">
             <button
               onClick={() => setShowBuilder(true)}
@@ -51,13 +51,15 @@ export default function Quizzes() {
               <Sparkles size={18} />
               Générateur IA Moodle
             </button>
-            <button
-              onClick={() => setShowCreator(true)}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
-            >
-              <Plus size={18} />
-              Créer Manuel
-            </button>
+            {(user?.role === 'teacher' || user?.role === 'admin') && (
+              <button
+                onClick={() => setShowCreator(true)}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
+              >
+                <Plus size={18} />
+                Créer Manuel
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -90,9 +92,13 @@ export default function Quizzes() {
         {quizzes.map((quiz) => (
           <div key={quiz.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all flex flex-col">
             <div className="flex items-start justify-between mb-4">
-              <div className="px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 bg-blue-100 text-blue-700">
-                <BookOpen size={12} />
-                Enseignant
+              <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                quiz.type === 'ai' 
+                  ? 'bg-purple-100 text-purple-700' 
+                  : 'bg-blue-100 text-blue-700'
+              }`}>
+                {quiz.type === 'ai' ? <Sparkles size={12} /> : <BookOpen size={12} />}
+                {quiz.type === 'ai' ? 'Généré par IA' : 'Enseignant'}
               </div>
               <span className="text-xs font-medium text-slate-400">{quiz.level}</span>
             </div>
@@ -121,7 +127,7 @@ export default function Quizzes() {
           <div className="col-span-full text-center py-12 bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
             <Brain className="mx-auto text-slate-300 mb-3" size={48} />
             <h3 className="text-lg font-bold text-slate-900 mb-1">Aucun quiz disponible</h3>
-            <p className="text-slate-500">Attendez qu'un enseignant crée un quiz pour votre niveau.</p>
+            <p className="text-slate-500">Soyez le premier à générer un quiz avec l'IA ou attendez qu'un enseignant en crée un.</p>
           </div>
         )}
         </div>

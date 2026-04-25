@@ -108,40 +108,65 @@ export default function Marketplace() {
   };
 
   const handlePublish = async () => {
-    if (!sellTitle || !sellPrice || !sellDescription || !sellAddress || !sellWhatsapp || !sellEmail || !sellUniversity) {
-      alert('Veuillez remplir tous les champs obligatoires.');
+    const missingFields = [];
+    if (!sellTitle) missingFields.push('Titre');
+    if (!sellPrice) missingFields.push('Prix');
+    if (!sellDescription) missingFields.push('Description');
+    if (!sellUniversity) missingFields.push('Localisation / Université');
+    if (!sellWhatsapp) missingFields.push('WhatsApp');
+    if (!sellEmail) missingFields.push('Email');
+
+    if (missingFields.length > 0) {
+      alert(`Veuillez remplir les champs obligatoires suivants : ${missingFields.join(', ')}.`);
+      return;
+    }
+
+    const price = parseInt(sellPrice);
+    if (isNaN(price) || price < 0) {
+      alert('Veuillez entrer un prix valide (chiffres seulement).');
       return;
     }
 
     if (sellImages.length < 2) {
-      alert('Veuillez ajouter au moins 2 photos de votre article.');
+      alert('Veuillez ajouter au moins 2 photos de votre article pour une meilleure visibilité.');
       return;
     }
 
     setIsPublishing(true);
+    console.log("[Marketplace] Tentative de publication de l'annonce:", { title: sellTitle, price: sellPrice });
     try {
       let finalCategory = sellCategory;
       if (showNewCategoryInput && newCategoryName.trim()) {
         finalCategory = newCategoryName.trim();
         if (!categories.includes(finalCategory)) {
-          setCategories([...categories, finalCategory]);
+          setCategories(prev => [...prev, finalCategory]);
         }
       }
 
       const imageUrls: string[] = [];
       
-      for (const imgBase64 of sellImages) {
-        const res = await fetch(imgBase64);
-        const blob = await res.blob();
-        const file = new File([blob], `ad-image-${Date.now()}.jpg`, { type: blob.type });
-        const { url } = await uploadFile(file);
-        imageUrls.push(url);
+      console.log(`[Marketplace] Début de l'envoi de ${sellImages.length} images...`);
+      for (const [idx, imgBase64] of sellImages.entries()) {
+        try {
+          console.log(`[Marketplace] Envoi de l'image ${idx + 1}/${sellImages.length}...`);
+          const res = await fetch(imgBase64);
+          const blob = await res.blob();
+          const file = new File([blob], `ad-${user?.id || 'anon'}-${Date.now()}-${idx}.jpg`, { type: blob.type });
+          
+          // Use 'documents' bucket which is guaranteed to exist
+          const { url } = await uploadFile(file, 'documents');
+          imageUrls.push(url);
+          console.log(`[Marketplace] Image ${idx + 1} envoyée avec succès: ${url}`);
+        } catch (uploadErr: any) {
+          console.error(`[Marketplace] Échec de l'envoi de l'image ${idx}:`, uploadErr);
+          throw new Error(`Échec de l'envoi de l'image ${idx + 1}: ${uploadErr.message}`);
+        }
       }
 
       const newItem = {
         title: sellTitle,
         description: sellDescription,
-        price: parseInt(sellPrice),
+        price,
         category: finalCategory.toLowerCase().replace('é', 'e'),
         sellerId: user?.id || 'anonymous',
         seller: {
@@ -153,12 +178,12 @@ export default function Marketplace() {
           level: user?.level || '',
           email: sellEmail,
           whatsapp: sellWhatsapp,
-          address: sellAddress,
+          address: sellUniversity,
           avatarUrl: user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
           role: user?.role || 'student',
           marketplaceStats: user?.marketplaceStats || { published: 0, sold: 0, reports: 0 }
         },
-        location: sellAddress,
+        location: sellUniversity,
         university: sellUniversity,
         phone: sellWhatsapp,
         status: 'pending',
@@ -169,7 +194,9 @@ export default function Marketplace() {
         imageUrl: imageUrls[0], // For backward compatibility
       };
 
+      console.log("[Marketplace] Ajout du document dans Firestore...");
       await addDoc(collection(db, 'marketplace'), newItem);
+      console.log("[Marketplace] Document ajouté avec succès.");
       if (incrementActivity) {
         incrementActivity('marketplacePosts').catch(console.error);
       }
@@ -178,9 +205,13 @@ export default function Marketplace() {
       }
       resetSellForm();
       alert('Votre annonce a été soumise avec succès ! Elle sera visible après validation par un administrateur.');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error publishing ad:", error);
-      alert("Erreur lors de la publication de l'annonce.");
+      if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+        handleFirestoreError(error, OperationType.CREATE, 'marketplace');
+      } else {
+        alert(error.message || "Erreur lors de la publication de l'annonce.");
+      }
     } finally {
       setIsPublishing(false);
     }
@@ -211,7 +242,7 @@ export default function Marketplace() {
     if (logAction) {
       logAction('Contact vendeur', `Annonce: ${itemTitle}`);
     }
-    navigate(`/messages?chat=${sellerId}`);
+    navigate(`/messages?userId=${sellerId}`);
   };
 
   return (

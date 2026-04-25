@@ -82,7 +82,7 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         level,
         creatorId: user.id,
         creatorName: `${user.firstName} ${user.lastName}`,
-        type: 'teacher',
+        type: user.role === 'teacher' || user.role === 'admin' ? 'teacher' : 'ai',
         duration,
         questions,
         settings: {

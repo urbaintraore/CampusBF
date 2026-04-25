@@ -18,39 +18,40 @@ import { logService } from './logService';
 export const communityService = {
   async createGroup(user: User, data: Omit<Group, 'id' | 'members' | 'createdAt'>) {
     try {
+      const groupsRef = collection(db, 'groups');
       const newGroup = {
         ...data,
         members: [user.id],
         createdAt: serverTimestamp()
       };
-      await addDoc(collection(db, 'communityGroups'), newGroup);
+      await addDoc(groupsRef, newGroup);
       await logService.logAction(user, 'Création groupe', `Groupe: ${data.name}`);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'communityGroups');
+      handleFirestoreError(error, OperationType.CREATE, 'groups');
       throw error;
     }
   },
 
   async addGroupMember(user: User, groupId: string, userId: string) {
     try {
-      await updateDoc(doc(db, 'communityGroups', groupId), {
+      await updateDoc(doc(db, 'groups', groupId), {
         members: arrayUnion(userId)
       });
       await logService.logAction(user, 'Ajout membre groupe', `Groupe ID: ${groupId}, Membre ID: ${userId}`);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `communityGroups/${groupId}`);
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
       throw error;
     }
   },
 
   async removeGroupMember(user: User, groupId: string, userId: string) {
     try {
-      await updateDoc(doc(db, 'communityGroups', groupId), {
+      await updateDoc(doc(db, 'groups', groupId), {
         members: arrayRemove(userId)
       });
       await logService.logAction(user, 'Retrait membre groupe', `Groupe ID: ${groupId}, Membre ID: ${userId}`);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `communityGroups/${groupId}`);
+      handleFirestoreError(error, OperationType.UPDATE, `groups/${groupId}`);
       throw error;
     }
   },
