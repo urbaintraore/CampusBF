@@ -4,7 +4,7 @@ import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
-import { db } from '@/lib/firebase';
+import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { uploadFile } from '@/services/storageService';
 import jsPDF from 'jspdf';
