@@ -45,7 +45,23 @@ export const createCampusAssistantChat = () => {
   return ai.chats.create({
     model: "gemini-3-flash-preview",
     config: {
-      systemInstruction: "Tu es un assistant intelligent pour CampusBF, une plateforme communautaire universitaire au Burkina Faso. Tes fonctionnalités incluent : la mise en relation avec des répétiteurs et enseignants, le partage de documents académiques, la recherche de stages et emplois, un marketplace étudiant, des forums communautaires, l'organisation d'événements, la recherche de camarades, et la participation à des concours (Contests).\n\nEXPERTISE ACADÉMIQUE :\nTu as une expertise particulière dans les programmes universitaires francophones, particulièrement en Mathématiques. Applique une distinction stricte dans le domaine de l'Algèbre :\n- Algèbre Structurelle/Générale : Logique, Théorie des ensembles, Relations, Structures (Groupes, Anneaux, Corps), Polynômes, Fractions rationnelles.\n- Algèbre Linéaire : Matrices, Espaces vectoriels, Systèmes linéaires.\nRéponds avec précision aux questions académiques en utilisant ce vocabulaire spécialisé.\n\nIMPORTANT :\n1. CampusBF est une plateforme indépendante et n'est PAS la plateforme gouvernementale Campus Faso. Ne confonds jamais les deux.\n2. CampusBF NE gère PAS les inscriptions/réinscriptions.\n3. Sois concis, amical et utilise des emojis.",
+      systemInstruction: `Tu es l'Assistant Intelligent Officiel de CampusBF, la plateforme communautaire de référence pour les étudiants au Burkina Faso (UJKZ, UTS, UNB, UNZ, UVBF, etc.).
+
+TON RÔLE :
+1. ACCOMPAGNEMENT ACADÉMIQUE : Aide à la compréhension des cours, résolution d'exercices (Maths, Physique, Droit, Économie, Lettres, etc.), et conseils de méthodologie.
+2. ORIENTATION & CARRIÈRE : Conseils pour choisir une filière au Burkina Faso, aide à la rédaction de CV et lettres de motivation pour des stages locaux.
+3. SERVICES CAMPUSBF : Explique le fonctionnement du Marketplace (vente/achat), de MotoRide (covoiturage étudiant), et de la DocThèque (partage de documents).
+4. VIE ÉTUDIANTE : Conseils sur la colocation, les bons plans (Deals) et les événements universitaires.
+
+TON EXPERTISE :
+- Tu connais parfaitement le système LMD appliqué au Burkina Faso. 
+- Mathématiques : Distinction stricte entre l'Algèbre Générale (Logique, Groupes, Anneaux, Corps, Polynômes) et l'Algèbre Linéaire (Matrices, Espaces vectoriels).
+- Droit : Connaissances fondamentales du droit burkinabè et de l'OHADA.
+
+TON STYLE :
+- Amical, encourageant, professionnel et concis.
+- Utilise des emojis adaptés.
+- Ne confonds JAMAIS CampusBF avec Campus Faso (plateforme de l'État). Tu es indépendant.`,
     }
   });
 };
@@ -76,8 +92,17 @@ export const generateAdvancedQuizWithAI = async (
     const lang = options?.language || 'Français';
     const typesStr = options?.questionTypes?.join(', ') || 'multiple_choice, true_false, short_answer';
     
-    const prompt = `Tu es un Professeur Expert en Mathématiques et concepteur de quiz académiques. Ta spécialité est l'Algèbre universitaire (Structures algébriques et Algèbre générale).
-Génère un quiz universitaire de haute précision à partir du texte source ci-dessous.
+    const prompt = `Tu es une IA experte en ingénierie pédagogique, spécialisée dans la création d'évaluations universitaires de type Moodle. 
+Ton objectif est de transformer le texte fourni en un quiz de haute qualité pour le niveau ${level}.
+
+CONTEXTE :
+- Sujet : ${subject}
+- Niveau : ${level}
+- Nombre de questions : ${numQuestions}
+- Langue : ${lang}
+- Difficulté : ${options?.difficulty || 'Standard'}
+${options?.instructions ? `- Instructions spécifiques : ${options.instructions}` : ''}
+- Types de questions autorisés : ${typesStr}
 
 Matière : ${subject}
 Niveau universitaire : ${level}
@@ -87,25 +112,27 @@ ${options?.difficulty ? `Difficulté : ${options.difficulty}` : ''}
 ${options?.instructions ? `Instructions : ${options.instructions}` : ''}
 Types de questions autorisés : ${typesStr}
 
-### Expertise Spécifique (Catégorisation des matières) :
-Si le sujet est "Algèbre", tu dois faire une distinction TRÈS stricte entre :
-1. Algèbre Générale/Structurelle : Logique, Théorie des ensembles, Relations (équivalence, ordre), Groupes, Anneaux (Rings), Corps (Fields), Polynômes, Algèbre de Boole, et Fractions rationnelles.
-2. Algèbre Linéaire : Espaces vectoriels, Matrices, Applications linéaires, Déterminants, Systèmes linéaires.
-
-NE MÉLANGE PAS ces deux domaines. Si l'utilisateur demande une matière de la liste 1 (ex: Anneaux), ne pose aucune question sur la liste 2 (ex: Matrices).
+### Expertise Spécifique :
+- Mathématiques : Si le sujet concerne l'Algèbre, distingue strictement l'Algèbre Générale (Structures) et l'Algèbre Linéaire (Espaces vectoriels).
+- Sciences / Droit / Économie / Lettres : Utilise une terminologie académique précise et rigoureuse.
 
 Texte source :
 """
 ${courseText}
 """
 
-Contraintes strictes :
-- Renvoie un objet JSON valide et complet.
-- Chaque question doit être extraite ou basée sur le texte fourni.
-- Fournir une explication pédagogique concise ("explanation") pour chaque question.
-- Utilise des questions de types variés.
-- Ne pas générer de champs inutiles ou de tableaux excessivement longs.
-- Pour les QCM, fournis exactement une 'correctAnswerIndex' correspondant à l'index de la bonne réponse.
+DIRECTIVES POUR LES QUESTIONS :
+1. multiple_choice : 4 options, un seul index correct.
+2. true_false : Exactement 2 options (Vrai/Faux).
+3. matching : Liste de paires (left/right) à associer.
+4. cloze : Un texte avec des [[gap1]], [[gap2]] et leurs réponses respectives (clozeAnswers doit être un tableau d'objets {gapId, answer}).
+5. numerical : Question demandant un chiffre précis avec une tolérance numérique.
+6. short_answer : Réponse textuelle courte et sans ambiguïté.
+
+CONTRANTES JSON :
+- Réponds UNIQUEMENT avec un objet JSON valide et complet.
+- Chaque question DOIT inclure une explication pédagogique détaillée ("explanation").
+- Assure-toi que les questions sont directement dérivées du texte source.
 
 Modèle de format attendu pour l'output :
 {

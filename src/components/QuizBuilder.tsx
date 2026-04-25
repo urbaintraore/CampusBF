@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Brain, Sparkles, BookOpen, Clock, Settings, Save, List, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Quiz, QuizQuestion } from '@/types';
@@ -32,6 +32,25 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   // Generated questions
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [currentFact, setCurrentFact] = useState(0);
+
+  const eduFacts = [
+    "Saviez-vous ? Faire des quiz régulièrement améliore la rétention d'information de 50%.",
+    "L'IA Gemini analyse votre texte pour extraire les concepts les plus importants.",
+    "CampusBF aide des milliers d'étudiants au Burkina Faso chaque mois.",
+    "La répétition espacée est la clé d'un apprentissage efficace.",
+    "Le système LMD favorise l'autonomie et l'auto-évaluation.",
+  ];
+
+  useEffect(() => {
+    let interval: any;
+    if (isGenerating) {
+      interval = setInterval(() => {
+        setCurrentFact(prev => (prev + 1) % eduFacts.length);
+      }, 4000);
+    }
+    return () => clearInterval(interval);
+  }, [isGenerating]);
 
   const toggleQuestionType = (type: string) => {
     setQuestionTypes(prev => 
@@ -278,10 +297,24 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   type="button"
                   onClick={handleGenerateAI}
                   disabled={isGenerating}
-                  className="w-full py-4 mt-2 bg-white text-purple-700 rounded-xl font-bold hover:bg-slate-100 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                  className={`w-full py-4 mt-2 bg-white text-purple-700 rounded-xl font-bold hover:bg-slate-100 disabled:opacity-90 flex flex-col items-center justify-center gap-2 shadow-lg transition-all ${isGenerating ? 'h-32 ring-4 ring-white/20' : 'h-16'}`}
                 >
-                  {isGenerating ? <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={20} />}
-                  {isGenerating ? 'Génération en cours...' : 'Générer le Quiz depuis le texte'}
+                  {isGenerating ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="animate-pulse">Génération en cours...</span>
+                      </div>
+                      <p className="text-[10px] text-purple-500 font-medium px-6 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {eduFacts[currentFact]}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={20} />
+                      <span>Générer le Quiz depuis le texte</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

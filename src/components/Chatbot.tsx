@@ -10,6 +10,14 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
+  
+  const quickActions = [
+    { label: "Aide-moi à réviser", icon: "📚", prompt: "Je voudrais réviser mes cours de ce semestre. Peux-tu m'aider ?" },
+    { label: "Recherche stage", icon: "💼", prompt: "Je cherche un stage au Burkina Faso dans mon domaine." },
+    { label: "Vendre un article", icon: "💰", prompt: "Comment puis-je vendre un article sur le marketplace ?" },
+    { label: "MotoRide ?", icon: "🏍️", prompt: "C'est quoi MotoRide et comment ça marche ?" },
+  ];
   
   // Référence pour garder la session de chat active (avec historique)
   const chatSessionRef = useRef<any>(null);
@@ -86,6 +94,30 @@ export default function Chatbot() {
                 </div>
               </div>
             ))}
+
+            {showQuickActions && messages.length === 1 && (
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                {quickActions.map((action, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setInput(action.prompt);
+                      setShowQuickActions(false);
+                      // On doit attendre que le state soit mis à jour ou passer directement la valeur
+                      setTimeout(() => {
+                        const btn = document.getElementById('chatbot-send-btn');
+                        btn?.click();
+                      }, 0);
+                    }}
+                    className="p-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm flex flex-col items-center gap-1 text-center"
+                  >
+                    <span className="text-xl">{action.icon}</span>
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="p-3.5 bg-white border border-slate-200/60 text-slate-700 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2">
@@ -106,6 +138,7 @@ export default function Chatbot() {
               placeholder="Posez votre question..." 
             />
             <button 
+              id="chatbot-send-btn"
               onClick={handleSend} 
               disabled={isLoading || !input.trim()}
               className="bg-emerald-600 text-white min-w-[40px] h-[40px] rounded-full hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:hover:scale-100"
