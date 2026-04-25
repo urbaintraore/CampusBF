@@ -430,6 +430,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log("Setting user state:", initialUserData.id);
         setUser(initialUserData);
+        
+        // Ensure user is in the community group
+        if (firebaseUser.uid) {
+          communityService.ensureUserInCommunityGroup(firebaseUser.uid).catch(console.error);
+        }
+        
         // Log login
         try {
           await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
@@ -1084,7 +1090,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('Error adding comment:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'comments');
       throw error;
     }
   };

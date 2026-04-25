@@ -215,7 +215,7 @@ export default function Messages() {
       }
 
     } catch (error) {
-      console.error("Error sending message:", error);
+      handleFirestoreError(error, OperationType.WRITE, `conversations/${convId}`);
       // Handle error (restore input)
       setMessageInput(content);
       alert("Une erreur s'est produite lors de l'envoi du message.");

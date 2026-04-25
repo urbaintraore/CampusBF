@@ -35,6 +35,8 @@ service cloud.firestore {
     match /colocation_requests/{document=**} { allow read, write: if isSignedIn(); }
     match /colocation_reviews/{document=**} { allow read, write: if isSignedIn(); }
     match /contest_participants/{document=**} { allow read, write: if isSignedIn(); }
+    match /comments/{document=**} { allow read, write: if isSignedIn(); }
+    match /conversations/{document=**} { allow read, write: if isSignedIn(); }
     match /training_enrollments/{document=**} { allow read, write: if isSignedIn(); }
     match /training_reviews/{document=**} { allow read, write: if isSignedIn(); }
     match /marketplace/{document=**} { allow read, write: if isSignedIn(); }
