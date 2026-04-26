@@ -30,6 +30,9 @@ const categoryColors: Record<string, string> = {
   economie: 'from-amber-500 to-orange-600',
   svt: 'from-green-500 to-lime-600',
   physique: 'from-purple-500 to-violet-600',
+  dissertation_redaction: 'from-cyan-500 to-blue-600',
+  tests_psychotechniques: 'from-fuchsia-500 to-pink-600',
+  cas_pratique: 'from-stone-500 to-gray-700',
 };
 
 const categoryLabels: Record<string, string> = {
@@ -39,6 +42,9 @@ const categoryLabels: Record<string, string> = {
   economie: 'Économie & Finances',
   svt: 'SVT / Santé',
   physique: 'Physique & Chimie',
+  dissertation_redaction: 'Dissertation / Rédaction',
+  tests_psychotechniques: 'Tests Psychotechniques',
+  cas_pratique: 'Cas pratique'
 };
 
 export default function PublicServiceContests() {

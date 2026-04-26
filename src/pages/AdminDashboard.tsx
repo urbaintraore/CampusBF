@@ -108,6 +108,8 @@ export default function AdminDashboard() {
   const [showAddDealModal, setShowAddDealModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<any>(null);
   const [showAIGenModal, setShowAIGenModal] = useState(false);
+  const [showManualContestModal, setShowManualContestModal] = useState(false);
+  const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
   const [aiGenData, setAiGenData] = useState({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
   const [isGenerating, setIsGenerating] = useState(false);
   const [newDeal, setNewDeal] = useState<any>({
@@ -315,6 +317,40 @@ export default function AdminDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleManualContestCreate = async () => {
+    if (!manualContestData.title || !manualContestData.questionsJSON) {
+      toast.error('Veuillez remplir le titre et les questions (JSON)');
+      return;
+    }
+    
+    let questionsParsed;
+    try {
+      questionsParsed = JSON.parse(manualContestData.questionsJSON);
+      if (!Array.isArray(questionsParsed)) throw new Error('Les questions doivent être dans un tableau [ ]');
+    } catch (e: any) {
+      toast.error('Format JSON invalide: ' + e.message);
+      return;
+    }
+
+    try {
+      const newCtx = {
+        titre: manualContestData.title,
+        categorie: manualContestData.category,
+        niveau: manualContestData.level,
+        type: 'qcm',
+        duree: questionsParsed.length * 2, // arbitrary duration
+        difficulte: 'moyen',
+        questions: questionsParsed
+      };
+      await addPublicServiceContest(newCtx);
+      setShowManualContestModal(false);
+      setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'ajout manuel");
+    }
   };
 
   const handleAIGenerateContest = async () => {
@@ -1326,15 +1362,27 @@ export default function AdminDashboard() {
               ))}
 
               {contentTab === 'public_service_contests' && (
-                <div className="p-4 bg-gray-50 border-b border-gray-100 flex gap-2">
-                  <button 
-                    onClick={() => setShowAIGenModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
-                  >
-                    <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
-                    Générer un concours (IA)
-                  </button>
-                  <p className="text-xs text-gray-500 mt-2">Créez instantanément des QCM complets avec l'IA Gemini</p>
+                <div className="p-4 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-[250px]">
+                    <button 
+                      onClick={() => setShowAIGenModal(true)}
+                      className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
+                      Générer un concours (IA)
+                    </button>
+                    <p className="text-xs text-center text-gray-500 mt-2">Créez instantanément des QCM complets avec l'IA Gemini</p>
+                  </div>
+                  <div className="flex-1 min-w-[250px]">
+                    <button 
+                      onClick={() => setShowManualContestModal(true)}
+                      className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white border-2 border-emerald-600 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-50 transition-colors shadow-sm"
+                    >
+                      <Plus size={16} />
+                      Créer manuellement
+                    </button>
+                    <p className="text-xs text-center text-gray-500 mt-2">Ajouter un QCM depuis un fichier JSON</p>
+                  </div>
                 </div>
               )}
 
@@ -2582,6 +2630,9 @@ export default function AdminDashboard() {
                   <option value="economie">Économie</option>
                   <option value="svt">SVT</option>
                   <option value="physique">Physique-Chimie</option>
+                  <option value="dissertation_redaction">Dissertation / Rédaction</option>
+                  <option value="tests_psychotechniques">Tests Psychotechniques</option>
+                  <option value="cas_pratique">Cas pratique</option>
                 </select>
               </div>
 
@@ -2631,6 +2682,98 @@ export default function AdminDashboard() {
                       Générer maintenant
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showManualContestModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Plus size={20} className="text-emerald-600" />
+                Créer un concours (Manuel)
+              </h2>
+              <button onClick={() => setShowManualContestModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Titre du concours</label>
+                <input 
+                  type="text" 
+                  value={manualContestData.title}
+                  onChange={(e) => setManualContestData({ ...manualContestData, title: e.target.value })}
+                  placeholder="Ex: Concours d'intégration 2024"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Catégorie</label>
+                  <select 
+                    value={manualContestData.category}
+                    onChange={(e) => setManualContestData({ ...manualContestData, category: e.target.value as PublicServiceCategory })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                  >
+                    <option value="culture_generale">Culture Générale</option>
+                    <option value="maths">Mathématiques</option>
+                    <option value="droit">Droit</option>
+                    <option value="economie">Économie</option>
+                    <option value="svt">SVT</option>
+                    <option value="physique">Physique-Chimie</option>
+                    <option value="dissertation_redaction">Dissertation / Rédaction</option>
+                    <option value="tests_psychotechniques">Tests Psychotechniques</option>
+                    <option value="cas_pratique">Cas pratique</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Niveau</label>
+                  <select 
+                    value={manualContestData.level}
+                    onChange={(e) => setManualContestData({ ...manualContestData, level: e.target.value as PublicServiceLevel })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                  >
+                    <option value="BEPC">BEPC</option>
+                    <option value="BAC">BAC</option>
+                    <option value="Licence">Licence</option>
+                    <option value="Master">Master</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex justify-between">
+                  <span>Questions (Format JSON Array)</span>
+                  <button onClick={() => {
+                    const sample = `[\n  {\n    "question": "Votre question ici ?",\n    "options": ["Option A", "Option B", "Option C", "Option D"],\n    "bonne_reponse": 0,\n    "explication": "Explication courte"\n  }\n]`;
+                    setManualContestData({...manualContestData, questionsJSON: sample});
+                  }} className="text-emerald-600 hover:text-emerald-700 capitalize font-medium">Insérer modèle</button>
+                </label>
+                <textarea 
+                  rows={10}
+                  value={manualContestData.questionsJSON}
+                  onChange={(e) => setManualContestData({ ...manualContestData, questionsJSON: e.target.value })}
+                  placeholder="Collez ici le tableau JSON de vos questions..."
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-xs font-mono"
+                />
+              </div>
+
+              <div className="pt-4">
+                <button 
+                  onClick={handleManualContestCreate}
+                  disabled={!manualContestData.title || !manualContestData.questionsJSON}
+                  className="w-full py-3 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center justify-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  <Plus size={18} />
+                  Enregistrer ce concours
                 </button>
               </div>
             </div>

@@ -684,7 +684,7 @@ export interface ContestWinner {
   score: number;
 }
 
-export type PublicServiceCategory = "culture_generale" | "maths" | "droit" | "economie" | "svt" | "physique";
+export type PublicServiceCategory = "culture_generale" | "maths" | "droit" | "economie" | "svt" | "physique" | "dissertation_redaction" | "tests_psychotechniques" | "cas_pratique";
 export type PublicServiceType = "qcm" | "dissertation" | "exercice" | "simulation";
 export type PublicServiceLevel = "BEPC" | "BAC" | "Licence";
 export type PublicServiceDifficulty = "facile" | "moyen" | "difficile";

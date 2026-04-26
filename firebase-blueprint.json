@@ -47,7 +47,7 @@
       "type": "object",
       "properties": {
         "titre": { "type": "string" },
-        "categorie": { "type": "string", "enum": ["culture_generale", "maths", "droit", "economie", "svt", "physique"] },
+        "categorie": { "type": "string", "enum": ["culture_generale", "maths", "droit", "economie", "svt", "physique", "dissertation_redaction", "tests_psychotechniques", "cas_pratique"] },
         "type": { "type": "string", "enum": ["qcm", "dissertation", "exercice", "simulation"] },
         "niveau": { "type": "string", "enum": ["BEPC", "BAC", "Licence"] },
         "duree": { "type": "number" },
