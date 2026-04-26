@@ -1086,6 +1086,24 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               )}
+              {contentTab === 'public_service_contests' && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowAIGenModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+                  >
+                    <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
+                    Générer (IA)
+                  </button>
+                  <button 
+                    onClick={() => setShowManualContestModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
+                  >
+                    <Plus size={16} />
+                    Créer manuellement
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="divide-y divide-gray-50">
@@ -1360,31 +1378,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-
-              {contentTab === 'public_service_contests' && (
-                <div className="p-4 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-4">
-                  <div className="flex-1 min-w-[250px]">
-                    <button 
-                      onClick={() => setShowAIGenModal(true)}
-                      className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-                    >
-                      <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
-                      Générer un concours (IA)
-                    </button>
-                    <p className="text-xs text-center text-gray-500 mt-2">Créez instantanément des QCM complets avec l'IA Gemini</p>
-                  </div>
-                  <div className="flex-1 min-w-[250px]">
-                    <button 
-                      onClick={() => setShowManualContestModal(true)}
-                      className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white border-2 border-emerald-600 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-50 transition-colors shadow-sm"
-                    >
-                      <Plus size={16} />
-                      Créer manuellement
-                    </button>
-                    <p className="text-xs text-center text-gray-500 mt-2">Ajouter un QCM depuis un fichier JSON</p>
-                  </div>
-                </div>
-              )}
 
               {contentTab === 'public_service_contests' && publicServiceContests.map(contest => (
                 <div key={contest.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
