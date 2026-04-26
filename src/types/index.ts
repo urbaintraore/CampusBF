@@ -684,6 +684,53 @@ export interface ContestWinner {
   score: number;
 }
 
+export type PublicServiceCategory = "culture_generale" | "maths" | "droit" | "economie" | "svt" | "physique";
+export type PublicServiceType = "qcm" | "dissertation" | "exercice" | "simulation";
+export type PublicServiceLevel = "BEPC" | "BAC" | "Licence";
+export type PublicServiceDifficulty = "facile" | "moyen" | "difficile";
+
+export interface PublicServiceQuestion {
+  question: string;
+  options: string[];
+  bonne_reponse: number; // index de la bonne réponse
+  explication: string;
+}
+
+export interface PublicServiceContest {
+  id: string;
+  titre: string;
+  description: string;
+  categorie: PublicServiceCategory;
+  type: PublicServiceType;
+  niveau: PublicServiceLevel;
+  duree: number; // en minutes
+  difficulte: PublicServiceDifficulty;
+  questions: PublicServiceQuestion[];
+  corrige_detaille?: string;
+  auteur_id: string;
+  date_creation: any;
+  status: 'active' | 'inactive';
+}
+
+export interface PublicServiceResult {
+  id: string;
+  user_id: string;
+  concours_id: string;
+  score: number;
+  total_questions: number;
+  temps: number; // en secondes
+  date: any;
+  classement?: number;
+}
+
+export interface PublicServiceSubscription {
+  id: string;
+  user_id: string;
+  actif: boolean;
+  date_debut: any;
+  date_fin: any;
+}
+
 export interface Deal {
   id: string;
   title: string;

@@ -33,6 +33,7 @@ import Messages from './pages/Messages';
 import FindClassmates from './pages/FindClassmates';
 import Trainings from './pages/Trainings';
 import Contests from './pages/Contests';
+import PublicServiceContests from './pages/PublicServiceContests';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -246,6 +247,11 @@ export default function App() {
           <Route path="/contests" element={
             <ProtectedRoute>
               <Contests />
+            </ProtectedRoute>
+          } />
+          <Route path="/public-service-contests" element={
+            <ProtectedRoute>
+              <PublicServiceContests />
             </ProtectedRoute>
           } />
           

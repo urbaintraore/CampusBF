@@ -75,6 +75,9 @@ interface AuthContextType {
   colocations: Colocation[];
   colocationRequests: ColocationRequest[];
   colocationReviews: ColocationReview[];
+  publicServiceContests: any[];
+  addPublicServiceContest: (contest: any) => Promise<void>;
+  deletePublicServiceContest: (id: string) => Promise<void>;
   addQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt'>) => Promise<void>;
   deleteQuiz: (id: string) => Promise<void>;
   createContest: (contest: Omit<Contest, 'id' | 'createdAt'>) => Promise<void>;
@@ -206,6 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [colocations, setColocations] = useState<Colocation[]>([]);
   const [colocationRequests, setColocationRequests] = useState<ColocationRequest[]>([]);
   const [colocationReviews, setColocationReviews] = useState<ColocationReview[]>([]);
+  const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -580,6 +584,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTrainingReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReview)));
     }));
 
+    unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
+      setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }));
+
     // Restricted/Conditional lists
     const marketplaceQuery = user.role === 'admin' 
       ? collection(db, 'marketplace')
@@ -652,6 +660,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const ensureUserInCommunityGroup = async (userId: string) => {
     await communityService.ensureUserInCommunityGroup(userId);
+  };
+
+  const deletePublicServiceContest = async (id: string) => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      await deleteDoc(doc(db, 'public_service_contests', id));
+      toast.success('Concours supprimé');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const addPublicServiceContest = async (contestData: any) => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      await addDoc(collection(db, 'public_service_contests'), {
+        ...contestData,
+        status: 'active',
+        authorId: user.id,
+        createdAt: serverTimestamp(),
+        date_creation: new Date().toISOString()
+      });
+      toast.success('Concours ajouté avec succès');
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'ajout");
+    }
   };
 
   const syncCommunityGroup = async () => {
@@ -1439,6 +1475,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reportTraining,
       updateTrainingStatus,
       deleteTraining,
+      publicServiceContests,
+      addPublicServiceContest,
+      deletePublicServiceContest,
       contests,
       contestParticipants,
       quizzes,

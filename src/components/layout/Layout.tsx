@@ -33,6 +33,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Calendar, label: 'Événements', to: '/events' },
     { icon: Compass, label: 'Orientation', to: '/orientation', roles: ['student', 'admin', 'parent'] },
     { icon: Brain, label: 'Révisions & Quiz', to: '/quizzes', roles: ['student', 'admin', 'teacher'] },
+    { icon: Trophy, label: 'Prépa Concours 🙏', to: '/public-service-contests', roles: ['student', 'admin', 'teacher'] },
     { icon: FileText, label: 'Générateur de CV', to: '/cv-generator', roles: ['student', 'admin', 'alumni'] },
     { icon: Tag, label: 'Bons Plans', to: '/deals', roles: ['student', 'admin', 'alumni'] },
     { icon: Home, label: 'Colocation', to: '/colocation', roles: ['student', 'admin'] },

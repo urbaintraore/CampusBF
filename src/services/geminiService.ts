@@ -1,5 +1,70 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizQuestion } from "@/types";
+import { QuizQuestion, PublicServiceQuestion } from "@/types";
+
+// ... existing code ...
+
+/**
+ * Génère spécialisée pour les concours de la fonction publique au Burkina Faso
+ */
+export const generatePublicServiceExam = async (
+  category: string,
+  level: string,
+  numQuestions: number = 10
+): Promise<PublicServiceQuestion[]> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `Tu es un expert en conception de concours pour la fonction publique au Burkina Faso.
+Génère un questionnaire de type QCM de niveau ${level} en "${category}".
+
+CONTRAINTES :
+1. Nombre de questions : ${numQuestions}
+2. Chaque question doit avoir exactement 4 choix.
+3. Le sujet doit être spécifiquement adapté au contexte burkinabè (si culture générale, droit ou économie).
+4. Pour chaque question, fournis la bonne réponse (index 0 à 3) et une explication pédagogique détaillée.
+
+Matière : ${category}
+Niveau requis : ${level}
+
+Réponds UNIQUEMENT avec un tableau JSON d'objets suivant ce schéma :
+[
+  {
+    "question": "Texte de la question",
+    "options": ["Choix A", "Choix B", "Choix C", "Choix D"],
+    "bonne_reponse": 0,
+    "explication": "Pourquoi c'est la bonne réponse..."
+  }
+]`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: { type: Type.STRING },
+              options: { type: Type.ARRAY, items: { type: Type.STRING } },
+              bonne_reponse: { type: Type.NUMBER },
+              explication: { type: Type.STRING }
+            },
+            required: ["question", "options", "bonne_reponse", "explication"]
+          }
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) throw new Error("Aucun résultat de l'IA");
+    
+    return JSON.parse(resultText) as PublicServiceQuestion[];
+  } catch (error: any) {
+    console.error("Public Service Exam AI Prep Error:", error);
+    throw new Error(`La génération de concours a échoué: ${error.message}`);
+  }
+};
 
 // Initialisation paresseuse de l'API Gemini
 let aiClient: GoogleGenAI | null = null;

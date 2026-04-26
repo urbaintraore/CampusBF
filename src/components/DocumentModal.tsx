@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface DocumentModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface DocumentModalProps {
 }
 
 export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentModalProps) {
+  const { documents } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     subject: '',
@@ -26,6 +28,27 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const uniqueUniversities = useMemo(() => {
+    const unis = new Set<string>();
+    // Default common universities
+    unis.add('Université Joseph Ki-Zerbo');
+    unis.add('Université Thomas Sankara');
+    unis.add('Université Nazi Boni');
+    unis.add('Université Norbert Zongo');
+    unis.add('Université Aube Nouvelle');
+    unis.add('LBS');
+    unis.add('U-AUBEN');
+    
+    // Learning from existing documents
+    documents.forEach(doc => {
+      if (doc.university && doc.university.trim()) {
+        unis.add(doc.university.trim());
+      }
+    });
+    
+    return Array.from(unis).sort((a, b) => a.localeCompare(b));
+  }, [documents]);
 
   useEffect(() => {
     setError(null);
@@ -150,12 +173,18 @@ export function DocumentModal({ isOpen, onClose, onSave, document }: DocumentMod
             <label className="text-xs font-bold text-gray-500 uppercase">Université / Établissement</label>
             <input
               type="text"
+              list="universities-data"
               placeholder="Nom de l'université"
               className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               value={formData.university}
               onChange={(e) => setFormData({ ...formData, university: e.target.value })}
               disabled={loading}
             />
+            <datalist id="universities-data">
+              {uniqueUniversities.map(uni => (
+                <option key={uni} value={uni} />
+              ))}
+            </datalist>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">

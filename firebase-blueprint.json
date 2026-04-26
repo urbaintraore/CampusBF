@@ -40,6 +40,45 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title", "message", "type", "read", "createdAt"]
+    },
+    "PublicServiceContest": {
+      "title": "Concours Fonction Publique",
+      "description": "Sujets et QCM de préparation aux concours",
+      "type": "object",
+      "properties": {
+        "titre": { "type": "string" },
+        "categorie": { "type": "string", "enum": ["culture_generale", "maths", "droit", "economie", "svt", "physique"] },
+        "type": { "type": "string", "enum": ["qcm", "dissertation", "exercice", "simulation"] },
+        "niveau": { "type": "string", "enum": ["BEPC", "BAC", "Licence"] },
+        "duree": { "type": "number" },
+        "difficulte": { "type": "string", "enum": ["facile", "moyen", "difficile"] },
+        "questions": { "type": "array" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "date_creation": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PublicServiceResult": {
+      "title": "Résultat Concours",
+      "description": "Historique des performances aux tests",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "concours_id": { "type": "string" },
+        "score": { "type": "number" },
+        "temps": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PublicServiceSubscription": {
+      "title": "Abonnement Concours",
+      "description": "Statut d'abonnement au module concours",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "actif": { "type": "boolean" },
+        "date_debut": { "type": "string", "format": "date-time" },
+        "date_fin": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -54,6 +93,18 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "Historique des notifications"
+    },
+    "/public_service_contests/{contestId}": {
+      "schema": "PublicServiceContest",
+      "description": "Base de données des concours"
+    },
+    "/public_service_results/{resultId}": {
+      "schema": "PublicServiceResult",
+      "description": "Résultats des tests"
+    },
+    "/public_service_subscriptions/{subId}": {
+      "schema": "PublicServiceSubscription",
+      "description": "Abonnements au module"
     }
   }
 }

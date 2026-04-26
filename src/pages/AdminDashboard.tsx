@@ -1,6 +1,6 @@
 import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -9,7 +9,8 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { generateDevReport, generateSummaryReport, generateFullReport } from '@/services/devReportService';
+import { generatePublicServiceExam } from '@/services/geminiService';
+import { PublicServiceCategory, PublicServiceLevel } from '@/types';
 import { toast } from 'react-hot-toast';
 
 export default function AdminDashboard() {
@@ -23,6 +24,9 @@ export default function AdminDashboard() {
     reviewSubscriptionRequest, 
     syncCommunityGroup,
     users, 
+    publicServiceContests,
+    addPublicServiceContest,
+    deletePublicServiceContest,
     updateUserRole, 
     activateUser,
     deactivateUser,
@@ -82,7 +86,7 @@ export default function AdminDashboard() {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -103,6 +107,9 @@ export default function AdminDashboard() {
   const [editingContest, setEditingContest] = useState<any>(null);
   const [showAddDealModal, setShowAddDealModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<any>(null);
+  const [showAIGenModal, setShowAIGenModal] = useState(false);
+  const [aiGenData, setAiGenData] = useState({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
+  const [isGenerating, setIsGenerating] = useState(false);
   const [newDeal, setNewDeal] = useState<any>({
     title: '',
     description: '',
@@ -308,6 +315,34 @@ export default function AdminDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleAIGenerateContest = async () => {
+    if (!aiGenData.title) {
+      toast.error('Veuillez donner un titre au concours');
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const questions = await generatePublicServiceExam(aiGenData.category, aiGenData.level, aiGenData.numQuestions);
+      const newCtx = {
+        titre: aiGenData.title,
+        categorie: aiGenData.category,
+        niveau: aiGenData.level,
+        type: 'qcm',
+        duree: aiGenData.numQuestions * 2, // 2 mins per question roughly
+        difficulte: 'moyen',
+        questions: questions
+      };
+      await addPublicServiceContest(newCtx);
+      setShowAIGenModal(false);
+      setAiGenData({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de la génération IA');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const pendingApplications = applications.filter(app => app.status === 'pending');
@@ -941,6 +976,7 @@ export default function AdminDashboard() {
               { id: 'deals', label: 'Bons Plans', icon: Tag },
               { id: 'colocation', label: 'Colocation', icon: Home },
               { id: 'payments', label: 'Paiements', icon: CreditCard },
+              { id: 'public_service_contests', label: 'Concours Fonction Publique', icon: Trophy },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -1289,6 +1325,42 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
+              {contentTab === 'public_service_contests' && (
+                <div className="p-4 bg-gray-50 border-b border-gray-100 flex gap-2">
+                  <button 
+                    onClick={() => setShowAIGenModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+                  >
+                    <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
+                    Générer un concours (IA)
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">Créez instantanément des QCM complets avec l'IA Gemini</p>
+                </div>
+              )}
+
+              {contentTab === 'public_service_contests' && publicServiceContests.map(contest => (
+                <div key={contest.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+                      <Trophy size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{contest.titre}</p>
+                      <p className="text-xs text-gray-500">{contest.categorie} • {contest.niveau} • {contest.questions?.length || 0} questions</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => deletePublicServiceContest(contest.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
               {contentTab === 'ads' && ads.map(ad => (
                 <div key={ad.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
@@ -2467,6 +2539,100 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAIGenModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <RefreshCw size={20} className="text-indigo-600" />
+                Générer un concours (IA)
+              </h2>
+              <button onClick={() => setShowAIGenModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Titre du concours</label>
+                <input 
+                  type="text" 
+                  value={aiGenData.title}
+                  onChange={(e) => setAiGenData({ ...aiGenData, title: e.target.value })}
+                  placeholder="Ex: Culture Générale - session 2024"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Catégorie</label>
+                <select 
+                  value={aiGenData.category}
+                  onChange={(e) => setAiGenData({ ...aiGenData, category: e.target.value as PublicServiceCategory })}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
+                >
+                  <option value="culture_generale">Culture Générale</option>
+                  <option value="maths">Mathématiques</option>
+                  <option value="droit">Droit</option>
+                  <option value="economie">Économie</option>
+                  <option value="svt">SVT</option>
+                  <option value="physique">Physique-Chimie</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Niveau</label>
+                <select 
+                  value={aiGenData.level}
+                  onChange={(e) => setAiGenData({ ...aiGenData, level: e.target.value as PublicServiceLevel })}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
+                >
+                  <option value="BEPC">BEPC</option>
+                  <option value="BAC">BAC</option>
+                  <option value="Licence">Licence</option>
+                  <option value="Master">Master</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre de questions</label>
+                <input 
+                  type="number" 
+                  min="5"
+                  max="50"
+                  value={aiGenData.numQuestions}
+                  onChange={(e) => setAiGenData({ ...aiGenData, numQuestions: parseInt(e.target.value) })}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
+                />
+              </div>
+
+              <div className="pt-4">
+                <button 
+                  onClick={handleAIGenerateContest}
+                  disabled={isGenerating || !aiGenData.title}
+                  className={cn(
+                    "w-full py-3 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center justify-center gap-2",
+                    isGenerating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+                  )}
+                >
+                  {isGenerating ? (
+                    <>
+                      <RefreshCw size={18} className="animate-spin" />
+                      Génération en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={18} />
+                      Générer maintenant
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
