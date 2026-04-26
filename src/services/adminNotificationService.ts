@@ -4,28 +4,50 @@ import { getMessaging } from 'firebase-admin/messaging';
 
 // Initialisation de Firebase Admin
 // Les secrets doivent être configurés dans les variables d'environnement
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-      : null;
+let db: admin.firestore.Firestore | null = null;
+let messaging: admin.messaging.Messaging | null = null;
+let isInitialized = false;
 
-    if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-    } else {
-      // Fallback pour le développement local ou si configuré via ADC
-      admin.initializeApp();
+function ensureInitialized() {
+  if (isInitialized) return true;
+
+  if (!admin.apps.length) {
+    try {
+      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
+        : null;
+
+      if (serviceAccount) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        });
+      } else {
+        // Fallback pour le développement local ou si configuré via ADC
+        // En environnement de prod sandboxed sans ADC, ceci peut échouer
+        admin.initializeApp();
+      }
+      console.log('Firebase Admin initialisé avec succès');
+      isInitialized = true;
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de Firebase Admin:', error);
+      return false;
     }
-    console.log('Firebase Admin initialisé avec succès');
-  } catch (error) {
-    console.error('Erreur lors de l\'initialisation de Firebase Admin:', error);
+  } else {
+    isInitialized = true;
   }
+  
+  if (isInitialized) {
+    try {
+      db = getFirestore();
+      messaging = getMessaging();
+    } catch (e) {
+      console.error('Erreur lors de la récupération des services Firebase Admin:', e);
+      isInitialized = false;
+    }
+  }
+  
+  return isInitialized;
 }
-
-const db = getFirestore();
-const messaging = getMessaging();
 
 export interface NotificationPayload {
   title: string;
@@ -35,6 +57,10 @@ export interface NotificationPayload {
 }
 
 export const sendNotificationToUser = async (userId: string, payload: NotificationPayload) => {
+  if (!ensureInitialized() || !db || !messaging) {
+    console.warn('Firebase Admin non initialisé. Notification ignorée.');
+    return;
+  }
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
@@ -77,6 +103,10 @@ export const sendNotificationToUser = async (userId: string, payload: Notificati
 };
 
 export const notifyUsersByFilter = async (filter: (user: any) => boolean, payload: NotificationPayload) => {
+  if (!ensureInitialized() || !db) {
+    console.warn('Firebase Admin non initialisé. Notification par filtre ignorée.');
+    return;
+  }
   try {
     const usersSnapshot = await db.collection('users').get();
     const users = usersSnapshot.docs

@@ -4,7 +4,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import admin from 'firebase-admin';
+import fs from 'fs/promises';
 
+console.log('Starting server.ts...');
 dotenv.config();
 
 const app = express();
@@ -13,14 +15,11 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-import { 
-  sendNotificationToUser, 
-  notifyUsersByFilter 
-} from './src/services/adminNotificationService.ts';
-
 // Endpoints de notification
 app.post('/api/notify/document', async (req, res) => {
   const { title, subject, university, major } = req.body;
+  
+  const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
   
   await notifyUsersByFilter(
     (user) => user.major === major || user.university === university,
@@ -38,6 +37,8 @@ app.post('/api/notify/document', async (req, res) => {
 app.post('/api/notify/internship', async (req, res) => {
   const { title, company, major, level } = req.body;
   
+  const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
+  
   await notifyUsersByFilter(
     (user) => user.major === major && (user.level === level || !level),
     {
@@ -54,6 +55,8 @@ app.post('/api/notify/internship', async (req, res) => {
 app.post('/api/notify/contest', async (req, res) => {
   const { title } = req.body;
   
+  const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
+  
   await notifyUsersByFilter(
     () => true, // Tous les utilisateurs
     {
@@ -68,6 +71,8 @@ app.post('/api/notify/contest', async (req, res) => {
 
 app.post('/api/notify/event', async (req, res) => {
   const { title, university } = req.body;
+  
+  const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
   
   await notifyUsersByFilter(
     (user) => user.university === university,
@@ -85,6 +90,8 @@ app.post('/api/notify/event', async (req, res) => {
 app.post('/api/notify/reply', async (req, res) => {
   const { userId, discussionTitle } = req.body;
   
+  const { sendNotificationToUser } = await import('./src/services/adminNotificationService.ts');
+  
   await sendNotificationToUser(userId, {
     title: "Quelqu'un a répondu à ta question",
     body: `Ta discussion "${discussionTitle}" a reçu une nouvelle réponse.`,
@@ -97,6 +104,7 @@ app.post('/api/notify/reply', async (req, res) => {
 // Vérification de l'inactivité (toutes les 24h)
 const checkInactivity = async () => {
   try {
+    const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
     const threeDaysAgo = admin.firestore.Timestamp.fromDate(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000));
     
     await notifyUsersByFilter(
@@ -126,27 +134,51 @@ app.get('/api/health', (req, res) => {
 });
 
 async function startServer() {
-  // Configuration du middleware Vite pour le développement
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('Starting Vite server...');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-      root: process.cwd(),
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Configuration pour la production
-    const distPath = path.resolve(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
-    });
-  }
+  console.log('entering startServer');
+  try {
+    // Configuration du middleware Vite pour le développement
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Mode: DEVELOPMENT');
+      console.log('Starting Vite server...');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+        root: process.cwd(),
+      });
+      app.use(vite.middlewares);
+      console.log('Vite middleware added');
+      
+      // Fallback manual serving of index.html in case vite middleware skips it
+      app.get('*', async (req, res, next) => {
+        if (req.url.startsWith('/api')) return next();
+        try {
+          const html = await vite.transformIndexHtml(req.url, await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf-8'));
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+        } catch (e) {
+          next(e);
+        }
+      });
+    } else {
+      console.log('Mode: PRODUCTION');
+      // Configuration pour la production
+      const distPath = path.resolve(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.resolve(distPath, 'index.html'));
+      });
+    }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT}`);
-  });
+    console.log('Attempting to listen on port', PORT);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Serveur démarré avec succès sur http://0.0.0.0:${PORT}`);
+      console.log('Environnement:', process.env.NODE_ENV || 'development');
+    });
+  } catch (error) {
+    console.error('CRITICAL ERROR DURING SERVER STARTUP:', error);
+    // On essaie quand même d'écouter pour ne pas laisser le port vide si possible, 
+    // ou au moins on log l'erreur.
+    process.exit(1);
+  }
 }
 
 startServer();
