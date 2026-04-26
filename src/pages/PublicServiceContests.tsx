@@ -15,7 +15,9 @@ import {
   History,
   Lock,
   Star,
-  CheckCircle2
+  CheckCircle2,
+  Plus,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { publicServiceExamService } from '@/services/publicServiceExamService';
@@ -57,6 +59,44 @@ export default function PublicServiceContests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isExamMode, setIsExamMode] = useState(false);
   const [ranking, setRanking] = useState<any[]>([]);
+  const [showManualContestModal, setShowManualContestModal] = useState(false);
+  const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
+  const { addPublicServiceContest } = useAuth();
+
+  const handleManualContestCreate = async () => {
+    if (!manualContestData.title || !manualContestData.questionsJSON) {
+      toast.error('Veuillez remplir le titre et les questions (JSON)');
+      return;
+    }
+    
+    let questionsParsed;
+    try {
+      questionsParsed = JSON.parse(manualContestData.questionsJSON);
+      if (!Array.isArray(questionsParsed)) throw new Error('Les questions doivent être dans un tableau [ ]');
+    } catch (e: any) {
+      toast.error('Format JSON invalide: ' + e.message);
+      return;
+    }
+
+    try {
+      const newCtx = {
+        titre: manualContestData.title,
+        categorie: manualContestData.category,
+        niveau: manualContestData.level,
+        type: 'qcm',
+        duree: questionsParsed.length * 2, // arbitrary duration
+        difficulte: 'moyen',
+        questions: questionsParsed
+      };
+      await addPublicServiceContest(newCtx);
+      setShowManualContestModal(false);
+      setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
+      toast.success('Concours ajouté avec succès');
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'ajout manuel");
+    }
+  };
 
   useEffect(() => {
     if (globalContests) {
@@ -209,6 +249,18 @@ export default function PublicServiceContests() {
               </select>
             </div>
           </div>
+          
+          {user?.role === 'admin' && (
+            <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+              <button 
+                onClick={() => setShowManualContestModal(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                <Plus size={18} />
+                Créer manuellement un concours
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content Tabs */}
@@ -415,6 +467,92 @@ export default function PublicServiceContests() {
           </div>
         </div>
       </div>
+
+      {showManualContestModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Plus size={24} className="text-emerald-600" />
+                Créer un concours (Manuel)
+              </h2>
+              <button onClick={() => setShowManualContestModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titre du concours</label>
+                <input 
+                  type="text" 
+                  value={manualContestData.title}
+                  onChange={(e) => setManualContestData({ ...manualContestData, title: e.target.value })}
+                  placeholder="Ex: Concours d'intégration 2024"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm text-slate-700"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Catégorie</label>
+                  <select 
+                    value={manualContestData.category}
+                    onChange={(e) => setManualContestData({ ...manualContestData, category: e.target.value as PublicServiceCategory })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm text-slate-700"
+                  >
+                    {Object.entries(categoryLabels).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Niveau</label>
+                  <select 
+                    value={manualContestData.level}
+                    onChange={(e) => setManualContestData({ ...manualContestData, level: e.target.value as PublicServiceLevel })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm text-slate-700"
+                  >
+                    <option value="BEPC">BEPC</option>
+                    <option value="BAC">BAC</option>
+                    <option value="Licence">Licence</option>
+                    <option value="Master">Master</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex justify-between">
+                  <span>Questions (Format JSON Array)</span>
+                  <button onClick={() => {
+                    const sample = `[\n  {\n    "question": "Votre question ici ?",\n    "options": ["Option A", "Option B", "Option C", "Option D"],\n    "bonne_reponse": 0,\n    "explication": "Explication courte"\n  }\n]`;
+                    setManualContestData({...manualContestData, questionsJSON: sample});
+                  }} className="text-emerald-600 hover:text-emerald-700 capitalize font-medium">Insérer modèle</button>
+                </label>
+                <textarea 
+                  rows={10}
+                  value={manualContestData.questionsJSON}
+                  onChange={(e) => setManualContestData({ ...manualContestData, questionsJSON: e.target.value })}
+                  placeholder="Collez ici le tableau JSON de vos questions..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-mono text-slate-700"
+                />
+              </div>
+
+              <div className="pt-6 border-t border-slate-100">
+                <button 
+                  onClick={handleManualContestCreate}
+                  disabled={!manualContestData.title || !manualContestData.questionsJSON}
+                  className="w-full py-4 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/30 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  <Plus size={20} />
+                  Enregistrer ce concours
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

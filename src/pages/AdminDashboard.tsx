@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { generateDevReport, generateSummaryReport, generateFullReport } from '@/services/devReportService';
 import { generatePublicServiceExam } from '@/services/geminiService';
 import { PublicServiceCategory, PublicServiceLevel } from '@/types';
 import { toast } from 'react-hot-toast';
