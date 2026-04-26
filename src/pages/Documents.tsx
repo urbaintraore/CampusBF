@@ -91,6 +91,13 @@ export default function Documents() {
   const majors = getUniqueValues(documents.map(doc => doc.department || doc.major));
   const years = getUniqueValues(documents.map(doc => doc.year)).sort((a, b) => b.localeCompare(a));
 
+  const knownUniversities = getUniqueValues([
+    'Université Joseph Ki-Zerbo',
+    'Université Thomas Sankara',
+    'Université Aube Nouvelle',
+    ...documents.map(doc => doc.university)
+  ]);
+
   const filteredDocuments = documents.filter(doc => {
     const matchesFilter = filter === 'tout' || doc.type === filterMap[filter];
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -531,10 +538,10 @@ export default function Documents() {
                   onChange={(e) => setUploadUniversity(e.target.value)}
                   className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200/60 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-700"
                 >
-                  <option value="Université Joseph Ki-Zerbo">Université Joseph Ki-Zerbo</option>
-                  <option value="Université Thomas Sankara">Université Thomas Sankara</option>
-                  <option value="Université Aube Nouvelle">Université Aube Nouvelle</option>
-                  <option value="Autre">Autre université</option>
+                  {knownUniversities.map(uni => (
+                    <option key={uni} value={uni}>{uni}</option>
+                  ))}
+                  <option value="Autre">Autre université (Préciser...)</option>
                 </select>
               </div>
               {uploadUniversity === 'Autre' && (
