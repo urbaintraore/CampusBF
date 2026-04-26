@@ -268,9 +268,10 @@ export default function Dashboard() {
       {headerSection}
 
       {/* Quick Stats / Highlights */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {user?.role === 'parent' ? (
           [
+            { label: 'Concours FP', count: auth.publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
             { label: 'Événements', count: auth.events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
@@ -283,6 +284,12 @@ export default function Dashboard() {
         ) : (
           [
             { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
+            { 
+              label: 'Concours FP', 
+              count: auth.publicServiceContests?.length.toString() || '0', 
+              color: 'bg-amber-100 text-amber-700 ring-amber-200', 
+              link: '/public-service-contests' 
+            },
             {
               label: 'Stages & Emplois', 
               count: internships.length.toString(), 
@@ -374,6 +381,30 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Public Service Contests Promo */}
+      <section className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200 overflow-hidden relative group">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex items-center gap-6">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-lg border border-white/20 group-hover:rotate-6 transition-transform">
+              <Trophy size={40} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
+              <p className="text-orange-50 mt-2 max-w-md text-lg opacity-90 leading-relaxed">
+                Prépare-toi aux concours de l'État avec nos QCM officiels et simulations d'examens.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/public-service-contests')}
+            className="px-10 py-4 bg-white text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-xl shadow-orange-600/20 active:scale-95 whitespace-nowrap text-lg"
+          >
+            S'entraîner maintenant
+          </button>
         </div>
       </section>
 
