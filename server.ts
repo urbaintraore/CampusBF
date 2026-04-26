@@ -134,51 +134,36 @@ app.get('/api/health', (req, res) => {
 });
 
 async function startServer() {
-  console.log('entering startServer');
+  console.log('Mode development détecté. Initialisation de Vite...');
   try {
-    // Configuration du middleware Vite pour le développement
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Mode: DEVELOPMENT');
-      console.log('Starting Vite server...');
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-        root: process.cwd(),
-      });
-      app.use(vite.middlewares);
-      console.log('Vite middleware added');
-      
-      // Fallback manual serving of index.html in case vite middleware skips it
-      app.get('*', async (req, res, next) => {
-        if (req.url.startsWith('/api')) return next();
-        try {
-          const html = await vite.transformIndexHtml(req.url, await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf-8'));
-          res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
-        } catch (e) {
-          next(e);
-        }
-      });
-    } else {
-      console.log('Mode: PRODUCTION');
-      // Configuration pour la production
-      const distPath = path.resolve(process.cwd(), 'dist');
-      app.use(express.static(distPath));
-      app.get('*', (req, res) => {
-        res.sendFile(path.resolve(distPath, 'index.html'));
-      });
-    }
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
 
-    console.log('Attempting to listen on port', PORT);
+    app.use(vite.middlewares);
+    console.log('Middleware Vite injecté avec succès.');
+
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Serveur démarré avec succès sur http://0.0.0.0:${PORT}`);
-      console.log('Environnement:', process.env.NODE_ENV || 'development');
+      console.log(`[DEV] Serveur en écoute sur http://0.0.0.0:${PORT}`);
     });
   } catch (error) {
-    console.error('CRITICAL ERROR DURING SERVER STARTUP:', error);
-    // On essaie quand même d'écouter pour ne pas laisser le port vide si possible, 
-    // ou au moins on log l'erreur.
+    console.error('Erreur fatale lors du démarrage de Vite:', error);
     process.exit(1);
   }
 }
 
-startServer();
+if (process.env.NODE_ENV === 'production') {
+  console.log('Mode production détecté.');
+  const distPath = path.resolve(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(distPath, 'index.html'));
+  });
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[PROD] Serveur en écoute sur http://0.0.0.0:${PORT}`);
+  });
+} else {
+  startServer();
+}
