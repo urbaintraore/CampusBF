@@ -14,8 +14,8 @@ export default function Chatbot() {
   
   const quickActions = [
     { label: "Aide-moi à réviser", icon: "📚", prompt: "Je voudrais réviser mes cours de ce semestre. Peux-tu m'aider ?" },
+    { label: "Concours Fonction Publique", icon: "🇧🇫", prompt: "Je me prépare pour les concours de la fonction publique au Burkina. Peux-tu me donner des conseils ou me poser des questions de culture générale ?" },
     { label: "Recherche stage", icon: "💼", prompt: "Je cherche un stage au Burkina Faso dans mon domaine." },
-    { label: "Vendre un article", icon: "💰", prompt: "Comment puis-je vendre un article sur le marketplace ?" },
     { label: "MotoRide ?", icon: "🏍️", prompt: "C'est quoi MotoRide et comment ça marche ?" },
   ];
   

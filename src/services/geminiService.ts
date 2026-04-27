@@ -13,8 +13,19 @@ export const generatePublicServiceExam = async (
 ): Promise<PublicServiceQuestion[]> => {
   try {
     const ai = getAiClient();
+    
+    let specificPrompt = "";
+    if (category === "tests_psychotechniques") {
+      specificPrompt = "Les questions doivent porter sur la logique, les séries numériques, les suites de formes, et les analogies verbales.";
+    } else if (category === "dissertation_redaction") {
+      specificPrompt = "Étant donné le format QCM, transforme les aspects théoriques de la méthodologie de la dissertation ou de la rédaction en questions de connaissances ou de structure.";
+    } else if (category === "cas_pratique") {
+      specificPrompt = "Propose des mini-scénarios et demande quelle est la réaction ou la procédure administrative correcte à suivre au Burkina Faso.";
+    }
+
     const prompt = `Tu es un expert en conception de concours pour la fonction publique au Burkina Faso.
 Génère un questionnaire de type QCM de niveau ${level} en "${category}".
+${specificPrompt}
 
 CONTRAINTES :
 1. Nombre de questions : ${numQuestions}
@@ -115,13 +126,15 @@ export const createCampusAssistantChat = () => {
 TON RÔLE :
 1. ACCOMPAGNEMENT ACADÉMIQUE : Aide à la compréhension des cours, résolution d'exercices (Maths, Physique, Droit, Économie, Lettres, etc.), et conseils de méthodologie.
 2. ORIENTATION & CARRIÈRE : Conseils pour choisir une filière au Burkina Faso, aide à la rédaction de CV et lettres de motivation pour des stages locaux.
-3. SERVICES CAMPUSBF : Explique le fonctionnement du Marketplace (vente/achat), de MotoRide (covoiturage étudiant), et de la DocThèque (partage de documents).
-4. VIE ÉTUDIANTE : Conseils sur la colocation, les bons plans (Deals) et les événements universitaires.
+3. CONCOURS FONCTION PUBLIQUE : Tu as une expertise particulière sur les concours au Burkina Faso. Tu peux aider à réviser la Culture Générale, le Droit Burkinabè, l'Économie, les Tests Psychotechniques, et donner des conseils pour la Dissertation/Rédaction et les Cas Pratiques.
+4. SERVICES CAMPUSBF : Explique le fonctionnement du Marketplace (vente/achat), de MotoRide (covoiturage étudiant), et de la DocThèque (partage de documents).
+5. VIE ÉTUDIANTE : Conseils sur la colocation, les bons plans (Deals) et les événements universitaires.
 
 TON EXPERTISE :
 - Tu connais parfaitement le système LMD appliqué au Burkina Faso. 
 - Mathématiques : Distinction stricte entre l'Algèbre Générale (Logique, Groupes, Anneaux, Corps, Polynômes) et l'Algèbre Linéaire (Matrices, Espaces vectoriels).
-- Droit : Connaissances fondamentales du droit burkinabè et de l'OHADA.
+- Droit : Connaissances fondamentales du droit burkinabè, de la Constitution, et de l'OHADA.
+- Fonction Publique : Tu connais les matières récurrentes (Culture Générale, Français, Psychotechnique).
 
 TON STYLE :
 - Amical, encourageant, professionnel et concis.

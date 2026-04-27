@@ -5,6 +5,7 @@ import { Quiz, QuizQuestion } from '@/types';
 import { quizService } from '@/services/quizService';
 import { generateAdvancedQuizWithAI } from '@/services/geminiService';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
 export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { user } = useAuth();
@@ -29,6 +30,9 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [aiLanguage, setAiLanguage] = useState('Français');
   const [questionTypes, setQuestionTypes] = useState<string[]>(['multiple_choice', 'true_false', 'short_answer']);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationMode, setGenerationMode] = useState<'text' | 'public_service'>('text');
+  const [pubServiceCategory, setPubServiceCategory] = useState<string>('culture_generale');
+  const [pubServiceLevel, setPubServiceLevel] = useState<string>('BAC');
 
   // Generated questions
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -41,6 +45,18 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     "La répétition espacée est la clé d'un apprentissage efficace.",
     "Le système LMD favorise l'autonomie et l'auto-évaluation.",
   ];
+
+  const categoryLabels: Record<string, string> = {
+    culture_generale: 'Culture Générale',
+    maths: 'Mathématiques',
+    droit: 'Droit & Administration',
+    economie: 'Économie & Finances',
+    svt: 'SVT / Santé',
+    physique: 'Physique & Chimie',
+    dissertation_redaction: 'Dissertation / Rédaction',
+    tests_psychotechniques: 'Tests Psychotechniques',
+    cas_pratique: 'Cas pratique'
+  };
 
   useEffect(() => {
     let interval: any;
@@ -59,25 +75,53 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const handleGenerateAI = async () => {
-    if (!courseText.trim() || !subject.trim() || questionTypes.length === 0) {
-      toast.error('Veuillez remplir le sujet, le texte source et choisir au moins un type de question.');
-      return;
+    if (generationMode === 'text') {
+      if (!courseText.trim() || !subject.trim() || questionTypes.length === 0) {
+        toast.error('Veuillez remplir le sujet, le texte source et choisir au moins un type de question.');
+        return;
+      }
+    } else {
+      if (!title.trim()) {
+        toast.error('Veuillez donner un titre au concours.');
+        return;
+      }
     }
 
-    const loadingToast = toast.loading('Analyse du texte et génération du quiz en cours...');
+    const loadingToast = toast.loading(generationMode === 'text' ? 'Analyse du texte et génération du quiz...' : 'Génération du concours fonction publique...');
     setIsGenerating(true);
 
     try {
-      const result = await generateAdvancedQuizWithAI(courseText, subject, level, numQuestions, {
-        difficulty: aiDifficulty,
-        language: aiLanguage,
-        questionTypes: questionTypes
-      });
+      if (generationMode === 'text') {
+        const result = await generateAdvancedQuizWithAI(courseText, subject, level, numQuestions, {
+          difficulty: aiDifficulty,
+          language: aiLanguage,
+          questionTypes: questionTypes
+        });
 
-      if (result) {
-        if (!title) setTitle(result.title);
-        setQuestions(result.questions);
-        toast.success(`Généré avec succès ! (${result.questions.length} questions importées)`, { id: loadingToast });
+        if (result) {
+          if (!title) setTitle(result.title);
+          setQuestions(result.questions);
+          toast.success(`Généré avec succès ! (${result.questions.length} questions importées)`, { id: loadingToast });
+        }
+      } else {
+        // Mode Fonction Publique
+        const { generatePublicServiceExam } = await import('@/services/geminiService');
+        const examQuestions = await generatePublicServiceExam(pubServiceCategory, pubServiceLevel, numQuestions);
+        
+        // Conversion de PublicServiceQuestion vers QuizQuestion
+        const convertedQuestions: QuizQuestion[] = examQuestions.map((q, idx) => ({
+          id: `ai-pub-${Date.now()}-${idx}`,
+          type: 'multiple_choice',
+          question: q.question,
+          options: q.options,
+          correctAnswerIndex: q.bonne_reponse,
+          explanation: q.explication,
+          pointsPerOption: q.options.map((_, i) => i === q.bonne_reponse ? 1 : 0)
+        }));
+
+        setQuestions(convertedQuestions);
+        if (!subject) setSubject(categoryLabels[pubServiceCategory]);
+        toast.success(`Concours généré ! (${convertedQuestions.length} questions)`, { id: loadingToast });
       }
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la génération.', { id: loadingToast });
@@ -235,20 +279,74 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 Génération par l'IA (Gemini)
               </h2>
               
+              <div className="flex gap-2 p-1 bg-white/10 rounded-xl mb-6">
+                <button
+                  onClick={() => setGenerationMode('text')}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                    generationMode === 'text' ? "bg-white text-purple-700 shadow-sm" : "text-white/60 hover:text-white"
+                  )}
+                >
+                  Depuis un cours (Texte)
+                </button>
+                <button
+                  onClick={() => setGenerationMode('public_service')}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                    generationMode === 'public_service' ? "bg-white text-purple-700 shadow-sm" : "text-white/60 hover:text-white"
+                  )}
+                >
+                  Concours Fonction Publique
+                </button>
+              </div>
+
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Texte / Cours source <span className="text-red-300">*</span></label>
-                  <textarea 
-                    value={courseText} 
-                    onChange={e => setCourseText(e.target.value)} 
-                    placeholder="Copiez-collez le texte de votre cours, notes ou chapitre ici..." 
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl outline-none placeholder:text-white/40 focus:bg-white/20 transition-all min-h-[150px] resize-y"
-                  />
-                </div>
+                {generationMode === 'text' ? (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Texte / Cours source <span className="text-red-300">*</span></label>
+                    <textarea 
+                      value={courseText} 
+                      onChange={e => setCourseText(e.target.value)} 
+                      placeholder="Copiez-collez le texte de votre cours, notes ou chapitre ici..." 
+                      className="w-full p-4 bg-white/10 border border-white/20 rounded-xl outline-none placeholder:text-white/40 focus:bg-white/20 transition-all min-h-[150px] resize-y"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Matière du concours</label>
+                      <select 
+                        value={pubServiceCategory} 
+                        onChange={e => setPubServiceCategory(e.target.value)}
+                        className="w-full p-3 bg-white/10 border border-white/20 rounded-xl outline-none text-slate-800"
+                      >
+                        {Object.entries(categoryLabels).map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Niveau d'examen</label>
+                      <select 
+                        value={pubServiceLevel} 
+                        onChange={e => setPubServiceLevel(e.target.value)}
+                        className="w-full p-3 bg-white/10 border border-white/20 rounded-xl outline-none text-slate-800"
+                      >
+                        <option value="BEPC">BEPC</option>
+                        <option value="BAC">BAC</option>
+                        <option value="Licence">Licence</option>
+                        <option value="Master">Master</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                       <p className="text-[10px] text-white/70 italic">Note: Le mode Concours génère des questions basées sur les annales et thématiques classiques du Burkina Faso.</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Questions à générer (max recommandé: 20)</label>
+                    <label className="block text-sm font-medium mb-1">Questions à générer (max: 40)</label>
                     <input 
                       type="number" 
                       min={1} 
@@ -257,7 +355,7 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       onChange={e => setNumQuestions(Number(e.target.value))} 
                       className={`w-full p-3 bg-white/10 border rounded-xl outline-none transition-colors ${numQuestions > 20 ? 'border-orange-400' : 'border-white/20'}`} 
                     />
-                    {numQuestions > 20 && <p className="text-[10px] text-orange-200 mt-1 font-medium">⚠️ Trop de questions peuvent être tronquées par l'IA.</p>}
+                    {numQuestions > 25 && <p className="text-[10px] text-orange-200 mt-1 font-medium">⚠️ Trop de questions peuvent être tronquées par l'IA.</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Difficulté IA</label>
@@ -267,31 +365,33 @@ export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Types de questions autorisés</label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: 'multiple_choice', label: 'QCM' },
-                      { id: 'true_false', label: 'Vrai/Faux' },
-                      { id: 'short_answer', label: 'Rép. courte' },
-                      { id: 'matching', label: 'Correspondance' },
-                      { id: 'numerical', label: 'Numérique' }
-                    ].map(type => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => toggleQuestionType(type.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                          questionTypes.includes(type.id) 
-                            ? 'bg-white text-purple-700 border-white' 
-                            : 'bg-transparent text-white/70 border-white/30 hover:border-white'
-                        }`}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
+                {generationMode === 'text' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Types de questions autorisés</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'multiple_choice', label: 'QCM' },
+                        { id: 'true_false', label: 'Vrai/Faux' },
+                        { id: 'short_answer', label: 'Rép. courte' },
+                        { id: 'matching', label: 'Correspondance' },
+                        { id: 'numerical', label: 'Numérique' }
+                      ].map(type => (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => toggleQuestionType(type.id)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                            questionTypes.includes(type.id) 
+                              ? 'bg-white text-purple-700 border-white' 
+                              : 'bg-transparent text-white/70 border-white/30 hover:border-white'
+                          }`}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <button 
                   type="button"
