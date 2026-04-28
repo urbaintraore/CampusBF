@@ -51,10 +51,47 @@ import {
   orderBy
 } from 'firebase/firestore';
 
+async function fetchWithSessionCache(cacheKey: string, q: any) {
+  const cached = sessionStorage.getItem(cacheKey);
+  const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+  const now = Date.now();
+  // Cache valide pour 30 minutes (1800000 ms)
+  if (cached && cacheTime && now - parseInt(cacheTime) < 1800000) {
+    return JSON.parse(cached);
+  }
+  const snapshot = await getDocs(q);
+  const data = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+    sessionStorage.setItem(cacheKey + '_time', now.toString());
+  } catch (e) {
+    // Ignorer en cas de quota dépassé localement
+  }
+  return data;
+}
+
+async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
+  const cached = sessionStorage.getItem(cacheKey);
+  const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+  const now = Date.now();
+  if (cached && cacheTime && now - parseInt(cacheTime) < 1800000) return parseInt(cached);
+  
+  // Importer dynamiquement pour éviter un chargement inutile si pas besoin
+  const { getCountFromServer } = await import('firebase/firestore');
+  const snapshot = await getCountFromServer(ref);
+  const count = snapshot.data().count;
+  try {
+    sessionStorage.setItem(cacheKey, count.toString());
+    sessionStorage.setItem(cacheKey + '_time', now.toString());
+  } catch (e) {}
+  return count;
+}
+
 interface AuthContextType {
   user: User | null;
   users: User[];
   totalUsersCount: number;
+  totalDocumentsCount: number;
   ads: Ad[];
   documents: any[];
   internships: Internship[];
@@ -186,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [totalUsersCount, setTotalUsersCount] = useState<number>(0);
+  const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
   const [ads, setAds] = useState<Ad[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
@@ -512,81 +550,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
 
     // Public/Authenticated lists
-    getDocs(query(collection(db, 'ads'), limit(50))).then(snapshot => {
-      setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
-    });
+    fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(50))).then(data => setAds(data as Ad[]));
 
-    getDocs(query(collection(db, 'documents'), limit(50))).then(snapshot => {
-      setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'), limit(50))).then(data => setDocuments(data as any[]));
 
-    getDocs(query(collection(db, 'internships'), limit(50))).then(snapshot => {
-      setInternships(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Internship)));
-    });
+    fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(50))).then(data => setInternships(data as Internship[]));
 
-    getDocs(query(collection(db, 'events'), limit(50))).then(snapshot => {
-      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
-    });
+    fetchWithSessionCache('cache_Events', query(collection(db, 'events'), limit(50))).then(data => setEvents(data as CampusEvent[]));
 
-    getDocs(query(collection(db, 'groups'), limit(50))).then(snapshot => {
-      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-    });
+    fetchWithSessionCache('cache_Groups', query(collection(db, 'groups'), limit(50))).then(data => setGroups(data as Group[]));
 
-    getDocs(query(collection(db, 'posts'), limit(50))).then(snapshot => {
-      setCommunity(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
-    });
+    fetchWithSessionCache('cache_Community', query(collection(db, 'posts'), limit(50))).then(data => setCommunity(data as Post[]));
 
-    getDocs(query(collection(db, 'news'), limit(50))).then(snapshot => {
-      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News)));
-    });
+    fetchWithSessionCache('cache_News', query(collection(db, 'news'), limit(50))).then(data => setNews(data as News[]));
 
-    getDocs(query(collection(db, 'lostAndFound'), limit(50))).then(snapshot => {
-      setLostAndFound(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LostAndFound)));
-    });
+    fetchWithSessionCache('cache_LostAndFound', query(collection(db, 'lostAndFound'), limit(50))).then(data => setLostAndFound(data as LostAndFound[]));
 
-    getDocs(query(collection(db, 'reports'), limit(50))).then(snapshot => {
-      setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
-    });
+    fetchWithSessionCache('cache_Reports', query(collection(db, 'reports'), limit(50))).then(data => setReports(data as Report[]));
 
-    getDocs(query(collection(db, 'quizzes'), limit(50))).then(snapshot => {
-      setQuizzes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz)));
-    });
+    fetchWithSessionCache('cache_Quizzes', query(collection(db, 'quizzes'), limit(50))).then(data => setQuizzes(data as Quiz[]));
 
-    getDocs(query(collection(db, 'contests'), limit(50))).then(snapshot => {
-      setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
-    });
+    fetchWithSessionCache('cache_Contests', query(collection(db, 'contests'), limit(50))).then(data => setContests(data as Contest[]));
 
-    getDocs(query(collection(db, 'deals'), limit(50))).then(snapshot => {
-      setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
-    });
+    fetchWithSessionCache('cache_Deals', query(collection(db, 'deals'), limit(50))).then(data => setDeals(data as Deal[]));
 
-    getDocs(query(collection(db, 'deal_suggestions'), limit(50))).then(snapshot => {
-      setDealSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DealSuggestion)));
-    });
+    fetchWithSessionCache('cache_DealSuggestions', query(collection(db, 'deal_suggestions'), limit(50))).then(data => setDealSuggestions(data as DealSuggestion[]));
 
-    getDocs(query(collection(db, 'colocations'), limit(50))).then(snapshot => {
-      setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
-    });
+    fetchWithSessionCache('cache_Colocations', query(collection(db, 'colocations'), limit(50))).then(data => setColocations(data as Colocation[]));
 
-    getDocs(query(collection(db, 'colocation_requests'), limit(50))).then(snapshot => {
-      setColocationRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationRequest)));
-    });
+    fetchWithSessionCache('cache_ColocationRequests', query(collection(db, 'colocation_requests'), limit(50))).then(data => setColocationRequests(data as ColocationRequest[]));
 
-    getDocs(query(collection(db, 'colocation_reviews'), limit(50))).then(snapshot => {
-      setColocationReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationReview)));
-    });
+    fetchWithSessionCache('cache_ColocationReviews', query(collection(db, 'colocation_reviews'), limit(50))).then(data => setColocationReviews(data as ColocationReview[]));
 
-    getDocs(query(collection(db, 'contest_participants'), limit(50))).then(snapshot => {
-      setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
-    });
+    fetchWithSessionCache('cache_ContestParticipants', query(collection(db, 'contest_participants'), limit(50))).then(data => setContestParticipants(data as ContestParticipant[]));
 
-    getDocs(query(collection(db, 'training_enrollments'), limit(50))).then(snapshot => {
-      setTrainingEnrollments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingEnrollment)));
-    });
+    fetchWithSessionCache('cache_TrainingEnrollments', query(collection(db, 'training_enrollments'), limit(50))).then(data => setTrainingEnrollments(data as TrainingEnrollment[]));
 
-    getDocs(query(collection(db, 'training_reviews'), limit(50))).then(snapshot => {
-      setTrainingReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReview)));
-    });
+    fetchWithSessionCache('cache_TrainingReviews', query(collection(db, 'training_reviews'), limit(50))).then(data => setTrainingReviews(data as TrainingReview[]));
 
     // unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
     //   setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -596,36 +596,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const marketplaceQuery = user.role === 'admin' 
       ? query(collection(db, 'marketplace'), limit(100))
       : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)), limit(50));
-    getDocs(marketplaceQuery).then(snapshot => {
-      setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
-    });
+    fetchWithSessionCache('cache_Marketplace', marketplaceQuery).then(data => setMarketplace(data as MarketplaceItem[]));
 
     const motoRideQuery = user.role === 'admin'
       ? query(collection(db, 'motoRides'), limit(100))
       : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)), limit(50));
-    getDocs(motoRideQuery).then(snapshot => {
-      setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
-    });
+    fetchWithSessionCache('cache_MotoRides', motoRideQuery).then(data => setMotoRides(data as MotoRide[]));
 
     const trainingsQuery = user.role === 'admin'
       ? query(collection(db, 'trainings'), limit(100))
       : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)), limit(50));
-    getDocs(trainingsQuery).then(snapshot => {
-      setTrainings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Training)));
-    });
+    fetchWithSessionCache('cache_Trainings', trainingsQuery).then(data => setTrainings(data as Training[]));
 
     // Count exact users instead of fetching them all to save quota
-    import('firebase/firestore').then(({ getCountFromServer }) => {
-      getCountFromServer(collection(db, 'users')).then(snapshot => {
-        setTotalUsersCount(snapshot.data().count);
-      }).catch(e => console.error(e));
-    });
+    fetchCountWithSessionCache('cache_count_TotalUsersCount', collection(db, 'users')).then(count => setTotalUsersCount(count)).catch(e => console.error(e));
+    fetchCountWithSessionCache('cache_count_TotalDocumentsCount', collection(db, 'documents')).then(count => setTotalDocumentsCount(count)).catch(e => console.error(e));
 
     // Extremely heavy query causing quota exhaustion. Limit to 10 for basic display if needed.
     const usersQuery = query(collection(db, 'users'), limit(10));
-    getDocs(usersQuery).then(snapshot => {
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-    });
+    fetchWithSessionCache('cache_Users', usersQuery).then(data => setUsers(data as User[]));
 
     // Notifications for current user limited to 50 to prevent huge reads
     const qNotifs = query(
@@ -640,36 +629,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Admin only lists
     if (user.role === 'admin') {
-      getDocs(query(collection(db, 'applications'), limit(100))).then(snapshot => {
-      setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-    });
+      fetchWithSessionCache('cache_Applications', query(collection(db, 'applications'), limit(100))).then(data => setApplications(data as TutorApplication[]));
 
-      getDocs(query(collection(db, 'teacherApplications'), limit(100))).then(snapshot => {
-      setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
-    });
+      fetchWithSessionCache('cache_TeacherApplications', query(collection(db, 'teacherApplications'), limit(100))).then(data => setTeacherApplications(data as TeacherApplication[]));
 
-      getDocs(query(collection(db, 'subscriptionRequests'), limit(100))).then(snapshot => {
-      setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
-    });
+      fetchWithSessionCache('cache_SubscriptionRequests', query(collection(db, 'subscriptionRequests'), limit(100))).then(data => setSubscriptionRequests(data as SubscriptionRequest[]));
 
-      getDocs(query(collection(db, 'training_reports'), limit(100))).then(snapshot => {
-      setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
-    });
+      fetchWithSessionCache('cache_TrainingReports', query(collection(db, 'training_reports'), limit(100))).then(data => setTrainingReports(data as TrainingReport[]));
 
-      getDocs(query(collection(db, 'logs'), limit(100))).then(snapshot => {
-      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Log)));
-    });
+      fetchWithSessionCache('cache_Logs', query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100))).then(data => setLogs(data as Log[]));
     } else {
       // Non-admins see their own applications
       const qApps = query(collection(db, 'applications'), where('userId', '==', user.id));
-      getDocs(qApps).then(snapshot => {
-      setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-    });
+      fetchWithSessionCache('cache_Applications', qApps).then(data => setApplications(data as TutorApplication[]));
 
       const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id));
-      getDocs(qTeacherApps).then(snapshot => {
-      setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
-    });
+      fetchWithSessionCache('cache_TeacherApplications', qTeacherApps).then(data => setTeacherApplications(data as TeacherApplication[]));
     }
 
     return () => unsubscribes.forEach(unsub => unsub());
@@ -1452,6 +1427,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, 
       users,
       totalUsersCount,
+      totalDocumentsCount,
       ads,
       documents,
       internships,

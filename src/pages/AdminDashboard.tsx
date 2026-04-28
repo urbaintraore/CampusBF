@@ -91,7 +91,8 @@ export default function AdminDashboard() {
     colocations,
     deleteColocation,
     logs,
-    totalUsersCount
+    totalUsersCount,
+    totalDocumentsCount
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
@@ -618,7 +619,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {[
               { label: 'Utilisateurs', count: totalUsersCount.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
-              { label: 'Documents', count: documents.length.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Documents', count: totalDocumentsCount.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Signalements', count: reports.length.toString(), icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
               { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
@@ -933,7 +934,7 @@ export default function AdminDashboard() {
                   <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Contenus Publiés</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-xl">
-                      <p className="text-xl font-bold text-gray-900">{documents.length}</p>
+                      <p className="text-xl font-bold text-gray-900">{totalDocumentsCount}</p>
                       <p className="text-[10px] font-bold text-gray-400 uppercase">Documents</p>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-xl">

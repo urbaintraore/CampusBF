@@ -13,7 +13,7 @@ import { User as UserType } from '@/types';
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
-  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings, events } = auth;
+  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings, events, totalDocumentsCount } = auth;
   const tutors = users.filter(u => u.tutorStatus === 'approved');
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
@@ -283,7 +283,7 @@ export default function Dashboard() {
           ))
         ) : (
           [
-            { label: 'Documents', count: documents.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
+            { label: 'Documents', count: totalDocumentsCount.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
             { 
               label: 'Concours FP', 
               count: auth.publicServiceContests?.length.toString() || '0', 
