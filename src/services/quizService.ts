@@ -1,5 +1,5 @@
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, deleteDoc, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc, query, where, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { Quiz, QuizResult, QuestionBankItem } from '@/types';
 
 export const quizService = {
@@ -51,7 +51,8 @@ export const quizService = {
 
   async getQuizResultsByUser(userId: string): Promise<QuizResult[]> {
     try {
-      const q = query(collection(db, 'quizResults'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+      // Limit to 20 to prevent huge history loads
+      const q = query(collection(db, 'quizResults'), where('userId', '==', userId), orderBy('createdAt', 'desc'), limit(20));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizResult));
     } catch (error) {
@@ -75,7 +76,8 @@ export const quizService = {
 
   async getQuestionBank(): Promise<QuestionBankItem[]> {
     try {
-      const q = query(collection(db, 'questionBank'), orderBy('createdAt', 'desc'));
+      // Limit to 100 recent questions to prevent massive reads
+      const q = query(collection(db, 'questionBank'), orderBy('createdAt', 'desc'), limit(100));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuestionBankItem));
     } catch (error) {

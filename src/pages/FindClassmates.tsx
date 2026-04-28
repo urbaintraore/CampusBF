@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { User as UserType } from '@/types';
 import { Search, GraduationCap, Users, MessageSquare, UserPlus, Loader2, Share, CheckCircle2, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -35,7 +35,8 @@ export default function FindClassmates() {
       }
 
       const usersRef = collection(db, 'users');
-      const usersSnap = await getDocs(usersRef);
+      // Limit to 500 to prevent quota exhaustion when syncing contacts
+      const usersSnap = await getDocs(query(usersRef, limit(500)));
       const allUsers = usersSnap.docs.map(doc => doc.data() as UserType);
 
       let registeredCount = 0;
@@ -149,7 +150,8 @@ export default function FindClassmates() {
           );
         }
 
-        const querySnapshot = await getDocs(q);
+        // Limit to 50 to prevent huge document reads
+        const querySnapshot = await getDocs(query(q, limit(50)));
         console.log("Query results count:", querySnapshot.size);
 
         const results = querySnapshot.docs

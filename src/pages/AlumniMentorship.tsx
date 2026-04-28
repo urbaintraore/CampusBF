@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, limit } from 'firebase/firestore';
 import { AlumniProfile } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
@@ -21,7 +21,8 @@ export default function AlumniMentorship() {
 
   const fetchAlumni = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'alumniProfiles'));
+      // Limit to 50 to prevent huge document reads
+      const querySnapshot = await getDocs(query(collection(db, 'alumniProfiles'), limit(50)));
       const alumniData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AlumniProfile));
       setAlumni(alumniData);
     } catch (error) {

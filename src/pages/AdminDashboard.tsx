@@ -13,8 +13,16 @@ import { generateDevReport, generateSummaryReport, generateFullReport } from '@/
 import { generatePublicServiceExam } from '@/services/geminiService';
 import { PublicServiceCategory, PublicServiceLevel } from '@/types';
 import { toast } from 'react-hot-toast';
+import { useCachedQuery } from '@/hooks/useCachedQuery';
 
 export default function AdminDashboard() {
+  const { data: publicServiceContests, loading: loadingContests, loadMore: loadMoreContests, hasMore: hasMoreContests } = useCachedQuery(
+    'public_service_contests',
+    [],
+    'admin_public_service_contests_cache',
+    50
+  );
+
   const { 
     user: currentUser,
     applications, 
@@ -25,7 +33,6 @@ export default function AdminDashboard() {
     reviewSubscriptionRequest, 
     syncCommunityGroup,
     users, 
-    publicServiceContests,
     addPublicServiceContest,
     deletePublicServiceContest,
     updateUserRole, 
@@ -83,7 +90,8 @@ export default function AdminDashboard() {
     deleteDealSuggestion,
     colocations,
     deleteColocation,
-    logs
+    logs,
+    totalUsersCount
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
@@ -609,7 +617,7 @@ export default function AdminDashboard() {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {[
-              { label: 'Utilisateurs', count: users.length.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
+              { label: 'Utilisateurs', count: totalUsersCount.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
               { label: 'Documents', count: documents.length.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Signalements', count: reports.length.toString(), icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
@@ -912,7 +920,7 @@ export default function AdminDashboard() {
                         <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div 
                             className={`h-full ${item.color}`} 
-                            style={{ width: `${(item.count / Math.max(users.length, 1)) * 100}%` }}
+                            style={{ width: `${(item.count / Math.max(totalUsersCount, 1)) * 100}%` }}
                           ></div>
                         </div>
                       </div>
@@ -3427,7 +3435,7 @@ export default function AdminDashboard() {
                   <span className="text-sm text-emerald-200">Revenus Totaux</span>
                 </div>
                 <div className="text-center">
-                  <span className="block text-3xl font-bold">{((subscriptionRequests.filter(r => r.status === 'approved').length / (users.length || 1)) * 100).toFixed(1)}%</span>
+                  <span className="block text-3xl font-bold">{((subscriptionRequests.filter(r => r.status === 'approved').length / (totalUsersCount || 1)) * 100).toFixed(1)}%</span>
                   <span className="text-sm text-emerald-200">Taux de Conversion</span>
                 </div>
               </div>

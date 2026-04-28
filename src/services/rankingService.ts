@@ -1,6 +1,8 @@
 import { 
   collection, 
-  getDocs 
+  getDocs,
+  query,
+  limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { User, Document } from '@/types';
@@ -73,7 +75,8 @@ export const rankingService = {
 
     // Phase 2: Fetch document count and downloads per university
     try {
-      const docsSnapshot = await getDocs(collection(db, 'documents'));
+      const q = query(collection(db, 'documents'), limit(500));
+      const docsSnapshot = await getDocs(q);
       docsSnapshot.forEach(docSnap => {
         const doc = docSnap.data() as Document;
         if (!doc.university) return;

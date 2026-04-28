@@ -25,6 +25,10 @@ import { PublicServiceContest, PublicServiceCategory, PublicServiceLevel } from 
 import PublicServiceExamPlayer from '@/components/PublicServiceExamPlayer';
 import { toast } from 'sonner';
 
+import { useCachedQuery } from '@/hooks/useCachedQuery';
+import { doc, getDoc, orderBy, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
 const categoryColors: Record<string, string> = {
   culture_generale: 'from-blue-500 to-indigo-600',
   maths: 'from-emerald-500 to-teal-600',
@@ -50,7 +54,16 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function PublicServiceContests() {
-  const { user, publicServiceContests: globalContests } = useAuth();
+  const { user, addPublicServiceContest } = useAuth();
+  
+  // Use cached and paginated query instead of global state
+  const { data: globalContests, loading: dataLoading, loadMore, hasMore } = useCachedQuery(
+    'public_service_contests',
+    [], // You can add orderBy('createdAt', 'desc') if such a field exists
+    'public_service_contests_cache',
+    20
+  );
+
   const [contests, setContests] = useState<PublicServiceContest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeContest, setActiveContest] = useState<PublicServiceContest | null>(null);
@@ -61,7 +74,6 @@ export default function PublicServiceContests() {
   const [ranking, setRanking] = useState<any[]>([]);
   const [showManualContestModal, setShowManualContestModal] = useState(false);
   const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
-  const { addPublicServiceContest } = useAuth();
 
   const handleManualContestCreate = async () => {
     if (!manualContestData.title || !manualContestData.questionsJSON) {
@@ -99,11 +111,11 @@ export default function PublicServiceContests() {
   };
 
   useEffect(() => {
-    if (globalContests) {
+    if (!dataLoading && globalContests) {
       setContests(globalContests as PublicServiceContest[]);
       setLoading(false);
     }
-  }, [globalContests]);
+  }, [globalContests, dataLoading]);
 
   useEffect(() => {
     const loadRanking = async () => {
@@ -126,7 +138,25 @@ export default function PublicServiceContests() {
     return matchesCategory && matchesLevel && matchesSearch;
   });
 
-  const handleStartExam = (contest: PublicServiceContest) => {
+  const handleStartExam = async (contest: PublicServiceContest) => {
+    // If questions are not in the document (new split architecture)
+    if (!contest.questions || contest.questions.length === 0) {
+      const toastId = toast.loading('Chargement des questions...');
+      try {
+        const detailsSnap = await getDoc(doc(db, 'public_service_contest_details', contest.id!));
+        if (detailsSnap.exists()) {
+          const detailsData = detailsSnap.data();
+          contest.questions = detailsData.questions || [];
+        } else {
+          toast.error("Questions introuvables pour ce concours", { id: toastId });
+          return;
+        }
+        toast.dismiss(toastId);
+      } catch (err) {
+        toast.error("Erreur de chargement", { id: toastId });
+        return;
+      }
+    }
     setActiveContest(contest);
     setIsExamMode(true);
   };

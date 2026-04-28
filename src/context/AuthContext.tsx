@@ -46,12 +46,15 @@ import {
   getDocs,
   arrayUnion,
   arrayRemove,
-  increment
+  increment,
+  limit,
+  orderBy
 } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
   users: User[];
+  totalUsersCount: number;
   ads: Ad[];
   documents: any[];
   internships: Internship[];
@@ -182,6 +185,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [totalUsersCount, setTotalUsersCount] = useState<number>(0);
   const [ads, setAds] = useState<Ad[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
@@ -508,151 +512,164 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
 
     // Public/Authenticated lists
-    unsubscribes.push(onSnapshot(collection(db, 'ads'), (snapshot) => {
+    getDocs(query(collection(db, 'ads'), limit(50))).then(snapshot => {
       setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'documents'), (snapshot) => {
+    getDocs(query(collection(db, 'documents'), limit(50))).then(snapshot => {
       setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'internships'), (snapshot) => {
+    getDocs(query(collection(db, 'internships'), limit(50))).then(snapshot => {
       setInternships(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Internship)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'events'), (snapshot) => {
+    getDocs(query(collection(db, 'events'), limit(50))).then(snapshot => {
       setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'groups'), (snapshot) => {
+    getDocs(query(collection(db, 'groups'), limit(50))).then(snapshot => {
       setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'posts'), (snapshot) => {
+    getDocs(query(collection(db, 'posts'), limit(50))).then(snapshot => {
       setCommunity(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'news'), (snapshot) => {
+    getDocs(query(collection(db, 'news'), limit(50))).then(snapshot => {
       setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'lostAndFound'), (snapshot) => {
+    getDocs(query(collection(db, 'lostAndFound'), limit(50))).then(snapshot => {
       setLostAndFound(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LostAndFound)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'reports'), (snapshot) => {
+    getDocs(query(collection(db, 'reports'), limit(50))).then(snapshot => {
       setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'quizzes'), (snapshot) => {
+    getDocs(query(collection(db, 'quizzes'), limit(50))).then(snapshot => {
       setQuizzes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'contests'), (snapshot) => {
+    getDocs(query(collection(db, 'contests'), limit(50))).then(snapshot => {
       setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'deals'), (snapshot) => {
+    getDocs(query(collection(db, 'deals'), limit(50))).then(snapshot => {
       setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'deal_suggestions'), (snapshot) => {
+    getDocs(query(collection(db, 'deal_suggestions'), limit(50))).then(snapshot => {
       setDealSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DealSuggestion)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'colocations'), (snapshot) => {
+    getDocs(query(collection(db, 'colocations'), limit(50))).then(snapshot => {
       setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'colocation_requests'), (snapshot) => {
+    getDocs(query(collection(db, 'colocation_requests'), limit(50))).then(snapshot => {
       setColocationRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationRequest)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'colocation_reviews'), (snapshot) => {
+    getDocs(query(collection(db, 'colocation_reviews'), limit(50))).then(snapshot => {
       setColocationReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ColocationReview)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'contest_participants'), (snapshot) => {
+    getDocs(query(collection(db, 'contest_participants'), limit(50))).then(snapshot => {
       setContestParticipants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContestParticipant)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'training_enrollments'), (snapshot) => {
+    getDocs(query(collection(db, 'training_enrollments'), limit(50))).then(snapshot => {
       setTrainingEnrollments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingEnrollment)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'training_reviews'), (snapshot) => {
+    getDocs(query(collection(db, 'training_reviews'), limit(50))).then(snapshot => {
       setTrainingReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReview)));
-    }));
+    });
 
-    unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
-      setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }));
+    // unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
+    //   setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    // }));
 
     // Restricted/Conditional lists
     const marketplaceQuery = user.role === 'admin' 
-      ? collection(db, 'marketplace')
-      : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)));
-    unsubscribes.push(onSnapshot(marketplaceQuery, (snapshot) => {
+      ? query(collection(db, 'marketplace'), limit(100))
+      : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)), limit(50));
+    getDocs(marketplaceQuery).then(snapshot => {
       setMarketplace(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem)));
-    }));
+    });
 
     const motoRideQuery = user.role === 'admin'
-      ? collection(db, 'motoRides')
-      : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)));
-    unsubscribes.push(onSnapshot(motoRideQuery, (snapshot) => {
+      ? query(collection(db, 'motoRides'), limit(100))
+      : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)), limit(50));
+    getDocs(motoRideQuery).then(snapshot => {
       setMotoRides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MotoRide)));
-    }));
+    });
 
     const trainingsQuery = user.role === 'admin'
-      ? collection(db, 'trainings')
-      : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)));
-    unsubscribes.push(onSnapshot(trainingsQuery, (snapshot) => {
+      ? query(collection(db, 'trainings'), limit(100))
+      : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)), limit(50));
+    getDocs(trainingsQuery).then(snapshot => {
       setTrainings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Training)));
-    }));
+    });
 
-    const usersQuery = collection(db, 'users');
-    unsubscribes.push(onSnapshot(usersQuery, (snapshot) => {
+    // Count exact users instead of fetching them all to save quota
+    import('firebase/firestore').then(({ getCountFromServer }) => {
+      getCountFromServer(collection(db, 'users')).then(snapshot => {
+        setTotalUsersCount(snapshot.data().count);
+      }).catch(e => console.error(e));
+    });
+
+    // Extremely heavy query causing quota exhaustion. Limit to 10 for basic display if needed.
+    const usersQuery = query(collection(db, 'users'), limit(10));
+    getDocs(usersQuery).then(snapshot => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-    }));
+    });
 
-    // Notifications for current user
-    const qNotifs = query(collection(db, 'notifications'), where('userId', '==', user.id));
+    // Notifications for current user limited to 50 to prevent huge reads
+    const qNotifs = query(
+      collection(db, 'notifications'), 
+      where('userId', 'in', [user.id, 'all']),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
     unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
     }));
 
     // Admin only lists
     if (user.role === 'admin') {
-      unsubscribes.push(onSnapshot(collection(db, 'applications'), (snapshot) => {
-        setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-      }));
+      getDocs(query(collection(db, 'applications'), limit(100))).then(snapshot => {
+      setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+    });
 
-      unsubscribes.push(onSnapshot(collection(db, 'teacherApplications'), (snapshot) => {
-        setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
-      }));
+      getDocs(query(collection(db, 'teacherApplications'), limit(100))).then(snapshot => {
+      setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+    });
 
-      unsubscribes.push(onSnapshot(collection(db, 'subscriptionRequests'), (snapshot) => {
-        setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
-      }));
+      getDocs(query(collection(db, 'subscriptionRequests'), limit(100))).then(snapshot => {
+      setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
+    });
 
-      unsubscribes.push(onSnapshot(collection(db, 'training_reports'), (snapshot) => {
-        setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
-      }));
+      getDocs(query(collection(db, 'training_reports'), limit(100))).then(snapshot => {
+      setTrainingReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrainingReport)));
+    });
 
-      unsubscribes.push(onSnapshot(collection(db, 'logs'), (snapshot) => {
-        setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Log)));
-      }));
+      getDocs(query(collection(db, 'logs'), limit(100))).then(snapshot => {
+      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Log)));
+    });
     } else {
       // Non-admins see their own applications
       const qApps = query(collection(db, 'applications'), where('userId', '==', user.id));
-      unsubscribes.push(onSnapshot(qApps, (snapshot) => {
-        setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
-      }));
+      getDocs(qApps).then(snapshot => {
+      setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+    });
 
       const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id));
-      unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
-        setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
-      }));
+      getDocs(qTeacherApps).then(snapshot => {
+      setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
+    });
     }
 
     return () => unsubscribes.forEach(unsub => unsub());
@@ -676,13 +693,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const addPublicServiceContest = async (contestData: any) => {
     if (!user || user.role !== 'admin') return;
     try {
-      await addDoc(collection(db, 'public_service_contests'), {
-        ...contestData,
+      const { questions, ...lightData } = contestData;
+      
+      const contestRef = await addDoc(collection(db, 'public_service_contests'), {
+        ...lightData,
+        questionCount: questions?.length || 0,
         status: 'active',
         authorId: user.id,
         createdAt: serverTimestamp(),
         date_creation: new Date().toISOString()
       });
+
+      // Save heavy data (questions) in a separate document to save reads on list view
+      if (questions && questions.length > 0) {
+        await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
+          questions: questions,
+          contestId: contestRef.id
+        });
+      }
+
       toast.success('Concours ajouté avec succès');
     } catch (error) {
       console.error(error);
@@ -1422,6 +1451,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       users,
+      totalUsersCount,
       ads,
       documents,
       internships,

@@ -16,24 +16,47 @@ import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { PublicServiceContest, PublicServiceResult, PublicServiceSubscription, User } from '@/types';
 
 export const publicServiceExamService = {
-  async getContests(filters?: {
-    categorie?: string;
-    niveau?: string;
-    type?: string;
-  }) {
+  async getContests(
+    filters?: {
+      categorie?: string;
+      niveau?: string;
+      type?: string;
+    },
+    pageSize: number = 10,
+    lastDoc?: any // Snapshot
+  ) {
     try {
-      let q = query(collection(db, 'public_service_contests'), where('status', '==', 'active'));
-      
-      const contestsSnapshot = await getDocs(q);
-      let contests = contestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PublicServiceContest));
-      
-      if (filters) {
-        if (filters.categorie) contests = contests.filter(c => c.categorie === filters.categorie);
-        if (filters.niveau) contests = contests.filter(c => c.niveau === filters.niveau);
-        if (filters.type) contests = contests.filter(c => c.type === filters.type);
+      // Optimsed with queries
+      let queryConstraints: any[] = [
+        where('status', '==', 'active'),
+        orderBy('date_creation', 'desc'),
+        limit(pageSize)
+      ];
+
+      if (filters?.categorie) queryConstraints.push(where('categorie', '==', filters.categorie));
+      if (filters?.niveau) queryConstraints.push(where('niveau', '==', filters.niveau));
+      if (filters?.type) queryConstraints.push(where('type', '==', filters.type));
+
+      if (lastDoc) {
+        // Need to import startAfter
+        const { startAfter } = await import('firebase/firestore');
+        queryConstraints.push(startAfter(lastDoc));
       }
+
+      const q = query(collection(db, 'public_service_contests'), ...queryConstraints);
+      const snapshot = await getDocs(q);
       
-      return contests;
+      const contests = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Do not load 'questions' to save memory/bandwidth as requested
+        delete data.questions; 
+        return { id: doc.id, ...data } as PublicServiceContest;
+      });
+      
+      return {
+        contests,
+        lastDoc: snapshot.docs[snapshot.docs.length - 1]
+      };
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, 'public_service_contests');
       throw error;
@@ -50,6 +73,21 @@ export const publicServiceExamService = {
       return null;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `public_service_contests/${id}`);
+      throw error;
+    }
+  },
+
+  async getContestQuestions(contestId: string) {
+    try {
+      const q = query(
+        collection(db, 'public_service_questions'),
+        where('concours_id', '==', contestId),
+        orderBy('order', 'asc') // Assuming an order field exists
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'public_service_questions');
       throw error;
     }
   },
@@ -73,7 +111,8 @@ export const publicServiceExamService = {
       const q = query(
         collection(db, 'public_service_results'), 
         where('user_id', '==', userId),
-        orderBy('date', 'desc')
+        orderBy('date', 'desc'),
+        limit(20) // Optimized: prevent fetching thousands of results
       );
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PublicServiceResult));
