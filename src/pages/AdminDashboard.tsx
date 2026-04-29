@@ -92,7 +92,9 @@ export default function AdminDashboard() {
     deleteColocation,
     logs,
     totalUsersCount,
-    totalDocumentsCount
+    totalDocumentsCount,
+    tutors,
+    teachers
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
@@ -907,9 +909,9 @@ export default function AdminDashboard() {
                   <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Répartition Utilisateurs</h3>
                   <div className="space-y-3">
                     {[
-                      { label: 'Étudiants', count: users.filter(u => u.role === 'student').length, color: 'bg-blue-500' },
-                      { label: 'Répétiteurs & Prof de maison', count: users.filter(u => u.tutorStatus === 'approved').length, color: 'bg-amber-500' },
-                      { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length, color: 'bg-emerald-500' },
+                      { label: 'Étudiants', count: totalUsersCount - tutors.length - teachers.length, color: 'bg-blue-500' },
+                      { label: 'Répétiteurs & Prof de maison', count: tutors.length, color: 'bg-amber-500' },
+                      { label: 'Enseignants', count: teachers.length, color: 'bg-emerald-500' },
                       { label: 'Entreprises', count: users.filter(u => u.role === 'company').length, color: 'bg-purple-500' },
                       { label: 'Admins', count: users.filter(u => u.role === 'admin').length, color: 'bg-red-500' },
                     ].map((item) => (
@@ -1548,11 +1550,11 @@ export default function AdminDashboard() {
                       Répétiteurs & Prof de maison actifs
                     </h3>
                     <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                      {users.filter(u => u.tutorStatus === 'approved').length} actifs
+                      {tutors.length} actifs
                     </span>
                   </div>
                   <div className="divide-y divide-gray-50">
-                    {users.filter(u => u.tutorStatus === 'approved').map(tutor => (
+                    {tutors.map(tutor => (
                       <div key={tutor.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
                         <div className="flex items-center gap-4 w-full md:w-auto">
                           <img src={tutor.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 object-cover" />
@@ -1789,11 +1791,11 @@ export default function AdminDashboard() {
                       Enseignants validés (Annuaire)
                     </h3>
                     <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                      {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').length} actifs
+                      {teachers.filter(t => t.teacherStatus === 'approved').length} actifs
                     </span>
                   </div>
                   <div className="divide-y divide-gray-50">
-                    {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').map(teacher => (
+                    {teachers.filter(t => t.teacherStatus === 'approved').map(teacher => (
                       <div key={teacher.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
                         <div className="flex items-center gap-4 w-full md:w-auto">
                           <img src={teacher.avatarUrl} alt="" className="w-12 h-12 rounded-full bg-gray-100 object-cover" />
@@ -1842,7 +1844,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
-                    {users.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').length === 0 && (
+                    {teachers.filter(t => t.teacherStatus === 'approved').length === 0 && (
                       <div className="p-8 text-center text-gray-400">
                         <p>Aucun enseignant validé pour le moment.</p>
                       </div>
@@ -3323,9 +3325,9 @@ export default function AdminDashboard() {
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Étudiants', value: users.filter(u => u.role === 'student').length },
-                        { name: 'Répétiteurs & Prof de maison', value: users.filter(u => u.role === 'tutor').length },
-                        { name: 'Enseignants', value: users.filter(u => u.role === 'teacher').length },
+                        { name: 'Étudiants', value: totalUsersCount - tutors.length - teachers.length },
+                        { name: 'Répétiteurs & Prof de maison', value: tutors.length },
+                        { name: 'Enseignants', value: teachers.length },
                         { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
                       ]}
                       cx="50%"
@@ -3347,15 +3349,15 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span className="text-xs text-gray-600">Étudiants ({users.filter(u => u.role === 'student').length})</span>
+                  <span className="text-xs text-gray-600">Étudiants ({totalUsersCount - tutors.length - teachers.length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-xs text-gray-600">Répétiteurs & Prof de maison ({users.filter(u => u.role === 'tutor').length})</span>
+                  <span className="text-xs text-gray-600">Répétiteurs & Prof de maison ({tutors.length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-xs text-gray-600">Enseignants ({users.filter(u => u.role === 'teacher').length})</span>
+                  <span className="text-xs text-gray-600">Enseignants ({teachers.length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-purple-500" />

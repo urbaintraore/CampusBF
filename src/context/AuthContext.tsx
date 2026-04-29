@@ -90,6 +90,8 @@ async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
 interface AuthContextType {
   user: User | null;
   users: User[];
+  tutors: User[];
+  teachers: User[];
   totalUsersCount: number;
   totalDocumentsCount: number;
   ads: Ad[];
@@ -222,6 +224,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [tutors, setTutors] = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<User[]>([]);
   const [totalUsersCount, setTotalUsersCount] = useState<number>(0);
   const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
   const [ads, setAds] = useState<Ad[]>([]);
@@ -509,6 +513,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) {
       // Clear data state on logout
       setUsers([]);
+      setTutors([]);
+      setTeachers([]);
       setAds([]);
       setDocuments([]);
       setApplications([]);
@@ -552,7 +558,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Public/Authenticated lists
     fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(50))).then(data => setAds(data as Ad[]));
 
-    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'), limit(50))).then(data => setDocuments(data as any[]));
+    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'))).then(data => setDocuments(data as any[]));
 
     fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(50))).then(data => setInternships(data as Internship[]));
 
@@ -615,6 +621,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Extremely heavy query causing quota exhaustion. Limit to 10 for basic display if needed.
     const usersQuery = query(collection(db, 'users'), limit(10));
     fetchWithSessionCache('cache_Users', usersQuery).then(data => setUsers(data as User[]));
+
+    const tutorsQuery = query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(200));
+    fetchWithSessionCache('cache_Tutors', tutorsQuery).then(data => setTutors(data as User[]));
+
+    const teachersQuery = query(collection(db, 'users'), where('role', '==', 'teacher'), limit(200));
+    fetchWithSessionCache('cache_Teachers', teachersQuery).then(data => setTeachers(data as User[]));
 
     // Notifications for current user limited to 50 to prevent huge reads
     const qNotifs = query(
@@ -1426,6 +1438,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       users,
+      tutors,
+      teachers,
       totalUsersCount,
       totalDocumentsCount,
       ads,

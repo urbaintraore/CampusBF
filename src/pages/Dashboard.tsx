@@ -13,8 +13,7 @@ import { User as UserType } from '@/types';
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
-  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings, events, totalDocumentsCount } = auth;
-  const tutors = users.filter(u => u.tutorStatus === 'approved');
+  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings, events, totalDocumentsCount, tutors, teachers } = auth;
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
   console.log("Dashboard activeAds length:", activeAds.length);
@@ -273,7 +272,7 @@ export default function Dashboard() {
           [
             { label: 'Concours FP', count: auth.publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
-            { label: 'Enseignants', count: users.filter(u => u.role === 'teacher').length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
+            { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
             { label: 'Événements', count: auth.events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
           ].map((stat) => (
             <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>

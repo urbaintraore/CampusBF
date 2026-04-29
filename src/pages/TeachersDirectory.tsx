@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment } from 'firebase/firestore';
 
 export default function TeachersDirectory() {
-  const { user, users, submitSubscriptionRequest, addTeacherReview } = useAuth();
+  const { user, teachers, submitSubscriptionRequest, addTeacherReview } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [domainFilter, setDomainFilter] = useState('Tous');
   const [rankFilter, setRankFilter] = useState('Tous');
@@ -34,10 +34,10 @@ export default function TeachersDirectory() {
     }
   }, [selectedTeacher]);
 
-  const teachers = useMemo(() => users.filter(u => u.role === 'teacher' && u.teacherProfile), [users]);
+  const teachersList = useMemo(() => teachers.filter(u => u.teacherProfile), [teachers]);
 
   const filteredTeachers = useMemo(() => {
-    return teachers.filter(teacher => {
+    return teachersList.filter(teacher => {
       const profile = teacher.teacherProfile!;
       const matchesSearch = 
         `${teacher.firstName} ${teacher.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,9 +50,9 @@ export default function TeachersDirectory() {
 
       return matchesSearch && matchesDomain && matchesRank && matchesAvailability;
     });
-  }, [teachers, searchTerm, domainFilter, rankFilter, availabilityFilter]);
+  }, [teachersList, searchTerm, domainFilter, rankFilter, availabilityFilter]);
 
-  const domains = ['Tous', ...Array.from(new Set(teachers.flatMap(t => t.teacherProfile!.domains)))];
+  const domains = ['Tous', ...Array.from(new Set(teachersList.flatMap(t => t.teacherProfile!.domains)))];
   const ranks = ['Tous', 'Assistant', 'Maître Assistant', 'Maître de Conférences', 'Professeur Titulaire'];
 
   const isInstitution = user?.role === 'institution';

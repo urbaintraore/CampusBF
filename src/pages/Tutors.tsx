@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 import { uploadFile } from '@/services/storageService';
 
 export default function Tutors() {
-  const { user, users, submitTutorApplication } = useAuth();
+  const { user, tutors, submitTutorApplication } = useAuth();
   const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const [selectedTutor, setSelectedTutor] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function Tutors() {
     }
   };
 
-  const realTutors: Tutor[] = users
+  const realTutors: Tutor[] = tutors
     .filter(u => {
       if (isAdmin) return u.tutorStatus && u.tutorStatus !== 'none';
       return u.tutorStatus === 'approved';
