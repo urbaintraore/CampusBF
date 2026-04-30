@@ -2637,10 +2637,25 @@ export default function AdminDashboard() {
                   <option value="droit">Droit</option>
                   <option value="economie">Économie</option>
                   <option value="svt">SVT</option>
-                  <option value="physique">Physique-Chimie</option>
+                  <option value="physique">Physique</option>
+                  <option value="chimie">Chimie</option>
                   <option value="dissertation_redaction">Dissertation / Rédaction</option>
                   <option value="tests_psychotechniques">Tests Psychotechniques</option>
                   <option value="cas_pratique">Cas pratique</option>
+                  <option value="actualite_retrospective">Actualité Rétrospective</option>
+                  <option value="societes_evenements">Sociétés et Événements</option>
+                  <option value="institutions_nationales_internationales">Institutions Nationales/Internationales</option>
+                  <option value="culture_litterature_internationales">Culture et Littérature Internationales</option>
+                  <option value="culture_litteraire_artistique">Culture Littéraire et Artistique</option>
+                  <option value="histoire">Histoire</option>
+                  <option value="geographie">Géographie</option>
+                  <option value="philosophie">Philosophie</option>
+                  <option value="psychologie">Psychologie</option>
+                  <option value="sociologie">Sociologie</option>
+                  <option value="francais">Français</option>
+                  <option value="sciences_technologie">Sciences et Technologie</option>
+                  <option value="connaissances_burkina">Connaissances du Burkina</option>
+                  <option value="test_niveau">Test de Niveau</option>
                 </select>
               </div>
 
