@@ -3,7 +3,7 @@ import {
   FileText, GraduationCap, ShoppingBag, Briefcase, 
   Compass, Users, Bike, Calendar, Library, 
   UserCheck, MessageSquare, Sparkles, Download, Loader2,
-  WifiOff, BookOpen, Trophy, Tag, Home, Brain, TrendingUp
+  WifiOff, BookOpen, Trophy, Tag, Home, Brain, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -91,6 +91,22 @@ const features = [
     color: "bg-amber-50 text-amber-600",
     link: "/contests",
     roles: ['student', 'teacher', 'admin', 'alumni']
+  },
+  {
+    icon: ShieldCheck,
+    title: "Concours Fonction Publique",
+    description: "Préparez-vous aux concours de la fonction publique avec des sujets officiels et des quiz interactifs.",
+    color: "bg-rose-50 text-rose-600",
+    link: "/public-service-contests",
+    roles: ['student', 'admin']
+  },
+  {
+    icon: Users,
+    title: "Recherche de Camarades",
+    description: "Trouvez facilement vos camarades de promotion ou de cursus pour collaborer et étudier ensemble.",
+    color: "bg-sky-50 text-sky-600",
+    link: "/find-classmates",
+    roles: ['student', 'admin']
   },
   {
     icon: Brain,
