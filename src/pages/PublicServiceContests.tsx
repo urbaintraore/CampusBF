@@ -36,9 +36,23 @@ const categoryColors: Record<string, string> = {
   economie: 'from-amber-500 to-orange-600',
   svt: 'from-green-500 to-lime-600',
   physique: 'from-purple-500 to-violet-600',
+  chimie: 'from-indigo-500 to-blue-600',
   dissertation_redaction: 'from-cyan-500 to-blue-600',
   tests_psychotechniques: 'from-fuchsia-500 to-pink-600',
   cas_pratique: 'from-stone-500 to-gray-700',
+  actualite_retrospective: 'from-sky-500 to-cyan-600',
+  societes_evenements: 'from-teal-500 to-emerald-600',
+  institutions_nationales_internationales: 'from-amber-500 to-orange-600',
+  culture_litterature_internationales: 'from-blue-500 to-indigo-600',
+  culture_litteraire_artistique: 'from-violet-500 to-purple-600',
+  histoire: 'from-orange-500 to-red-600',
+  geographie: 'from-emerald-500 to-green-600',
+  philosophie: 'from-lime-500 to-green-600',
+  psychologie: 'from-rose-500 to-pink-600',
+  sociologie: 'from-yellow-500 to-amber-600',
+  francais: 'from-indigo-500 to-blue-600',
+  sciences_technologie: 'from-cyan-500 to-blue-600',
+  connaissances_burkina: 'from-red-500 to-yellow-600',
 };
 
 const categoryLabels: Record<string, string> = {
@@ -47,10 +61,24 @@ const categoryLabels: Record<string, string> = {
   droit: 'Droit & Administration',
   economie: 'Économie & Finances',
   svt: 'SVT / Santé',
-  physique: 'Physique & Chimie',
+  physique: 'Physique',
+  chimie: 'Chimie',
   dissertation_redaction: 'Dissertation / Rédaction',
   tests_psychotechniques: 'Tests Psychotechniques',
-  cas_pratique: 'Cas pratique'
+  cas_pratique: 'Cas pratique',
+  actualite_retrospective: 'Actualité et rétrospective',
+  societes_evenements: 'Sociétés-Evènements',
+  institutions_nationales_internationales: 'Institutions nationales et internationales',
+  culture_litterature_internationales: 'Culture littérature et int.',
+  culture_litteraire_artistique: 'Culture littéraire et artistique',
+  histoire: 'Histoire',
+  geographie: 'Géographie',
+  philosophie: 'Philosophie',
+  psychologie: 'Psychologie',
+  sociologie: 'Sociologie',
+  francais: 'Français',
+  sciences_technologie: 'Sciences et technologie',
+  connaissances_burkina: 'Connaissances sur le Burkina'
 };
 
 export default function PublicServiceContests() {

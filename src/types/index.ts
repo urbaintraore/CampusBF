@@ -684,7 +684,30 @@ export interface ContestWinner {
   score: number;
 }
 
-export type PublicServiceCategory = "culture_generale" | "maths" | "droit" | "economie" | "svt" | "physique" | "dissertation_redaction" | "tests_psychotechniques" | "cas_pratique";
+export type PublicServiceCategory = 
+  "culture_generale" | 
+  "maths" | 
+  "droit" | 
+  "economie" | 
+  "svt" | 
+  "physique" | 
+  "chimie" |
+  "dissertation_redaction" | 
+  "tests_psychotechniques" | 
+  "cas_pratique" |
+  "actualite_retrospective" | 
+  "societes_evenements" | 
+  "institutions_nationales_internationales" | 
+  "culture_litterature_internationales" | 
+  "culture_litteraire_artistique" | 
+  "histoire" | 
+  "geographie" | 
+  "philosophie" | 
+  "psychologie" | 
+  "sociologie" | 
+  "francais" | 
+  "sciences_technologie" | 
+  "connaissances_burkina";
 export type PublicServiceType = "qcm" | "dissertation" | "exercice" | "simulation";
 export type PublicServiceLevel = "BEPC" | "BAC" | "Licence";
 export type PublicServiceDifficulty = "facile" | "moyen" | "difficile";
@@ -712,6 +735,12 @@ export interface PublicServiceContest {
   status: 'active' | 'inactive';
 }
 
+export interface ResultAnswer {
+  questionIndex: number;
+  selectedOption: number;
+  comment?: string;
+}
+
 export interface PublicServiceResult {
   id: string;
   user_id: string;
@@ -721,6 +750,7 @@ export interface PublicServiceResult {
   temps: number; // en secondes
   date: any;
   classement?: number;
+  answers: ResultAnswer[];
 }
 
 export interface PublicServiceSubscription {

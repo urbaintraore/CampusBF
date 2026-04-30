@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Home
 } from 'lucide-react';
-import { PublicServiceContest, PublicServiceQuestion } from '@/types';
+import { PublicServiceContest, PublicServiceQuestion, ResultAnswer } from '@/types';
 import { publicServiceExamService } from '@/services/publicServiceExamService';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -28,11 +28,38 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'instructions' | 'exam' | 'results'>('instructions');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
+  const [userAnswers, setUserAnswers] = useState<Record<number, { selectedOption: number, comment?: string }>>({});
   const [timeLeft, setTimeLeft] = useState(contest.duree * 60);
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [startTime] = useState(Date.now());
+  const [currentComment, setCurrentComment] = useState("");
+
+  useEffect(() => {
+    // Reset comment when question changes
+    setCurrentComment(userAnswers[currentQuestionIndex]?.comment || "");
+  }, [currentQuestionIndex, userAnswers]);
+
+  const handleUpdateAnswer = (optionIdx: number) => {
+    setUserAnswers(prev => ({ 
+      ...prev, 
+      [currentQuestionIndex]: { 
+        ...prev[currentQuestionIndex], 
+        selectedOption: optionIdx 
+      } 
+    }));
+  };
+
+  const handleUpdateComment = (comment: string) => {
+    setCurrentComment(comment);
+    setUserAnswers(prev => ({ 
+      ...prev, 
+      [currentQuestionIndex]: { 
+        ...prev[currentQuestionIndex], 
+        comment: comment 
+      } 
+    }));
+  };
 
   // Security: Prevent Back Navigation and Text Selection
   useEffect(() => {
@@ -81,10 +108,16 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
 
     // Calculate score
     let totalCorrect = 0;
-    contest.questions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.bonne_reponse) {
+    const answersArray: ResultAnswer[] = contest.questions.map((q, idx) => {
+      const answer = userAnswers[idx] || { selectedOption: -1 };
+      if (answer.selectedOption === q.bonne_reponse) {
         totalCorrect++;
       }
+      return {
+        questionIndex: idx,
+        selectedOption: answer.selectedOption,
+        comment: answer.comment
+      };
     });
     
     const finalScore = Math.round((totalCorrect / contest.questions.length) * 100);
@@ -98,7 +131,8 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
           concours_id: contest.id,
           score: finalScore,
           total_questions: contest.questions.length,
-          temps: Math.floor((Date.now() - startTime) / 1000)
+          temps: Math.floor((Date.now() - startTime) / 1000),
+          answers: answersArray
         });
       }
     } catch (error) {
@@ -264,11 +298,11 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
 
                   <div className="grid grid-cols-1 gap-4">
                     {currentQuestion.options.map((option, idx) => {
-                      const isSelected = userAnswers[currentQuestionIndex] === idx;
+                      const isSelected = userAnswers[currentQuestionIndex]?.selectedOption === idx;
                       return (
                         <button
                           key={idx}
-                          onClick={() => setUserAnswers(prev => ({ ...prev, [currentQuestionIndex]: idx }))}
+                          onClick={() => handleUpdateAnswer(idx)}
                           className={`group w-full p-6 rounded-3xl border text-left transition-all relative overflow-hidden flex items-center gap-4 ${
                             isSelected 
                             ? 'bg-emerald-600 border-emerald-500 shadow-xl shadow-emerald-500/10' 
@@ -293,6 +327,19 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
                       );
                     })}
                   </div>
+
+                  {userAnswers[currentQuestionIndex]?.selectedOption !== undefined && (
+                    <div className="mt-8 space-y-2">
+                      <label className="text-sm font-bold text-white/70">Commentaire (optionnel) :</label>
+                      <textarea
+                        value={currentComment}
+                        onChange={(e) => handleUpdateComment(e.target.value)}
+                        placeholder="Ajouter une remarque..."
+                        className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        rows={3}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Navigation */}
@@ -352,7 +399,7 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
                 <div className="grid grid-cols-2 gap-4 mb-12">
                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                     <div className="text-2xl font-black text-white mb-1">
-                      {Object.values(userAnswers).filter((ans, idx) => ans === contest.questions[idx].bonne_reponse).length} / {contest.questions.length}
+                      {contest.questions.filter((q, idx) => userAnswers[idx]?.selectedOption === q.bonne_reponse).length} / {contest.questions.length}
                     </div>
                     <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Réponses Justes</div>
                   </div>

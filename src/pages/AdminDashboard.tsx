@@ -121,7 +121,7 @@ export default function AdminDashboard() {
   const [editingDeal, setEditingDeal] = useState<any>(null);
   const [showAIGenModal, setShowAIGenModal] = useState(false);
   const [showManualContestModal, setShowManualContestModal] = useState(false);
-  const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
+  const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
   const [aiGenData, setAiGenData] = useState({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
   const [isGenerating, setIsGenerating] = useState(false);
   const [newDeal, setNewDeal] = useState<any>({
@@ -341,6 +341,9 @@ export default function AdminDashboard() {
     try {
       questionsParsed = JSON.parse(manualContestData.questionsJSON);
       if (!Array.isArray(questionsParsed)) throw new Error('Les questions doivent être dans un tableau [ ]');
+      if (manualContestData.shuffle) {
+        questionsParsed.sort(() => Math.random() - 0.5);
+      }
     } catch (e: any) {
       toast.error('Format JSON invalide: ' + e.message);
       return;
@@ -358,7 +361,7 @@ export default function AdminDashboard() {
       };
       await addPublicServiceContest(newCtx);
       setShowManualContestModal(false);
-      setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
+      setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
     } catch (error) {
       console.error(error);
       toast.error("Erreur lors de l'ajout manuel");
@@ -2717,6 +2720,15 @@ export default function AdminDashboard() {
                   placeholder="Ex: Concours d'intégration 2024"
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
                 />
+                <div className="flex items-center gap-2 mt-2">
+                  <input 
+                    type="checkbox"
+                    checked={manualContestData.shuffle}
+                    onChange={(e) => setManualContestData({ ...manualContestData, shuffle: e.target.checked })}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label className="text-sm font-bold text-gray-700">Mélanger les questions</label>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
