@@ -5,7 +5,7 @@ service cloud.firestore {
     // Helper functions
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isAdmin() { return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
+    function isAdmin() { return isSignedIn() && (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'); }
 
     // Public Service Contests rules
     match /public_service_contests/{contestId} {
