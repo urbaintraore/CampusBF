@@ -18,7 +18,7 @@ service cloud.firestore {
     }
     
     match /public_service_results/{resultId} {
-      allow read: if isOwner(resource.data.user_id);
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isOwner(resource.data.user_id);
     }
