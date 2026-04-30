@@ -62,7 +62,7 @@ service cloud.firestore {
     match /motoRides/{document=**} { allow read, write: if isSignedIn(); }
     match /trainings/{document=**} { allow read, write: if isSignedIn(); }
     match /notifications/{document=**} { 
-      allow read: if isOwner(resource.data.userId); 
+      allow read: if isOwner(resource.data.userId) || resource.data.userId == 'all'; 
       allow update: if isOwner(resource.data.userId);
       allow create: if isSignedIn();
       allow delete: if isOwner(resource.data.userId);

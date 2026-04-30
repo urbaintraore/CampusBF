@@ -3,7 +3,7 @@ import {
   FileText, GraduationCap, ShoppingBag, Briefcase, 
   Compass, Users, Bike, Calendar, Library, 
   UserCheck, MessageSquare, Sparkles, Download, Loader2,
-  WifiOff, BookOpen, Trophy, Tag, Home
+  WifiOff, BookOpen, Trophy, Tag, Home, Brain, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -90,6 +90,22 @@ const features = [
     description: "Participez à des concours académiques et thématiques pour gagner des prix et booster votre profil.",
     color: "bg-amber-50 text-amber-600",
     link: "/contests",
+    roles: ['student', 'teacher', 'admin', 'alumni']
+  },
+  {
+    icon: Brain,
+    title: "Quiz & Révisions",
+    description: "Améliorez vos connaissances avec des quiz interactifs générés par IA ou créés par des enseignants, et utilisez des flashcards pour mémoriser efficacement.",
+    color: "bg-purple-50 text-purple-600",
+    link: "/quizzes",
+    roles: ['student', 'teacher', 'admin']
+  },
+  {
+    icon: TrendingUp,
+    title: "Classements",
+    description: "Suivez votre progression par rapport à vos camarades et contribuez au prestige de votre université dans le classement général.",
+    color: "bg-indigo-50 text-indigo-600",
+    link: "/ranking",
     roles: ['student', 'teacher', 'admin', 'alumni']
   },
   {
