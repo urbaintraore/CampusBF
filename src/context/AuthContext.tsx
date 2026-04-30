@@ -558,7 +558,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Public/Authenticated lists
     fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(50))).then(data => setAds(data as Ad[]));
 
-    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'))).then(data => setDocuments(data as any[]));
+    // fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'))).then(data => setDocuments(data as any[]));
+    getDocs(query(collection(db, 'documents'))).then(snapshot => setDocuments(snapshot.docs.map(d => ({id: d.id, ...d.data()}))));
 
     fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(50))).then(data => setInternships(data as Internship[]));
 
@@ -588,7 +589,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     fetchWithSessionCache('cache_ColocationReviews', query(collection(db, 'colocation_reviews'), limit(50))).then(data => setColocationReviews(data as ColocationReview[]));
 
-    fetchWithSessionCache('cache_ContestParticipants', query(collection(db, 'contest_participants'), limit(50))).then(data => setContestParticipants(data as ContestParticipant[]));
+    fetchWithSessionCache('cache_ContestParticipants', query(collection(db, 'contest_participants'), limit(1000))).then(data => setContestParticipants(data as ContestParticipant[]));
 
     fetchWithSessionCache('cache_TrainingEnrollments', query(collection(db, 'training_enrollments'), limit(50))).then(data => setTrainingEnrollments(data as TrainingEnrollment[]));
 
