@@ -11,6 +11,10 @@ service cloud.firestore {
     match /public_service_contests/{contestId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }                
+    
+    match /public_service_contest_details/{document=**} {
+      allow read: if isSignedIn();
     }
     
     match /public_service_results/{resultId} {
