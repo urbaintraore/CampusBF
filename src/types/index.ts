@@ -709,7 +709,7 @@ export type PublicServiceCategory =
   "sciences_technologie" | 
   "connaissances_burkina";
 export type PublicServiceType = "qcm" | "dissertation" | "exercice" | "simulation";
-export type PublicServiceLevel = "BEPC" | "BAC" | "Licence";
+export type PublicServiceLevel = "BEPC" | "BAC" | "Licence" | "Master" | "Tout Niveau";
 export type PublicServiceDifficulty = "facile" | "moyen" | "difficile";
 
 export interface PublicServiceQuestion {

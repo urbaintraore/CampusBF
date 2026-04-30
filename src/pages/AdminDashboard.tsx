@@ -2762,6 +2762,7 @@ export default function AdminDashboard() {
                     <option value="BAC">BAC</option>
                     <option value="Licence">Licence</option>
                     <option value="Master">Master</option>
+                    <option value="Tout Niveau">Tout Niveau</option>
                   </select>
                 </div>
               </div>
