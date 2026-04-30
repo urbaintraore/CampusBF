@@ -2748,6 +2748,7 @@ export default function AdminDashboard() {
                     <option value="dissertation_redaction">Dissertation / Rédaction</option>
                     <option value="tests_psychotechniques">Tests Psychotechniques</option>
                     <option value="cas_pratique">Cas pratique</option>
+                    <option value="test_niveau">Test de Niveau</option>
                   </select>
                 </div>
 

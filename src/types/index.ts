@@ -707,7 +707,8 @@ export type PublicServiceCategory =
   "sociologie" | 
   "francais" | 
   "sciences_technologie" | 
-  "connaissances_burkina";
+  "connaissances_burkina" |
+  "test_niveau";
 export type PublicServiceType = "qcm" | "dissertation" | "exercice" | "simulation";
 export type PublicServiceLevel = "BEPC" | "BAC" | "Licence" | "Master" | "Tout Niveau";
 export type PublicServiceDifficulty = "facile" | "moyen" | "difficile";
