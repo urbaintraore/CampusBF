@@ -31,27 +31,51 @@ const UserGuide = () => {
     
     const tId = toast.loading('Génération du PDF...');
     try {
+      // Temporary fix for oklch: we force standard colors on a clone
       const canvas = await html2canvas(guideRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        windowWidth: guideRef.current.scrollWidth,
-        windowHeight: guideRef.current.scrollHeight
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            :root {
+              --color-emerald-600: #059669 !important;
+              --color-emerald-700: #047857 !important;
+              --color-emerald-50: #ecfdf5 !important;
+              --color-emerald-100: #d1fae5 !important;
+              --color-blue-600: #2563eb !important;
+              --color-blue-50: #eff6ff !important;
+              --color-purple-600: #9333ea !important;
+              --color-purple-50: #faf5ff !important;
+              --color-orange-600: #ea580c !important;
+              --color-orange-100: #ffedd5 !important;
+            }
+            * { 
+              color-scheme: light !important;
+              border-color: #e5e7eb !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
+        }
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdfWidth = 210; // A4 width in mm
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('Guide_Utilisateur_CampusBF.pdf');
-      toast.success('Le guide a été téléchargé avec succès !', { id: tId });
+      pdf.save('Guide_CampusBF_Utilisateur.pdf');
+      toast.success('Guide téléchargé avec succès !', { id: tId });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Erreur lors de la génération du PDF.', { id: tId });
+      toast.error('Erreur lors de la génération. Essayez via l\'impression classique (Ctrl+P).', { id: tId });
     }
   };
+
+  const platformUrl = window.location.origin;
 
   const categories = [
     {
@@ -130,7 +154,10 @@ const UserGuide = () => {
 
       <div ref={guideRef} className="bg-white rounded-3xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="text-center mb-12">
-        <motion.h1 
+          <div className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4 border border-emerald-100">
+            {platformUrl}
+          </div>
+          <motion.h1 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4"
@@ -246,7 +273,6 @@ const UserGuide = () => {
           <GraduationCap size={200} />
         </div>
       </div>
-      </div>
       
       {/* Contact & Footer */}
       <div className="mt-20 pt-12 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -258,7 +284,7 @@ const UserGuide = () => {
           </p>
           <div className="flex items-center gap-3 text-sm text-emerald-600 font-medium">
             <Smartphone size={16} />
-            <span>Disponible sur Web et Mobile</span>
+            <span>Site Officiel : {platformUrl}</span>
           </div>
         </div>
 
@@ -275,7 +301,7 @@ const UserGuide = () => {
             <div className="flex items-start gap-3">
               <Phone className="text-emerald-600 shrink-0 mt-1" size={18} />
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase">Administrateur</p>
+                <p className="text-xs font-bold text-gray-400 uppercase">Administrateur (WhatsApp)</p>
                 <p className="text-sm text-gray-700 font-bold">+226 63 37 52 57</p>
               </div>
             </div>
@@ -290,7 +316,8 @@ const UserGuide = () => {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default UserGuide;
