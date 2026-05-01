@@ -122,6 +122,21 @@ export default function AdminDashboard() {
   const [showAIGenModal, setShowAIGenModal] = useState(false);
   const [showManualContestModal, setShowManualContestModal] = useState(false);
   const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
+  const [parsedQuestionsCount, setParsedQuestionsCount] = useState(0);
+
+  const handleJSONChange = (val: string) => {
+    setManualContestData({ ...manualContestData, questionsJSON: val });
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        setParsedQuestionsCount(parsed.length);
+      } else {
+        setParsedQuestionsCount(0);
+      }
+    } catch (e) {
+      setParsedQuestionsCount(0);
+    }
+  };
   const [aiGenData, setAiGenData] = useState({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
   const [isGenerating, setIsGenerating] = useState(false);
   const [newDeal, setNewDeal] = useState<any>({
@@ -349,6 +364,12 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (questionsParsed.length === 0) {
+      toast.error('Le tableau de questions est vide.');
+      return;
+    }
+
+    const tId = toast.loading('Création du concours...');
     try {
       const newCtx = {
         titre: manualContestData.title,
@@ -359,13 +380,21 @@ export default function AdminDashboard() {
         difficulte: 'moyen',
         questions: questionsParsed
       };
+      
+      console.log('AdminDashboard: Creating contest with', questionsParsed.length, 'questions');
       await addPublicServiceContest(newCtx);
-      invalidateContestsCache();
+      
+      if (invalidateContestsCache) {
+        invalidateContestsCache();
+      }
+      
+      toast.success(`${questionsParsed.length} questions ajoutées avec succès`, { id: tId });
       setShowManualContestModal(false);
       setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
+      setParsedQuestionsCount(0);
     } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors de l'ajout manuel");
+      console.error('Error in handleManualContestCreate:', error);
+      toast.error("Erreur lors de l'ajout manuel", { id: tId });
     }
   };
 
@@ -436,7 +465,12 @@ export default function AdminDashboard() {
             <Shield className="text-emerald-600" />
             Administration
           </h1>
-          <p className="text-gray-500 mt-1">Vue d'ensemble et modération de CampusBF.</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-gray-500">Vue d'ensemble et modération de CampusBF.</p>
+            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-widest ml-2">
+              Rôle : {user?.role}
+            </span>
+          </div>
         </div>
         <div className="flex bg-gray-100 p-1 rounded-xl">
           <button 
@@ -1603,7 +1637,27 @@ export default function AdminDashboard() {
                       <Library className="text-emerald-600" size={18} />
                       Dossiers en attente de validation
                     </h3>
-                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">{pendingTeacherApplications.length} en attente</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">{pendingTeacherApplications.length} en attente</span>
+                        <button 
+                          onClick={async () => {
+                            const tId = toast.loading('Synchronisation forcée...');
+                            try {
+                              // We could trigger a manual refetch here if needed
+                              toast.success('Données synchronisées', { id: tId });
+                            } catch (e) {
+                              toast.error('Erreur synchro', { id: tId });
+                            }
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400"
+                          title="Forcer rafraîchissement"
+                        >
+                          <RefreshCw size={12} className={cn(false && "animate-spin")} />
+                        </button>
+                        {teacherApplications.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">Aucune donnée détectée</span>
+                        )}
+                      </div>
                   </div>
                   <div className="divide-y divide-gray-50">
                     {pendingTeacherApplications.length > 0 ? (
@@ -2798,21 +2852,34 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex justify-between">
-                  <span>Questions (Format JSON Array)</span>
-                  <button onClick={() => {
-                    const sample = `[\n  {\n    "question": "Votre question ici ?",\n    "options": ["Option A", "Option B", "Option C", "Option D"],\n    "bonne_reponse": 0,\n    "explication": "Explication courte"\n  }\n]`;
-                    setManualContestData({...manualContestData, questionsJSON: sample});
-                  }} className="text-emerald-600 hover:text-emerald-700 capitalize font-medium">Insérer modèle</button>
-                </label>
-                <textarea 
-                  rows={10}
-                  value={manualContestData.questionsJSON}
-                  onChange={(e) => setManualContestData({ ...manualContestData, questionsJSON: e.target.value })}
-                  placeholder="Collez ici le tableau JSON de vos questions..."
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-xs font-mono"
-                />
+              <div className="space-y-4">
+                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                   <p className="text-xs text-emerald-800 flex items-center gap-2 font-medium">
+                     <Plus size={14} />
+                     {parsedQuestionsCount > 0 ? `${parsedQuestionsCount} questions détectées.` : "Collez vos questions au format JSON ci-dessous."}
+                   </p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex justify-between items-center">
+                    <span>Questions (Format JSON Array)</span>
+                    <button 
+                      onClick={() => {
+                        const template = `[\n  {\n    "question": "Quelle est la capitale du Burkina Faso ?",\n    "options": ["Bobo-Dioulasso", "Ouagadougou", "Koudougou", "Banfora"],\n    "bonne_reponse": 1,\n    "explication": "Ouagadougou est la capitale politique et administrative."\n  }\n]`;
+                        handleJSONChange(template);
+                      }}
+                      className="text-emerald-600 hover:underline normal-case"
+                    >
+                      Insérer modèle
+                    </button>
+                  </label>
+                  <textarea 
+                    rows={10}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    value={manualContestData.questionsJSON}
+                    onChange={(e) => handleJSONChange(e.target.value)}
+                    placeholder='[{"question": "...", "options": [...], "bonne_reponse": 0}]'
+                  />
+                </div>
               </div>
 
               <div className="pt-4">

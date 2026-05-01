@@ -104,6 +104,21 @@ export default function PublicServiceContests() {
   const [ranking, setRanking] = useState<any[]>([]);
   const [showManualContestModal, setShowManualContestModal] = useState(false);
   const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
+  const [parsedQuestionsCount, setParsedQuestionsCount] = useState(0);
+
+  const handleJSONChange = (val: string) => {
+    setManualContestData({ ...manualContestData, questionsJSON: val });
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        setParsedQuestionsCount(parsed.length);
+      } else {
+        setParsedQuestionsCount(0);
+      }
+    } catch (e) {
+      setParsedQuestionsCount(0);
+    }
+  };
 
   const handleManualContestCreate = async () => {
     if (!manualContestData.title || !manualContestData.questionsJSON) {
@@ -120,6 +135,12 @@ export default function PublicServiceContests() {
       return;
     }
 
+    if (questionsParsed.length === 0) {
+      toast.error('Le tableau de questions est vide.');
+      return;
+    }
+
+    const tId = toast.loading('Création du concours...');
     try {
       const newCtx = {
         titre: manualContestData.title,
@@ -130,14 +151,21 @@ export default function PublicServiceContests() {
         difficulte: 'moyen',
         questions: questionsParsed
       };
+      
+      console.log('PublicServiceContests: Creating contest with', questionsParsed.length, 'questions');
       await addPublicServiceContest(newCtx);
-      invalidateCache();
+      
+      if (invalidateCache) {
+        invalidateCache();
+      }
+      
+      toast.success(`${questionsParsed.length} questions ajoutées avec succès`, { id: tId });
       setShowManualContestModal(false);
       setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
-      toast.success('Concours ajouté avec succès');
+      setParsedQuestionsCount(0);
     } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors de l'ajout manuel");
+      console.error('Error in handleManualContestCreate:', error);
+      toast.error("Erreur lors de l'ajout manuel", { id: tId });
     }
   };
 
@@ -543,6 +571,12 @@ export default function PublicServiceContests() {
             </div>
             
             <div className="space-y-5">
+              <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                 <p className="text-xs text-emerald-800 flex items-center gap-2 font-medium">
+                   <Plus size={14} />
+                   {parsedQuestionsCount > 0 ? `${parsedQuestionsCount} questions détectées.` : "Collez vos questions au format JSON ci-dessous."}
+                 </p>
+              </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titre du concours</label>
                 <input 
@@ -588,13 +622,13 @@ export default function PublicServiceContests() {
                   <span>Questions (Format JSON Array)</span>
                   <button onClick={() => {
                     const sample = `[\n  {\n    "question": "Votre question ici ?",\n    "options": ["Option A", "Option B", "Option C", "Option D"],\n    "bonne_reponse": 0,\n    "explication": "Explication courte"\n  }\n]`;
-                    setManualContestData({...manualContestData, questionsJSON: sample});
+                    handleJSONChange(sample);
                   }} className="text-emerald-600 hover:text-emerald-700 capitalize font-medium">Insérer modèle</button>
                 </label>
                 <textarea 
                   rows={10}
                   value={manualContestData.questionsJSON}
-                  onChange={(e) => setManualContestData({ ...manualContestData, questionsJSON: e.target.value })}
+                  onChange={(e) => handleJSONChange(e.target.value)}
                   placeholder="Collez ici le tableau JSON de vos questions..."
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-mono text-slate-700"
                 />

@@ -638,15 +638,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+    }, (error) => {
+      console.error("onSnapshot Notifications Error:", error);
     }));
 
     // Admin only lists
     if (user.role === 'admin') {
-      fetchWithSessionCache('cache_Applications', query(collection(db, 'applications'), limit(100))).then(data => setApplications(data as TutorApplication[]));
+      unsubscribes.push(onSnapshot(query(collection(db, 'applications'), limit(100)), (snapshot) => {
+        setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
+      }, (error) => {
+        console.error("onSnapshot Applications Error:", error);
+      }));
 
-      fetchWithSessionCache('cache_TeacherApplications', query(collection(db, 'teacherApplications'), limit(100))).then(data => setTeacherApplications(data as TeacherApplication[]));
+      unsubscribes.push(onSnapshot(query(collection(db, 'teacherApplications'), limit(100)), (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication));
+        console.log("AuthContext: teacherApplications updated via onSnapshot:", data.length);
+        setTeacherApplications(data);
+      }, (error) => {
+        console.error("onSnapshot TeacherApplications Error:", error);
+      }));
 
-      fetchWithSessionCache('cache_SubscriptionRequests', query(collection(db, 'subscriptionRequests'), limit(100))).then(data => setSubscriptionRequests(data as SubscriptionRequest[]));
+      unsubscribes.push(onSnapshot(query(collection(db, 'subscriptionRequests'), limit(100)), (snapshot) => {
+        setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
+      }, (error) => {
+        console.error("onSnapshot SubscriptionRequests Error:", error);
+      }));
 
       fetchWithSessionCache('cache_TrainingReports', query(collection(db, 'training_reports'), limit(100))).then(data => setTrainingReports(data as TrainingReport[]));
 
@@ -713,11 +729,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       toast.success('Concours ajouté avec succès');
-      console.log("Contest fully saved.");
+      console.log("Contest fully saved with ID:", contestRef.id);
+      return contestRef.id;
     } catch (error) {
       console.error("Critical Error adding contest:", error);
       const msg = error instanceof Error ? error.message : "Erreur inconnue";
       toast.error(`Échec de l'ajout : ${msg}`);
+      throw error;
     }
   };
 
@@ -897,31 +915,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const reviewApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
     if (!user) return;
     const app = applications.find(a => a.id === applicationId);
-    if (!app) return;
-    await applicationService.reviewTutorApplication(user, app, status);
+    if (!app) {
+      toast.error("Demande introuvable.");
+      return;
+    }
+    try {
+      await toast.promise(
+        applicationService.reviewTutorApplication(user, app, status),
+        {
+          loading: 'Traitement de la demande tuteur...',
+          success: status === 'approved' ? 'Tuteur approuvé avec succès !' : 'Demande refusée.',
+          error: 'Échec du traitement de la demande.'
+        }
+      );
+    } catch (e) {
+      console.error("Error reviewing tutor application:", e);
+    }
   };
 
   const submitTeacherApplication = async (data: Omit<TeacherApplication, 'id' | 'userId' | 'user' | 'status' | 'createdAt'>) => {
     if (!user) return;
     try {
-      await applicationService.submitTeacherApplication(user, data);
+      await toast.promise(
+        applicationService.submitTeacherApplication(user, data),
+        {
+          loading: 'Envoi de votre dossier enseignant...',
+          success: 'Dossier envoyé avec succès !',
+          error: 'Erreur lors de l\'envoi du dossier.'
+        }
+      );
       await updateUser({ teacherStatus: 'pending_approval' });
     } catch (error) {
-      // Error handled in service
+      console.error("Error submitting teacher application:", error);
     }
   };
 
   const reviewTeacherApplication = async (applicationId: string, status: 'approved' | 'rejected') => {
-    if (!user) return;
+    console.log(`AuthContext: reviewTeacherApplication called for ${applicationId} with status ${status}`);
+    if (!user) {
+      console.error("AuthContext: No user found in context during review");
+      return;
+    }
     const app = teacherApplications.find(a => a.id === applicationId);
-    if (!app) return;
-    await applicationService.reviewTeacherApplication(user, app, status);
+    if (!app) {
+      console.warn("AuthContext: Teacher application not found in local state:", applicationId);
+      toast.error("Dossier enseignant introuvable.");
+      return;
+    }
+    try {
+      console.log("AuthContext: Executing applicationService.reviewTeacherApplication...");
+      await toast.promise(
+        applicationService.reviewTeacherApplication(user, app, status),
+        {
+          loading: 'Traitement du dossier enseignant...',
+          success: status === 'approved' ? 'Enseignant approuvé avec succès !' : 'Dossier refusé.',
+          error: 'Échec du traitement du dossier.'
+        }
+      );
+      console.log("AuthContext: applicationService.reviewTeacherApplication completed successfully");
+    } catch (e) {
+      console.error("Error reviewing teacher application:", e);
+    }
   };
 
   const submitSubscriptionRequest = async (type: 'exam' | 'premium' | 'motoride' | 'event' | 'institution', amount: number) => {
     if (!user) return;
     try {
-      await applicationService.submitSubscriptionRequest(user, type, amount);
+      await toast.promise(
+        applicationService.submitSubscriptionRequest(user, type, amount),
+        {
+          loading: 'Envoi de la demande d\'activation...',
+          success: 'Demande envoyée ! Un administrateur va vérifier votre paiement.',
+          error: 'Erreur lors de l\'envoi de la demande.'
+        }
+      );
       
       const updateData: Partial<User> = {};
       if (type === 'exam') updateData.examSubscriptionStatus = 'pending';
@@ -936,18 +1003,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       await updateUser(updateData);
     } catch (error) {
-      // Error handled in service
+      console.error("Error submitting subscription request:", error);
     }
   };
 
   const reviewSubscriptionRequest = async (requestId: string, status: 'approved' | 'rejected') => {
     if (!user) return;
     const req = subscriptionRequests.find(r => r.id === requestId);
-    if (!req) return;
+    if (!req) {
+      toast.error("Demande d'abonnement introuvable.");
+      return;
+    }
     const targetUser = users.find(u => u.id === req.userId);
-    if (!targetUser) return;
+    if (!targetUser) {
+      toast.error("Utilisateur introuvable pour cette demande.");
+      return;
+    }
 
-    await applicationService.reviewSubscriptionRequest(user, req, targetUser, status);
+    try {
+      await toast.promise(
+        applicationService.reviewSubscriptionRequest(user, req, targetUser, status),
+        {
+          loading: 'Traitement du paiement...',
+          success: status === 'approved' ? 'Abonnement activé !' : 'Abonnement refusé.',
+          error: 'Erreur lors du traitement du paiement.'
+        }
+      );
+    } catch (e) {
+      console.error("Error reviewing subscription request:", e);
+    }
   };
 
   const updateUserRole = async (userId: string, role: User['role']) => {

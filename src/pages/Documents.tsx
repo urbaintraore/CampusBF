@@ -146,13 +146,15 @@ export default function Documents() {
   };
 
   const handleUploadClick = () => {
-    if (user?.role === 'student') {
+    if (user?.role === 'student' && !isAdmin) {
       const message = encodeURIComponent(`Bonjour ! Je souhaite partager un document académique sur CampusBF.\nTitre: \nMatière: \nUniversité: `);
       window.open(`https://wa.me/22663375257?text=${message}`, '_blank');
       return;
     }
     
-    if (!isProfileComplete && !isAdmin) {
+    // Teachers and Admins can upload if their basic profile is at least present
+    // Approved teachers should definitely be able to upload
+    if (!isProfileComplete && !isAdmin && user?.role !== 'teacher') {
       alert("Veuillez renseigner complètement votre profil (téléphone WhatsApp, université, filière, niveau) dans les paramètres pour pouvoir partager des documents.");
       return;
     }
