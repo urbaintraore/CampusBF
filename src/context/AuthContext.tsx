@@ -679,10 +679,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addPublicServiceContest = async (contestData: any) => {
-    if (!user || user.role !== 'admin') return;
+    if (!user || user.role !== 'admin') {
+      console.error("Non-admin or no user:", user);
+      return;
+    }
     try {
+      console.log("Contest Data Payload:", contestData);
       const { questions, ...lightData } = contestData;
       
+      // JSON size check (approximate)
+      const dataSize = JSON.stringify(questions).length;
+      if (dataSize > 900000) { // Keep safety margin under 1MB (1,048,576 bytes)
+        toast.error("Le volume de questions est trop important pour un seul concours (limite 1 Mo).");
+        return;
+      }
+
+      console.log("Adding contest entry...");
       const contestRef = await addDoc(collection(db, 'public_service_contests'), {
         ...lightData,
         questionCount: questions?.length || 0,
@@ -692,8 +704,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         date_creation: new Date().toISOString()
       });
 
-      // Save heavy data (questions) in a separate document to save reads on list view
       if (questions && questions.length > 0) {
+        console.log(`Adding ${questions.length} questions to details...`);
         await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
           questions: questions,
           contestId: contestRef.id
@@ -701,9 +713,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       toast.success('Concours ajouté avec succès');
+      console.log("Contest fully saved.");
     } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors de l'ajout");
+      console.error("Critical Error adding contest:", error);
+      const msg = error instanceof Error ? error.message : "Erreur inconnue";
+      toast.error(`Échec de l'ajout : ${msg}`);
     }
   };
 

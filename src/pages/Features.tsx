@@ -26,7 +26,7 @@ const features = [
     color: "bg-emerald-50 text-emerald-600",
     link: "/tutors",
     highlight: true,
-    roles: ['student', 'parent', 'admin']
+    roles: ['student', 'teacher', 'parent', 'admin']
   },
   {
     icon: ShoppingBag,
@@ -42,7 +42,7 @@ const features = [
     description: "Découvrez les meilleures opportunités de stages, d'emplois et de bourses adaptées à votre profil.",
     color: "bg-indigo-50 text-indigo-600",
     link: "/internships",
-    roles: ['student', 'alumni', 'admin']
+    roles: ['student', 'teacher', 'alumni', 'admin']
   },
   {
     icon: BookOpen,
@@ -58,7 +58,7 @@ const features = [
     description: "Bénéficiez de conseils d'experts pour choisir votre filière et construire votre projet professionnel.",
     color: "bg-rose-50 text-rose-600",
     link: "/orientation",
-    roles: ['student', 'parent', 'admin']
+    roles: ['student', 'teacher', 'parent', 'admin']
   },
   {
     icon: Users,
@@ -98,7 +98,7 @@ const features = [
     description: "Préparez-vous aux concours de la fonction publique avec des sujets officiels et des quiz interactifs.",
     color: "bg-rose-50 text-rose-600",
     link: "/public-service-contests",
-    roles: ['student', 'admin']
+    roles: ['student', 'teacher', 'admin']
   },
   {
     icon: Users,
@@ -106,7 +106,7 @@ const features = [
     description: "Trouvez facilement vos camarades de promotion ou de cursus pour collaborer et étudier ensemble.",
     color: "bg-sky-50 text-sky-600",
     link: "/find-classmates",
-    roles: ['student', 'admin']
+    roles: ['student', 'teacher', 'admin']
   },
   {
     icon: Brain,
@@ -130,7 +130,7 @@ const features = [
     description: "Créez un CV professionnel et moderne en quelques secondes à partir de vos informations de profil.",
     color: "bg-blue-50 text-blue-600",
     link: "/cv-generator",
-    roles: ['student', 'admin', 'alumni']
+    roles: ['student', 'teacher', 'admin', 'alumni']
   },
   {
     icon: Tag,
@@ -138,7 +138,7 @@ const features = [
     description: "Profitez de réductions exclusives chez nos partenaires (restauration, transport, loisirs) sur présentation de votre profil CampusBF.",
     color: "bg-emerald-50 text-emerald-600",
     link: "/deals",
-    roles: ['student', 'admin', 'alumni']
+    roles: ['student', 'teacher', 'admin', 'alumni']
   },
   {
     icon: Home,
@@ -146,7 +146,7 @@ const features = [
     description: "Trouvez des colocataires fiables et sécurisés près de votre université grâce à notre système de vérification étudiante.",
     color: "bg-emerald-50 text-emerald-600",
     link: "/colocation",
-    roles: ['student', 'admin']
+    roles: ['student', 'teacher', 'admin']
   },
   {
     icon: Library,
@@ -154,7 +154,7 @@ const features = [
     description: "Consultez les profils des enseignants et contactez-les pour des questions académiques ou du mentorat.",
     color: "bg-cyan-50 text-cyan-600",
     link: "/teachers",
-    roles: ['student', 'parent', 'admin']
+    roles: ['student', 'teacher', 'parent', 'admin']
   },
   {
     icon: UserCheck,
@@ -239,6 +239,19 @@ export default function Features() {
       features.forEach((feature, idx) => {
         const isSecondCol = idx % 2 !== 0;
         const x = isSecondCol ? col2X : col1X;
+        
+        // Add new page if space is insufficient (current yPos + card height)
+        if (yPos > 240) {
+          pdf.addPage();
+          yPos = 25;
+          // Redraw header-like text or list title if needed, but here we just continue
+          pdf.setTextColor(slate[0], slate[1], slate[2]);
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Nos Services (suite)', 15, 15);
+          yPos = 25;
+        }
+
         const currentY = yPos;
 
         // Card Background
@@ -259,14 +272,8 @@ export default function Features() {
         const splitDesc = pdf.splitTextToSize(feature.description, cardWidth - 10);
         pdf.text(splitDesc, x + 5, currentY + 16);
 
-        if (isSecondCol) {
+        if (isSecondCol || idx === features.length - 1) {
           yPos += 42;
-        }
-        
-        // Add new page if needed
-        if (yPos > 260 && idx < features.length - 1) {
-          pdf.addPage();
-          yPos = 20;
         }
       });
 
