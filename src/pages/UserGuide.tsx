@@ -29,53 +29,80 @@ const UserGuide = () => {
   const downloadPDF = async () => {
     if (!guideRef.current) return;
     
-    const tId = toast.loading('Génération du PDF...');
+    const tId = toast.loading('Préparation du téléchargement...');
     try {
-      // Temporary fix for oklch: we force standard colors on a clone
+      // Create a clean canvas with standard color space
       const canvas = await html2canvas(guideRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
+          const container = clonedDoc.querySelector('[ref="guideRef"]') || clonedDoc.body;
+          
+          // Inject critical fix for Tailwind 4 oklch colors which crash html2canvas
           const style = clonedDoc.createElement('style');
           style.innerHTML = `
-            :root {
-              --color-emerald-600: #059669 !important;
-              --color-emerald-700: #047857 !important;
-              --color-emerald-50: #ecfdf5 !important;
-              --color-emerald-100: #d1fae5 !important;
-              --color-blue-600: #2563eb !important;
-              --color-blue-50: #eff6ff !important;
-              --color-purple-600: #9333ea !important;
-              --color-purple-50: #faf5ff !important;
-              --color-orange-600: #ea580c !important;
-              --color-orange-100: #ffedd5 !important;
-            }
             * { 
               color-scheme: light !important;
-              border-color: #e5e7eb !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
+            /* Force standard hex colors for the most common elements to avoid oklch parsing */
+            .text-emerald-600 { color: #059669 !important; }
+            .bg-emerald-600 { background-color: #059669 !important; }
+            .bg-emerald-50 { background-color: #f0fdf4 !important; }
+            .text-emerald-700 { color: #047857 !important; }
+            .text-gray-900 { color: #111827 !important; }
+            .text-gray-600 { color: #4b5563 !important; }
+            .bg-gray-50 { background-color: #f9fafb !important; }
+            
+            /* Remove animations or problematic elements for PDF */
+            .animate-pulse { animation: none !important; }
+            svg { color: inherit !important; }
           `;
           clonedDoc.head.appendChild(style);
+
+          // Deep clean: replace any remaining oklch in computed styles
+          const all = clonedDoc.getElementsByTagName('*');
+          for (let i = 0; i < all.length; i++) {
+            const el = all[i] as HTMLElement;
+            const style = window.getComputedStyle(el);
+            if (style.color.includes('oklch')) el.style.color = '#111827';
+            if (style.backgroundColor.includes('oklch')) {
+              if (el.classList.contains('bg-emerald-600')) el.style.backgroundColor = '#059669';
+              else if (el.classList.contains('bg-emerald-50')) el.style.backgroundColor = '#f0fdf4';
+              else el.style.backgroundColor = 'transparent';
+            }
+          }
         }
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('Guide_CampusBF_Utilisateur.pdf');
-      toast.success('Guide téléchargé avec succès !', { id: tId });
+      // If height is more than A4, we can optionally split but for a guide we'll scale to fit or add pages
+      // To keep it simple and avoid cutting text, we'll use a custom height PDF
+      if (pdfHeight > 297) {
+        const longPdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+        longPdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        longPdf.save('Guide_Utilisateur_CampusBF.pdf');
+      } else {
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('Guide_Utilisateur_CampusBF.pdf');
+      }
+      
+      toast.success('Le guide a été téléchargé avec succès !', { id: tId });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Erreur lors de la génération. Essayez via l\'impression classique (Ctrl+P).', { id: tId });
+      toast.error('Échec de la génération. Essayez de faire Ctrl+P et "Enregistrer en PDF".', { id: tId });
     }
   };
 
-  const platformUrl = window.location.origin;
+  const platformUrl = 'https://campusbf.com';
 
   const categories = [
     {
@@ -154,8 +181,8 @@ const UserGuide = () => {
 
       <div ref={guideRef} className="bg-white rounded-3xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="text-center mb-12">
-          <div className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4 border border-emerald-100">
-            {platformUrl}
+          <div className="inline-block px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm md:text-base font-medium mb-4 border border-emerald-100">
+            {platformUrl.toLowerCase()}
           </div>
           <motion.h1 
           initial={{ opacity: 0, y: -20 }}
@@ -282,9 +309,9 @@ const UserGuide = () => {
             CampusBF est la première plateforme intégrée au Burkina Faso dédiée à la réussite et au bien-être des étudiants. 
             Développée par des étudiants pour des étudiants, elle vise à briser les barrières académiques et financières.
           </p>
-          <div className="flex items-center gap-3 text-sm text-emerald-600 font-medium">
-            <Smartphone size={16} />
-            <span>Site Officiel : {platformUrl}</span>
+          <div className="flex items-center gap-3 text-base text-emerald-600 font-medium">
+            <Smartphone size={18} />
+            <span>Site Officiel : {platformUrl.toLowerCase()}</span>
           </div>
         </div>
 
@@ -315,9 +342,9 @@ const UserGuide = () => {
           </div>
         </div>
       </div>
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default UserGuide;
