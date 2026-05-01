@@ -47,7 +47,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)) || (isAdmin && item.roles?.includes('admin')));
 
   if (isAdmin) {
-    navItems.push({ icon: Shield, label: 'Administration', to: '/admin' });
+    navItems.unshift({ icon: Shield, label: 'Administration', to: '/admin' });
+    console.log("Admin detecté - Menu Administration ajouté");
+  } else {
+    console.log("Admin non detecté - Role:", user?.role, "Email:", user?.email);
   }
 
   return (

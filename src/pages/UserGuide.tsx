@@ -16,7 +16,8 @@ import {
   Star,
   Download,
   Phone,
-  Mail
+  Mail,
+  Globe
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import html2canvas from 'html2canvas';
@@ -44,18 +45,21 @@ const UserGuide = () => {
   const downloadPDF = async () => {
     if (!guideRef.current) return;
     
-    const tId = toast.loading('Préparation du téléchargement...');
+    const tId = toast.loading('Génération du PDF en cours...');
     try {
       const canvas = await html2canvas(guideRef.current, {
-        scale: 1.5,
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        width: guideRef.current.scrollWidth,
+        height: guideRef.current.scrollHeight,
+        windowWidth: 1200, // Force a desktop-like width for consistent rendering
         onclone: (clonedDoc) => {
           const content = clonedDoc.getElementById('guide-content');
           if (!content) return;
 
-          // Inject standard colors and remove animations
+          // Inject standard colors to override oklch which html2canvas doesn't support well
           const style = clonedDoc.createElement('style');
           style.innerHTML = `
             * { 
@@ -64,56 +68,41 @@ const UserGuide = () => {
               print-color-adjust: exact !important;
               animation: none !important;
               transition: none !important;
+              box-shadow: none !important;
             }
-            .text-emerald-600, .text-emerald-700 { color: #059669 !important; }
-            .bg-emerald-600 { background-color: #059669 !important; }
+            /* Override tailwind oklch colors with standard hex for html2canvas */
+            [class*="text-emerald-"], [class*="bg-emerald-"], [class*="border-emerald-"] {
+              color: #059669 !important;
+            }
+            .text-emerald-600, .text-emerald-700, .text-emerald-800 { color: #059669 !important; }
+            .bg-emerald-600, .bg-emerald-700 { background-color: #059669 !important; }
             .bg-emerald-50, .bg-emerald-100 { background-color: #f0fdf4 !important; }
-            .text-gray-900 { color: #111827 !important; }
-            .text-gray-600, .text-gray-500 { color: #4b5563 !important; }
-            .bg-gray-50 { background-color: #f9fafb !important; }
-            .bg-white { background-color: #ffffff !important; }
+            .text-gray-900, .text-slate-900 { color: #111827 !important; }
+            .text-gray-600, .text-gray-500, .text-slate-500 { color: #4b5563 !important; }
+            .bg-gray-50, .bg-slate-50 { background-color: #f9fafb !important; }
+            .border-slate-200, .border-gray-200 { border-color: #e5e7eb !important; }
+            
+            /* Remove some layout shifts */
+            .motion-safe\\:animate-pulse { animation: none !important; }
           `;
           clonedDoc.head.appendChild(style);
-
-          // Iterate all elements to strip problematic styles
-          const all = clonedDoc.getElementsByTagName('*');
-          for (let i = 0; i < all.length; i++) {
-            const el = all[i] as HTMLElement;
-            
-            // Remove motion attributes if they exist
-            el.removeAttribute('style'); 
-
-            // Get computed style to check for oklch
-            const comp = window.getComputedStyle(el);
-            if (comp.color.includes('oklch')) {
-              el.style.color = '#111827';
-            }
-            if (comp.backgroundColor.includes('oklch')) {
-              el.style.backgroundColor = el.classList.contains('bg-emerald-600') ? '#059669' : '#ffffff';
-            }
-
-            // Re-apply essential styles after clearing
-            if (el.className.includes('bg-emerald-600')) el.style.backgroundColor = '#059669';
-            if (el.className.includes('text-emerald-600')) el.style.color = '#059669';
-          }
-          
-          // Final safety: strip oklch from innerHTML as strings if any left
-          clonedDoc.body.innerHTML = clonedDoc.body.innerHTML.replace(/oklch\([^)]+\)/g, '#059669');
         }
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
+      // If the guide is very long, it might need multiple pages, but for now we fit it to one page width
+      // and let jspdf handle the height (or simple single-page long image if desired)
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       pdf.save('Guide_CampusBF.pdf');
-      toast.success('Le guide a été téléchargé avec succès !', { id: tId });
+      toast.success('Le guide a été téléchargé !', { id: tId });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Génération automatique échouée. Utilisation du mode Impression...', { id: tId });
-      window.print();
+      toast.error('Échec de la génération. Redirection vers le mode impression...', { id: tId });
+      setTimeout(() => window.print(), 1000);
     }
   };
 
@@ -331,9 +320,14 @@ const UserGuide = () => {
             CampusBF est la première plateforme intégrée au Burkina Faso dédiée à la réussite et au bien-être des étudiants. 
             Développée par des étudiants pour des étudiants, elle vise à briser les barrières académiques et financières.
           </p>
-          <div className="flex items-center gap-3 text-base text-emerald-600 font-medium">
-            <Smartphone size={18} />
-            <span>Site Officiel : {platformUrl.toLowerCase()}</span>
+          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-center gap-4">
+            <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white shrink-0">
+              <Globe size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Plateforme</p>
+              <p className="text-xl md:text-2xl font-black text-emerald-700 tracking-tight leading-none">{platformUrl.toLowerCase()}</p>
+            </div>
           </div>
         </div>
 

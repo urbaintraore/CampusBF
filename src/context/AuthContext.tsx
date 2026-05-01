@@ -264,7 +264,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     'urbain.traoreurb@gmail.com',
     'urbain.traoreurb@gmail',
     'urbain.traoreurb@gmail.com.',
-    'urbain.traore@yahoo.fr'
+    'urbain.traore@yahoo.fr',
+    'urbain.traore@yahoo.com',
+    'urbain@campusbf.com'
   ];
 
   const isAdminEmail = (email: string | null | undefined) => {
@@ -272,6 +274,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const lowerEmail = email.toLowerCase().trim();
     return ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim());
   };
+
+  const isAdmin = user?.role === 'admin' || isAdminEmail(user?.email) || isAdminEmail(auth.currentUser?.email);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
@@ -644,7 +648,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
 
     // Admin only lists
-    if (user.role === 'admin') {
+    if (isAdmin) {
       unsubscribes.push(onSnapshot(query(collection(db, 'applications'), limit(100)), (snapshot) => {
         setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
       }, (error) => {
@@ -1533,8 +1537,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     await contestService.publishContestResults(user, contestId, winners);
   };
-
-  const isAdmin = user?.role === 'admin' || isAdminEmail(user?.email);
 
   return (
     <AuthContext.Provider value={{ 
