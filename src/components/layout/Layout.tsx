@@ -54,7 +54,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900">
       {/* Admin Banner */}
       {isAdmin && (
-        <div className="bg-emerald-600 text-white px-4 py-1.5 text-[10px] md:text-xs font-medium flex items-center justify-between fixed top-0 left-0 right-0 z-[100] shadow-md">
+        <div className="bg-emerald-600 text-white px-4 py-1.5 text-[10px] md:text-xs font-medium flex items-center justify-between fixed top-0 left-0 right-0 z-[100] shadow-md no-print">
           <div className="flex items-center gap-2">
             <Shield size={12} className="animate-pulse" />
             <span className="font-bold uppercase tracking-wider">Mode Administrateur</span>
@@ -73,7 +73,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Header */}
       <header className={cn(
-        "md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky z-50 shadow-sm",
+        "md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky z-50 shadow-sm no-print",
         isAdmin ? "top-[32px]" : "top-0"
       )}>
         <Logo size="md" />
@@ -126,7 +126,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
+        "hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] no-print",
         isAdmin ? "top-[32px]" : "top-0"
       )}>
         <div className="p-6">
@@ -239,7 +239,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50">
+        <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50 no-print">
           <div className="relative">
             <button 
               onClick={() => setShowNotifications(!showNotifications)}
@@ -270,7 +270,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         href="https://wa.me/22663375257"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-50 bg-[#128C7E] text-white p-3.5 md:p-4 rounded-full shadow-lg shadow-[#128C7E]/30 hover:bg-[#075E54] hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-50 bg-[#128C7E] text-white p-3.5 md:p-4 rounded-full shadow-lg shadow-[#128C7E]/30 hover:bg-[#075E54] hover:scale-110 transition-all duration-300 flex items-center justify-center group no-print"
         title="Contacter l'administrateur"
       >
         <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">

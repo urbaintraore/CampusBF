@@ -24,6 +24,21 @@ import { jsPDF } from 'jspdf';
 import { toast } from 'react-hot-toast';
 
 const UserGuide = () => {
+  // Styles for printing
+  const printStyles = `
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      #guide-content { 
+        box-shadow: none !important; 
+        padding: 0 !important; 
+        margin: 0 !important;
+        width: 100% !important;
+      }
+      .rounded-3xl { border-radius: 0 !important; }
+      .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #eee !important; }
+    }
+  `;
   const guideRef = useRef<HTMLDivElement>(null);
 
   const downloadPDF = async () => {
@@ -31,74 +46,74 @@ const UserGuide = () => {
     
     const tId = toast.loading('Préparation du téléchargement...');
     try {
-      // Create a clean canvas with standard color space
       const canvas = await html2canvas(guideRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
-          const container = clonedDoc.querySelector('[ref="guideRef"]') || clonedDoc.body;
-          
-          // Inject critical fix for Tailwind 4 oklch colors which crash html2canvas
+          const content = clonedDoc.getElementById('guide-content');
+          if (!content) return;
+
+          // Inject standard colors and remove animations
           const style = clonedDoc.createElement('style');
           style.innerHTML = `
             * { 
               color-scheme: light !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              animation: none !important;
+              transition: none !important;
             }
-            /* Force standard hex colors for the most common elements to avoid oklch parsing */
-            .text-emerald-600 { color: #059669 !important; }
+            .text-emerald-600, .text-emerald-700 { color: #059669 !important; }
             .bg-emerald-600 { background-color: #059669 !important; }
-            .bg-emerald-50 { background-color: #f0fdf4 !important; }
-            .text-emerald-700 { color: #047857 !important; }
+            .bg-emerald-50, .bg-emerald-100 { background-color: #f0fdf4 !important; }
             .text-gray-900 { color: #111827 !important; }
-            .text-gray-600 { color: #4b5563 !important; }
+            .text-gray-600, .text-gray-500 { color: #4b5563 !important; }
             .bg-gray-50 { background-color: #f9fafb !important; }
-            
-            /* Remove animations or problematic elements for PDF */
-            .animate-pulse { animation: none !important; }
-            svg { color: inherit !important; }
+            .bg-white { background-color: #ffffff !important; }
           `;
           clonedDoc.head.appendChild(style);
 
-          // Deep clean: replace any remaining oklch in computed styles
+          // Iterate all elements to strip problematic styles
           const all = clonedDoc.getElementsByTagName('*');
           for (let i = 0; i < all.length; i++) {
             const el = all[i] as HTMLElement;
-            const style = window.getComputedStyle(el);
-            if (style.color.includes('oklch')) el.style.color = '#111827';
-            if (style.backgroundColor.includes('oklch')) {
-              if (el.classList.contains('bg-emerald-600')) el.style.backgroundColor = '#059669';
-              else if (el.classList.contains('bg-emerald-50')) el.style.backgroundColor = '#f0fdf4';
-              else el.style.backgroundColor = 'transparent';
+            
+            // Remove motion attributes if they exist
+            el.removeAttribute('style'); 
+
+            // Get computed style to check for oklch
+            const comp = window.getComputedStyle(el);
+            if (comp.color.includes('oklch')) {
+              el.style.color = '#111827';
             }
+            if (comp.backgroundColor.includes('oklch')) {
+              el.style.backgroundColor = el.classList.contains('bg-emerald-600') ? '#059669' : '#ffffff';
+            }
+
+            // Re-apply essential styles after clearing
+            if (el.className.includes('bg-emerald-600')) el.style.backgroundColor = '#059669';
+            if (el.className.includes('text-emerald-600')) el.style.color = '#059669';
           }
+          
+          // Final safety: strip oklch from innerHTML as strings if any left
+          clonedDoc.body.innerHTML = clonedDoc.body.innerHTML.replace(/oklch\([^)]+\)/g, '#059669');
         }
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      // If height is more than A4, we can optionally split but for a guide we'll scale to fit or add pages
-      // To keep it simple and avoid cutting text, we'll use a custom height PDF
-      if (pdfHeight > 297) {
-        const longPdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
-        longPdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        longPdf.save('Guide_Utilisateur_CampusBF.pdf');
-      } else {
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save('Guide_Utilisateur_CampusBF.pdf');
-      }
-      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('Guide_CampusBF.pdf');
       toast.success('Le guide a été téléchargé avec succès !', { id: tId });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Échec de la génération. Essayez de faire Ctrl+P et "Enregistrer en PDF".', { id: tId });
+      toast.error('Génération automatique échouée. Utilisation du mode Impression...', { id: tId });
+      window.print();
     }
   };
 
@@ -169,17 +184,24 @@ const UserGuide = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-20">
-      <div className="flex justify-end mb-4">
+      <style>{printStyles}</style>
+      <div className="flex justify-end gap-3 mb-4 no-print">
+        <button 
+          onClick={() => window.print()}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors active:scale-95 shrink-0"
+        >
+          Imprimer
+        </button>
         <button 
           onClick={downloadPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg active:scale-95"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg active:scale-95 shrink-0"
         >
           <Download size={18} />
-          Télécharger en PDF
+          Télécharger PDF
         </button>
       </div>
 
-      <div ref={guideRef} className="bg-white rounded-3xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div ref={guideRef} id="guide-content" className="bg-white rounded-3xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="text-center mb-12">
           <div className="inline-block px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm md:text-base font-medium mb-4 border border-emerald-100">
             {platformUrl.toLowerCase()}
