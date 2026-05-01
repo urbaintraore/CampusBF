@@ -11,7 +11,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
-  const { user, logout, notifications, markNotificationAsRead } = useAuth();
+  const { user, isAdmin, logout, notifications, markNotificationAsRead } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -41,18 +41,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['student', 'admin', 'alumni', 'teacher', 'parent', 'institution'] },
     { icon: BookOpen, label: 'Formations', to: '/trainings' },
     { icon: Sparkles, label: 'Fonctionnalités', to: '/features' },
+    { icon: BookOpen, label: 'Guide d\'utilisation', to: '/guide' },
   ];
 
-  const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
+  const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)) || (isAdmin && item.roles?.includes('admin')));
 
-  if (user?.role === 'admin') {
+  if (isAdmin) {
     navItems.push({ icon: Shield, label: 'Administration', to: '/admin' });
   }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900">
       {/* Admin Banner */}
-      {user?.role === 'admin' && (
+      {isAdmin && (
         <div className="bg-emerald-600 text-white px-4 py-1.5 text-[10px] md:text-xs font-medium flex items-center justify-between fixed top-0 left-0 right-0 z-[100] shadow-md">
           <div className="flex items-center gap-2">
             <Shield size={12} className="animate-pulse" />
@@ -73,7 +74,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className={cn(
         "md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/60 p-4 flex items-center justify-between sticky z-50 shadow-sm",
-        user?.role === 'admin' ? "top-[32px]" : "top-0"
+        isAdmin ? "top-[32px]" : "top-0"
       )}>
         <Logo size="md" />
         <div className="flex items-center gap-2">
@@ -96,7 +97,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {isMobileMenuOpen && (
         <div className={cn(
           "md:hidden fixed inset-0 z-40 bg-white px-4 animate-in slide-in-from-top-10 duration-200 overflow-y-auto pb-10",
-          user?.role === 'admin' ? "pt-[80px]" : "pt-20"
+          isAdmin ? "pt-[80px]" : "pt-20"
         )}>
           <nav className="flex flex-col gap-2">
             {navItems.map((item) => (
@@ -126,7 +127,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className={cn(
         "hidden md:flex flex-col w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200/60 h-screen sticky z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
-        user?.role === 'admin' ? "top-[32px]" : "top-0"
+        isAdmin ? "top-[32px]" : "top-0"
       )}>
         <div className="p-6">
           <Logo size="lg" />
@@ -226,7 +227,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className={cn(
         "flex-1 overflow-y-auto relative bg-[#F8FAFC]",
-        user?.role === 'admin' ? "h-[calc(100vh-64px-32px)] md:h-[calc(100vh-32px)] mt-[32px]" : "h-[calc(100vh-64px)] md:h-screen"
+        isAdmin ? "h-[calc(100vh-64px-32px)] md:h-[calc(100vh-32px)] mt-[32px]" : "h-[calc(100vh-64px)] md:h-screen"
       )}>
         {/* Share Toast */}
         {showShareToast && (

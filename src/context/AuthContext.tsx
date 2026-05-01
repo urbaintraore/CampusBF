@@ -89,6 +89,7 @@ async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
 
 interface AuthContextType {
   user: User | null;
+  isAdmin: boolean;
   users: User[];
   tutors: User[];
   teachers: User[];
@@ -118,7 +119,7 @@ interface AuthContextType {
   colocationRequests: ColocationRequest[];
   colocationReviews: ColocationReview[];
   publicServiceContests: any[];
-  addPublicServiceContest: (contest: any) => Promise<void>;
+  addPublicServiceContest: (contest: any) => Promise<string | void>;
   deletePublicServiceContest: (id: string) => Promise<void>;
   addQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt'>) => Promise<void>;
   deleteQuiz: (id: string) => Promise<void>;
@@ -1533,9 +1534,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await contestService.publishContestResults(user, contestId, winners);
   };
 
+  const isAdmin = user?.role === 'admin' || isAdminEmail(user?.email);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
+      isAdmin,
       users,
       tutors,
       teachers,

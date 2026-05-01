@@ -34,9 +34,10 @@ import FindClassmates from './pages/FindClassmates';
 import Trainings from './pages/Trainings';
 import Contests from './pages/Contests';
 import PublicServiceContests from './pages/PublicServiceContests';
+import UserGuide from './pages/UserGuide';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -51,8 +52,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Force profile completion for students
-  if (user?.role === 'student') {
+  // Force profile completion for students (who are not admins)
+  if (user?.role === 'student' && !isAdmin) {
     const isProfileComplete = Boolean(
       user.firstName && 
       user.lastName && 
@@ -71,7 +72,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -86,7 +87,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (user?.role !== 'admin') {
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 
@@ -156,6 +157,11 @@ export default function App() {
           <Route path="/quizzes" element={
             <ProtectedRoute>
               <Quizzes />
+            </ProtectedRoute>
+          } />
+          <Route path="/guide" element={
+            <ProtectedRoute>
+              <UserGuide />
             </ProtectedRoute>
           } />
           <Route path="/cv-generator" element={

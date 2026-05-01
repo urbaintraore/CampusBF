@@ -468,7 +468,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2 mt-1">
             <p className="text-gray-500">Vue d'ensemble et modération de CampusBF.</p>
             <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-widest ml-2">
-              Rôle : {user?.role}
+              Rôle : {currentUser?.role}
             </span>
           </div>
         </div>
