@@ -312,8 +312,51 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Espace Enseignant */}
+      {user?.role === 'teacher' && user.teacherStatus === 'approved' && (
+        <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+           <div className="relative z-10">
+              <h2 className="text-2xl font-display font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <GraduationCap className="text-blue-600" size={28} />
+                Espace Enseignant
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <Link to="/quizzes" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-emerald-50 hover:border-emerald-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                      <Brain size={20} />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">Gérer mes Quiz</h3>
+                    <p className="text-[10px] text-slate-500">Créez et gérez vos quiz pour vos étudiants.</p>
+                 </Link>
+                 <Link to="/public-service-contests" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                      <Trophy size={20} />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">Concours FP</h3>
+                    <p className="text-[10px] text-slate-500">Ajouter des questions aux concours publics.</p>
+                 </Link>
+                 <Link to="/documents" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-blue-50 hover:border-blue-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                      <FileText size={20} />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">Mes Documents</h3>
+                    <p className="text-[10px] text-slate-500">Partagez vos supports de cours et TD.</p>
+                 </Link>
+                 <Link to="/portfolio" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-purple-50 hover:border-purple-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                      <User size={20} />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">Mon Portfolio</h3>
+                    <p className="text-[10px] text-slate-500">Gérez votre profil professionnel.</p>
+                 </Link>
+              </div>
+           </div>
+        </section>
+      )}
+
       {/* Find Classmates Call to Action */}
-      {user?.role === 'student' && (
+      {(user?.role === 'student' || user?.role === 'teacher') && (
         <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
@@ -536,7 +579,7 @@ export default function Dashboard() {
         <div className="space-y-8">
           
           {/* Friend Suggestions */}
-          {user?.role === 'student' && suggestedFriends.length > 0 && (
+          {(user?.role === 'student' || user?.role === 'teacher') && suggestedFriends.length > 0 && (
             <section>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-xl font-display font-bold text-slate-900">Suggestions d'amis</h2>

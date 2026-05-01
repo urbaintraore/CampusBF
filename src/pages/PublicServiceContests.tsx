@@ -53,6 +53,7 @@ const categoryColors: Record<string, string> = {
   francais: 'from-indigo-500 to-blue-600',
   sciences_technologie: 'from-cyan-500 to-blue-600',
   connaissances_burkina: 'from-red-500 to-yellow-600',
+  test_niveau: 'from-emerald-500 to-teal-600',
 };
 
 const categoryLabels: Record<string, string> = {
@@ -78,14 +79,15 @@ const categoryLabels: Record<string, string> = {
   sociologie: 'Sociologie',
   francais: 'Français',
   sciences_technologie: 'Sciences et technologie',
-  connaissances_burkina: 'Connaissances sur le Burkina'
+  connaissances_burkina: 'Connaissances sur le Burkina',
+  test_niveau: 'Test de Niveau'
 };
 
 export default function PublicServiceContests() {
   const { user, addPublicServiceContest } = useAuth();
   
   // Use cached and paginated query instead of global state
-  const { data: globalContests, loading: dataLoading, loadMore, hasMore } = useCachedQuery(
+  const { data: globalContests, loading: dataLoading, loadMore, hasMore, invalidateCache } = useCachedQuery(
     'public_service_contests',
     [], // You can add orderBy('createdAt', 'desc') if such a field exists
     'public_service_contests_cache',
@@ -129,6 +131,7 @@ export default function PublicServiceContests() {
         questions: questionsParsed
       };
       await addPublicServiceContest(newCtx);
+      invalidateCache();
       setShowManualContestModal(false);
       setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
       toast.success('Concours ajouté avec succès');
@@ -308,7 +311,7 @@ export default function PublicServiceContests() {
             </div>
           </div>
           
-          {user?.role === 'admin' && (
+          {(user?.role === 'admin' || user?.role === 'teacher') && (
             <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
               <button 
                 onClick={() => setShowManualContestModal(true)}

@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { useCachedQuery } from '@/hooks/useCachedQuery';
 
 export default function AdminDashboard() {
-  const { data: publicServiceContests, loading: loadingContests, loadMore: loadMoreContests, hasMore: hasMoreContests } = useCachedQuery(
+  const { data: publicServiceContests, loading: loadingContests, loadMore: loadMoreContests, hasMore: hasMoreContests, invalidateCache: invalidateContestsCache } = useCachedQuery(
     'public_service_contests',
     [],
     'admin_public_service_contests_cache',
@@ -360,6 +360,7 @@ export default function AdminDashboard() {
         questions: questionsParsed
       };
       await addPublicServiceContest(newCtx);
+      invalidateContestsCache();
       setShowManualContestModal(false);
       setManualContestData({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
     } catch (error) {

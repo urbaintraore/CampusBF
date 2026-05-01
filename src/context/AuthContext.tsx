@@ -668,7 +668,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deletePublicServiceContest = async (id: string) => {
-    if (!user || user.role !== 'admin') return;
+    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return;
     try {
       await deleteDoc(doc(db, 'public_service_contests', id));
       toast.success('Concours supprimé');
@@ -679,8 +679,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addPublicServiceContest = async (contestData: any) => {
-    if (!user || user.role !== 'admin') {
-      console.error("Non-admin or no user:", user);
+    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) {
+      console.error("Unauthorised or no user:", user);
       return;
     }
     try {

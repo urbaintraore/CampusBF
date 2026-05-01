@@ -6,16 +6,19 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isAdmin() { return isSignedIn() && (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'); }
+    function isTeacher() { return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'; }
 
     // Public Service Contests rules
     match /public_service_contests/{contestId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create: if isAdmin() || isTeacher();
+      allow update, delete: if isAdmin() || (isTeacher() && resource.data.authorId == request.auth.uid);
     }                
     
     match /public_service_contest_details/{document=**} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create: if isAdmin() || isTeacher();
+      allow update, delete: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/public_service_contests/$(request.resource.data.contestId)).data.authorId == request.auth.uid);
     }
     
     match /public_service_results/{resultId} {
