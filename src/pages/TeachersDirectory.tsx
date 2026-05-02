@@ -135,9 +135,9 @@ export default function TeachersDirectory() {
             <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
               <Briefcase size={24} />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Annuaire des Enseignants</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Portail Enseignants</h1>
           </div>
-          <p className="text-slate-500 text-sm">Trouvez et contactez des enseignants universitaires pour des vacations ou collaborations.</p>
+          <p className="text-slate-500 text-sm">Trouvez et contactez des enseignants pour des vacations, du tutorat, du mentorat ou des collaborations.</p>
         </div>
       </div>
 
@@ -321,20 +321,89 @@ export default function TeachersDirectory() {
                     <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-3">
                       <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
                         <MessageSquare size={16} className="text-emerald-500" />
-                        {user?.role === 'parent' ? 'Contact Parent' : 'Contact Étudiant'}
+                        {user?.role === 'parent' ? 'Contact Parent' : (user?.role === 'company' || user?.role === 'institution') ? 'Collaboration Pro' : 'Contact'}
                       </h4>
                       <p className="text-xs text-emerald-700">
                         {user?.role === 'parent' 
                           ? "Envoyez un message direct à cet enseignant pour discuter des besoins de votre enfant."
-                          : "Vous pouvez envoyer un message direct à cet enseignant pour des questions ou du tutorat."}
+                          : (user?.role === 'company' || user?.role === 'institution')
+                          ? "Proposez une vacation, une conférence, un panel, une formation ou une étude."
+                          : "Vous pouvez envoyer un message direct à cet enseignant pour des questions, du tutorat ou du mentorat."}
                       </p>
-                      <button 
-                        onClick={() => setShowMessageModal(true)}
-                        className="w-full py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <MessageSquare size={18} />
-                        Envoyer un message
-                      </button>
+                      <div className="space-y-2">
+                        <button 
+                          onClick={() => {
+                            setMessageText("Bonjour, je souhaite vous contacter.");
+                            setShowMessageModal(true);
+                          }}
+                          className="w-full py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <MessageSquare size={18} />
+                          Envoyer un message
+                        </button>
+                        {(user?.role === 'student' || user?.role === 'parent') && (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                setMessageText("Bonjour, je souhaite solliciter vos services pour du tutorat/soutien académique.");
+                                setShowMessageModal(true);
+                              }}
+                              className="flex-1 py-1.5 bg-white text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-50 transition-colors"
+                            >
+                              Tutorat
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setMessageText("Bonjour, je suis intéressé(e) par un accompagnement sous forme de mentorat professionnel.");
+                                setShowMessageModal(true);
+                              }}
+                              className="flex-1 py-1.5 bg-white text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-50 transition-colors"
+                            >
+                              Mentorat
+                            </button>
+                          </div>
+                        )}
+                        {(user?.role === 'company' || user?.role === 'institution') && (
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            <button 
+                              onClick={() => {
+                                setMessageText("Bonjour, nous aimerions vous proposer de donner une conférence ou d'animer un panel au sein de notre structure.");
+                                setShowMessageModal(true);
+                              }}
+                              className="w-full py-1.5 bg-white text-blue-600 border border-blue-200 rounded-lg text-[10px] font-bold hover:bg-blue-50 transition-colors"
+                            >
+                              Conférence / Panel
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setMessageText("Bonjour, nous sommes intéressés par vos services pour délivrer une formation.");
+                                setShowMessageModal(true);
+                              }}
+                              className="w-full py-1.5 bg-white text-indigo-600 border border-indigo-200 rounded-lg text-[10px] font-bold hover:bg-indigo-50 transition-colors"
+                            >
+                              Délivrer Formation
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setMessageText("Bonjour, nous aimerions vous mandater pour réaliser une étude/consultation spécialisée.");
+                                setShowMessageModal(true);
+                              }}
+                              className="w-full py-1.5 bg-white text-purple-600 border border-purple-200 rounded-lg text-[10px] font-bold hover:bg-purple-50 transition-colors"
+                            >
+                              Mener une Étude
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setMessageText("Bonjour, nous recherchons un enseignant pour des vacations/heures d'enseignement dans vos domaines de spécialité.");
+                                setShowMessageModal(true);
+                              }}
+                              className="w-full py-1.5 bg-white text-emerald-600 border border-emerald-200 rounded-lg text-[10px] font-bold hover:bg-emerald-50 transition-colors"
+                            >
+                              Proposer Vacation
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

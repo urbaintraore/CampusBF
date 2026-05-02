@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: MessageCircle, label: 'Messages', to: '/messages' },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'teacher'] },
-    { icon: Library, label: 'Enseignants', to: '/teachers' },
+    { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['student', 'admin', 'teacher', 'company', 'institution'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'teacher'] },
     { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'teacher', 'alumni', 'company'] },
     { icon: Users, label: 'Communauté', to: '/community', roles: ['student', 'admin', 'teacher', 'alumni'] },
