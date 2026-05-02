@@ -35,6 +35,8 @@ import Trainings from './pages/Trainings';
 import Contests from './pages/Contests';
 import PublicServiceContests from './pages/PublicServiceContests';
 import UserGuide from './pages/UserGuide';
+import EnterprisePortal from './pages/EnterprisePortal';
+import UniversityPortal from './pages/UniversityPortal';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
@@ -258,6 +260,17 @@ export default function App() {
           <Route path="/public-service-contests" element={
             <ProtectedRoute>
               <PublicServiceContests />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/enterprise-portal" element={
+            <ProtectedRoute>
+              <EnterprisePortal />
+            </ProtectedRoute>
+          } />
+          <Route path="/university-portal" element={
+            <ProtectedRoute>
+              <UniversityPortal />
             </ProtectedRoute>
           } />
           
