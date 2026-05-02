@@ -114,6 +114,7 @@ export interface User {
   status?: 'active' | 'inactive';
   isVerified?: boolean;
   isDriverVerified?: boolean;
+  companyName?: string;
   motoRideStatus?: 'active' | 'suspended';
   motoRideStats?: {
     ridesCompleted: number;
@@ -445,7 +446,7 @@ export interface CampusEvent {
   id: string;
   title: string;
   description: string;
-  type: 'conference' | 'defense' | 'competition' | 'cultural' | 'other';
+  type: 'conference' | 'defense' | 'competition' | 'cultural' | 'Soutenance' | 'Atelier' | 'Séminaire' | 'Colloque' | 'Réunion' | 'other';
   location: string;
   date: string;
   time: string;

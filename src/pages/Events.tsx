@@ -28,7 +28,7 @@ export default function Events() {
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
-    type: 'conference' as CampusEvent['type'],
+    type: 'Soutenance' as CampusEvent['type'],
     location: '',
     date: '',
     time: ''
@@ -221,7 +221,7 @@ export default function Events() {
     setNewEvent({
       title: '',
       description: '',
-      type: 'conference',
+      type: 'Soutenance',
       location: '',
       date: '',
       time: ''
@@ -233,9 +233,14 @@ export default function Events() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'conference': return <Info size={16} />;
-      case 'defense': return <GraduationCap size={16} />;
+      case 'defense': 
+      case 'Soutenance': return <GraduationCap size={16} />;
       case 'competition': return <Trophy size={16} />;
       case 'cultural': return <Music size={16} />;
+      case 'Atelier': return <Users size={16} />;
+      case 'Séminaire': return <Info size={16} />;
+      case 'Colloque': return <Info size={16} />;
+      case 'Réunion': return <Users size={16} />;
       default: return <Calendar size={16} />;
     }
   };
@@ -243,19 +248,29 @@ export default function Events() {
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'conference': return 'Conférence';
-      case 'defense': return 'Soutenance';
+      case 'defense': 
+      case 'Soutenance': return 'Soutenance';
       case 'competition': return 'Compétition';
       case 'cultural': return 'Activité Culturelle';
+      case 'Atelier': return 'Atelier';
+      case 'Séminaire': return 'Séminaire';
+      case 'Colloque': return 'Colloque';
+      case 'Réunion': return 'Réunion';
       default: return 'Autre';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'conference': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'defense': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'conference': 
+      case 'Séminaire':
+      case 'Colloque': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'defense': 
+      case 'Soutenance': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
       case 'competition': return 'bg-amber-50 text-amber-700 border-amber-100';
       case 'cultural': return 'bg-purple-50 text-purple-700 border-purple-100';
+      case 'Atelier': 
+      case 'Réunion': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
       default: return 'bg-slate-50 text-slate-700 border-slate-100';
     }
   };
@@ -323,10 +338,16 @@ export default function Events() {
             className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
           >
             <option value="all">Tous les types</option>
+            <option value="Soutenance">Soutenance</option>
+            <option value="Atelier">Atelier</option>
+            <option value="Séminaire">Séminaire</option>
+            <option value="Colloque">Colloque</option>
+            <option value="Réunion">Réunion</option>
             <option value="conference">Conférences</option>
-            <option value="defense">Soutenances</option>
+            <option value="defense">Anciennes Soutenances</option>
             <option value="competition">Compétitions</option>
             <option value="cultural">Culturel</option>
+            <option value="other">Autre</option>
           </select>
         </div>
       </div>
@@ -669,10 +690,14 @@ export default function Events() {
                 <select 
                   value={newEvent.type}
                   onChange={e => setNewEvent({...newEvent, type: e.target.value as any})}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium text-slate-700 capitalize"
                 >
+                  <option value="Soutenance">Soutenance</option>
+                  <option value="Atelier">Atelier</option>
+                  <option value="Séminaire">Séminaire</option>
+                  <option value="Colloque">Colloque</option>
+                  <option value="Réunion">Réunion</option>
                   <option value="conference">Conférence</option>
-                  <option value="defense">Soutenance</option>
                   <option value="competition">Compétition</option>
                   <option value="cultural">Activité Culturelle</option>
                   <option value="other">Autre</option>

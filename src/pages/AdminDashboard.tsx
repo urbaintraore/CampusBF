@@ -1,6 +1,6 @@
 import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -1055,6 +1055,8 @@ export default function AdminDashboard() {
               { id: 'ads', label: 'Publicités', icon: Megaphone },
               { id: 'teachers', label: 'Enseignants', icon: Library },
               { id: 'tutors', label: 'Répétiteurs & Prof de maison', icon: GraduationCap },
+              { id: 'enterprise', label: 'Portails Entreprises', icon: Building2 },
+              { id: 'university', label: 'Portails Universités', icon: School },
               { id: 'reports', label: 'Signalements', icon: AlertTriangle },
               { id: 'motoRide', label: 'MotoRide', icon: Bike },
               { id: 'formations', label: 'Formations', icon: BookOpen },
@@ -1396,6 +1398,60 @@ export default function AdminDashboard() {
                     <button 
                       onClick={() => {
                         if(confirm('Supprimer cet objet ?')) deleteLostAndFound(item.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {contentTab === 'enterprise' && users.filter(u => u.role === 'company').map(u => (
+                <div key={u.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                      <Building2 size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{u.companyName || `${u.firstName} ${u.lastName}`}</p>
+                      <p className="text-xs text-gray-500">{u.email} • {u.city || 'Ville non précisée'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-widest mr-2">
+                      {internships.filter(i => i.authorId === u.id).length} offres
+                    </span>
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cette entreprise ?')) deleteUser(u.id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {contentTab === 'university' && users.filter(u => u.role === 'institution').map(u => (
+                <div key={u.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
+                      <School size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{u.institutionProfile?.type || u.university || `${u.firstName} ${u.lastName}`}</p>
+                      <p className="text-xs text-gray-500">{u.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100 uppercase tracking-widest mr-2">
+                      {events.filter(e => e.organizerId === u.id).length} événements
+                    </span>
+                    <button 
+                      onClick={() => {
+                        if(confirm('Supprimer cette institution ?')) deleteUser(u.id);
                       }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >

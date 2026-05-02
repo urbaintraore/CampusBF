@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { cn } from '@/lib/utils';
 import { serverTimestamp } from 'firebase/firestore';
+import { uploadFile } from '@/services/storageService';
 
 export default function Internships() {
   const { user, internships, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
@@ -147,9 +148,9 @@ export default function Internships() {
 
     setIsSubmitting(true);
     try {
-      // In a real app, we would upload the file to Firebase Storage first
-      // For now, we'll just create the application record
-      // We'll use a placeholder URL for the file
+      // Upload file to Supabase Storage
+      const { url } = await uploadFile(applyFile, 'documents');
+
       const applicationData = {
         internshipId: selectedJob.id,
         internshipTitle: selectedJob.title,
@@ -158,7 +159,7 @@ export default function Internships() {
         studentName: `${user.firstName} ${user.lastName}`,
         studentEmail: user.email,
         status: 'pending',
-        resumeUrl: 'https://placeholder-url.com/resume.pdf', // Placeholder
+        resumeUrl: url,
       };
 
       await applyInternship(applicationData);
@@ -168,6 +169,7 @@ export default function Internships() {
       setApplyFile(null);
       setTimeout(() => setShowApplySuccess(false), 3000);
     } catch (error) {
+      console.error(error);
       alert('Une erreur est survenue lors de l\'envoi de votre candidature.');
     } finally {
       setIsSubmitting(false);
