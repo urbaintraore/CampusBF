@@ -26,7 +26,7 @@ interface PublicServiceExamPlayerProps {
 
 export default function PublicServiceExamPlayer({ contest, onClose }: PublicServiceExamPlayerProps) {
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState<'instructions' | 'exam' | 'results'>('instructions');
+  const [currentStep, setCurrentStep] = useState<'instructions' | 'exam' | 'results' | 'correction'>('instructions');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, { selectedOption: number, comment?: string }>>({});
   const [timeLeft, setTimeLeft] = useState(contest.duree * 60);
@@ -186,10 +186,12 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
           </div>
         )}
 
-        <div className="hidden sm:block">
+                <div className="hidden sm:block">
           <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
             <Shield className="w-4 h-4 text-emerald-400" />
-            <span className="text-[10px] font-bold text-white/70 uppercase">Mode Examen Sécurisé</span>
+            <span className="text-[10px] font-bold text-white/70 uppercase">
+              {currentStep === 'correction' ? 'Mode Correction' : 'Mode Examen Sécurisé'}
+            </span>
           </div>
         </div>
       </div>
@@ -265,7 +267,7 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
               </motion.div>
             )}
 
-            {currentStep === 'exam' && (
+            {(currentStep === 'exam' || currentStep === 'correction') && (
               <motion.div
                 key="exam"
                 initial={{ opacity: 0, x: 20 }}
@@ -276,7 +278,9 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
                 {/* Progress Bar */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
-                    <div className="text-xs font-black text-white/50 uppercase tracking-widest">Question {currentQuestionIndex + 1} sur {contest.questions.length}</div>
+                    <div className="text-xs font-black text-white/50 uppercase tracking-widest">
+                      {currentStep === 'correction' ? 'Correction ' : ''}Question {currentQuestionIndex + 1} sur {contest.questions.length}
+                    </div>
                     <div className="text-2xl font-black text-white">
                       {Math.round(((currentQuestionIndex + 1) / contest.questions.length) * 100)}%
                     </div>
@@ -299,28 +303,52 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
                   <div className="grid grid-cols-1 gap-4">
                     {currentQuestion.options.map((option, idx) => {
                       const isSelected = userAnswers[currentQuestionIndex]?.selectedOption === idx;
+                      let buttonClass = '';
+                      let icon = null;
+                      
+                      if (currentStep === 'exam') {
+                        buttonClass = isSelected 
+                          ? 'bg-emerald-600 border-emerald-500 shadow-xl shadow-emerald-500/10' 
+                          : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10';
+                        if (isSelected) {
+                          icon = <CheckCircle2 className="w-6 h-6 text-white" />;
+                        }
+                      } else if (currentStep === 'correction') {
+                        const isCorrectAnswer = currentQuestion.bonne_reponse === idx;
+                        
+                        if (isCorrectAnswer) {
+                          buttonClass = 'bg-emerald-600 border-emerald-500 text-white';
+                          icon = <CheckCircle2 className="w-6 h-6 text-white" />;
+                        } else if (isSelected && !isCorrectAnswer) {
+                          buttonClass = 'bg-rose-500/20 border-rose-500/50 text-white';
+                          icon = <X className="w-6 h-6 text-rose-400" />;
+                        } else {
+                          buttonClass = 'bg-white/5 border-white/5 opacity-50';
+                        }
+                      }
+
                       return (
                         <button
                           key={idx}
-                          onClick={() => handleUpdateAnswer(idx)}
-                          className={`group w-full p-6 rounded-3xl border text-left transition-all relative overflow-hidden flex items-center gap-4 ${
-                            isSelected 
-                            ? 'bg-emerald-600 border-emerald-500 shadow-xl shadow-emerald-500/10' 
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
-                          }`}
+                          disabled={currentStep === 'correction'}
+                          onClick={() => currentStep === 'exam' && handleUpdateAnswer(idx)}
+                          className={`group w-full p-6 rounded-3xl border text-left transition-all relative overflow-hidden flex items-center gap-4 ${buttonClass}`}
                         >
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black transition-all ${
-                            isSelected ? 'bg-white text-emerald-600' : 'bg-white/10 text-white/50 group-hover:bg-white/20'
+                            currentStep === 'exam' && isSelected ? 'bg-white text-emerald-600' : 
+                            (currentStep === 'correction' && currentQuestion.bonne_reponse === idx ? 'bg-white text-emerald-600' : 'bg-white/10 text-white/50')
                           }`}>
                             {String.fromCharCode(65 + idx)}
                           </div>
-                          <span className={`text-base font-medium transition-all ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                          <span className={`text-base font-medium transition-all ${
+                            (currentStep === 'exam' && isSelected) || (currentStep === 'correction' && currentQuestion.bonne_reponse === idx) ? 'text-white' : 'text-slate-300'
+                          }`}>
                             {option}
                           </span>
                           
-                          {isSelected && (
+                          {icon && (
                             <div className="absolute right-6">
-                              <CheckCircle2 className="w-6 h-6 text-white" />
+                              {icon}
                             </div>
                           )}
                         </button>
@@ -330,12 +358,19 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
 
                   {userAnswers[currentQuestionIndex]?.selectedOption !== undefined && (
                     <div className="mt-8 space-y-2">
-                      <label className="text-sm font-bold text-white/70">Commentaire (optionnel) :</label>
+                       {currentStep === 'correction' && currentQuestion.explication && (
+                         <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                            <p className="text-sm font-bold text-blue-400 mb-1">Explication :</p>
+                            <p className="text-sm text-blue-200">{currentQuestion.explication}</p>
+                         </div>
+                       )}
+                      <label className="text-sm font-bold text-white/70">Commentaire {currentStep === 'correction' ? 'saisi pendant l\'examen' : '(optionnel)'} :</label>
                       <textarea
                         value={currentComment}
+                        disabled={currentStep === 'correction'}
                         onChange={(e) => handleUpdateComment(e.target.value)}
-                        placeholder="Ajouter une remarque..."
-                        className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        placeholder={currentStep === 'correction' ? "Aucun commentaire saisi" : "Ajouter une remarque..."}
+                        className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-75 disabled:resize-none"
                         rows={3}
                       />
                     </div>
@@ -353,14 +388,23 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
                     Précédent
                   </button>
                   
-                  <button
-                    onClick={handleNext}
-                    disabled={userAnswers[currentQuestionIndex] === undefined}
-                    className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-white font-bold text-sm transition-all shadow-xl shadow-emerald-500/10 flex items-center gap-3 disabled:opacity-50 disabled:grayscale"
-                  >
-                    {currentQuestionIndex === contest.questions.length - 1 ? 'Terminer l\'examen' : 'Suivant'}
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
+                  {currentStep === 'correction' && currentQuestionIndex === contest.questions.length - 1 ? (
+                    <button
+                      onClick={() => setCurrentStep('results')}
+                      className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-white font-bold text-sm transition-all shadow-xl shadow-indigo-500/10 flex items-center gap-3"
+                    >
+                      Retour aux résultats
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleNext}
+                      disabled={currentStep === 'exam' && userAnswers[currentQuestionIndex] === undefined}
+                      className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-white font-bold text-sm transition-all shadow-xl shadow-emerald-500/10 flex items-center gap-3 disabled:opacity-50 disabled:grayscale"
+                    >
+                      {currentStep === 'exam' && currentQuestionIndex === contest.questions.length - 1 ? 'Terminer l\'examen' : 'Suivant'}
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -421,13 +465,13 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
                   </button>
                   <button 
                     onClick={() => {
-                      // Share functionality logic here
-                      toast.info("Partage bientôt disponible !");
+                      setCurrentQuestionIndex(0);
+                      setCurrentStep('correction');
                     }}
                     className="py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-3xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl shadow-emerald-500/10"
                   >
-                    <Share2 className="w-5 h-5" />
-                    Partager mon score
+                    <CheckCircle2 className="w-5 h-5" />
+                    Voir la correction
                   </button>
                 </div>
 
