@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation } from 'react-router-dom';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle, FileText, Plus, Trash2 } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle, FileText, Plus, Trash2, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { uploadFile } from '@/services/storageService';
@@ -52,6 +52,11 @@ export default function Profile() {
     bio: user?.bio || '',
     skills: user?.skills?.join(', ') || '',
     experiences: user?.experiences || [],
+    notificationPreferences: user?.notificationPreferences || {
+      pushEnabled: false,
+      whatsappEnabled: false,
+      whatsappNumber: user?.phone || ''
+    }
   });
 
   // Supabase config check
@@ -564,6 +569,72 @@ export default function Profile() {
                 placeholder="ex: React, Gestion de projet, Anglais courant"
                 className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               />
+            </div>
+
+            <div className="space-y-4 p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Bell size={18} className="text-emerald-500" />
+                Paramètres de Notifications
+              </h3>
+              
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.notificationPreferences.whatsappEnabled}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        whatsappEnabled: e.target.checked
+                      }
+                    }))}
+                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" 
+                  />
+                  <div>
+                    <p className="font-bold text-sm text-slate-900">Recevoir les alertes par WhatsApp</p>
+                    <p className="text-xs text-slate-500">Nouvelles publications (Concours, Stages, etc.)</p>
+                  </div>
+                </label>
+
+                {formData.notificationPreferences.whatsappEnabled && (
+                  <div className="pl-8">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Numéro WhatsApp (avec indicatif)</label>
+                    <input 
+                      type="tel" 
+                      value={formData.notificationPreferences.whatsappNumber}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        notificationPreferences: {
+                          ...prev.notificationPreferences,
+                          whatsappNumber: e.target.value
+                        }
+                      }))}
+                      placeholder="ex: +226..."
+                      className="w-full p-2.5 mt-1 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                    />
+                  </div>
+                )}
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.notificationPreferences.pushEnabled}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        pushEnabled: e.target.checked
+                      }
+                    }))}
+                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" 
+                  />
+                  <div>
+                    <p className="font-bold text-sm text-slate-900">Activer les notifications Push (Navigateur/PWA)</p>
+                    <p className="text-xs text-slate-500">Inscrivez votre appareil pour recevoir des alertes directes</p>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div className="space-y-3">

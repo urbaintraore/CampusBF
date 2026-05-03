@@ -106,6 +106,7 @@ export interface User {
   tutorDescription?: string;
   teacherProfile?: TeacherProfile;
   institutionProfile?: InstitutionProfile;
+  pushSubscription?: any;
   marketplaceStats?: {
     published: number;
     sold: number;
@@ -147,11 +148,14 @@ export interface User {
   invitedUsers?: string[];
   fcmToken?: string;
   notificationPreferences?: {
-    documents: boolean;
-    internships: boolean;
-    forums: boolean;
-    contests: boolean;
-    events: boolean;
+    pushEnabled?: boolean;
+    whatsappEnabled?: boolean;
+    whatsappNumber?: string;
+    documents?: boolean;
+    internships?: boolean;
+    forums?: boolean;
+    contests?: boolean;
+    events?: boolean;
   };
   lastActiveAt?: any;
   activityStats?: {
@@ -169,6 +173,23 @@ export interface User {
     motoRideContacts: number;
     groupMessages: number;
     invitations: number;
+  };
+  dailyQuests?: {
+    date: string;
+    quests: {
+      id: string;
+      title: string;
+      target: number;
+      progress: number;
+      completed: boolean;
+      type: 'login' | 'quiz' | 'document' | 'post' | 'comment';
+      reward: number;
+    }[];
+  };
+  streak?: {
+    current: number;
+    longest: number;
+    lastLoginDate: string;
   };
   rankingScore?: number;
   contributionCount?: number;

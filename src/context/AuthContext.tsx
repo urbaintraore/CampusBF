@@ -6,9 +6,11 @@ import { documentService } from '@/services/documentService';
 import { motoRideService } from '@/services/motoRideService';
 import { logService } from '@/services/logService';
 import { notificationService } from '@/services/notificationService';
+import { pushNotificationService } from '@/services/pushNotificationService';
 import { internshipService } from '@/services/internshipService';
 import { marketplaceService } from '@/services/marketplaceService';
 import { contentService } from '@/services/contentService';
+import { questService } from '@/services/questService';
 import { reportService } from '@/services/reportService';
 import { applicationService } from '@/services/applicationService';
 import { userService } from '@/services/userService';
@@ -148,7 +150,7 @@ interface AuthContextType {
   updateDocument: (id: string, data: Partial<any>) => Promise<void>;
   addDocument: (data: any) => Promise<void>;
   deleteInternship: (id: string) => Promise<void>;
-  triggerNotification: (type: 'document' | 'internship' | 'contest' | 'event' | 'reply', data: any) => Promise<void>;
+  triggerNotification: (type: 'document' | 'internship' | 'contest' | 'event' | 'reply' | 'marketplace' | 'community' | 'quiz' | 'public_service' | 'deal' | 'colocation', data: any) => Promise<void>;
   updateInternship: (id: string, data: Partial<Internship>) => Promise<void>;
   addInternship: (data: Omit<Internship, 'id' | 'createdAt'>) => Promise<void>;
   applyInternship: (data: any) => Promise<void>;
@@ -330,6 +332,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         [`activityStats.${activity}`]: increment(1),
         rankingScore: increment(pointValue)
       });
+      
+      // Update Daily Quests
+      const questMap: Record<string, 'quiz' | 'document' | 'post' | 'comment' | 'login'> = {
+         quizzesCompleted: 'quiz',
+         docsViewed: 'document',
+         docsDownloaded: 'document',
+         marketplacePosts: 'post',
+         groupMessages: 'comment',
+      };
+      const questType = questMap[activity];
+      if (questType) {
+         await questService.updateQuestProgress(user, questType, 1);
+      }
     } catch (error) {
       console.error(`Error incrementing activity ${activity}:`, error);
     }
@@ -415,12 +430,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data = userDoc.data();
           initialUserData = { id: firebaseUser.uid, ...data } as User;
           
+          // Initializes daily quests and updates consecutive logins logic
+          initialUserData = await questService.initializeDailyQuests(initialUserData);
+
           // Mise à jour de la dernière activité et stats de connexion
           try {
             await updateDoc(doc(db, 'users', firebaseUser.uid), {
               lastActiveAt: serverTimestamp(),
               'activityStats.logins': increment(1),
-              rankingScore: increment(1)
             });
           } catch (err: any) {
              console.error("Firestore updateDoc error for lastActiveAt/stats:", err);
@@ -733,6 +750,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
+      await triggerNotification('public_service', contestData);
       toast.success('Concours ajouté avec succès');
       console.log("Contest fully saved with ID:", contestRef.id);
       return contestRef.id;
@@ -1109,13 +1127,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await internshipService.deleteInternship(id);
   };
 
-  const triggerNotification = async (type: 'document' | 'internship' | 'contest' | 'event' | 'reply', data: any) => {
+  const triggerNotification = async (type: 'document' | 'internship' | 'contest' | 'event' | 'reply' | 'marketplace' | 'community' | 'quiz' | 'public_service' | 'deal' | 'colocation', data: any) => {
     try {
-      await fetch(`/api/notify/${type}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const sourceMap: Record<string, string> = {
+        document: 'Documents',
+        internship: 'Stages - Emplois - Bourses',
+        contest: 'Challenges et Concours',
+        event: 'Événements',
+        marketplace: 'MarketPlace',
+        community: 'Communauté',
+        quiz: 'Révision et Quiz',
+        public_service: 'Concours Fonction Publique',
+        deal: 'Bons Plans',
+        colocation: 'Colocation',
+        reply: 'Réponse'
+      };
+
+      const title = `Nouveau dans ${sourceMap[type] || 'CampusBF'}`;
+      const body = `Nouvelle publication : ${data.title || data.name || data.subject || 'Découvrez la nouvelle publication'}`;
+      const url = `/${type}s`;
+
+      await pushNotificationService.broadcastNotification(
+        sourceMap[type] || type,
+        title,
+        body,
+        url
+      );
     } catch (error) {
       console.error(`Error triggering ${type} notification:`, error);
     }
@@ -1149,6 +1186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addMarketplaceItem = async (data: Omit<MarketplaceItem, 'id' | 'createdAt'>) => {
     await marketplaceService.addMarketplaceItem(data);
+    await triggerNotification('marketplace', data);
   };
 
   const reviewMarketplaceItem = async (id: string, status: 'approved' | 'rejected') => {
@@ -1412,6 +1450,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const createContest = async (contest: Omit<Contest, 'id' | 'createdAt'>) => {
     if (!user) return;
     await contestService.createContest(user, contest);
+    await triggerNotification('contest', contest);
   };
 
   const updateContest = async (id: string, data: Partial<Contest>) => {
@@ -1433,6 +1472,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const addQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt'>) => {
     if (!user) return;
     await quizService.addQuiz(quiz);
+    await triggerNotification('quiz', quiz);
   };
 
   const deleteQuiz = async (id: string) => {
@@ -1444,6 +1484,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     await dealService.createDeal(deal);
     await logAction('Création Bon Plan', deal.title);
+    await triggerNotification('deal', { title: deal.title });
   };
 
   const updateDeal = async (id: string, data: Partial<Deal>) => {
@@ -1483,6 +1524,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     await colocationService.createColocation(user, colocation);
     await logAction('Création Colocation', colocation.title);
+    await triggerNotification('colocation', { title: colocation.title });
   };
 
   const updateColocation = async (id: string, data: Partial<Colocation>) => {
