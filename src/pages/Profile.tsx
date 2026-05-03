@@ -89,6 +89,10 @@ export default function Profile() {
     
     const updatedData = {
       ...formData,
+      notificationPreferences: {
+        ...formData.notificationPreferences,
+        whatsappEnabled: user.role === 'student' ? true : formData.notificationPreferences.whatsappEnabled
+      },
       skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : []
     };
     
@@ -578,10 +582,11 @@ export default function Profile() {
               </h3>
               
               <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className={`flex items-center gap-3 ${user?.role === 'student' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
                   <input 
                     type="checkbox" 
-                    checked={formData.notificationPreferences.whatsappEnabled}
+                    checked={user?.role === 'student' ? true : formData.notificationPreferences.whatsappEnabled}
+                    disabled={user?.role === 'student'}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
                       notificationPreferences: {
@@ -592,7 +597,10 @@ export default function Profile() {
                     className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" 
                   />
                   <div>
-                    <p className="font-bold text-sm text-slate-900">Recevoir les alertes par WhatsApp</p>
+                    <p className="font-bold text-sm text-slate-900">
+                      Recevoir les alertes par WhatsApp
+                      {user?.role === 'student' && <span className="ml-2 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full uppercase">Obligatoire</span>}
+                    </p>
                     <p className="text-xs text-slate-500">Nouvelles publications (Concours, Stages, etc.)</p>
                   </div>
                 </label>

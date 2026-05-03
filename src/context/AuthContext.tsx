@@ -840,6 +840,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         invitedUsers: [],
         rankingScore: 1,
         contributionCount: 0,
+        notificationPreferences: {
+          pushEnabled: true,
+          whatsappEnabled: (userData.role || 'student') === 'student',
+          whatsappNumber: userData.phone || '',
+          documents: true,
+          internships: true,
+          forums: true,
+          contests: true,
+          events: true
+        },
         activityStats: {
           logins: 1,
           docsViewed: 0,
@@ -1079,7 +1089,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const newUser: Partial<User> = {
         ...userData,
         id: firebaseUser.uid,
-        status: 'active'
+        status: 'active',
+        notificationPreferences: {
+          pushEnabled: true,
+          whatsappEnabled: userData.role === 'student',
+          whatsappNumber: userData.phone || '',
+          documents: true,
+          internships: true,
+          forums: true,
+          contests: true,
+          events: true
+        }
       };
       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
     } catch (error) {
@@ -1153,6 +1173,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body,
         url
       );
+
+      // Appeler le backend pour envoyer les notifications (FCM & WhatsApp)
+      fetch(`/api/notify/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(err => console.error("Error calling notification API:", err));
     } catch (error) {
       console.error(`Error triggering ${type} notification:`, error);
     }

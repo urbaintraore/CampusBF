@@ -64,28 +64,42 @@ export const sendNotificationToUser = async (userId: string, payload: Notificati
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+    if (!userData) return;
 
-    if (!userData || !userData.fcmToken) return;
-
-    // Vérifier les préférences
-    if (userData.notificationPreferences && !userData.notificationPreferences[payload.type]) {
+    // Vérifier les préférences (On impose aux étudiants)
+    const isEnforced = userData.role === 'student';
+    if (!isEnforced && userData.notificationPreferences && !userData.notificationPreferences[payload.type]) {
       console.log(`Utilisateur ${userId} a désactivé les notifications de type ${payload.type}`);
       return;
     }
 
-    const message = {
-      notification: {
-        title: payload.title,
-        body: payload.body,
-      },
-      data: {
-        ...payload.data,
-        type: payload.type,
-      },
-      token: userData.fcmToken,
-    };
+    // FCM Notification
+    if (userData.fcmToken) {
+      try {
+        const message = {
+          notification: {
+            title: payload.title,
+            body: payload.body,
+          },
+          data: {
+            ...payload.data,
+            type: payload.type,
+          },
+          token: userData.fcmToken,
+        };
+        await messaging.send(message);
+      } catch (fcmError) {
+        console.error(`Erreur FCM pour ${userId}:`, fcmError);
+      }
+    }
 
-    await messaging.send(message);
+    // MOCK WHATSAPP NOTIFICATION
+    if (isEnforced || (userData.notificationPreferences?.whatsappEnabled && userData.notificationPreferences?.whatsappNumber)) {
+      const waNumber = userData.notificationPreferences?.whatsappNumber || userData.phone;
+      if (waNumber) {
+        console.log(`[WHATSAPP NOTIFICATION ENFORCED: ${isEnforced}] Sent to ${waNumber}: ${payload.title} - ${payload.body}`);
+      }
+    }
 
     // Enregistrer dans l'historique
     await db.collection('notifications').add({
