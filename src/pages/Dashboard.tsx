@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, User, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock, Trophy, School } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, User, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock, Trophy, School, Compass } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -200,29 +200,24 @@ export default function Dashboard() {
 
       {/* Parent Hero Section */}
       {user?.role === 'parent' && (
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-emerald-200 relative overflow-hidden group">
+        <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
             <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center flex-shrink-0 shadow-inner ring-1 ring-white/30">
-              <GraduationCap size={48} />
+              <User size={48} />
             </div>
             <div className="flex-1 text-center md:text-left space-y-4">
-              <h2 className="text-3xl font-display font-bold">Trouvez le répétiteur idéal</h2>
-              <p className="text-emerald-50 text-lg leading-relaxed max-w-2xl">
-                Accompagnez la réussite de vos enfants avec nos répétiteurs qualifiés et vérifiés. Parcourez les profils et contactez-les directement.
+              <h2 className="text-3xl font-display font-bold">Portail Parents CampusBF</h2>
+              <p className="text-orange-50 text-lg leading-relaxed max-w-2xl">
+                Trouvez des répétiteurs qualifiés, connectez-vous avec des mentors pour orienter vos enfants et consultez l'annuaire des experts universitaires.
               </p>
               <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
                 <button 
-                  onClick={() => navigate('/tutors')}
-                  className="px-8 py-3.5 bg-white text-emerald-700 rounded-2xl font-bold hover:bg-emerald-50 transition-all shadow-lg active:scale-95"
+                  onClick={() => navigate('/parent-portal')}
+                  className="px-8 py-3.5 bg-white text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-lg active:scale-95 flex items-center gap-2"
                 >
-                  Voir les répétiteurs
-                </button>
-                <button 
-                  onClick={() => navigate('/features')}
-                  className="px-8 py-3.5 bg-emerald-500/30 backdrop-blur-md text-white border border-white/30 rounded-2xl font-bold hover:bg-emerald-500/40 transition-all active:scale-95"
-                >
-                  Découvrir CampusBF
+                  <Compass size={20} />
+                  Accéder au Portail Parents
                 </button>
               </div>
             </div>
