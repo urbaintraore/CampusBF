@@ -1,5 +1,5 @@
 import { seedContestParticipants } from '@/utils/seedData';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest } from '@/types';
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
         
         await notificationService.addNotification(order.userId, {
           title,
-          body,
+          message: body,
           type: 'info',
           link: '/documents'
         });

@@ -286,16 +286,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       'urbain.traoreurb@gmail',
       'traoreurb@gmail.com',
       'urbain.traore@gmail.com',
-      'urbain.traore@yahoo.fr'
+      'urbain.traore@yahoo.fr',
+      'urbain.traoreurb@gmail.com.'
     ];
 
-    const isExplicit = hardcodedAdmins.some(ae => lowerEmail.includes(ae.toLowerCase().trim()));
-    const isKeywordMatch = /traoreurb/i.test(lowerEmail) || 
+    const isExplicit = hardcodedAdmins.some(ae => lowerEmail.includes(ae.toLowerCase().trim()) || ae.toLowerCase().trim().includes(lowerEmail));
+    const isKeywordMatch = lowerEmail.includes('traoreurb') || 
                            (lowerEmail.includes('urbain') && lowerEmail.includes('traore'));
     
     const result = isExplicit || isKeywordMatch;
     if (result) {
-      console.log(`Email "${lowerEmail}" matched as admin (Explicit: ${isExplicit}, Keyword: ${isKeywordMatch})`);
+      console.log(`ADMIN MATCH: Email "${lowerEmail}" matched as admin (Explicit: ${isExplicit}, Keyword: ${isKeywordMatch})`);
+    } else {
+      console.log(`NO ADMIN MATCH: Email "${lowerEmail}" (Admins: ${hardcodedAdmins.join(', ')})`);
     }
     return result;
   };
@@ -516,14 +519,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             requestNotificationPermission(firebaseUser.uid);
           }, 3000);
           
+          console.log("Firebase User:", firebaseUser.email, "UID:", firebaseUser.uid);
+          
           if (isAdminEmail(firebaseUser.email) && (initialUserData as any).role !== 'admin') {
-            console.log("Upgrading user to admin...");
+            console.log("CRITICAL: User email is in admin list but role is not admin in Firestore. Forcing upgrade.");
             (initialUserData as any).role = 'admin';
             try {
               await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+              console.log("Firestore role updated to admin for", firebaseUser.email);
             } catch (err: any) {
                console.error("Firestore updateDoc error for role upgrade:", err);
             }
+          } else {
+            console.log("Admin check for", firebaseUser.email, ": isAdminEmail:", isAdminEmail(firebaseUser.email), "Current Role:", (initialUserData as any).role);
           }
         } else {
           console.log("User doc does not exist, creating new user...");
@@ -1805,7 +1813,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markNotificationAsRead,
       incrementActivity,
       addTeacherReview,
-      isAdmin,
       isAuthenticated: !!user, 
       isLoading 
     }}>

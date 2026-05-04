@@ -24,10 +24,9 @@ export default function Login() {
       const adminEmailCheck = (email: string | null | undefined) => {
         if (!email) return false;
         const lowerEmail = email.toLowerCase().trim();
-        return lowerEmail === 'urbain.traoreurb@gmail.com' || 
-               lowerEmail === 'urbain.traoreurb@gmail' || 
-               lowerEmail === 'urbain.traoreurb@gmail.com.' ||
-               lowerEmail === 'admin@campusbf.bf';
+        return lowerEmail.includes('urbain.traoreurb@gmail') || 
+               lowerEmail === 'admin@campusbf.bf' ||
+               (lowerEmail.includes('urbain') && lowerEmail.includes('traore'));
       };
 
       if (adminEmailCheck(email)) {
