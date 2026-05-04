@@ -20,7 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
-    ...(isAdmin ? [{ icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] }] : []),
+    { icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] },
     { icon: Briefcase, label: 'Portail Entreprise', to: '/enterprise-portal', roles: ['company', 'admin'] },
     { icon: Building2, label: 'Portail Université', to: '/university-portal', roles: ['institution', 'admin'] },
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
@@ -48,12 +48,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: BookOpen, label: 'Guide d\'utilisation', to: '/guide' },
   ];
 
-  console.log("Layout Navigation - isAdmin:", isAdmin, "userRole:", user?.role);
+  console.log("Layout Navigation State:", { isAdmin, userRole: user?.role, userId: user?.id });
+  
   const navItems = allNavItems.filter(item => {
+    // If no roles required, show to everyone
     if (!item.roles) return true;
-    const hasRole = user && item.roles.includes(user.role);
-    const hasAdminOverride = isAdmin && item.roles.includes('admin');
-    return hasRole || hasAdminOverride;
+    
+    // Admin always sees everything that has 'admin' role or if they are super admin
+    if (isAdmin) {
+      if (item.roles.includes('admin')) return true;
+      // Also show company/institution/parent portals to admins for management
+      if (item.to === '/admin' || item.to === '/enterprise-portal' || item.to === '/university-portal' || item.to === '/parent-portal') return true;
+    }
+    
+    // Check if user has the required role
+    if (user && item.roles.includes(user.role)) return true;
+    
+    return false;
   });
   console.log("Computed NavItems length:", navItems.length);
 

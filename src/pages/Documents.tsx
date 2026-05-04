@@ -941,16 +941,18 @@ export default function Documents() {
                           <Printer size={18} className="text-emerald-600" />
                         </button>
                       )}
-                      <button 
-                        onClick={() => handleView(doc)}
-                        className={cn(
-                          "w-full md:w-auto px-4 py-3 border border-slate-200 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95",
-                          isDocumentLocked(doc, 'view') ? "bg-slate-50 text-slate-400" : "bg-white text-slate-700 hover:bg-slate-50"
-                        )}
-                      >
-                        {isDocumentLocked(doc, 'view') ? <Lock size={18} /> : <Eye size={18} />}
-                        Voir
-                      </button>
+                      {(isAdmin || user?.role !== 'student') && (
+                        <button 
+                          onClick={() => handleView(doc)}
+                          className={cn(
+                            "w-full md:w-auto px-4 py-3 border border-slate-200 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95",
+                            isDocumentLocked(doc, 'view') ? "bg-slate-50 text-slate-400" : "bg-white text-slate-700 hover:bg-slate-50"
+                          )}
+                        >
+                          {isDocumentLocked(doc, 'view') ? <Lock size={18} /> : <Eye size={18} />}
+                          Voir
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleDownload(doc)}
                         className={cn(

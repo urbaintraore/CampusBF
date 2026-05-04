@@ -276,40 +276,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     'urbain@campusbf.com'
   ];
 
-  const isAdminEmail = (email: string | null | undefined) => {
+  const isAdminEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
     const lowerEmail = email.toLowerCase().trim();
-    // Use both hardcoded list and regex for robustness
-    const isMatched = ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim()) || 
-           /urbain\.traoreurb/i.test(lowerEmail) ||
-           /traoreurb/i.test(lowerEmail) ||
-           /urbain\.traore/i.test(lowerEmail);
     
-    console.log(`Checking admin email for: "${lowerEmail}" -> Matched: ${isMatched}`);
-    return isMatched;
+    // Explicit list of known admin emails
+    const hardcodedAdmins = [
+      'urbain.traoreurb@gmail.com',
+      'urbain.traoreurb@gmail',
+      'traoreurb@gmail.com',
+      'urbain.traore@gmail.com',
+      'urbain.traore@yahoo.fr'
+    ];
+
+    const isExplicit = hardcodedAdmins.some(ae => lowerEmail.includes(ae.toLowerCase().trim()));
+    const isKeywordMatch = /traoreurb/i.test(lowerEmail) || 
+                           (lowerEmail.includes('urbain') && lowerEmail.includes('traore'));
+    
+    const result = isExplicit || isKeywordMatch;
+    if (result) {
+      console.log(`Email "${lowerEmail}" matched as admin (Explicit: ${isExplicit}, Keyword: ${isKeywordMatch})`);
+    }
+    return result;
   };
 
   const isAdmin = React.useMemo(() => {
-    // Check all potential sources of the email
-    const emailsToCheck = [
-      user?.email,
-      firebaseEmail,
-      auth.currentUser?.email,
-      'urbain.traoreurb@gmail.com' // Meta-check
-    ];
+    // 1. Check direct Firebase Auth email (most reliable)
+    const firebaseUserEmail = auth.currentUser?.email?.toLowerCase().trim() || firebaseEmail?.toLowerCase().trim();
     
-    const isSpecialAdmin = emailsToCheck.some(email => isAdminEmail(email));
+    // 2. Check profile email
+    const profileEmail = user?.email?.toLowerCase().trim();
+    
+    // 3. Check hardcoded developer email fallback
+    const developerEmail = 'urbain.traoreurb@gmail.com';
+
+    if (firebaseUserEmail === developerEmail || profileEmail === developerEmail) {
+      console.log("Admin identified via direct developer email match");
+      return true;
+    }
+
+    const isSpecialAdmin = isAdminEmail(firebaseUserEmail) || isAdminEmail(profileEmail);
     const result = user?.role === 'admin' || isSpecialAdmin;
     
     console.log("isAdmin Memo Evaluation:", { 
       result, 
       userRole: user?.role, 
       isSpecialAdmin,
-      emailsFound: emailsToCheck.filter(Boolean)
+      firebaseUserEmail,
+      profileEmail
     });
     
     return result;
-  }, [user, firebaseEmail]);
+  }, [user, firebaseEmail, auth.currentUser?.email]); // Include auth.currentUser?.email just in case
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
