@@ -8,7 +8,7 @@ import { uploadFile } from '@/services/storageService';
 import { CVGenerator } from '@/components/CVGenerator';
 
 export default function Profile() {
-  const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction } = useAuth();
+  const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction, groups } = useAuth();
   const location = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [forceComplete, setForceComplete] = useState(false);
@@ -306,6 +306,49 @@ export default function Profile() {
           <div>
             <h3 className="font-bold text-sm">Action requise</h3>
             <p className="text-sm mt-1">Vous devez obligatoirement compléter votre profil (Prénom, Nom, Téléphone WhatsApp, Université, Filière, Niveau) avant de pouvoir accéder au reste de la plateforme.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Checklist for Students */}
+      {user.role === 'student' && (
+        <div className="glass p-6 rounded-3xl border border-emerald-100 shadow-sm animate-in fade-in slide-in-from-bottom-4">
+          <h3 className="font-bold text-slate-900 text-lg mb-4 flex items-center gap-2">
+            <CheckCircle className="text-emerald-600" size={22} />
+            Checklist de téléchargement
+          </h3>
+          <p className="text-sm text-slate-500 mb-4 italic">Complétez ces étapes pour pouvoir télécharger des documents académiques.</p>
+          <div className="space-y-3">
+            {[
+              { 
+                label: "Rejoindre un groupe (Université ou Filière)", 
+                done: groups?.some(g => g.members?.includes(user.id)),
+                desc: "Allez dans la section Communauté et rejoignez un groupe."
+              },
+              { 
+                label: "Poster un message de présentation", 
+                done: user.hasPostedPresentation,
+                desc: "Présentez-vous brièvement dans l'un de vos groupes."
+              },
+              { 
+                label: "Compléter au moins un Quiz", 
+                done: (user.activityStats?.quizzesCompleted || 0) > 0,
+                desc: "Testez vos connaissances dans la section Quiz."
+              }
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white">
+                <div className={cn(
+                  "p-1 rounded-full mt-0.5 shrink-0 transition-colors",
+                  item.done ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-400"
+                )}>
+                  {item.done ? <CheckCircle size={14} /> : <X size={14} />}
+                </div>
+                <div>
+                  <p className={cn("text-sm font-bold", item.done ? "text-emerald-700" : "text-slate-600")}>{item.label}</p>
+                  {!item.done && <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

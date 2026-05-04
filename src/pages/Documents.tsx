@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight } from 'lucide-react';
 import PrintOrderModal from '../components/PrintOrderModal';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { cn } from '@/lib/utils';
@@ -278,30 +278,34 @@ export default function Documents() {
   };
 
   const isDocumentLocked = (doc: any, mode: 'view' | 'download' = 'view') => {
+    // Admins bypass all restrictions
     if (isAdmin) return false;
+    if (!user) return { locked: true, reason: 'Vous devez être connecté.' };
     
-    // If student, check special restrictions
-    if (user?.role === 'student' && !isAdmin) {
-      // 1. 24h timeout restriction for downloads
-      if (mode === 'download' && user.lastDownloadAt) {
-        const lastDownload = new Date(user.lastDownloadAt);
-        const now = new Date();
-        const diffInHours = (now.getTime() - lastDownload.getTime()) / (1000 * 60 * 60);
-        
-        if (diffInHours < 24) {
-          return { 
-            locked: true, 
-            reason: `Délai de 24h: Vous devez attendre encore ${Math.ceil(24 - diffInHours)}h avant votre prochain téléchargement.` 
-          };
-        }
+    // 1. 24h timeout restriction for all non-admins (only for DOWNLOAD)
+    if (mode === 'download' && user.lastDownloadAt) {
+      const lastDownload = new Date(user.lastDownloadAt);
+      const now = new Date();
+      const diffInHours = (now.getTime() - lastDownload.getTime()) / (1000 * 60 * 60);
+      
+      if (diffInHours < 24) {
+        console.log(`[Restrictions] Download locked for ${user.email}: last download was ${diffInHours.toFixed(2)}h ago`);
+        return { 
+          locked: true, 
+          reason: `Délai de 24h: Vous devez attendre encore ${Math.ceil(24 - diffInHours)}h avant votre prochain téléchargement.` 
+        };
       }
+    }
 
-      // 2. Onboarding requirements
-      const isInGroup = groups?.some(g => g.members.includes(user.id)) || false;
-      const hasQuizzes = (user.activityStats?.quizzesCompleted || 0) > 0;
-      const hasPresentation = (user.hasPostedPresentation || false);
+    // 2. Student special restrictions (Onboarding)
+    if (user?.role === 'student') {
+      const isInGroup = groups?.some(g => g.members?.includes(user.id)) || false;
+      const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
+      const hasQuizzes = quizzesCompleted > 0;
+      const hasPresentation = (user.hasPostedPresentation === true);
 
       if (!isInGroup || !hasQuizzes || !hasPresentation) {
+        console.log(`[Restrictions] Onboarding locked for student ${user.email}: Group:${isInGroup}, Quiz:${hasQuizzes}(${quizzesCompleted}), Post:${hasPresentation}`);
         let missing = [];
         if (!isInGroup) missing.push("Rejoindre un groupe");
         if (!hasPresentation) missing.push("Poster un message de présentation dans le groupe");
@@ -314,19 +318,18 @@ export default function Documents() {
       }
     }
 
-    // If for sale, check subscription
-    if (doc.isForSale && !isPremium && user?.role !== 'student') {
-      return { locked: true, reason: 'Ce document est en vente. Abonnez-vous ou achetez-le pour y accéder.' };
+    // 3. For Sale / Premium check (Global for all non-admins)
+    if (doc.isForSale && !isPremium) {
+      return { 
+        locked: true, 
+        reason: 'Document en vente : Vous devez avoir un abonnement premium pour y accéder.' 
+      };
     }
     
     return false;
   };
 
   const handleView = (doc: any) => {
-    if (incrementActivity) {
-      incrementActivity('docsViewed').catch(console.error);
-    }
-
     if (isAdmin) {
       window.open(doc.downloadUrl, '_blank');
       return;
@@ -337,21 +340,31 @@ export default function Documents() {
       toast.error(lockStatus.reason || "Accès restreint");
       return;
     }
+
+    if (incrementActivity) {
+      incrementActivity('docsViewed').catch(console.error);
+    }
     
     window.open(doc.downloadUrl, '_blank');
   };
 
   const handleDownload = async (docData: any) => {
-    if (incrementActivity) {
-      incrementActivity('docsDownloaded').catch(console.error);
+    if (!user) {
+      setShowInviteModal(true);
+      return;
     }
 
     if (!isAdmin) {
       const lockStatus: any = isDocumentLocked(docData, 'download');
+      console.log("[Documents] handleDownload lockStatus:", lockStatus);
       if (lockStatus && lockStatus.locked) {
         toast.error(lockStatus.reason || "Téléchargement restreint");
         return;
       }
+    }
+
+    if (incrementActivity) {
+      incrementActivity('docsDownloaded').catch(console.error);
     }
 
     if (!docData.downloadUrl) {
@@ -807,6 +820,32 @@ export default function Documents() {
           </div>
         )}
       </div>
+      
+      {user?.role === 'student' && !isAdmin && (
+        <div className="mb-8 p-6 bg-slate-900 rounded-[2rem] text-white overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
+          <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Shield className="text-emerald-400" size={24} />
+                Statut de téléchargement
+              </h2>
+              <p className="text-slate-400 text-sm max-w-xl">
+                {isDocumentLocked({}, 'download') 
+                  ? "Votre profil est restreint. Plusieurs étapes académiques sont nécessaires pour débloquer les téléchargements."
+                  : "Votre profil est complet. Vous pouvez télécharger un document toutes les 24h."}
+              </p>
+            </div>
+            <button 
+              onClick={() => window.location.href = '/profile'}
+              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center gap-2"
+            >
+              Voir ma checklist
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
@@ -953,8 +992,9 @@ export default function Documents() {
                           onClick={() => handleView(doc)}
                           className={cn(
                             "w-full md:w-auto px-4 py-3 border border-slate-200 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 active:scale-95",
-                            isDocumentLocked(doc, 'view') ? "bg-slate-50 text-slate-400" : "bg-white text-slate-700 hover:bg-slate-50"
+                            isDocumentLocked(doc, 'view') ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "bg-white text-slate-700 hover:bg-slate-50"
                           )}
+                          disabled={Boolean(isDocumentLocked(doc, 'view')) && !isAdmin}
                         >
                           {isDocumentLocked(doc, 'view') ? <Lock size={18} /> : <Eye size={18} />}
                           Voir
@@ -965,9 +1005,10 @@ export default function Documents() {
                         className={cn(
                           "w-full md:w-auto px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95",
                           isDocumentLocked(doc, 'download') 
-                            ? "bg-slate-200 text-slate-500 shadow-none hover:bg-slate-300" 
+                            ? "bg-slate-200 text-slate-500 shadow-none cursor-not-allowed opacity-80" 
                             : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
                         )}
+                        disabled={Boolean(isDocumentLocked(doc, 'download')) && !isAdmin}
                       >
                         {isDocumentLocked(doc, 'download') ? <Lock size={18} /> : <Download size={18} />}
                         Télécharger

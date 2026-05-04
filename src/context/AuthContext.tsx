@@ -569,7 +569,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             initialUserData = { id: firebaseUser.uid, ...newUser } as User;
-            await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+            if (newUser.role !== 'student') {
+              await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+            }
           } catch (err: any) {
              console.error("Firestore setDoc error for new user creation:", err);
              handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
@@ -580,8 +582,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("Setting user state:", initialUserData.id);
         setUser(initialUserData);
         
-        // Ensure user is in the community group
-        if (firebaseUser.uid) {
+        // Ensure user is in the community group (except for students who must join manually)
+        if (firebaseUser.uid && initialUserData && initialUserData.role !== 'student') {
           communityService.ensureUserInCommunityGroup(firebaseUser.uid).catch(console.error);
         }
         
@@ -670,7 +672,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     fetchWithSessionCache('cache_Events', query(collection(db, 'events'), limit(50))).then(data => setEvents(data as CampusEvent[]));
 
-    fetchWithSessionCache('cache_Groups', query(collection(db, 'groups'), limit(50))).then(data => setGroups(data as Group[]));
+    const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(50)), (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setGroups(data as Group[]);
+    });
+    unsubscribes.push(unsubscribeGroups);
 
     fetchWithSessionCache('cache_Community', query(collection(db, 'posts'), limit(50))).then(data => setCommunity(data as Post[]));
 

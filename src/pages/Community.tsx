@@ -131,12 +131,13 @@ export default function Community() {
       await addDoc(collection(db, 'posts'), newPost);
       
       // Update hasPostedPresentation flag for students if not already set
-      if (user.role === 'student' && !user.hasPostedPresentation && postContent.length > 10) {
+      // A presentation post is usually in a major group or the Community group
+      if (user.role === 'student' && !user.hasPostedPresentation && postContent.length > 15) {
         try {
           await updateDoc(doc(db, 'users', user.id), {
             hasPostedPresentation: true
           });
-          console.log("hasPostedPresentation marked as true for user", user.id);
+          console.log("[Community] hasPostedPresentation set to true for user", user.id);
         } catch (err) {
           console.error("Error updating hasPostedPresentation:", err);
         }
@@ -411,6 +412,17 @@ export default function Community() {
         </div>
 
         {/* Create Post Input */}
+        {user?.role === 'student' && !user.hasPostedPresentation && (
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2">
+            <AlertTriangle className="text-blue-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <h4 className="font-bold text-blue-900 text-sm">Action requise</h4>
+              <p className="text-xs text-blue-700 mt-1 leading-relaxed font-medium">
+                Pour débloquer le téléchargement des documents, vous devez poster un message de présentation dans un de vos groupes (ex: votre nom, filière et attentes).
+              </p>
+            </div>
+          </div>
+        )}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
           <div className="flex gap-4">
             <img src={user?.avatarUrl} alt="" className="w-10 h-10 rounded-full bg-emerald-100 flex-shrink-0" />
