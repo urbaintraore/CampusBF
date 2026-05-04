@@ -23,7 +23,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
-  const { user, documents: globalDocuments, logAction, groups, community, addDocument, incrementActivity } = useAuth();
+  const { user, isAdmin, documents: globalDocuments, logAction, groups, community, addDocument, incrementActivity } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
@@ -123,8 +123,6 @@ export default function Documents() {
     return matchesFilter && matchesSearch && matchesUniversity && matchesMajor && matchesYear && matchesSubject;
   });
 
-  const isAdmin = user?.role === 'admin';
-  
   const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
 
   const isProfileComplete = Boolean(

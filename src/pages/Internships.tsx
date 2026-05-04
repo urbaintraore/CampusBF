@@ -7,7 +7,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import { uploadFile } from '@/services/storageService';
 
 export default function Internships() {
-  const { user, internships, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
+  const { user, isAdmin, internships, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -102,7 +102,6 @@ export default function Internships() {
 
   const isSubscriptionActive = user?.premiumSubscriptionStatus === 'active';
   const isSubscriptionPending = user?.premiumSubscriptionStatus === 'pending';
-  const isAdmin = user?.role === 'admin';
 
   const handlePostInternship = () => {
     if (!user) {

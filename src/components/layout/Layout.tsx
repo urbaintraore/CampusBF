@@ -20,6 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
+    { icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] },
     { icon: Briefcase, label: 'Portail Entreprise', to: '/enterprise-portal', roles: ['company', 'admin'] },
     { icon: Building2, label: 'Portail Université', to: '/university-portal', roles: ['institution', 'admin'] },
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
@@ -50,8 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)) || (isAdmin && item.roles?.includes('admin')));
 
   if (isAdmin) {
-    navItems.unshift({ icon: Shield, label: 'Administration', to: '/admin' });
-    console.log("Admin detecté - Menu Administration ajouté");
+    console.log("Admin detecté - Accès Administration autorisé");
   } else {
     console.log("Admin non detecté - Role:", user?.role, "Email:", user?.email);
   }

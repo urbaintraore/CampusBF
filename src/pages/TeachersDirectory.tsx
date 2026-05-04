@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment } from 'firebase/firestore';
 
 export default function TeachersDirectory() {
-  const { user, teachers, submitSubscriptionRequest, addTeacherReview } = useAuth();
+  const { user, isAdmin, teachers, submitSubscriptionRequest, addTeacherReview } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [domainFilter, setDomainFilter] = useState('Tous');
   const [rankFilter, setRankFilter] = useState('Tous');
@@ -56,7 +56,6 @@ export default function TeachersDirectory() {
   const ranks = ['Tous', 'Assistant', 'Maître Assistant', 'Maître de Conférences', 'Professeur Titulaire'];
 
   const isInstitution = user?.role === 'institution';
-  const isAdmin = user?.role === 'admin';
   const hasActiveSubscription = isAdmin || (isInstitution && user?.institutionProfile?.subscriptionStatus === 'active');
   const isPendingSubscription = isInstitution && user?.institutionProfile?.subscriptionStatus === 'pending';
 

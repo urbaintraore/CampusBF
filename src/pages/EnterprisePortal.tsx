@@ -4,7 +4,7 @@ import { Building2, Briefcase, Users, FileText, CheckCircle2, Plus, Clock, Searc
 import { serverTimestamp } from 'firebase/firestore';
 
 export default function EnterprisePortal() {
-  const { user, internships, addInternship } = useAuth();
+  const { user, isAdmin, internships, addInternship } = useAuth();
   
   const companyInternships = internships.filter(i => i.authorId === user?.id);
 
@@ -26,7 +26,6 @@ export default function EnterprisePortal() {
 
   const isSubscriptionActive = user?.premiumSubscriptionStatus === 'active';
   const isSubscriptionPending = user?.premiumSubscriptionStatus === 'pending';
-  const isAdmin = user?.role === 'admin';
 
   const handlePostInternship = () => {
     if (!user) {

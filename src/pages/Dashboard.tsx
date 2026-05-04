@@ -13,7 +13,9 @@ import { User as UserType } from '@/types';
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
-  const { ads, user, notifications, documents, internships, groups, users, marketplace, trainings, events, totalDocumentsCount, tutors, teachers } = auth;
+  const { 
+    ads, user, isAdmin, notifications, documents, internships, groups, users, marketplace, trainings, events, totalDocumentsCount, tutors, teachers 
+  } = useAuth();
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
   console.log("Dashboard activeAds length:", activeAds.length);
@@ -25,7 +27,6 @@ export default function Dashboard() {
 
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
 
-  const isAdmin = user?.role === 'admin';
   const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
 
   const isDocumentLocked = (doc: any) => {

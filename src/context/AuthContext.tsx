@@ -261,11 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isSigningUp = React.useRef(false);
 
   const ADMIN_EMAILS = [
     'urbain.traoreurb@gmail.com',
     'urbain.traoreurb@gmail',
     'urbain.traoreurb@gmail.com.',
+    'urbain.traore@gmail.com',
+    'urbain.traore@gmail',
+    'traoreurb@gmail.com',
     'urbain.traore@yahoo.fr',
     'urbain.traore@yahoo.com',
     'urbain@campusbf.com'
@@ -274,10 +278,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdminEmail = (email: string | null | undefined) => {
     if (!email) return false;
     const lowerEmail = email.toLowerCase().trim();
-    return ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim());
+    return ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim()) || 
+           lowerEmail === 'urbain.traoreurb@gmail.com' ||
+           lowerEmail === 'urbain.traoreurb@gmail';
   };
 
-  const isAdmin = user?.role === 'admin' || isAdminEmail(user?.email) || isAdminEmail(auth.currentUser?.email);
+  const isAdmin = React.useMemo(() => {
+    return user?.role === 'admin' || isAdminEmail(user?.email) || isAdminEmail(auth.currentUser?.email);
+  }, [user, auth.currentUser?.email]);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
@@ -406,6 +414,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // If signup is in progress, let it handle the doc creation
+      if (isSigningUp.current) {
+        console.log("Signup in progress, skipping auto-doc creation in onAuthStateChanged");
+        return;
+      }
+
       try {
         console.log("Auth State Changed for user:", firebaseUser.uid);
         let initialUserData: User;
@@ -421,7 +435,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
             return;
           }
-          handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
+          // On some environments, IndexedDB might be failing. We don't want to block the whole app.
+          console.warn("Falling back to minimal profile due to Firestore error");
+          initialUserData = { 
+            id: firebaseUser.uid, 
+            email: firebaseUser.email || '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            firstName: firebaseUser.displayName?.split(' ')[0] || '',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+            createdAt: new Date().toISOString()
+          } as any;
+          setUser(initialUserData);
+          setIsLoading(false);
           return;
         }
 
@@ -517,9 +542,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error: any) {
         console.error("Unexpected error in onAuthStateChanged:", error);
+        if (error.code !== 'auth/network-request-failed' && error.code !== 'unavailable') {
+          toast.error(`Erreur d'authentification: ${error.message || 'Problème de connexion'}`);
+        }
         if (error.message && error.message.includes('{')) {
-          // Already handled by handleFirestoreError and caught here
-          throw error;
+          const errData = JSON.parse(error.message);
+          if (errData.error?.includes('offline')) {
+             console.log("Suppressing offline error throw");
+          } else {
+             throw error;
+          }
         }
         setUser(null);
       } finally {
@@ -817,6 +849,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Email et mot de passe requis');
     }
 
+    isSigningUp.current = true;
     try {
       await auth.authStateReady();
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
@@ -886,7 +919,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Connexion directe après inscription
       setUser({ id: firebaseUser.uid, ...newUser } as User);
+      isSigningUp.current = false;
     } catch (error: any) {
+      isSigningUp.current = false;
       if (error.code === 'permission-denied') {
         handleFirestoreError(error, OperationType.CREATE, 'users');
       }

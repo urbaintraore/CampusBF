@@ -11,8 +11,7 @@ import { db } from '@/lib/firebase';
 import { uploadFile } from '@/services/storageService';
 
 export default function Tutors() {
-  const { user, tutors, submitTutorApplication } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const { user, isAdmin, tutors, submitTutorApplication } = useAuth();
   const navigate = useNavigate();
   const [selectedTutor, setSelectedTutor] = useState<string | null>(null);
   const [ratingModal, setRatingModal] = useState<string | null>(null);
