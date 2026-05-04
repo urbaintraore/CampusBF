@@ -58,6 +58,12 @@ service cloud.firestore {
     match /contests/{document=**} { allow read, write: if isSignedIn(); }
     match /deals/{document=**} { allow read, write: if isSignedIn(); }
     match /deal_suggestions/{document=**} { allow read, write: if isSignedIn(); }
+    match /commandes_impression/{document=**} {
+      allow create: if isSignedIn();
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow update: if isAdmin() || (isOwner(resource.data.userId) && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin();
+    }
     match /colocations/{document=**} { allow read, write: if isSignedIn(); }
     match /colocation_requests/{document=**} { allow read, write: if isSignedIn(); }
     match /colocation_reviews/{document=**} { allow read, write: if isSignedIn(); }

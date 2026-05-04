@@ -79,6 +79,24 @@
         "date_debut": { "type": "string", "format": "date-time" },
         "date_fin": { "type": "string", "format": "date-time" }
       }
+    },
+    "PrintOrder": {
+      "title": "Commande d'impression",
+      "description": "Ordre d'impression documentaire de la plateforme",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "pageCount": { "type": "number" },
+        "options": { "type": "object" },
+        "totalPrice": { "type": "number" },
+        "status": { "type": "string" },
+        "pickupPoint": { "type": "string" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -105,6 +123,10 @@
     "/public_service_subscriptions/{subId}": {
       "schema": "PublicServiceSubscription",
       "description": "Abonnements au module"
+    },
+    "/commandes_impression/{orderId}": {
+      "schema": "PrintOrder",
+      "description": "Commandes d'impression du kiosque"
     }
   }
 }

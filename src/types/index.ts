@@ -811,3 +811,33 @@ export interface DealSuggestion {
   status: 'pending' | 'reviewed' | 'rejected';
   createdAt: any;
 }
+
+export interface PrintOptions {
+  color: boolean;
+  twoSided: boolean;
+  copies: number;
+  binding: 'none' | 'staple' | 'spiral';
+}
+
+export interface PrintOrder {
+  id: string;
+  userId: string;
+  fileUrl: string;
+  fileName: string;
+  pageCount: number;
+  options: PrintOptions;
+  totalPrice: number;
+  status: 'pending' | 'processing' | 'ready' | 'delivered';
+  pickupPoint: string;
+  comment?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface PrintRates {
+  bwPage: number;
+  colorPage: number;
+  twoSidedDiscount: number;
+  bindingStaple: number;
+  bindingSpiral: number;
+}

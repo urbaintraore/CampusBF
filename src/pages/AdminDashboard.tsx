@@ -1,6 +1,6 @@
 import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
-  const [contentTab, setContentTab] = useState<'documents' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -123,6 +123,70 @@ export default function AdminDashboard() {
   const [showManualContestModal, setShowManualContestModal] = useState(false);
   const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
   const [parsedQuestionsCount, setParsedQuestionsCount] = useState(0);
+
+  const [printOrders, setPrintOrders] = useState<any[]>([]);
+  const [loadingPrintOrders, setLoadingPrintOrders] = useState(false);
+
+  useEffect(() => {
+    if (contentTab === 'print_orders') {
+      const fetchOrders = async () => {
+        setLoadingPrintOrders(true);
+        try {
+          const { getAllPrintOrders } = await import('@/services/printService');
+          const orders = await getAllPrintOrders();
+          setPrintOrders(orders);
+        } catch (error) {
+          console.error("Failed to load print orders", error);
+        } finally {
+          setLoadingPrintOrders(false);
+        }
+      };
+      fetchOrders();
+    }
+  }, [contentTab]);
+
+  const handleUpdatePrintStatus = async (orderId: string, status: string) => {
+    try {
+      const { updatePrintOrderStatus } = await import('@/services/printService');
+      const { notificationService } = await import('@/services/notificationService');
+      
+      await updatePrintOrderStatus(orderId, status as any);
+      
+      setPrintOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+      
+      // Notify user physically via DB
+      const order = printOrders.find(o => o.id === orderId);
+      if (order && order.userId) {
+        let title = "Commande en traitement";
+        let body = `Votre commande d\'impression pour ${order.fileName} est en cours de traitement.`;
+        
+        if (status === 'ready') {
+          title = "Commande prête !";
+          body = `Votre commande d'impression pour ${order.fileName} est prête à être récupérée au ${order.pickupPoint}.`;
+        } else if (status === 'delivered') {
+          title = "Commande livrée";
+          body = `Votre commande d'impression pour ${order.fileName} a été livrée.`;
+        }
+        
+        await notificationService.addNotification(order.userId, {
+          title,
+          body,
+          type: 'info',
+          link: '/documents'
+        });
+
+        // Simuler push/WhatsApp via API
+        fetch('/api/notify/print_status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: order.userId, status, fileName: order.fileName })
+        }).catch(err => console.log('Notification call failed', err));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erreur lors de la mise à jour');
+    }
+  };
 
   const handleJSONChange = (val: string) => {
     setManualContestData({ ...manualContestData, questionsJSON: val });
@@ -1046,6 +1110,7 @@ export default function AdminDashboard() {
           <div className="flex bg-gray-100 p-1 rounded-xl w-fit flex-wrap gap-1">
             {[
               { id: 'documents', label: 'Documents', icon: FileText },
+              { id: 'print_orders', label: 'Imprimerie', icon: Printer },
               { id: 'stages', label: 'Stages & Emplois & Bourses', icon: Briefcase },
               { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
               { id: 'community', label: 'Communauté', icon: MessageSquare },
@@ -1198,6 +1263,88 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+
+              {contentTab === 'print_orders' && (
+                <div className="overflow-x-auto">
+                  {loadingPrintOrders ? (
+                    <div className="p-10 text-center text-slate-500">Chargement des commandes...</div>
+                  ) : printOrders.length === 0 ? (
+                    <div className="p-10 text-center text-slate-500">Aucune commande pour le moment.</div>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-100/50">
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Utilisateur</th>
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Fichier</th>
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Options</th>
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Prix</th>
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Point de retrait</th>
+                          <th className="text-left py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Statut</th>
+                          <th className="text-right py-4 px-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100/50">
+                        {printOrders.map(order => {
+                          const orderUser = users.find(u => u.id === order.userId);
+                          return (
+                          <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-4 px-6 text-sm text-gray-600">
+                              {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('fr-FR') : 'N/A'}
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="text-sm font-bold text-gray-900">{orderUser ? `${orderUser.firstName} ${orderUser.lastName}` : 'Inconnu'}</div>
+                              <div className="text-xs text-gray-500">{orderUser?.phone || orderUser?.email || ''}</div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <a href={order.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-emerald-600 hover:underline flex items-center gap-1">
+                                <FileText size={16} />
+                                {order.fileName}
+                                <ExternalLink size={12} />
+                              </a>
+                            </td>
+                            <td className="py-4 px-6 text-xs text-gray-600">
+                              <div>{order.options?.color ? 'Couleur' : 'N&B'} - {order.options?.twoSided ? 'Recto-Verso' : 'Recto'}</div>
+                              <div>{order.pageCount} pages, {order.options?.copies} {order.options?.copies > 1 ? 'copies' : 'copie'}</div>
+                              {order.options?.binding !== 'none' && <div>Reliure: {order.options?.binding}</div>}
+                            </td>
+                            <td className="py-4 px-6 text-sm font-bold text-slate-800">
+                              {order.totalPrice} CFA
+                            </td>
+                            <td className="py-4 px-6 text-xs text-gray-600">
+                              {order.pickupPoint}
+                            </td>
+                            <td className="py-4 px-6">
+                              <select 
+                                value={order.status}
+                                onChange={(e) => handleUpdatePrintStatus(order.id, e.target.value)}
+                                className={`text-xs font-bold px-2 py-1 flex items-center rounded-lg border outline-none 
+                                ${order.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                                 order.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                 order.status === 'ready' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                 'bg-emerald-100 text-emerald-800 border-emerald-300'}`}
+                              >
+                                <option value="pending">En attente</option>
+                                <option value="processing">En traitement</option>
+                                <option value="ready">Prêt (A récupérer)</option>
+                                <option value="delivered">Livré</option>
+                              </select>
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              {/* Optionnel: Bouton pour afficher les détails du modèle ou un commentaire */}
+                              {order.comment && (
+                                <button className="text-slate-400 hover:text-slate-600 focus:outline-none" title={order.comment}>
+                                  <MessageSquare size={18} />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        )})}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
 
               {contentTab === 'stages' && (
                 <div className="flex justify-end p-4 bg-gray-50 border-b border-gray-100">
