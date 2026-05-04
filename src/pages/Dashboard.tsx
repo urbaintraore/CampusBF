@@ -7,53 +7,99 @@ import TeacherOnboarding from '@/components/TeacherOnboarding';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, updateDoc, increment, serverTimestamp, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { User as UserType } from '@/types';
 
 export default function Dashboard() {
   const auth = useAuth();
   console.log("Dashboard useAuth:", auth);
   const { 
-    ads, user, isAdmin, notifications, documents, internships, groups, users, marketplace, trainings, events, totalDocumentsCount, tutors, teachers 
+    ads, user, isAdmin, notifications, documents, internships, groups, 
+    users, marketplace, trainings, events, totalDocumentsCount, 
+    tutors, teachers, isDocumentLocked, incrementActivity, logAction 
   } = useAuth();
+
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
-  console.log("Dashboard activeAds length:", activeAds.length);
   const [currentAd, setCurrentAd] = useState(0);
   const [suggestedFriends, setSuggestedFriends] = useState<UserType[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedDocForPayment, setSelectedDocForPayment] = useState<any>(null);
-
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
-
   const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
 
-  const isDocumentLocked = (doc: any) => {
-    if (isAdmin) return false;
-    if (doc.isForSale && !isPremium) return true;
-    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) return true;
-    return false;
-  };
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
-  const handleDocClick = (doc: any) => {
-    if (isAdmin) {
-      window.open(doc.downloadUrl, '_blank');
-      return;
-    }
-
-    if (doc.isForSale && !isPremium) {
-      setSelectedDocForPayment(doc);
-      setShowPaymentModal(true);
-      return;
-    }
-
-    if (user?.role === 'student' && (user?.referralsCount || 0) < 5) {
+  const handleDocClick = async (docData: any) => {
+    if (!user) {
       setShowInviteModal(true);
       return;
     }
 
-    window.open(doc.downloadUrl, '_blank');
+    if (isDownloading) return;
+
+    if (!isAdmin) {
+      const lockStatus: any = isDocumentLocked(docData, 'download');
+      if (lockStatus && lockStatus.locked) {
+        if (docData.isForSale && !isPremium) {
+           setSelectedDocForPayment(docData);
+           setShowPaymentModal(true);
+        } else if (user?.role === 'student' && (user?.referralsCount || 0) < 5 && lockStatus.reason.includes('parrainage')) {
+          // Legacy referrals check if we still want it, but the centralized one 
+          // usually covers onboarding now.
+          setShowInviteModal(true);
+        } else {
+          toast.error(lockStatus.reason);
+        }
+        return;
+      }
+    }
+
+    if (!docData.downloadUrl) {
+      toast.error("L'URL du document est introuvable.");
+      return;
+    }
+
+    setIsDownloading(docData.id);
+    try {
+      // 1. Update stats in Firebase first
+      const dRef = doc(db, 'documents', docData.id);
+      const uRef = doc(db, 'users', user.id);
+
+      await Promise.all([
+        updateDoc(dRef, { downloads: increment(1) }),
+        updateDoc(uRef, {
+          lastDownloadAt: new Date().toISOString(),
+          'activityStats.docsDownloaded': increment(1),
+          lastActiveAt: serverTimestamp()
+        })
+      ]);
+
+      if (logAction) {
+        // @ts-ignore
+        logAction('Téléchargement de document (Dashboard)', `Document: ${docData.title}`);
+      }
+
+      // 2. Trigger actual file download
+      const link = document.createElement('a');
+      link.href = docData.downloadUrl.includes('supabase.co') && !docData.downloadUrl.includes('?download=')
+        ? docData.downloadUrl + '?download='
+        : docData.downloadUrl;
+      link.target = '_blank';
+      link.download = docData.fileName || docData.title || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("Téléchargement lancé");
+    } catch (error: any) {
+      console.error("[Dashboard] Download error:", error);
+      toast.error("Erreur durant le téléchargement");
+    } finally {
+      setIsDownloading(null);
+    }
   };
 
   useEffect(() => {

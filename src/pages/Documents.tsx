@@ -23,7 +23,10 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
-  const { user, isAdmin, documents: globalDocuments, logAction, groups, community, addDocument, incrementActivity } = useAuth();
+  const { 
+    user, isAdmin, documents: globalDocuments, logAction, groups, community, 
+    addDocument, incrementActivity, isDocumentLocked 
+  } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
@@ -277,57 +280,7 @@ export default function Documents() {
     }
   };
 
-  const isDocumentLocked = (doc: any, mode: 'view' | 'download' = 'view') => {
-    // Admins bypass all restrictions
-    if (isAdmin) return false;
-    if (!user) return { locked: true, reason: 'Vous devez être connecté.' };
-    
-    // 1. 24h timeout restriction for all non-admins (only for DOWNLOAD)
-    if (mode === 'download' && user.lastDownloadAt) {
-      const lastDownload = new Date(user.lastDownloadAt);
-      const now = new Date();
-      const diffInHours = (now.getTime() - lastDownload.getTime()) / (1000 * 60 * 60);
-      
-      if (diffInHours < 24) {
-        console.log(`[Restrictions] Download locked for ${user.email}: last download was ${diffInHours.toFixed(2)}h ago`);
-        return { 
-          locked: true, 
-          reason: `Délai de 24h: Vous devez attendre encore ${Math.ceil(24 - diffInHours)}h avant votre prochain téléchargement.` 
-        };
-      }
-    }
-
-    // 2. Student special restrictions (Onboarding)
-    if (user?.role === 'student') {
-      const isInGroup = groups?.some(g => g.members?.includes(user.id)) || false;
-      const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
-      const hasQuizzes = quizzesCompleted > 0;
-      const hasPresentation = (user.hasPostedPresentation === true);
-
-      if (!isInGroup || !hasQuizzes || !hasPresentation) {
-        console.log(`[Restrictions] Onboarding locked for student ${user.email}: Group:${isInGroup}, Quiz:${hasQuizzes}(${quizzesCompleted}), Post:${hasPresentation}`);
-        let missing = [];
-        if (!isInGroup) missing.push("Rejoindre un groupe");
-        if (!hasPresentation) missing.push("Poster un message de présentation dans le groupe");
-        if (!hasQuizzes) missing.push("Compléter au moins un Quiz");
-        
-        return { 
-          locked: true, 
-          reason: `Restrictions de profil: Vous devez d'abord : ${missing.join(', ')}.` 
-        };
-      }
-    }
-
-    // 3. For Sale / Premium check (Global for all non-admins)
-    if (doc.isForSale && !isPremium) {
-      return { 
-        locked: true, 
-        reason: 'Document en vente : Vous devez avoir un abonnement premium pour y accéder.' 
-      };
-    }
-    
-    return false;
-  };
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
   const handleView = (doc: any) => {
     if (isAdmin) {
@@ -354,66 +307,59 @@ export default function Documents() {
       return;
     }
 
+    if (isDownloading) return;
+
     if (!isAdmin) {
       const lockStatus: any = isDocumentLocked(docData, 'download');
-      console.log("[Documents] handleDownload lockStatus:", lockStatus);
       if (lockStatus && lockStatus.locked) {
         toast.error(lockStatus.reason || "Téléchargement restreint");
         return;
       }
     }
 
-    if (incrementActivity) {
-      incrementActivity('docsDownloaded').catch(console.error);
-    }
-
     if (!docData.downloadUrl) {
-      console.error("[Documents] URL de téléchargement manquante.");
-      alert("Erreur: URL de téléchargement manquante.");
+      toast.error("L'URL du document est introuvable.");
       return;
     }
 
+    setIsDownloading(docData.id);
     try {
-      console.log("[Documents] Tentative de téléchargement:", docData.downloadUrl);
+      console.log("[Documents] Processing download for:", docData.id);
       
-      // Update download count and user's last download time
-      const updates: any = {
-        downloads: increment(1)
-      };
-      
-      await updateDoc(doc(db, 'documents', docData.id), updates);
+      // 1. Update stats in Firebase first
+      const docRef = doc(db, 'documents', docData.id);
+      const userRef = doc(db, 'users', user.id);
 
-      if (user?.id) {
-        await updateDoc(doc(db, 'users', user.id), {
+      await Promise.all([
+        updateDoc(docRef, { downloads: increment(1) }),
+        updateDoc(userRef, {
           lastDownloadAt: new Date().toISOString(),
-          'activityStats.docsDownloaded': increment(1)
-        });
-      }
+          'activityStats.docsDownloaded': increment(1),
+          lastActiveAt: serverTimestamp()
+        })
+      ]);
 
       if (logAction) {
         logAction('Téléchargement de document', `Document: ${docData.title}`);
       }
 
-      // Try to force download
-      let downloadUrl = docData.downloadUrl;
-      
-      // If it's a Supabase URL, we can append ?download= to force download
-      if (downloadUrl.includes('supabase.co') && !downloadUrl.includes('?download=')) {
-        downloadUrl += '?download=';
-      }
-      
-      console.log("[Documents] URL finale pour téléchargement :", downloadUrl);
-      
+      // 2. Trigger actual file download
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = docData.downloadUrl.includes('supabase.co') && !docData.downloadUrl.includes('?download=')
+        ? docData.downloadUrl + '?download='
+        : docData.downloadUrl;
       link.target = '_blank';
-      link.download = docData.fileName || 'document';
+      link.download = docData.fileName || docData.title || 'document';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      toast.success("Téléchargement lancé");
     } catch (error: any) {
-      console.error("[Documents] Erreur lors du téléchargement:", error);
-      alert(`Erreur lors du téléchargement: ${error.message || "Inconnue"}`);
+      console.error("[Documents] Download error:", error);
+      toast.error("Erreur durant le téléchargement");
+    } finally {
+      setIsDownloading(null);
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, MessageSquare, Share2, Send, X, Plus, CheckCircle2, Download, Paperclip } from 'lucide-react';
+import { Users, MessageSquare, Share2, Send, X, Plus, CheckCircle2, Download, Paperclip, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { 
@@ -132,7 +132,8 @@ export default function Community() {
       
       // Update hasPostedPresentation flag for students if not already set
       // A presentation post is usually in a major group or the Community group
-      if (user.role === 'student' && !user.hasPostedPresentation && postContent.length > 15) {
+      const normalizedRole = (user?.role || '').toLowerCase();
+      if (normalizedRole === 'student' && !user.hasPostedPresentation && postContent.length > 15) {
         try {
           await updateDoc(doc(db, 'users', user.id), {
             hasPostedPresentation: true

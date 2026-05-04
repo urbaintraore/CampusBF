@@ -217,6 +217,7 @@ interface AuthContextType {
   addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
   incrementActivity: (activity: keyof NonNullable<User['activityStats']>) => Promise<void>;
+  isDocumentLocked: (doc: any, mode?: 'view' | 'download') => false | { locked: boolean; reason: string };
   addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -330,7 +331,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     
     return result;
-  }, [user, firebaseEmail, auth.currentUser?.email]); // Include auth.currentUser?.email just in case
+  }, [user, firebaseEmail, auth.currentUser?.email]);
+
+  const isDocumentLocked = React.useCallback((doc: any, mode: 'view' | 'download' = 'view') => {
+    // Admins bypass all restrictions
+    if (isAdmin) return false;
+    if (!user) return { locked: true, reason: 'Vous devez être connecté.' };
+    
+    // 1. 24h timeout restriction for all non-admins (only for DOWNLOAD)
+    if (mode === 'download' && user.lastDownloadAt) {
+      try {
+        const lastDownload = new Date(user.lastDownloadAt);
+        if (!isNaN(lastDownload.getTime())) {
+          const now = new Date();
+          const msSinceLast = now.getTime() - lastDownload.getTime();
+          const hoursSinceLast = msSinceLast / (1000 * 60 * 60);
+          
+          if (hoursSinceLast < 24) {
+            const h = Math.floor(24 - hoursSinceLast);
+            const m = Math.floor((24 - hoursSinceLast - h) * 60);
+            return { 
+              locked: true, 
+              reason: `Délai de 24h : Vous devez attendre encore ${h}h ${m}m avant votre prochain téléchargement.` 
+            };
+          }
+        }
+      } catch (err) {
+        console.error("Error evaluating 24h rule:", err);
+      }
+    }
+
+    // 2. Student special restrictions (Onboarding)
+    const normalizedRole = (user?.role || 'student').toLowerCase();
+    const isStudent = normalizedRole === 'student';
+    
+    if (isStudent && !isAdmin) {
+      const isInGroup = groups?.some(g => g.members?.includes(user?.id)) || false;
+      const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
+      const hasQuizzes = quizzesCompleted > 0;
+      const hasPresentation = (user.hasPostedPresentation === true);
+
+      if (!isInGroup || !hasQuizzes || !hasPresentation) {
+        let missing = [];
+        if (!isInGroup) missing.push("Rejoindre un groupe");
+        if (!hasPresentation) missing.push("Poster un message de présentation");
+        if (!hasQuizzes) missing.push("Faire au moins un Quiz");
+        
+        return { 
+          locked: true, 
+          reason: `Accès étudiant restreint : ${missing.join(', ')} requis.` 
+        };
+      }
+    }
+
+    // 3. For Sale / Premium check (Global for all non-admins)
+    const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active';
+    if (doc?.isForSale && !isPremium) {
+      return { 
+        locked: true, 
+        reason: 'Document payant : Abonnement Premium requis.' 
+      };
+    }
+    
+    return false;
+  }, [user, isAdmin, groups]);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
@@ -429,6 +493,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    const unsubscribes: (() => void)[] = [];
     // Safety timeout to prevent stuck loading state
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
@@ -582,6 +647,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("Setting user state:", initialUserData.id);
         setUser(initialUserData);
         
+        // Listen to user profile changes in real-time
+        const userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
+          if (doc.exists()) {
+            setUser(prev => {
+              const newData = doc.data() as User;
+              // Only update if data changed to avoid infinite loops or unnecessary renders
+              if (JSON.stringify(prev) !== JSON.stringify({ id: firebaseUser.uid, ...newData })) {
+                return { id: firebaseUser.uid, ...newData };
+              }
+              return prev;
+            });
+          }
+        });
+        unsubscribes.push(userUnsubscribe);
+        
         // Ensure user is in the community group (except for students who must join manually)
         if (firebaseUser.uid && initialUserData && initialUserData.role !== 'student') {
           communityService.ensureUserInCommunityGroup(firebaseUser.uid).catch(console.error);
@@ -612,7 +692,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      unsubscribes.forEach(unsub => unsub());
+    };
   }, []);
 
   // Listeners for data fetching - re-runs when user role changes
@@ -1818,6 +1901,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       addNotification,
       markNotificationAsRead,
       incrementActivity,
+      isDocumentLocked,
       addTeacherReview,
       isAuthenticated: !!user, 
       isLoading 
