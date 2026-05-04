@@ -134,19 +134,6 @@ export default function Documents() {
     user?.level
   );
 
-  const canDownloadOrView = () => {
-    if (!user) return false;
-    if (user.role !== 'student') return true;
-    
-    const isInGroup = groups.some(g => g.members.includes(user.id));
-    const hasPosted = community.some(p => 
-      p.authorId === user.id || 
-      (p.comments && p.comments.some(c => c.authorId === user.id))
-    );
-    
-    return isInGroup && hasPosted;
-  };
-
   const handleUploadClick = () => {
     if (user?.role === 'student' && !isAdmin) {
       const message = encodeURIComponent(`Bonjour ! Je souhaite partager un document académique sur CampusBF.\nTitre: \nMatière: \nUniversité: `);
@@ -292,16 +279,10 @@ export default function Documents() {
 
   const isDocumentLocked = (doc: any, mode: 'view' | 'download' = 'view') => {
     if (isAdmin) return false;
+    if (user?.role === 'student') return false; // Students can view and download everything without restrictions
     
     // If for sale, check subscription
     if (doc.isForSale && !isPremium) return true;
-    
-    const inviteCount = user?.inviteCount || user?.referralsCount || 0;
-    const contributionCount = user?.contributionCount || 0;
-
-    if (user?.role === 'student') {
-      return false; // Students can now view and download everything (unless it's for sale handled above)
-    }
     
     return false;
   };
@@ -316,7 +297,7 @@ export default function Documents() {
       return;
     }
 
-    if (doc.isForSale && !isPremium) {
+    if (doc.isForSale && !isPremium && user?.role !== 'student') {
       setSelectedDocForPayment(doc);
       setShowPaymentModal(true);
       return;
@@ -338,7 +319,7 @@ export default function Documents() {
     if (isAdmin) {
       // Direct download for admin
     } else {
-      if (docData.isForSale && !isPremium) {
+      if (docData.isForSale && !isPremium && user?.role !== 'student') {
         setSelectedDocForPayment(docData);
         setShowPaymentModal(true);
         return;
