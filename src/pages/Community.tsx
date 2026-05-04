@@ -130,6 +130,18 @@ export default function Community() {
 
       await addDoc(collection(db, 'posts'), newPost);
       
+      // Update hasPostedPresentation flag for students if not already set
+      if (user.role === 'student' && !user.hasPostedPresentation && postContent.length > 10) {
+        try {
+          await updateDoc(doc(db, 'users', user.id), {
+            hasPostedPresentation: true
+          });
+          console.log("hasPostedPresentation marked as true for user", user.id);
+        } catch (err) {
+          console.error("Error updating hasPostedPresentation:", err);
+        }
+      }
+      
       if (triggerNotification) {
          await triggerNotification('community', { title: newPost.content });
       }

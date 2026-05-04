@@ -158,6 +158,8 @@ export interface User {
     events?: boolean;
   };
   lastActiveAt?: any;
+  lastDownloadAt?: any;
+  hasPostedPresentation?: boolean;
   activityStats?: {
     logins: number;
     docsViewed: number;

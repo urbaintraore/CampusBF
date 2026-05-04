@@ -279,10 +279,45 @@ export default function Documents() {
 
   const isDocumentLocked = (doc: any, mode: 'view' | 'download' = 'view') => {
     if (isAdmin) return false;
-    if (user?.role === 'student') return false; // Students can view and download everything without restrictions
     
+    // If student, check special restrictions
+    if (user?.role === 'student' && !isAdmin) {
+      // 1. 24h timeout restriction for downloads
+      if (mode === 'download' && user.lastDownloadAt) {
+        const lastDownload = new Date(user.lastDownloadAt);
+        const now = new Date();
+        const diffInHours = (now.getTime() - lastDownload.getTime()) / (1000 * 60 * 60);
+        
+        if (diffInHours < 24) {
+          return { 
+            locked: true, 
+            reason: `Délai de 24h: Vous devez attendre encore ${Math.ceil(24 - diffInHours)}h avant votre prochain téléchargement.` 
+          };
+        }
+      }
+
+      // 2. Onboarding requirements
+      const isInGroup = groups?.some(g => g.members.includes(user.id)) || false;
+      const hasQuizzes = (user.activityStats?.quizzesCompleted || 0) > 0;
+      const hasPresentation = (user.hasPostedPresentation || false);
+
+      if (!isInGroup || !hasQuizzes || !hasPresentation) {
+        let missing = [];
+        if (!isInGroup) missing.push("Rejoindre un groupe");
+        if (!hasPresentation) missing.push("Poster un message de présentation dans le groupe");
+        if (!hasQuizzes) missing.push("Compléter au moins un Quiz");
+        
+        return { 
+          locked: true, 
+          reason: `Restrictions de profil: Vous devez d'abord : ${missing.join(', ')}.` 
+        };
+      }
+    }
+
     // If for sale, check subscription
-    if (doc.isForSale && !isPremium) return true;
+    if (doc.isForSale && !isPremium && user?.role !== 'student') {
+      return { locked: true, reason: 'Ce document est en vente. Abonnez-vous ou achetez-le pour y accéder.' };
+    }
     
     return false;
   };
@@ -297,14 +332,9 @@ export default function Documents() {
       return;
     }
 
-    if (doc.isForSale && !isPremium && user?.role !== 'student') {
-      setSelectedDocForPayment(doc);
-      setShowPaymentModal(true);
-      return;
-    }
-
-    if (isDocumentLocked(doc, 'view')) {
-      setShowInviteModal(true);
+    const lockStatus: any = isDocumentLocked(doc, 'view');
+    if (lockStatus && lockStatus.locked) {
+      toast.error(lockStatus.reason || "Accès restreint");
       return;
     }
     
@@ -316,17 +346,10 @@ export default function Documents() {
       incrementActivity('docsDownloaded').catch(console.error);
     }
 
-    if (isAdmin) {
-      // Direct download for admin
-    } else {
-      if (docData.isForSale && !isPremium && user?.role !== 'student') {
-        setSelectedDocForPayment(docData);
-        setShowPaymentModal(true);
-        return;
-      }
-
-      if (isDocumentLocked(docData, 'download')) {
-        setShowInviteModal(true);
+    if (!isAdmin) {
+      const lockStatus: any = isDocumentLocked(docData, 'download');
+      if (lockStatus && lockStatus.locked) {
+        toast.error(lockStatus.reason || "Téléchargement restreint");
         return;
       }
     }
@@ -340,10 +363,19 @@ export default function Documents() {
     try {
       console.log("[Documents] Tentative de téléchargement:", docData.downloadUrl);
       
-      // Increment download count in Firestore
-      await updateDoc(doc(db, 'documents', docData.id), {
+      // Update download count and user's last download time
+      const updates: any = {
         downloads: increment(1)
-      });
+      };
+      
+      await updateDoc(doc(db, 'documents', docData.id), updates);
+
+      if (user?.id) {
+        await updateDoc(doc(db, 'users', user.id), {
+          lastDownloadAt: new Date().toISOString(),
+          'activityStats.docsDownloaded': increment(1)
+        });
+      }
 
       if (logAction) {
         logAction('Téléchargement de document', `Document: ${docData.title}`);
