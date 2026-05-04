@@ -261,6 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [firebaseEmail, setFirebaseEmail] = useState<string | null>(null);
   const isSigningUp = React.useRef(false);
 
   const ADMIN_EMAILS = [
@@ -278,14 +279,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdminEmail = (email: string | null | undefined) => {
     if (!email) return false;
     const lowerEmail = email.toLowerCase().trim();
-    return ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim()) || 
+    const result = ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim()) || 
            lowerEmail === 'urbain.traoreurb@gmail.com' ||
            lowerEmail === 'urbain.traoreurb@gmail';
+    console.log(`Checking admin email for: "${lowerEmail}" -> Result: ${result}`);
+    return result;
   };
 
   const isAdmin = React.useMemo(() => {
-    return user?.role === 'admin' || isAdminEmail(user?.email) || isAdminEmail(auth.currentUser?.email);
-  }, [user, auth.currentUser?.email]);
+    return user?.role === 'admin' || isAdminEmail(user?.email) || isAdminEmail(firebaseEmail);
+  }, [user, firebaseEmail]);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
@@ -405,6 +408,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email);
+      setFirebaseEmail(firebaseUser?.email || null);
       clearTimeout(loadingTimeout);
       
       if (!firebaseUser) {
@@ -1762,6 +1766,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markNotificationAsRead,
       incrementActivity,
       addTeacherReview,
+      isAdmin,
       isAuthenticated: !!user, 
       isLoading 
     }}>
