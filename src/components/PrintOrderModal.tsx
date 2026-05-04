@@ -284,6 +284,15 @@ export default function PrintOrderModal({ isOpen, onClose, initialFileUrl, initi
                     <option value="CampusBF Principal (Zogona)">CampusBF Principal (Zogona)</option>
                     <option value="Kiosque UJKZ">Kiosque UJKZ</option>
                     <option value="Kiosque UTS">Kiosque UTS</option>
+                    <option value="Université de l'Unité Africaine(ex IAM)">Université de l'Unité Africaine(ex IAM)</option>
+                    <option value="Université Aube Nouvelle(ex ISIG)">Université Aube Nouvelle(ex ISIG)</option>
+                    <option value="Université Norbert ZONGO(UNZ)">Université Norbert ZONGO(UNZ)</option>
+                    <option value="Université Nazi Boni (Nasso)">Université Nazi Boni (Nasso)</option>
+                    <option value="Université Nazi Boni (Secteur 22)">Université Nazi Boni (Secteur 22)</option>
+                    <option value="ESTA">ESTA</option>
+                    <option value="IST(Ouaga 2000)">IST(Ouaga 2000)</option>
+                    <option value="IST(Benogo)">IST(Benogo)</option>
+                    <option value="IST(Larlé)">IST(Larlé)</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
