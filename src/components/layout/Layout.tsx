@@ -20,7 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
-    ...(isAdmin ? [{ icon: Shield, label: 'Administration', to: '/admin' }] : []),
+    ...(isAdmin ? [{ icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] }] : []),
     { icon: Briefcase, label: 'Portail Entreprise', to: '/enterprise-portal', roles: ['company', 'admin'] },
     { icon: Building2, label: 'Portail Université', to: '/university-portal', roles: ['institution', 'admin'] },
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
@@ -48,7 +48,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: BookOpen, label: 'Guide d\'utilisation', to: '/guide' },
   ];
 
-  const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)) || (isAdmin && item.roles?.includes('admin')));
+  console.log("Layout Navigation - isAdmin:", isAdmin, "userRole:", user?.role);
+  const navItems = allNavItems.filter(item => {
+    if (!item.roles) return true;
+    const hasRole = user && item.roles.includes(user.role);
+    const hasAdminOverride = isAdmin && item.roles.includes('admin');
+    return hasRole || hasAdminOverride;
+  });
+  console.log("Computed NavItems length:", navItems.length);
 
   if (isAdmin) {
     console.log("Admin detecté - Accès Administration autorisé");

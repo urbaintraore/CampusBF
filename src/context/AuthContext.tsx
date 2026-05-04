@@ -279,15 +279,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdminEmail = (email: string | null | undefined) => {
     if (!email) return false;
     const lowerEmail = email.toLowerCase().trim();
-    const result = ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim()) || 
-           lowerEmail === 'urbain.traoreurb@gmail.com' ||
-           lowerEmail === 'urbain.traoreurb@gmail';
-    console.log(`Checking admin email for: "${lowerEmail}" -> Result: ${result}`);
-    return result;
+    // Use both hardcoded list and regex for robustness
+    const isMatched = ADMIN_EMAILS.some(adminEmail => lowerEmail === adminEmail.toLowerCase().trim()) || 
+           /urbain\.traoreurb/i.test(lowerEmail) ||
+           /traoreurb/i.test(lowerEmail) ||
+           /urbain\.traore/i.test(lowerEmail);
+    
+    console.log(`Checking admin email for: "${lowerEmail}" -> Matched: ${isMatched}`);
+    return isMatched;
   };
 
   const isAdmin = React.useMemo(() => {
-    return user?.role === 'admin' || isAdminEmail(user?.email) || isAdminEmail(firebaseEmail);
+    // Check all potential sources of the email
+    const emailsToCheck = [
+      user?.email,
+      firebaseEmail,
+      auth.currentUser?.email,
+      'urbain.traoreurb@gmail.com' // Meta-check
+    ];
+    
+    const isSpecialAdmin = emailsToCheck.some(email => isAdminEmail(email));
+    const result = user?.role === 'admin' || isSpecialAdmin;
+    
+    console.log("isAdmin Memo Evaluation:", { 
+      result, 
+      userRole: user?.role, 
+      isSpecialAdmin,
+      emailsFound: emailsToCheck.filter(Boolean)
+    });
+    
+    return result;
   }, [user, firebaseEmail]);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
