@@ -705,14 +705,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       unsubscribeAuth();
-      unsubscribes.forEach(unsub => unsub());
     };
   }, []);
 
   // Listeners for data fetching - MOVED LOADING TO INDIVIDUAL PAGES TO SAVE QUOTA
   useEffect(() => {
     if (!user) {
-      // Clear data state on logout
       setUsers([]);
       setTutors([]);
       setAds([]);
@@ -721,123 +719,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setEvents([]);
       setCommunity([]);
       setGroups([]);
+      setApplications([]);
+      setTeacherApplications([]);
+      setSubscriptionRequests([]);
+      setInternships([]);
       return;
     }
 
     const unsubscribes: (() => void)[] = [];
 
     // Only fetch minimal strictly necessary global data
-    if (user) {
-       // Groups are needed for permissions check globally
-       const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(10)), (snapshot) => {
-         setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group)));
-       });
-       unsubscribes.push(unsubscribeGroups);
+    // Groups are needed for permissions check globally
+    const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(10)), (snapshot) => {
+      setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group)));
+    }, (error) => {
+      console.error("onSnapshot Groups Error:", error);
+    });
+    unsubscribes.push(unsubscribeGroups);
 
-       // Notifications are important for UX
-       const qNotifs = query(
-         collection(db, 'notifications'), 
-         where('userId', 'in', [user.id, 'all']),
-         orderBy('createdAt', 'desc'),
-         limit(10)
-       );
-       const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
-         setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
-       }, () => {});
-       unsubscribes.push(unsubNotifs);
-    }
-
-    return () => unsubscribes.forEach(unsub => unsub());
-  }, [user]);
-
-    // unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
-    //   setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    // }));
-
-    // Restricted/Conditional lists
-    const marketplaceQuery = user.role === 'admin' 
-      ? query(collection(db, 'marketplace'), limit(30))
-      : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)), limit(15));
-    fetchWithSessionCache('cache_Marketplace', marketplaceQuery).then(data => setMarketplace(data as MarketplaceItem[]));
-
-    const motoRideQuery = user.role === 'admin'
-      ? query(collection(db, 'motoRides'), limit(30))
-      : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)), limit(15));
-    fetchWithSessionCache('cache_MotoRides', motoRideQuery).then(data => setMotoRides(data as MotoRide[]));
-
-    const trainingsQuery = user.role === 'admin'
-      ? query(collection(db, 'trainings'), limit(20))
-      : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)), limit(15));
-    fetchWithSessionCache('cache_Trainings', trainingsQuery).then(data => setTrainings(data as Training[]));
-
-    // Count exact users instead of fetching them all to save quota
-    if (isAdmin) {
-      fetchCountWithSessionCache('cache_count_TotalUsersCount', collection(db, 'users')).then(count => setTotalUsersCount(count)).catch(e => console.error(e));
-      fetchCountWithSessionCache('cache_count_TotalDocumentsCount', collection(db, 'documents')).then(count => setTotalDocumentsCount(count)).catch(e => console.error(e));
-    } else {
-      // Mock counts for users to save quota
-      setTotalUsersCount(1520);
-      setTotalDocumentsCount(480);
-    }
-
-    // Extremely heavy query causing quota exhaustion. Limit to 5 for basic display if needed.
-    const usersQuery = query(collection(db, 'users'), limit(5));
-    fetchWithSessionCache('cache_Users', usersQuery).then(data => setUsers(data as User[]));
-
-    const tutorsQuery = query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(25));
-    fetchWithSessionCache('cache_Tutors', tutorsQuery).then(data => setTutors(data as User[]));
-
-    const teachersQuery = query(collection(db, 'users'), where('role', '==', 'teacher'), limit(25));
-    fetchWithSessionCache('cache_Teachers', teachersQuery).then(data => setTeachers(data as User[]));
-
-    // Notifications for current user limited to 15 to prevent huge reads
+    // Notifications are important for UX
     const qNotifs = query(
       collection(db, 'notifications'), 
       where('userId', 'in', [user.id, 'all']),
       orderBy('createdAt', 'desc'),
-      limit(15)
+      limit(10)
     );
-    unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
+    const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
     }, (error) => {
       console.error("onSnapshot Notifications Error:", error);
-    }));
+    });
+    unsubscribes.push(unsubNotifs);
 
     // Admin only lists
     if (isAdmin) {
-      unsubscribes.push(onSnapshot(query(collection(db, 'applications'), limit(20)), (snapshot) => {
+      const qApps = query(collection(db, 'applications'), limit(20));
+      unsubscribes.push(onSnapshot(qApps, (snapshot) => {
         setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
       }, (error) => {
         console.error("onSnapshot Applications Error:", error);
       }));
 
-      unsubscribes.push(onSnapshot(query(collection(db, 'teacherApplications'), limit(20)), (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication));
-        setTeacherApplications(data);
+      const qTeacherApps = query(collection(db, 'teacherApplications'), limit(20));
+      unsubscribes.push(onSnapshot(qTeacherApps, (snapshot) => {
+        setTeacherApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication)));
       }, (error) => {
         console.error("onSnapshot TeacherApplications Error:", error);
       }));
 
-      unsubscribes.push(onSnapshot(query(collection(db, 'subscriptionRequests'), limit(20)), (snapshot) => {
+      const qSubReqs = query(collection(db, 'subscriptionRequests'), limit(20));
+      unsubscribes.push(onSnapshot(qSubReqs, (snapshot) => {
         setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
       }, (error) => {
         console.error("onSnapshot SubscriptionRequests Error:", error);
       }));
-
-      fetchWithSessionCache('cache_TrainingReports', query(collection(db, 'training_reports'), limit(20))).then(data => setTrainingReports(data as TrainingReport[]));
-
-      fetchWithSessionCache('cache_Logs', query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(20))).then(data => setLogs(data as Log[]));
     } else {
       // Non-admins see their own applications
-      const qApps = query(collection(db, 'applications'), where('userId', '==', user.id), limit(10));
-      fetchWithSessionCache('cache_Applications', qApps).then(data => setApplications(data as TutorApplication[]));
-
-      const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id), limit(10));
-      fetchWithSessionCache('cache_TeacherApplications', qTeacherApps).then(data => setTeacherApplications(data as TeacherApplication[]));
+      const qApps = query(collection(db, 'applications'), where('userId', '==', user.id), limit(5));
+      const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id), limit(5));
+      
+      getDocs(qApps).then(snap => setApplications(snap.docs.map(d => ({ id: d.id, ...d.data() } as TutorApplication)))).catch(() => {});
+      getDocs(qTeacherApps).then(snap => setTeacherApplications(snap.docs.map(d => ({ id: d.id, ...d.data() } as TeacherApplication)))).catch(() => {});
     }
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [user?.id, user?.role]);
+  }, [user?.id, isAdmin]);
 
   const ensureUserInCommunityGroup = async (userId: string) => {
     await communityService.ensureUserInCommunityGroup(userId);

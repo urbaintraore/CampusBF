@@ -55,10 +55,11 @@ export default function Community() {
     if (viewingGroupId) {
       q = query(
         collection(db, 'posts'),
-        where('groupId', '==', viewingGroupId)
+        where('groupId', '==', viewingGroupId),
+        limit(30)
       );
     } else {
-      q = query(collection(db, 'posts'));
+      q = query(collection(db, 'posts'), limit(30));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
