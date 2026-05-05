@@ -13,27 +13,11 @@ interface NotificationsCenterProps {
 }
 
 export const NotificationsCenter: React.FC<NotificationsCenterProps> = ({ onClose }) => {
-  const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, notifications: contextNotifications } = useAuth();
   const [filter, setFilter] = useState<string>('all');
 
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', user.id),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+  const notifications = contextNotifications || [];
+  const loading = false; // Context handles loading
 
   const markAllAsRead = async () => {
     if (!user || notifications.length === 0) return;

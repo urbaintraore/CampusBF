@@ -8,11 +8,25 @@ import Logo from '@/components/Logo';
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle();
+      navigate('/');
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      setError(err.message || 'Erreur lors de la connexion avec Google');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +38,18 @@ export default function Login() {
       const adminEmailCheck = (email: string | null | undefined) => {
         if (!email) return false;
         const lowerEmail = email.toLowerCase().trim();
-        return lowerEmail.includes('urbain.traoreurb@gmail') || 
-               lowerEmail === 'admin@campusbf.bf' ||
-               (lowerEmail.includes('urbain') && lowerEmail.includes('traore'));
+        const hardcodedAdmins = [
+          'urbain.traoreurb@gmail.com',
+          'urbain.traoreurb@gmail',
+          'traoreurb@gmail.com',
+          'urbain.traore@gmail.com',
+          'urbain.traore@yahoo.fr',
+          'urbain.traoreurb@gmail.com.'
+        ];
+        return hardcodedAdmins.some(ae => lowerEmail.includes(ae.toLowerCase().trim()) || ae.toLowerCase().trim().includes(lowerEmail)) || 
+               lowerEmail.includes('traoreurb') || 
+               (lowerEmail.includes('urbain') && lowerEmail.includes('traore')) ||
+               lowerEmail === 'admin@campusbf.bf';
       };
 
       if (adminEmailCheck(email)) {
@@ -120,6 +143,25 @@ export default function Login() {
               {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Se connecter'}
             </button>
           </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-slate-500">Ou continuer avec</span>
+            </div>
+          </div>
+
+          <button 
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+            className="w-full py-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 font-medium text-slate-700 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            Se connecter avec Google
+          </button>
 
           <div className="text-center text-sm text-slate-500 pt-2">
             Pas encore de compte ? <Link to="/signup" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">S'inscrire</Link>

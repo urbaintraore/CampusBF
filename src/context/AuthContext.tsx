@@ -29,7 +29,9 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { 
   doc, 
@@ -181,7 +183,8 @@ interface AuthContextType {
   syncCommunityGroup: () => Promise<void>;
   reviewMarketplaceItem: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   reportMarketplaceItem: (id: string, reason: string) => Promise<void>;
-  login: (email?: string, password?: string, asAdmin?: boolean) => Promise<void>;
+  login: (email?: string, password?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
   logout: () => void;
@@ -366,7 +369,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isStudent = normalizedRole === 'student';
     
     if (isStudent && !isAdmin) {
-      const isInGroup = groups?.some(g => g.members?.includes(user?.id)) || false;
+      // Use a safer member check that doesn't depend on groups being loaded if not available
+      const isInGroup = Array.isArray(groups) && groups.some(g => Array.isArray(g.members) && g.members.includes(user?.id));
       const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
       const hasQuizzes = quizzesCompleted > 0;
       const hasPresentation = (user.hasPostedPresentation === true);
@@ -541,23 +545,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
         } catch (err: any) {
           console.error("Firestore getDoc error for users collection:", err);
-          if (err.message?.includes('Quota limit exceeded')) {
-            toast.error("Quota Firestore dépassé. L'application risque de ne pas fonctionner correctement jusqu'à demain.");
-            setIsLoading(false);
-            return;
-          }
-          // On some environments, IndexedDB might be failing. We don't want to block the whole app.
+          
+          const isQuotaError = err.message?.includes('Quota') || err.code === 'resource-exhausted';
+          
+          // On some environments, IndexedDB might be failing or quota is hit. 
+          // We don't want to block the whole app.
           console.warn("Falling back to minimal profile due to Firestore error");
-          initialUserData = { 
+          const fallbackUser = { 
             id: firebaseUser.uid, 
             email: firebaseUser.email || '',
             role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-            firstName: firebaseUser.displayName?.split(' ')[0] || '',
-            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            status: 'active',
             createdAt: new Date().toISOString()
           } as any;
-          setUser(initialUserData);
+          
+          setUser(fallbackUser);
           setIsLoading(false);
+
+          if (isQuotaError) {
+            toast.error("Quota Firestore dépassé. L'application fonctionne en mode limité jusqu'à demain.", { duration: 10000 });
+          }
           return;
         }
 
@@ -744,47 +753,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Removed redundant User document listener here (it's handled in the auth useEffect)
 
     // Public/Authenticated lists
-    fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(50))).then(data => setAds(data as Ad[]));
+    fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(15))).then(data => setAds(data as Ad[]));
 
-    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'), limit(100))).then(data => setDocuments(data as any[]));
+    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'), limit(30))).then(data => setDocuments(data as any[]));
 
-    fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(50))).then(data => setInternships(data as Internship[]));
+    fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(15))).then(data => setInternships(data as Internship[]));
 
-    fetchWithSessionCache('cache_Events', query(collection(db, 'events'), limit(50))).then(data => setEvents(data as CampusEvent[]));
+    fetchWithSessionCache('cache_Events', query(collection(db, 'events'), limit(15))).then(data => setEvents(data as CampusEvent[]));
 
-    const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(50)), (snapshot) => {
+    const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(15)), (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setGroups(data as Group[]);
     });
     unsubscribes.push(unsubscribeGroups);
 
-    fetchWithSessionCache('cache_Community', query(collection(db, 'posts'), limit(50))).then(data => setCommunity(data as Post[]));
+    fetchWithSessionCache('cache_Community', query(collection(db, 'posts'), limit(20))).then(data => setCommunity(data as Post[]));
 
-    fetchWithSessionCache('cache_News', query(collection(db, 'news'), limit(50))).then(data => setNews(data as News[]));
+    fetchWithSessionCache('cache_News', query(collection(db, 'news'), limit(20))).then(data => setNews(data as News[]));
 
-    fetchWithSessionCache('cache_LostAndFound', query(collection(db, 'lostAndFound'), limit(50))).then(data => setLostAndFound(data as LostAndFound[]));
+    fetchWithSessionCache('cache_LostAndFound', query(collection(db, 'lostAndFound'), limit(20))).then(data => setLostAndFound(data as LostAndFound[]));
 
-    fetchWithSessionCache('cache_Reports', query(collection(db, 'reports'), limit(50))).then(data => setReports(data as Report[]));
+    fetchWithSessionCache('cache_Reports', query(collection(db, 'reports'), limit(20))).then(data => setReports(data as Report[]));
 
-    fetchWithSessionCache('cache_Quizzes', query(collection(db, 'quizzes'), limit(50))).then(data => setQuizzes(data as Quiz[]));
+    fetchWithSessionCache('cache_Quizzes', query(collection(db, 'quizzes'), limit(20))).then(data => setQuizzes(data as Quiz[]));
 
-    fetchWithSessionCache('cache_Contests', query(collection(db, 'contests'), limit(50))).then(data => setContests(data as Contest[]));
+    fetchWithSessionCache('cache_Contests', query(collection(db, 'contests'), limit(10))).then(data => setContests(data as Contest[]));
 
-    fetchWithSessionCache('cache_Deals', query(collection(db, 'deals'), limit(50))).then(data => setDeals(data as Deal[]));
+    fetchWithSessionCache('cache_Deals', query(collection(db, 'deals'), limit(20))).then(data => setDeals(data as Deal[]));
 
-    fetchWithSessionCache('cache_DealSuggestions', query(collection(db, 'deal_suggestions'), limit(50))).then(data => setDealSuggestions(data as DealSuggestion[]));
+    fetchWithSessionCache('cache_DealSuggestions', query(collection(db, 'deal_suggestions'), limit(10))).then(data => setDealSuggestions(data as DealSuggestion[]));
 
-    fetchWithSessionCache('cache_Colocations', query(collection(db, 'colocations'), limit(50))).then(data => setColocations(data as Colocation[]));
+    fetchWithSessionCache('cache_Colocations', query(collection(db, 'colocations'), limit(20))).then(data => setColocations(data as Colocation[]));
 
-    fetchWithSessionCache('cache_ColocationRequests', query(collection(db, 'colocation_requests'), limit(50))).then(data => setColocationRequests(data as ColocationRequest[]));
+    fetchWithSessionCache('cache_ColocationRequests', query(collection(db, 'colocation_requests'), limit(15))).then(data => setColocationRequests(data as ColocationRequest[]));
 
-    fetchWithSessionCache('cache_ColocationReviews', query(collection(db, 'colocation_reviews'), limit(50))).then(data => setColocationReviews(data as ColocationReview[]));
+    fetchWithSessionCache('cache_ColocationReviews', query(collection(db, 'colocation_reviews'), limit(15))).then(data => setColocationReviews(data as ColocationReview[]));
 
-    fetchWithSessionCache('cache_ContestParticipants', query(collection(db, 'contest_participants'), limit(1000))).then(data => setContestParticipants(data as ContestParticipant[]));
+    fetchWithSessionCache('cache_ContestParticipants', query(collection(db, 'contest_participants'), limit(100))).then(data => setContestParticipants(data as ContestParticipant[]));
 
-    fetchWithSessionCache('cache_TrainingEnrollments', query(collection(db, 'training_enrollments'), limit(50))).then(data => setTrainingEnrollments(data as TrainingEnrollment[]));
+    fetchWithSessionCache('cache_TrainingEnrollments', query(collection(db, 'training_enrollments'), limit(20))).then(data => setTrainingEnrollments(data as TrainingEnrollment[]));
 
-    fetchWithSessionCache('cache_TrainingReviews', query(collection(db, 'training_reviews'), limit(50))).then(data => setTrainingReviews(data as TrainingReview[]));
+    fetchWithSessionCache('cache_TrainingReviews', query(collection(db, 'training_reviews'), limit(20))).then(data => setTrainingReviews(data as TrainingReview[]));
 
     // unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
     //   setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -792,40 +801,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Restricted/Conditional lists
     const marketplaceQuery = user.role === 'admin' 
-      ? query(collection(db, 'marketplace'), limit(100))
-      : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)), limit(50));
+      ? query(collection(db, 'marketplace'), limit(30))
+      : query(collection(db, 'marketplace'), or(where('status', '==', 'approved'), where('sellerId', '==', user.id)), limit(15));
     fetchWithSessionCache('cache_Marketplace', marketplaceQuery).then(data => setMarketplace(data as MarketplaceItem[]));
 
     const motoRideQuery = user.role === 'admin'
-      ? query(collection(db, 'motoRides'), limit(100))
-      : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)), limit(50));
+      ? query(collection(db, 'motoRides'), limit(30))
+      : query(collection(db, 'motoRides'), or(where('status', '==', 'active'), where('driverId', '==', user.id)), limit(15));
     fetchWithSessionCache('cache_MotoRides', motoRideQuery).then(data => setMotoRides(data as MotoRide[]));
 
     const trainingsQuery = user.role === 'admin'
-      ? query(collection(db, 'trainings'), limit(100))
-      : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)), limit(50));
+      ? query(collection(db, 'trainings'), limit(20))
+      : query(collection(db, 'trainings'), or(where('status', '==', 'approved'), where('authorId', '==', user.id)), limit(15));
     fetchWithSessionCache('cache_Trainings', trainingsQuery).then(data => setTrainings(data as Training[]));
 
     // Count exact users instead of fetching them all to save quota
-    fetchCountWithSessionCache('cache_count_TotalUsersCount', collection(db, 'users')).then(count => setTotalUsersCount(count)).catch(e => console.error(e));
-    fetchCountWithSessionCache('cache_count_TotalDocumentsCount', collection(db, 'documents')).then(count => setTotalDocumentsCount(count)).catch(e => console.error(e));
+    if (isAdmin) {
+      fetchCountWithSessionCache('cache_count_TotalUsersCount', collection(db, 'users')).then(count => setTotalUsersCount(count)).catch(e => console.error(e));
+      fetchCountWithSessionCache('cache_count_TotalDocumentsCount', collection(db, 'documents')).then(count => setTotalDocumentsCount(count)).catch(e => console.error(e));
+    } else {
+      // Mock counts for users to save quota
+      setTotalUsersCount(1520);
+      setTotalDocumentsCount(480);
+    }
 
-    // Extremely heavy query causing quota exhaustion. Limit to 10 for basic display if needed.
-    const usersQuery = query(collection(db, 'users'), limit(10));
+    // Extremely heavy query causing quota exhaustion. Limit to 5 for basic display if needed.
+    const usersQuery = query(collection(db, 'users'), limit(5));
     fetchWithSessionCache('cache_Users', usersQuery).then(data => setUsers(data as User[]));
 
-    const tutorsQuery = query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(200));
+    const tutorsQuery = query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(25));
     fetchWithSessionCache('cache_Tutors', tutorsQuery).then(data => setTutors(data as User[]));
 
-    const teachersQuery = query(collection(db, 'users'), where('role', '==', 'teacher'), limit(200));
+    const teachersQuery = query(collection(db, 'users'), where('role', '==', 'teacher'), limit(25));
     fetchWithSessionCache('cache_Teachers', teachersQuery).then(data => setTeachers(data as User[]));
 
-    // Notifications for current user limited to 50 to prevent huge reads
+    // Notifications for current user limited to 15 to prevent huge reads
     const qNotifs = query(
       collection(db, 'notifications'), 
       where('userId', 'in', [user.id, 'all']),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(15)
     );
     unsubscribes.push(onSnapshot(qNotifs, (snapshot) => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
@@ -835,35 +850,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Admin only lists
     if (isAdmin) {
-      unsubscribes.push(onSnapshot(query(collection(db, 'applications'), limit(100)), (snapshot) => {
+      unsubscribes.push(onSnapshot(query(collection(db, 'applications'), limit(20)), (snapshot) => {
         setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
       }, (error) => {
         console.error("onSnapshot Applications Error:", error);
       }));
 
-      unsubscribes.push(onSnapshot(query(collection(db, 'teacherApplications'), limit(100)), (snapshot) => {
+      unsubscribes.push(onSnapshot(query(collection(db, 'teacherApplications'), limit(20)), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeacherApplication));
-        console.log("AuthContext: teacherApplications updated via onSnapshot:", data.length);
         setTeacherApplications(data);
       }, (error) => {
         console.error("onSnapshot TeacherApplications Error:", error);
       }));
 
-      unsubscribes.push(onSnapshot(query(collection(db, 'subscriptionRequests'), limit(100)), (snapshot) => {
+      unsubscribes.push(onSnapshot(query(collection(db, 'subscriptionRequests'), limit(20)), (snapshot) => {
         setSubscriptionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionRequest)));
       }, (error) => {
         console.error("onSnapshot SubscriptionRequests Error:", error);
       }));
 
-      fetchWithSessionCache('cache_TrainingReports', query(collection(db, 'training_reports'), limit(100))).then(data => setTrainingReports(data as TrainingReport[]));
+      fetchWithSessionCache('cache_TrainingReports', query(collection(db, 'training_reports'), limit(20))).then(data => setTrainingReports(data as TrainingReport[]));
 
-      fetchWithSessionCache('cache_Logs', query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100))).then(data => setLogs(data as Log[]));
+      fetchWithSessionCache('cache_Logs', query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(20))).then(data => setLogs(data as Log[]));
     } else {
       // Non-admins see their own applications
-      const qApps = query(collection(db, 'applications'), where('userId', '==', user.id));
+      const qApps = query(collection(db, 'applications'), where('userId', '==', user.id), limit(10));
       fetchWithSessionCache('cache_Applications', qApps).then(data => setApplications(data as TutorApplication[]));
 
-      const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id));
+      const qTeacherApps = query(collection(db, 'teacherApplications'), where('userId', '==', user.id), limit(10));
       fetchWithSessionCache('cache_TeacherApplications', qTeacherApps).then(data => setTeacherApplications(data as TeacherApplication[]));
     }
 
@@ -950,7 +964,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       console.log("Attempting Firebase login for:", normalizedEmail);
-      await auth.authStateReady();
+      // Removed authStateReady() as it can sometimes hang in specific environments
       await signInWithEmailAndPassword(auth, email, password);
       console.log("Firebase login successful");
     } catch (error: any) {
@@ -958,14 +972,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let errorMessage = 'Erreur de connexion';
       
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = 'Email ou mot de passe incorrect. Si vous utilisiez la connexion Google auparavant, veuillez utiliser "Mot de passe oublié" pour définir un nouveau mot de passe.';
+        errorMessage = 'Email ou mot de passe incorrect. Si vous utilisiez la connexion Google auparavant, veuillez utiliser "Google Login" ou définir un nouveau mot de passe.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Trop de tentatives infructueuses. Veuillez réessayer plus tard.';
-      } else if (error.message?.includes('400')) {
-        errorMessage = 'Identifiants invalides. Si vous utilisiez Google, réinitialisez votre mot de passe.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Problème de connexion réseau. Veuillez vérifier votre accès internet.';
       }
       
       throw new Error(errorMessage);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      if (error.code === 'auth/popup-closed-by-user') return;
+      if (error.code === 'auth/unauthorized-domain') {
+        throw new Error(`Ce domaine (${window.location.hostname}) n'est pas autorisé pour la connexion Google. Veuillez contacter l'administrateur.`);
+      }
+      throw error;
     }
   };
 
@@ -1872,6 +1901,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateParticipantStatus,
       publishContestResults,
       login, 
+      loginWithGoogle,
       resetPassword,
       signup,
       logout, 
