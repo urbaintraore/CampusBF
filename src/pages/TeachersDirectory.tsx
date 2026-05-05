@@ -1,13 +1,48 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, MapPin, GraduationCap, BookOpen, Clock, Star, Mail, Lock, CheckCircle2, Briefcase, Phone, X, MessageSquare, Send } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User } from '@/types';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment, where, limit, getDocs } from 'firebase/firestore';
 
 export default function TeachersDirectory() {
-  const { user, isAdmin, teachers, submitSubscriptionRequest, addTeacherReview } = useAuth();
+  const { user, isAdmin, submitSubscriptionRequest, addTeacherReview } = useAuth();
+  const [teachers, setTeachers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      const cacheKey = 'local_cache_teachers_directory';
+      const cached = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
+        setTeachers(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, 'users'), 
+          where('role', '==', 'teacher'),
+          limit(50)
+        );
+        const snapshot = await getDocs(q);
+        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+        setTeachers(list);
+        localStorage.setItem(cacheKey, JSON.stringify(list));
+        localStorage.setItem(cacheKey + '_time', now.toString());
+      } catch (error) {
+        console.error("Error fetching teachers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTeachers();
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [domainFilter, setDomainFilter] = useState('Tous');
   const [rankFilter, setRankFilter] = useState('Tous');

@@ -7,7 +7,7 @@ import TeacherOnboarding from '@/components/TeacherOnboarding';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { db } from '@/lib/firebase';
-import { doc, updateDoc, increment, serverTimestamp, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, updateDoc, increment, serverTimestamp, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { User as UserType } from '@/types';
 
@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [tutors, setTutors] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [marketplace, setMarketplace] = useState<any[]>([]);
   const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
   const [groupsCount, setGroupsCount] = useState(0);
   const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
@@ -53,6 +54,7 @@ export default function Dashboard() {
         setTutors(data.tutors || []);
         setTeachers(data.teachers || []);
         setEvents(data.events || []);
+        setMarketplace(data.marketplace || []);
         setPublicServiceContests(data.publicServiceContests || []);
         setGroupsCount(data.groupsCount || 0);
         setTotalDocumentsCount(data.totalDocumentsCount || 0);
@@ -62,14 +64,15 @@ export default function Dashboard() {
 
       try {
         // Run fetches in parallel but limited
-        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap] = await Promise.all([
+        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap, marketSnap] = await Promise.all([
           getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
           getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
           getDocs(query(collection(db, 'internships'), limit(3))),
           getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
           getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
           getDocs(query(collection(db, 'events'), limit(2))),
-          getDocs(query(collection(db, 'public_service_contests'), limit(5)))
+          getDocs(query(collection(db, 'public_service_contests'), limit(5))),
+          getDocs(query(collection(db, 'marketplace'), limit(2)))
         ]);
 
         const dashboardData = {
@@ -79,6 +82,7 @@ export default function Dashboard() {
           tutors: tutorSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           teachers: teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           events: eventSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          marketplace: marketSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           publicServiceContests: contestSnap.docs.map(d => ({ id: d.id, ...d.data() })),
           groupsCount: 15, // Fixed estimation to save quota
           totalDocumentsCount: 480 // Fixed estimation to save quota
@@ -90,6 +94,7 @@ export default function Dashboard() {
         setTutors(dashboardData.tutors);
         setTeachers(dashboardData.teachers);
         setEvents(dashboardData.events);
+        setMarketplace(dashboardData.marketplace);
         setPublicServiceContests(dashboardData.publicServiceContests);
         setGroupsCount(dashboardData.groupsCount);
         setTotalDocumentsCount(dashboardData.totalDocumentsCount);

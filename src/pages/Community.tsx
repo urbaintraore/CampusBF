@@ -13,7 +13,8 @@ import {
   orderBy, 
   serverTimestamp,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  limit
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Post, Comment, Group, CampusEvent } from '@/types';

@@ -56,40 +56,46 @@ import {
 } from 'firebase/firestore';
 
 async function fetchWithSessionCache(cacheKey: string, q: any) {
-  const cached = sessionStorage.getItem(cacheKey);
-  const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+  const cached = localStorage.getItem(cacheKey);
+  const cacheTime = localStorage.getItem(cacheKey + '_time');
   const now = Date.now();
-  // Cache valide pour 12 heures pour les données froides
+  // Cache désormais persistant en localStorage (valide pour 12 heures)
   if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
-    return JSON.parse(cached);
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      localStorage.removeItem(cacheKey);
+    }
   }
+  
   const snapshot = await getDocs(q);
   const data = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() }));
   try {
-    sessionStorage.setItem(cacheKey, JSON.stringify(data));
-    sessionStorage.setItem(cacheKey + '_time', now.toString());
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    localStorage.setItem(cacheKey + '_time', now.toString());
   } catch (e) {
-    // Ignorer en cas de quota dépassé localement
+    console.warn("Storage quota full");
   }
   return data;
 }
 
 async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
-  const cached = sessionStorage.getItem(cacheKey);
-  const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+  const cached = localStorage.getItem(cacheKey);
+  const cacheTime = localStorage.getItem(cacheKey + '_time');
   const now = Date.now();
-  // Cache pour 24 heures pour les compteurs (données très peu changeantes)
+  // Cache de 24h pour les compteurs statistiques
   if (cached && cacheTime && now - parseInt(cacheTime) < 86400000) return parseInt(cached);
   
-  // Importer dynamiquement pour éviter un chargement inutile si pas besoin
   const { getCountFromServer } = await import('firebase/firestore');
-  const snapshot = await getCountFromServer(ref);
-  const count = snapshot.data().count;
   try {
-    sessionStorage.setItem(cacheKey, count.toString());
-    sessionStorage.setItem(cacheKey + '_time', now.toString());
-  } catch (e) {}
-  return count;
+    const snapshot = await getCountFromServer(ref);
+    const count = snapshot.data().count;
+    localStorage.setItem(cacheKey, count.toString());
+    localStorage.setItem(cacheKey + '_time', now.toString());
+    return count;
+  } catch (e) {
+    return cached ? parseInt(cached) : 0;
+  }
 }
 
 interface AuthContextType {
