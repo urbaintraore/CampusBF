@@ -1,19 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Star, MessageCircle, Calendar, CheckCircle, X, GraduationCap, FileUp, CheckCircle2, AlertCircle, CreditCard, Phone, Mail, Loader2 } from 'lucide-react';
-import { MOCK_TUTORS } from '@/data/mock';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Tutor } from '@/types';
-import { doc, setDoc } from 'firebase/firestore';
+import { Tutor, User } from '@/types';
+import { doc, setDoc, query, collection, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { uploadFile } from '@/services/storageService';
 
 export default function Tutors() {
-  const { user, isAdmin, tutors, submitTutorApplication } = useAuth();
+  const { user, isAdmin, submitTutorApplication } = useAuth();
+  const [tutors, setTutors] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const navigate = useNavigate();
   const [selectedTutor, setSelectedTutor] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchTutors = async () => {
+      const cacheKey = 'local_cache_tutors';
+      const cached = sessionStorage.getItem(cacheKey);
+      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
+        setTutors(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(50));
+        const snapshot = await getDocs(q);
+        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+        setTutors(list);
+        sessionStorage.setItem(cacheKey, JSON.stringify(list));
+        sessionStorage.setItem(cacheKey + '_time', now.toString());
+      } catch (error) {
+        console.error("Error fetching tutors:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTutors();
+  }, []);
   const [ratingModal, setRatingModal] = useState<string | null>(null);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [description, setDescription] = useState('');

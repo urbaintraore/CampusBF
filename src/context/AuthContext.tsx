@@ -59,8 +59,8 @@ async function fetchWithSessionCache(cacheKey: string, q: any) {
   const cached = sessionStorage.getItem(cacheKey);
   const cacheTime = sessionStorage.getItem(cacheKey + '_time');
   const now = Date.now();
-  // Cache valide pour 4 heures (14400000 ms)
-  if (cached && cacheTime && now - parseInt(cacheTime) < 14400000) {
+  // Cache valide pour 12 heures pour les données froides
+  if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
     return JSON.parse(cached);
   }
   const snapshot = await getDocs(q);
@@ -78,7 +78,8 @@ async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
   const cached = sessionStorage.getItem(cacheKey);
   const cacheTime = sessionStorage.getItem(cacheKey + '_time');
   const now = Date.now();
-  if (cached && cacheTime && now - parseInt(cacheTime) < 14400000) return parseInt(cached);
+  // Cache pour 24 heures pour les compteurs (données très peu changeantes)
+  if (cached && cacheTime && now - parseInt(cacheTime) < 86400000) return parseInt(cached);
   
   // Importer dynamiquement pour éviter un chargement inutile si pas besoin
   const { getCountFromServer } = await import('firebase/firestore');
@@ -535,61 +536,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Logic for session login marking - avoid repeated writes
+      const checkSessionLogin = () => {
+        const key = `active_session_${firebaseUser.uid}`;
+        const lastLogin = localStorage.getItem(key);
+        const day = new Date().toDateString();
+        if (lastLogin === day) return true;
+        localStorage.setItem(key, day);
+        return false;
+      };
+
       try {
         console.log("Auth State Changed for user:", firebaseUser.uid);
         let initialUserData: User;
         
-        console.log("Fetching user doc for:", firebaseUser.uid);
+        // Quota safety check
+        const quotaHit = sessionStorage.getItem('firestore_quota_hit');
+        if (quotaHit) {
+          console.warn("Firestore Quota already hit, using fallback");
+          throw new Error('Quota exceeded');
+        }
+
         let userDoc;
         try {
+          // Use getDocFromServer to bypass local cache if needed, but here we want to be lean
           userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
         } catch (err: any) {
-          console.error("Firestore getDoc error for users collection:", err);
-          
-          const isQuotaError = err.message?.includes('Quota') || err.code === 'resource-exhausted';
-          
-          // On some environments, IndexedDB might be failing or quota is hit. 
-          // We don't want to block the whole app.
-          console.warn("Falling back to minimal profile due to Firestore error");
-          const fallbackUser = { 
-            id: firebaseUser.uid, 
-            email: firebaseUser.email || '',
-            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
-            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
-            status: 'active',
-            createdAt: new Date().toISOString()
-          } as any;
-          
-          setUser(fallbackUser);
-          setIsLoading(false);
-
-          if (isQuotaError) {
-            toast.error("Quota Firestore dépassé. L'application fonctionne en mode limité jusqu'à demain.", { duration: 10000 });
-          }
-          return;
+          const isQuota = err.message?.includes('Quota') || err.code === 'resource-exhausted';
+          if (isQuota) sessionStorage.setItem('firestore_quota_hit', 'true');
+          throw err;
         }
 
         if (userDoc.exists()) {
-          console.log("User doc exists, updating last active...");
           const data = userDoc.data();
           initialUserData = { id: firebaseUser.uid, ...data } as User;
           
-          // Initializes daily quests and updates consecutive logins logic
-          initialUserData = await questService.initializeDailyQuests(initialUserData);
-
-          // Mise à jour de la dernière activité et stats de connexion - seulement si non fait récemment
-          const sessionLoginDone = sessionStorage.getItem(`login_done_${firebaseUser.uid}`);
-          if (!sessionLoginDone) {
+          if (!checkSessionLogin()) {
             try {
               await updateDoc(doc(db, 'users', firebaseUser.uid), {
                 lastActiveAt: serverTimestamp(),
                 'activityStats.logins': increment(1),
               });
-              sessionStorage.setItem(`login_done_${firebaseUser.uid}`, 'true');
-            } catch (err: any) {
-               console.error("Firestore updateDoc error for lastActiveAt/stats:", err);
-            }
+            } catch {}
           }
 
           // Demande de permission pour les notifications
@@ -687,19 +675,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Error logging login action:", err);
         }
       } catch (error: any) {
-        console.error("Unexpected error in onAuthStateChanged:", error);
-        if (error.code !== 'auth/network-request-failed' && error.code !== 'unavailable') {
-          toast.error(`Erreur d'authentification: ${error.message || 'Problème de connexion'}`);
+        console.error("Auth context error handle:", error);
+        
+        const isQuotaHit = error.message?.includes('Quota') || error.code === 'resource-exhausted' || sessionStorage.getItem('firestore_quota_hit');
+        
+        if (isQuotaHit) {
+          console.warn("Using fallback profile due to quota exhaustion");
+          const fallbackUser: User = { 
+            id: firebaseUser.uid, 
+            email: firebaseUser.email || '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            activityStats: { logins: 1 } as any,
+            rankingScore: 1
+          } as any;
+          setUser(fallbackUser);
+          toast.error("Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.", { duration: 8000 });
+        } else {
+          toast.error(`Erreur: ${error.message || 'Problème de connexion'}`);
+          setUser(null);
         }
-        if (error.message && error.message.includes('{')) {
-          const errData = JSON.parse(error.message);
-          if (errData.error?.includes('offline')) {
-             console.log("Suppressing offline error throw");
-          } else {
-             throw error;
-          }
-        }
-        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -711,89 +709,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Listeners for data fetching - re-runs when user role changes
+  // Listeners for data fetching - MOVED LOADING TO INDIVIDUAL PAGES TO SAVE QUOTA
   useEffect(() => {
     if (!user) {
       // Clear data state on logout
       setUsers([]);
       setTutors([]);
-      setTeachers([]);
       setAds([]);
       setDocuments([]);
-      setApplications([]);
-      setTeacherApplications([]);
-      setSubscriptionRequests([]);
       setNotifications([]);
-      setInternships([]);
       setEvents([]);
-      setNews([]);
-      setLostAndFound([]);
-      setMarketplace([]);
       setCommunity([]);
       setGroups([]);
-      setLogs([]);
-      setTrainings([]);
-      setTrainingEnrollments([]);
-      setTrainingReviews([]);
-      setTrainingReports([]);
-      setContests([]);
-      setContestParticipants([]);
-      setQuizzes([]);
-      setDeals([]);
-      setDealSuggestions([]);
-      setColocations([]);
-      setColocationRequests([]);
-      setColocationReviews([]);
       return;
     }
 
-    console.log("Starting listeners for user role:", user.role);
     const unsubscribes: (() => void)[] = [];
 
-    // Removed redundant User document listener here (it's handled in the auth useEffect)
+    // Only fetch minimal strictly necessary global data
+    if (user) {
+       // Groups are needed for permissions check globally
+       const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(10)), (snapshot) => {
+         setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group)));
+       });
+       unsubscribes.push(unsubscribeGroups);
 
-    // Public/Authenticated lists
-    fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(15))).then(data => setAds(data as Ad[]));
+       // Notifications are important for UX
+       const qNotifs = query(
+         collection(db, 'notifications'), 
+         where('userId', 'in', [user.id, 'all']),
+         orderBy('createdAt', 'desc'),
+         limit(10)
+       );
+       const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
+         setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+       }, () => {});
+       unsubscribes.push(unsubNotifs);
+    }
 
-    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'), limit(30))).then(data => setDocuments(data as any[]));
-
-    fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(15))).then(data => setInternships(data as Internship[]));
-
-    fetchWithSessionCache('cache_Events', query(collection(db, 'events'), limit(15))).then(data => setEvents(data as CampusEvent[]));
-
-    const unsubscribeGroups = onSnapshot(query(collection(db, 'groups'), limit(15)), (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setGroups(data as Group[]);
-    });
-    unsubscribes.push(unsubscribeGroups);
-
-    fetchWithSessionCache('cache_Community', query(collection(db, 'posts'), limit(20))).then(data => setCommunity(data as Post[]));
-
-    fetchWithSessionCache('cache_News', query(collection(db, 'news'), limit(20))).then(data => setNews(data as News[]));
-
-    fetchWithSessionCache('cache_LostAndFound', query(collection(db, 'lostAndFound'), limit(20))).then(data => setLostAndFound(data as LostAndFound[]));
-
-    fetchWithSessionCache('cache_Reports', query(collection(db, 'reports'), limit(20))).then(data => setReports(data as Report[]));
-
-    fetchWithSessionCache('cache_Quizzes', query(collection(db, 'quizzes'), limit(20))).then(data => setQuizzes(data as Quiz[]));
-
-    fetchWithSessionCache('cache_Contests', query(collection(db, 'contests'), limit(10))).then(data => setContests(data as Contest[]));
-
-    fetchWithSessionCache('cache_Deals', query(collection(db, 'deals'), limit(20))).then(data => setDeals(data as Deal[]));
-
-    fetchWithSessionCache('cache_DealSuggestions', query(collection(db, 'deal_suggestions'), limit(10))).then(data => setDealSuggestions(data as DealSuggestion[]));
-
-    fetchWithSessionCache('cache_Colocations', query(collection(db, 'colocations'), limit(20))).then(data => setColocations(data as Colocation[]));
-
-    fetchWithSessionCache('cache_ColocationRequests', query(collection(db, 'colocation_requests'), limit(15))).then(data => setColocationRequests(data as ColocationRequest[]));
-
-    fetchWithSessionCache('cache_ColocationReviews', query(collection(db, 'colocation_reviews'), limit(15))).then(data => setColocationReviews(data as ColocationReview[]));
-
-    fetchWithSessionCache('cache_ContestParticipants', query(collection(db, 'contest_participants'), limit(100))).then(data => setContestParticipants(data as ContestParticipant[]));
-
-    fetchWithSessionCache('cache_TrainingEnrollments', query(collection(db, 'training_enrollments'), limit(20))).then(data => setTrainingEnrollments(data as TrainingEnrollment[]));
-
-    fetchWithSessionCache('cache_TrainingReviews', query(collection(db, 'training_reviews'), limit(20))).then(data => setTrainingReviews(data as TrainingReview[]));
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [user]);
 
     // unsubscribes.push(onSnapshot(collection(db, 'public_service_contests'), (snapshot) => {
     //   setPublicServiceContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));

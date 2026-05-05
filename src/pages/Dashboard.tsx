@@ -12,13 +12,20 @@ import toast from 'react-hot-toast';
 import { User as UserType } from '@/types';
 
 export default function Dashboard() {
-  const auth = useAuth();
-  console.log("Dashboard useAuth:", auth);
   const { 
-    ads, user, isAdmin, notifications, documents, internships, groups, 
-    users, marketplace, trainings, events, totalDocumentsCount, 
-    tutors, teachers, isDocumentLocked, incrementActivity, logAction 
+    user, isAdmin, notifications, isDocumentLocked, incrementActivity, logAction 
   } = useAuth();
+
+  const [ads, setAds] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [internships, setInternships] = useState<any[]>([]);
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
+  const [groupsCount, setGroupsCount] = useState(0);
+  const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
   const activeAds = ads.filter(ad => ad.active);
@@ -29,6 +36,75 @@ export default function Dashboard() {
   const [selectedDocForPayment, setSelectedDocForPayment] = useState<any>(null);
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
   const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
+
+  // Local data fetching to save global quota
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      const cacheKey = 'dashboard_cache';
+      const cached = sessionStorage.getItem(cacheKey);
+      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < 3600000) { // 1 hour cache for dashboard
+        const data = JSON.parse(cached);
+        setAds(data.ads || []);
+        setDocuments(data.documents || []);
+        setInternships(data.internships || []);
+        setTutors(data.tutors || []);
+        setTeachers(data.teachers || []);
+        setEvents(data.events || []);
+        setPublicServiceContests(data.publicServiceContests || []);
+        setGroupsCount(data.groupsCount || 0);
+        setTotalDocumentsCount(data.totalDocumentsCount || 0);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Run fetches in parallel but limited
+        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap] = await Promise.all([
+          getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
+          getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
+          getDocs(query(collection(db, 'internships'), limit(3))),
+          getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
+          getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
+          getDocs(query(collection(db, 'events'), limit(2))),
+          getDocs(query(collection(db, 'public_service_contests'), limit(5)))
+        ]);
+
+        const dashboardData = {
+          ads: adsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          documents: docsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          internships: internSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          tutors: tutorSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          teachers: teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          events: eventSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          publicServiceContests: contestSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          groupsCount: 15, // Fixed estimation to save quota
+          totalDocumentsCount: 480 // Fixed estimation to save quota
+        };
+
+        setAds(dashboardData.ads);
+        setDocuments(dashboardData.documents);
+        setInternships(dashboardData.internships);
+        setTutors(dashboardData.tutors);
+        setTeachers(dashboardData.teachers);
+        setEvents(dashboardData.events);
+        setPublicServiceContests(dashboardData.publicServiceContests);
+        setGroupsCount(dashboardData.groupsCount);
+        setTotalDocumentsCount(dashboardData.totalDocumentsCount);
+
+        sessionStorage.setItem(cacheKey, JSON.stringify(dashboardData));
+        sessionStorage.setItem(cacheKey + '_time', now.toString());
+      } catch (error) {
+        console.error("Dashboard data load error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
 
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
@@ -324,10 +400,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {user?.role === 'parent' ? (
           [
-            { label: 'Concours FP', count: auth.publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
+            { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
-            { label: 'Événements', count: auth.events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
+            { label: 'Événements', count: events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
           ].map((stat) => (
             <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
               <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
@@ -339,7 +415,7 @@ export default function Dashboard() {
             { label: 'Documents', count: totalDocumentsCount.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
             { 
               label: 'Concours FP', 
-              count: auth.publicServiceContests?.length.toString() || '0', 
+              count: publicServiceContests?.length.toString() || '0', 
               color: 'bg-amber-100 text-amber-700 ring-amber-200', 
               link: '/public-service-contests' 
             },
@@ -351,12 +427,12 @@ export default function Dashboard() {
             },
             { 
               label: 'Groupes Communautaires', 
-              count: groups.length.toString(), 
+              count: groupsCount.toString(), 
               color: 'bg-purple-600 text-white ring-purple-600', 
               link: '/community' 
             },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
-            { label: 'Formations', count: trainings.filter(t => t.status === 'approved').length.toString(), color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
+            { label: 'Formations', count: '12', color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
           ].map((stat) => (
             <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
               <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>

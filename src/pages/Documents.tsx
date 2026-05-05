@@ -30,6 +30,7 @@ export default function Documents() {
     addDocument, incrementActivity, isDocumentLocked 
   } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,13 +65,42 @@ export default function Documents() {
   const [selectedDocForPrint, setSelectedDocForPrint] = useState<{url?: string, name?: string} | null>(null);
 
   useEffect(() => {
-    const docsList = globalDocuments.map(doc => ({
-      ...doc,
-      createdAt: doc.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || 
-                 (typeof doc.createdAt === 'string' ? doc.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
-    }));
-    setDocuments(docsList);
-  }, [globalDocuments]);
+    const fetchDocs = async () => {
+      const cacheKey = 'local_cache_docs';
+      const cached = sessionStorage.getItem(cacheKey);
+      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
+        setDocuments(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(50));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const docsList = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || 
+                         (typeof data.createdAt === 'string' ? data.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
+            };
+          });
+          setDocuments(docsList);
+          sessionStorage.setItem(cacheKey, JSON.stringify(docsList));
+          sessionStorage.setItem(cacheKey + '_time', now.toString());
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      } catch (error) {
+        setLoading(false);
+      }
+    };
+    fetchDocs();
+  }, []);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
