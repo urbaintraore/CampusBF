@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Brain, BookOpen, Plus, Play, Layers, Sparkles, BarChart3 } from 'lucide-react';
 import { Quiz } from '@/types';
@@ -9,12 +10,27 @@ import { QuizBuilder } from '@/components/QuizBuilder';
 import { QuizStats } from '@/components/QuizStats';
 
 export default function Quizzes() {
+  const location = useLocation();
   const { user, quizzes } = useAuth();
   const [activeTab, setActiveTab] = useState<'explore' | 'stats'>('explore');
   const [showCreator, setShowCreator] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [initialBuilderData, setInitialBuilderData] = useState<any>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [activeFlashcards, setActiveFlashcards] = useState<Quiz | null>(null);
+
+  useEffect(() => {
+    if (location.state?.autoGenerate) {
+      setInitialBuilderData({
+        subject: location.state.subject || '',
+        title: location.state.title || '',
+        level: location.state.level || 'Licence 1'
+      });
+      setShowBuilder(true);
+      // Clear state to avoid reopening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   if (activeQuiz) {
     return <QuizPlayer quiz={activeQuiz} onClose={() => setActiveQuiz(null)} />;
@@ -29,7 +45,7 @@ export default function Quizzes() {
   }
   
   if (showBuilder) {
-    return <QuizBuilder onClose={() => setShowBuilder(false)} />;
+    return <QuizBuilder onClose={() => setShowBuilder(false)} initialData={initialBuilderData} />;
   }
 
   return (

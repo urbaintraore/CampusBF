@@ -7,12 +7,12 @@ import { generateAdvancedQuizWithAI } from '@/services/geminiService';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
-export const QuizBuilder: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+export const QuizBuilder: React.FC<{ onClose: () => void; initialData?: any }> = ({ onClose, initialData }) => {
   const { user } = useAuth();
   
-  const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState('');
-  const [level, setLevel] = useState('Licence 1');
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [subject, setSubject] = useState(initialData?.subject || '');
+  const [level, setLevel] = useState(initialData?.level || 'Licence 1');
   const [duration, setDuration] = useState<number>(30); // minutes
   
   // Advanced settings

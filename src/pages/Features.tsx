@@ -93,6 +93,18 @@ const features = [
     roles: ['student', 'teacher', 'admin', 'alumni']
   },
   {
+    icon: Sparkles,
+    title: "Assistant IA Gemini",
+    description: "Votre assistant académique intelligent disponible 24h/24 pour répondre à vos questions sur les cours, les concours et l'orientation au Burkina.",
+    color: "bg-emerald-50 text-emerald-600",
+    link: "#",
+    onClick: () => {
+      const trigger = document.querySelector('.chatbot-trigger') as HTMLButtonElement;
+      if (trigger) trigger.click();
+    },
+    roles: ['student', 'teacher', 'admin', 'alumni', 'parent']
+  },
+  {
     icon: ShieldCheck,
     title: "Concours Fonction Publique",
     description: "Préparez-vous aux concours de la fonction publique avec des sujets officiels et des quiz interactifs.",
@@ -179,6 +191,46 @@ export default function Features() {
   const [isExporting, setIsExporting] = useState(false);
 
   const filteredFeatures = features.filter(f => !f.roles || (user && f.roles.includes(user.role)));
+
+  const FeatureCard = ({ feature, idx }: { feature: any, idx: number }) => {
+    const cardContent = (
+      <>
+        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform", feature.color)}>
+          <feature.icon size={28} />
+        </div>
+        <h3 className="text-xl font-display font-bold text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors">
+          {feature.title}
+        </h3>
+        <p className="text-slate-500 text-sm leading-relaxed mb-6 flex-1">
+          {feature.description}
+        </p>
+        <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm group-hover:gap-3 transition-all">
+          Découvrir <MessageSquare size={16} />
+        </div>
+      </>
+    );
+
+    const commonClasses = cn(
+      "p-8 rounded-[2rem] border transition-all duration-300 group hover:-translate-y-2 flex flex-col h-full text-left",
+      feature.highlight 
+        ? "bg-white border-emerald-200 shadow-lg shadow-emerald-100/50 hover:border-emerald-400" 
+        : "bg-white border-slate-200/60 shadow-sm hover:shadow-xl hover:border-emerald-200"
+    );
+
+    if (feature.onClick) {
+      return (
+        <button key={idx} onClick={feature.onClick} className={commonClasses}>
+          {cardContent}
+        </button>
+      );
+    }
+
+    return (
+      <Link key={idx} to={feature.link} className={commonClasses}>
+        {cardContent}
+      </Link>
+    );
+  };
 
   const handleDownloadPDF = async () => {
     setIsExporting(true);
@@ -364,29 +416,7 @@ export default function Features() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredFeatures.map((feature, idx) => (
-          <Link 
-            key={idx} 
-            to={feature.link}
-            className={cn(
-              "p-8 rounded-[2rem] border transition-all duration-300 group hover:-translate-y-2 flex flex-col h-full",
-              feature.highlight 
-                ? "bg-white border-emerald-200 shadow-lg shadow-emerald-100/50 hover:border-emerald-400" 
-                : "bg-white border-slate-200/60 shadow-sm hover:shadow-xl hover:border-emerald-200"
-            )}
-          >
-            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform", feature.color)}>
-              <feature.icon size={28} />
-            </div>
-            <h3 className="text-xl font-display font-bold text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors">
-              {feature.title}
-            </h3>
-            <p className="text-slate-500 text-sm leading-relaxed mb-6 flex-1">
-              {feature.description}
-            </p>
-            <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm group-hover:gap-3 transition-all">
-              Découvrir <MessageSquare size={16} />
-            </div>
-          </Link>
+          <FeatureCard key={idx} feature={feature} idx={idx} />
         ))}
       </div>
 

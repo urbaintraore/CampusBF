@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight, Brain } from 'lucide-react';
 import PrintOrderModal from '../components/PrintOrderModal';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Documents() {
+  const navigate = useNavigate();
   const { 
     user, isAdmin, documents: globalDocuments, logAction, groups, community, 
     addDocument, incrementActivity, isDocumentLocked 
@@ -290,7 +292,7 @@ export default function Documents() {
 
     const lockStatus: any = isDocumentLocked(doc, 'view');
     if (lockStatus && lockStatus.locked) {
-      toast.error(lockStatus.reason || "Accès restreint");
+      toast.error(lockStatus.reason || "Accès restreint", { duration: 60000 });
       return;
     }
 
@@ -312,7 +314,7 @@ export default function Documents() {
     if (!isAdmin) {
       const lockStatus: any = isDocumentLocked(docData, 'download');
       if (lockStatus && lockStatus.locked) {
-        toast.error(lockStatus.reason || "Téléchargement restreint");
+        toast.error(lockStatus.reason || "Téléchargement restreint", { duration: 60000 });
         return;
       }
     }
@@ -891,8 +893,8 @@ export default function Documents() {
                           </div>
                         </div>
 
-                        {/* AI Summary Section */}
-                        <div className="mt-4">
+                {/* AI Summary & Quiz Section */}
+                        <div className="mt-4 flex flex-wrap gap-2">
                           {!summaries[doc.id] ? (
                             <button
                               onClick={() => handleSummarize(doc.id, doc.title, doc.subject, doc.university)}
@@ -907,7 +909,7 @@ export default function Documents() {
                               Aperçu IA
                             </button>
                           ) : (
-                            <div className="bg-purple-50/50 border border-purple-100 p-3 rounded-xl animate-in fade-in slide-in-from-top-1 text-xs">
+                            <div className="bg-purple-50/50 border border-purple-100 p-3 rounded-xl animate-in fade-in slide-in-from-top-1 text-xs w-full mb-2">
                               <div className="flex items-center gap-1.5 text-purple-700 font-bold mb-1 uppercase tracking-wider text-[9px]">
                                 <Sparkles size={10} />
                                 Résumé Gemini
@@ -917,6 +919,28 @@ export default function Documents() {
                               </p>
                             </div>
                           )}
+
+                          <button
+                            onClick={() => {
+                              if (user?.role === 'student' && !isAdmin) {
+                                const lock: any = isDocumentLocked(doc, 'view');
+                                if (lock && lock.locked) {
+                                  toast.error(lock.reason || "Accès au générateur restreint", { duration: 60000 });
+                                  return;
+                                }
+                              }
+                              navigate('/quizzes', { state: { 
+                                autoGenerate: true, 
+                                subject: doc.subject, 
+                                title: `Quiz : ${doc.title}`,
+                                level: doc.level || user?.level || 'Licence 1'
+                              } });
+                            }}
+                            className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md transition-all active:scale-95"
+                          >
+                            <Brain size={12} />
+                            Générer Quiz IA
+                          </button>
                         </div>
                       </div>
                     </div>
