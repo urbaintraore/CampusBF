@@ -57,8 +57,8 @@ async function fetchWithSessionCache(cacheKey: string, q: any) {
   const cached = sessionStorage.getItem(cacheKey);
   const cacheTime = sessionStorage.getItem(cacheKey + '_time');
   const now = Date.now();
-  // Cache valide pour 30 minutes (1800000 ms)
-  if (cached && cacheTime && now - parseInt(cacheTime) < 1800000) {
+  // Cache valide pour 4 heures (14400000 ms)
+  if (cached && cacheTime && now - parseInt(cacheTime) < 14400000) {
     return JSON.parse(cached);
   }
   const snapshot = await getDocs(q);
@@ -76,7 +76,7 @@ async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
   const cached = sessionStorage.getItem(cacheKey);
   const cacheTime = sessionStorage.getItem(cacheKey + '_time');
   const now = Date.now();
-  if (cached && cacheTime && now - parseInt(cacheTime) < 1800000) return parseInt(cached);
+  if (cached && cacheTime && now - parseInt(cacheTime) < 14400000) return parseInt(cached);
   
   // Importer dynamiquement pour éviter un chargement inutile si pas besoin
   const { getCountFromServer } = await import('firebase/firestore');
@@ -569,14 +569,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Initializes daily quests and updates consecutive logins logic
           initialUserData = await questService.initializeDailyQuests(initialUserData);
 
-          // Mise à jour de la dernière activité et stats de connexion
-          try {
-            await updateDoc(doc(db, 'users', firebaseUser.uid), {
-              lastActiveAt: serverTimestamp(),
-              'activityStats.logins': increment(1),
-            });
-          } catch (err: any) {
-             console.error("Firestore updateDoc error for lastActiveAt/stats:", err);
+          // Mise à jour de la dernière activité et stats de connexion - seulement si non fait récemment
+          const sessionLoginDone = sessionStorage.getItem(`login_done_${firebaseUser.uid}`);
+          if (!sessionLoginDone) {
+            try {
+              await updateDoc(doc(db, 'users', firebaseUser.uid), {
+                lastActiveAt: serverTimestamp(),
+                'activityStats.logins': increment(1),
+              });
+              sessionStorage.setItem(`login_done_${firebaseUser.uid}`, 'true');
+            } catch (err: any) {
+               console.error("Firestore updateDoc error for lastActiveAt/stats:", err);
+            }
           }
 
           // Demande de permission pour les notifications
@@ -737,19 +741,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("Starting listeners for user role:", user.role);
     const unsubscribes: (() => void)[] = [];
 
-    // User document listener (already covered for current user basically, but let's keep it robust)
-    unsubscribes.push(onSnapshot(doc(db, 'users', user.id), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUser(prev => prev ? { ...prev, ...data } : null);
-      }
-    }));
+    // Removed redundant User document listener here (it's handled in the auth useEffect)
 
     // Public/Authenticated lists
     fetchWithSessionCache('cache_Ads', query(collection(db, 'ads'), limit(50))).then(data => setAds(data as Ad[]));
 
-    // fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'))).then(data => setDocuments(data as any[]));
-    getDocs(query(collection(db, 'documents'))).then(snapshot => setDocuments(snapshot.docs.map(d => ({id: d.id, ...d.data()}))));
+    fetchWithSessionCache('cache_Documents', query(collection(db, 'documents'), limit(100))).then(data => setDocuments(data as any[]));
 
     fetchWithSessionCache('cache_Internships', query(collection(db, 'internships'), limit(50))).then(data => setInternships(data as Internship[]));
 

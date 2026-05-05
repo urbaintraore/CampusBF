@@ -106,6 +106,16 @@ export default function Dashboard() {
     const fetchSuggestions = async () => {
       if (!user || user.role !== 'student') return;
       
+      const cacheKey = `suggestions_${user.id}_${user.university}_${user.major}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < 3600000) { // 1 hour cache
+        setSuggestedFriends(JSON.parse(cached));
+        return;
+      }
+      
       try {
         const profilesRef = collection(db, 'profiles');
         let q;
@@ -142,6 +152,8 @@ export default function Dashboard() {
           .slice(0, 3);
           
         setSuggestedFriends(results);
+        sessionStorage.setItem(cacheKey, JSON.stringify(results));
+        sessionStorage.setItem(cacheKey + '_time', now.toString());
       } catch (error) {
         console.error("Error fetching suggestions:", error);
       }
