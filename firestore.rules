@@ -50,7 +50,7 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && (
         // Action: Profile Update (Immutable role/status for user)
-        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups', 'forceUnlocked', 'forceUnlockReason'])
       ) || isAdmin();
     }
 
@@ -79,7 +79,8 @@ service cloud.firestore {
     }
 
     match /quizResults/{resultId} {
-      allow read: if isSignedIn(); 
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }

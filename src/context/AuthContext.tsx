@@ -377,23 +377,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isStudent = normalizedRole === 'student';
 
     // Emergency bypass
-    if (user?.forceUnlocked) return false;
+    if (user?.forceUnlocked) return { locked: false };
     
     if (isStudent && !isAdmin && mode === 'download') {
       // Robust member check: 1. Check user's profile joinedGroups 2. Check global groups state
       const userJoinedGroups = user.joinedGroups || [];
       const isInGroup = userJoinedGroups.length > 0 || (Array.isArray(groups) && groups.some(g => Array.isArray(g.members) && g.members.includes(user?.id)));
       
-      const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
-      const hasQuizzes = quizzesCompleted > 0;
       const hasPresentation = user.hasPostedPresentation === true;
 
       // Special case: if user says they did it, maybe we should double check if stats are 0
-      if (isStudent && !isAdmin && (!isInGroup || !hasQuizzes || !hasPresentation)) {
+      if (isStudent && !isAdmin && (!isInGroup || !hasPresentation)) {
         let missing = [];
         if (!isInGroup) missing.push("Rejoindre un groupe");
         if (!hasPresentation) missing.push("Se présenter dans la Communauté (min. 15 car.)");
-        if (!hasQuizzes) missing.push("Passer 1 Quiz de révision (onglet Révisions)");
         
         return { 
           locked: true, 
@@ -734,7 +731,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const syncUserStats = React.useCallback(async () => {
     if (!user || user.role !== 'student') return;
     
-    console.log("[Auth] Manually syncing stats for", user.id);
+    console.log("[Auth] Starting sync for", user.id, user.email);
     const updates: any = {};
     let shouldUpdate = false;
     let quizDetected = false;
@@ -744,6 +741,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // 1. Sync Quiz Results (Try-Catch per step)
       try {
+        console.log("[Auth] Checking quiz results...");
         const results = await quizService.getQuizResultsByUser(user.id);
         if (results.length > (user.activityStats?.quizzesCompleted || 0)) {
           updates['activityStats.quizzesCompleted'] = results.length;
@@ -752,11 +750,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           quizDetected = true;
         }
       } catch (e) {
-        console.error("Quiz sync step failed", e);
+        console.warn("[Auth] Quiz sync step failed:", e);
       }
 
       // 2. Sync Group membership
       try {
+        console.log("[Auth] Checking group membership...");
         const communityGroup = groups.find(g => 
           g.id === 'general' || 
           g.id === 'community' || 
@@ -769,12 +768,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           groupDetected = true;
         }
       } catch (e) {
-        console.error("Group sync step failed", e);
+        console.warn("[Auth] Group sync step failed:", e);
       }
 
       // 3. Sync Presentation
       try {
         if (!user.hasPostedPresentation) {
+          console.log("[Auth] Checking posts for presentation...");
           const postsSnap = await getDocs(query(
             collection(db, 'posts'), 
             where('authorId', '==', user.id), // Try both authorId and author.id
@@ -799,15 +799,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (e) {
-        console.error("Presentation sync step failed", e);
+        console.warn("[Auth] Presentation sync step failed:", e);
       }
 
       if (shouldUpdate) {
+        console.log("[Auth] Sync applying updates:", updates);
         await updateDoc(doc(db, 'users', user.id), {
            ...updates,
            lastActiveAt: serverTimestamp()
         });
-        console.log("[Auth] Stats synced successfully", updates);
         
         let message = "Profil synchronisé !";
         if (quizDetected) message += " Quiz trouvé.";
@@ -818,8 +818,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         console.log("[Auth] Sync finished, no new criteria found");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Auth] Overall sync stats failed:", err);
+      if (err?.message?.includes('permission')) {
+         toast.error("Erreur de permission. Votre profil n'est pas encore modifiable.");
+      }
     }
   }, [user, groups]);
 
