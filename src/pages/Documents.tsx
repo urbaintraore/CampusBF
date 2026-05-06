@@ -975,7 +975,12 @@ export default function Documents() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5">
+                        <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5 relative">
+                      {Boolean(isDocumentLocked(doc, 'download')) && !isAdmin && (
+                        <div className="absolute -top-10 right-0 bg-amber-50 text-amber-700 text-[10px] px-3 py-1 rounded-lg border border-amber-200 whitespace-nowrap animate-in fade-in slide-in-from-right-1">
+                          {((isDocumentLocked(doc, 'download') as any)?.reason || "Vérifiez les critères")}
+                        </div>
+                      )}
                       {!isDocumentLocked(doc, 'download') && (
                         <button
                           onClick={() => {

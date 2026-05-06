@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, User, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock, Trophy, School, Compass, Target, CheckCircle2 } from 'lucide-react';
+import { Search, Bell, Filter, ChevronLeft, ChevronRight, FileText, GraduationCap, Users, User, UserPlus, Calendar, MapPin, Sparkles, Brain, Lock, Trophy, School, Compass, Target, CheckCircle2, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -27,8 +27,91 @@ export default function Dashboard() {
   const [groupsCount, setGroupsCount] = useState(0);
   const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const navigate = useNavigate();
+
+  const loadDashboardData = async (force = false) => {
+    const cacheKey = 'dashboard_cache';
+    const cached = sessionStorage.getItem(cacheKey);
+    const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+    const now = Date.now();
+
+    if (!force && cached && cacheTime && now - parseInt(cacheTime) < 3600000) { // 1 hour cache
+      const data = JSON.parse(cached);
+      setAds(data.ads || []);
+      setDocuments(data.documents || []);
+      setInternships(data.internships || []);
+      setTutors(data.tutors || []);
+      setTeachers(data.teachers || []);
+      setEvents(data.events || []);
+      setMarketplace(data.marketplace || []);
+      setPublicServiceContests(data.publicServiceContests || []);
+      setGroupsCount(data.groupsCount || 0);
+      setTotalDocumentsCount(data.totalDocumentsCount || 0);
+      setLoading(false);
+      return;
+    }
+
+    if (force) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      // Run fetches in parallel but limited
+      const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap, marketSnap] = await Promise.all([
+        getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
+        getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
+        getDocs(query(collection(db, 'internships'), limit(3))),
+        getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
+        getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
+        getDocs(query(collection(db, 'events'), limit(2))),
+        getDocs(query(collection(db, 'public_service_contests'), limit(5))),
+        getDocs(query(collection(db, 'marketplace'), limit(2)))
+      ]);
+
+      const dashboardData = {
+        ads: adsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        documents: docsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        internships: internSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        tutors: tutorSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        teachers: teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        events: eventSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        marketplace: marketSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        publicServiceContests: contestSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        groupsCount: 15, // Fixed estimation to save quota
+        totalDocumentsCount: 480 // Fixed estimation to save quota
+      };
+
+      setAds(dashboardData.ads);
+      setDocuments(dashboardData.documents);
+      setInternships(dashboardData.internships);
+      setTutors(dashboardData.tutors);
+      setTeachers(dashboardData.teachers);
+      setEvents(dashboardData.events);
+      setMarketplace(dashboardData.marketplace);
+      setPublicServiceContests(dashboardData.publicServiceContests);
+      setGroupsCount(dashboardData.groupsCount);
+      setTotalDocumentsCount(dashboardData.totalDocumentsCount);
+
+      sessionStorage.setItem(cacheKey, JSON.stringify(dashboardData));
+      sessionStorage.setItem(cacheKey + '_time', now.toString());
+    } catch (error: any) {
+      console.error("Dashboard data load error:", error);
+      // Fallback for missing Index
+      if (error?.message?.includes('index')) {
+        const docsSnap = await getDocs(query(collection(db, 'documents'), limit(3)));
+        setDocuments(docsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
   const activeAds = ads.filter(ad => ad.active);
   const [currentAd, setCurrentAd] = useState(0);
   const [suggestedFriends, setSuggestedFriends] = useState<UserType[]>([]);
@@ -37,79 +120,6 @@ export default function Dashboard() {
   const [selectedDocForPayment, setSelectedDocForPayment] = useState<any>(null);
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === 'all') && !n.read).length;
   const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
-
-  // Local data fetching to save global quota
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      const cacheKey = 'dashboard_cache';
-      const cached = sessionStorage.getItem(cacheKey);
-      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
-      const now = Date.now();
-
-      if (cached && cacheTime && now - parseInt(cacheTime) < 3600000) { // 1 hour cache for dashboard
-        const data = JSON.parse(cached);
-        setAds(data.ads || []);
-        setDocuments(data.documents || []);
-        setInternships(data.internships || []);
-        setTutors(data.tutors || []);
-        setTeachers(data.teachers || []);
-        setEvents(data.events || []);
-        setMarketplace(data.marketplace || []);
-        setPublicServiceContests(data.publicServiceContests || []);
-        setGroupsCount(data.groupsCount || 0);
-        setTotalDocumentsCount(data.totalDocumentsCount || 0);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Run fetches in parallel but limited
-        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap, marketSnap] = await Promise.all([
-          getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
-          getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
-          getDocs(query(collection(db, 'internships'), limit(3))),
-          getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
-          getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
-          getDocs(query(collection(db, 'events'), limit(2))),
-          getDocs(query(collection(db, 'public_service_contests'), limit(5))),
-          getDocs(query(collection(db, 'marketplace'), limit(2)))
-        ]);
-
-        const dashboardData = {
-          ads: adsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          documents: docsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          internships: internSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          tutors: tutorSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          teachers: teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          events: eventSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          marketplace: marketSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          publicServiceContests: contestSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          groupsCount: 15, // Fixed estimation to save quota
-          totalDocumentsCount: 480 // Fixed estimation to save quota
-        };
-
-        setAds(dashboardData.ads);
-        setDocuments(dashboardData.documents);
-        setInternships(dashboardData.internships);
-        setTutors(dashboardData.tutors);
-        setTeachers(dashboardData.teachers);
-        setEvents(dashboardData.events);
-        setMarketplace(dashboardData.marketplace);
-        setPublicServiceContests(dashboardData.publicServiceContests);
-        setGroupsCount(dashboardData.groupsCount);
-        setTotalDocumentsCount(dashboardData.totalDocumentsCount);
-
-        sessionStorage.setItem(cacheKey, JSON.stringify(dashboardData));
-        sessionStorage.setItem(cacheKey + '_time', now.toString());
-      } catch (error) {
-        console.error("Dashboard data load error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDashboardData();
-  }, []);
 
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
@@ -264,6 +274,15 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => loadDashboardData(true)}
+            disabled={refreshing}
+            className="p-3 bg-white rounded-full border border-slate-200/60 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 text-sm font-medium flex items-center gap-2"
+            title="Rafraîchir"
+          >
+            <RotateCw size={18} className={refreshing ? 'animate-spin' : ''} />
+            <span className="hidden md:inline">Actualiser</span>
+          </button>
           <button 
             onClick={() => navigate('/notifications')}
             className="p-3 bg-white rounded-full border border-slate-200/60 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 md:hidden"

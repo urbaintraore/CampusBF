@@ -17,7 +17,8 @@ import {
   Star,
   CheckCircle2,
   Plus,
-  X
+  X,
+  RotateCw
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { publicServiceExamService } from '@/services/publicServiceExamService';
@@ -310,6 +311,13 @@ export default function PublicServiceContests() {
             </div>
             
             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              <button 
+                onClick={() => invalidateCache && invalidateCache()}
+                className="p-2.5 bg-slate-50 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all border border-slate-100"
+                title="Rafraîchir"
+              >
+                <RotateCw size={18} className={loading ? 'animate-spin' : ''} />
+              </button>
               <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 text-slate-600">
                 <Filter className="w-4 h-4" />
                 <span className="text-sm font-medium">Filtres:</span>

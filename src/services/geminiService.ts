@@ -47,7 +47,7 @@ Réponds UNIQUEMENT avec un tableau JSON d'objets suivant ce schéma :
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: DEFAULT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -83,20 +83,22 @@ let aiClient: GoogleGenAI | null = null;
 const getAiClient = (): GoogleGenAI => {
   if (!aiClient) {
     // Priority: 
-    // 1. Fixed Secrets (process.env.GEMINI_API_KEY)
-    // 2. Local fallback if explicitly provided during dev
-    const apiKey = (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') ? process.env.GEMINI_API_KEY : 
-                   (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-                   (import.meta as any).env?.GEMINI_API_KEY;
+    // 1. process.env.GEMINI_API_KEY (Vite standard for this platform)
+    // 2. import.meta.env fallback
+    const apiKey = (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') 
+      ? process.env.GEMINI_API_KEY 
+      : (import.meta as any).env?.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
     
-    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-      console.error("Gemini API Key missing or incorrectly configured.");
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey === 'undefined') {
+      console.warn("Gemini API Key missing or incorrectly configured in environment.");
     }
     
     aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
   }
   return aiClient;
 };
+
+const DEFAULT_MODEL = "gemini-3-flash-preview";
 
 /**
  * Fonction pour générer du texte avec Gemini
@@ -105,7 +107,7 @@ export const generateText = async (prompt: string): Promise<string> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: DEFAULT_MODEL,
       contents: prompt,
     });
     
@@ -122,7 +124,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 export const createCampusAssistantChat = () => {
   const ai = getAiClient();
   return ai.chats.create({
-    model: "gemini-flash-latest",
+    model: DEFAULT_MODEL,
     config: {
       systemInstruction: `Tu es l'Assistant Intelligent Officiel de CampusBF, la plateforme communautaire de référence pour les étudiants au Burkina Faso (UJKZ, UTS, UNB, UNZ, UVBF, etc.).
 
@@ -224,7 +226,7 @@ Modèle de format attendu pour l'output :
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: DEFAULT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -365,7 +367,7 @@ Pour chaque question :
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: DEFAULT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -472,7 +474,7 @@ export const summarizeDocument = async (documentTitle: string, documentDescripti
     const prompt = `En tant qu'assistant académique de CampusBF, donne-moi un bref aperçu de ce que pourrait contenir ce document et pourquoi il serait utile pour un étudiant, en te basant sur son titre et sa description.\n\nTitre: ${documentTitle}\nDescription: ${documentDescription}\n\nFais une réponse courte (2-3 sentences maximum) et motivante.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: DEFAULT_MODEL,
       contents: prompt,
     });
     

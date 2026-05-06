@@ -385,12 +385,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isInGroup || !hasQuizzes || !hasPresentation) {
         let missing = [];
         if (!isInGroup) missing.push("Rejoindre un groupe");
-        if (!hasPresentation) missing.push("Poster un message de présentation");
-        if (!hasQuizzes) missing.push("Faire au moins un Quiz");
+        if (!hasPresentation) missing.push("Se présenter dans la Communauté (min. 15 car.)");
+        if (!hasQuizzes) missing.push("Passer 1 Quiz de révision (onglet Révisions)");
         
         return { 
           locked: true, 
-          reason: `Accès étudiant restreint : ${missing.join(', ')} requis.` 
+          reason: `Accès étudiant : Pour débloquer les téléchargements, vous devez : ${missing.join(', ')}.` 
         };
       }
     }
@@ -641,9 +641,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             initialUserData = { id: firebaseUser.uid, ...newUser } as User;
-            if (newUser.role !== 'student') {
-              await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
-            }
+            // Join everyone to the community group by default to enable basic platform access
+            await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
           } catch (err: any) {
              console.error("Firestore setDoc error for new user creation:", err);
              handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);

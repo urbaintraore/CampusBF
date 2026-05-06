@@ -56,7 +56,6 @@ export function useCachedQuery(
         
         const results = snapshot.docs.map(doc => {
           const docData = doc.data();
-          // Remove heavy fields like questions from the list view if necessary
           return { id: doc.id, ...docData };
         });
 
@@ -71,8 +70,23 @@ export function useCachedQuery(
             timestamp: Date.now()
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching", collectionName, err);
+        // Fallback for missing index or other ordering issues
+        if (err?.message?.includes('index') || err?.message?.includes('orderBy')) {
+           try {
+             const fallbackQ = query(collection(db, collectionName), limit(pageSize));
+             const fallbackSnapshot = await getDocs(fallbackQ);
+             const results = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             if (mounted) {
+               setData(results);
+               lastDocRef.current = fallbackSnapshot.docs[fallbackSnapshot.docs.length - 1] || null;
+               setHasMore(fallbackSnapshot.docs.length >= pageSize);
+             }
+           } catch (e) {
+             console.error("Fallback fetch failed", e);
+           }
+        }
       } finally {
         if (mounted) setLoading(false);
       }

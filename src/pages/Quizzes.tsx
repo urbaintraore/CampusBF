@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Brain, BookOpen, Plus, Play, Layers, Sparkles, BarChart3 } from 'lucide-react';
+import { Brain, BookOpen, Plus, Play, Layers, Sparkles, BarChart3, RotateCw } from 'lucide-react';
 import { Quiz } from '@/types';
 import { QuizPlayer } from '@/components/QuizPlayer';
 import { FlashcardPlayer } from '@/components/FlashcardPlayer';
@@ -24,32 +24,60 @@ export default function Quizzes() {
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [activeFlashcards, setActiveFlashcards] = useState<Quiz | null>(null);
 
-  useEffect(() => {
-    const fetchQuizzes = async () => {
-      const cacheKey = 'local_cache_quizzes_directory';
-      const cached = localStorage.getItem(cacheKey);
-      const cacheTime = localStorage.getItem(cacheKey + '_time');
-      const now = Date.now();
+  const fetchQuizzes = async (force: boolean = false) => {
+    setLoading(true);
+    const cacheKey = 'local_cache_quizzes_directory';
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(cacheKey + '_time');
+    const now = Date.now();
 
-      if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
-        setQuizzes(JSON.parse(cached));
-        setLoading(false);
-        return;
+    // Only use cache if not forced and less than 1 hour old (was 12h, reduced for better production visibility)
+    if (!force && cached && cacheTime && now - parseInt(cacheTime) < 3600000) {
+      setQuizzes(JSON.parse(cached));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Primary attempt: Sorted by most recent
+      const q = query(collection(db, 'quizzes'), orderBy('createdAt', 'desc'), limit(50));
+      const snapshot = await getDocs(q);
+      let list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
+      
+      // Fallback: If no results found or error, try without sorting (in case createdAt index is missing or fields are missing)
+      if (list.length === 0) {
+        console.log("No quizzes found with sorted query, trying unsorted...");
+        const qSimple = query(collection(db, 'quizzes'), limit(100));
+        const simpleSnapshot = await getDocs(qSimple);
+        list = simpleSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
+        
+        // Sort client-side if possible
+        list.sort((a, b) => {
+          const dateA = a.createdAt ? (typeof a.createdAt === 'object' ? a.createdAt.toDate?.() || 0 : new Date(a.createdAt).getTime()) : 0;
+          const dateB = b.createdAt ? (typeof b.createdAt === 'object' ? b.createdAt.toDate?.() || 0 : new Date(b.createdAt).getTime()) : 0;
+          return dateB - dateA;
+        });
       }
 
+      setQuizzes(list);
+      localStorage.setItem(cacheKey, JSON.stringify(list));
+      localStorage.setItem(cacheKey + '_time', now.toString());
+    } catch (error) {
+      console.error("Error fetching quizzes, trying simple query:", error);
       try {
-        const q = query(collection(db, 'quizzes'), orderBy('createdAt', 'desc'), limit(50));
-        const snapshot = await getDocs(q);
-        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
+        const qSimple = query(collection(db, 'quizzes'), limit(100));
+        const simpleSnapshot = await getDocs(qSimple);
+        const list = simpleSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
         setQuizzes(list);
-        localStorage.setItem(cacheKey, JSON.stringify(list));
-        localStorage.setItem(cacheKey + '_time', now.toString());
-      } catch (error) {
-        console.error("Error fetching quizzes:", error);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.error("Final quiz fetch fail:", err);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchQuizzes();
   }, []);
 
@@ -114,25 +142,37 @@ export default function Quizzes() {
         )}
       </div>
 
-      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveTab('explore')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'explore' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <BookOpen size={16} />
-          Explorer
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'stats' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <BarChart3 size={16} />
-          Mes Statistiques
-        </button>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchQuizzes(true)}
+            className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-slate-200 bg-white shadow-sm"
+            title="Rafraîchir"
+            disabled={loading}
+          >
+            <RotateCw size={18} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
+            <button
+              onClick={() => setActiveTab('explore')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'explore' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <BookOpen size={16} />
+              Explorer
+            </button>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'stats' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <BarChart3 size={16} />
+              Mes Statistiques
+            </button>
+          </div>
+        </div>
       </div>
 
       {activeTab === 'stats' && <QuizStats />}

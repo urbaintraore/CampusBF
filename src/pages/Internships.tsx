@@ -1,13 +1,17 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, AlertCircle, FileUp, Edit, Search, Filter, ArrowUpDown } from 'lucide-react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { Briefcase, MapPin, Clock, Building2, Plus, X, Send, CheckCircle2, AlertCircle, FileUp, Edit, Search, Filter, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { cn } from '@/lib/utils';
 import { serverTimestamp } from 'firebase/firestore';
 import { uploadFile } from '@/services/storageService';
+import { internshipService } from '@/services/internshipService';
+import { Internship } from '@/types';
 
 export default function Internships() {
-  const { user, isAdmin, internships, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
+  const { user, isAdmin, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
+  const [internshipsList, setInternshipsList] = useState<Internship[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -17,6 +21,34 @@ export default function Internships() {
   const [applyFile, setApplyFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const applyFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchInternships = async () => {
+      const cacheKey = 'local_cache_internships_directory';
+      const cached = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      // Cache for 6 hours (21600000 ms)
+      if (cached && cacheTime && now - parseInt(cacheTime) < 21600000) {
+        setInternshipsList(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await internshipService.getInternships(100);
+        setInternshipsList(data);
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        localStorage.setItem(cacheKey + '_time', now.toString());
+      } catch (error) {
+        console.error("Error fetching internships:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInternships();
+  }, []);
 
   // Form state for new internship
   const [newInternship, setNewInternship] = useState({
@@ -39,7 +71,7 @@ export default function Internships() {
 
   // Filtered and sorted internships
   const filteredInternships = useMemo(() => {
-    let result = [...internships];
+    let result = [...internshipsList];
 
     // Search by company name or title
     if (searchQuery) {
@@ -86,16 +118,16 @@ export default function Internships() {
     }
 
     return result;
-  }, [internships, searchQuery, typeFilter, locationFilter, sortBy]);
+  }, [internshipsList, searchQuery, typeFilter, locationFilter, sortBy]);
 
   // Get unique locations for filter
   const locations = useMemo(() => {
     const locs = new Set<string>();
-    internships.forEach(job => {
+    internshipsList.forEach(job => {
       if (job.location) locs.add(job.location);
     });
     return Array.from(locs).sort();
-  }, [internships]);
+  }, [internshipsList]);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -353,7 +385,12 @@ export default function Internships() {
 
       {/* Internships List */}
       <div className="grid gap-6">
-        {filteredInternships.length === 0 ? (
+        {loading ? (
+          <div className="glass p-20 rounded-3xl text-center flex flex-col items-center justify-center min-h-[400px]">
+            <Loader2 className="w-12 h-12 text-emerald-600 animate-spin mb-4" />
+            <p className="text-slate-500 font-medium">Chargement des offres...</p>
+          </div>
+        ) : filteredInternships.length === 0 ? (
           <div className="glass p-12 rounded-3xl text-center flex flex-col items-center justify-center min-h-[400px]">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
               <Briefcase className="text-slate-400" size={32} />

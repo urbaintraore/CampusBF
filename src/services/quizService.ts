@@ -7,8 +7,30 @@ export const quizService = {
     try {
       const q = query(collection(db, 'quizzes'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz));
-    } catch (error) {
+      
+      const quizzes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz));
+      
+      // If we got no results, try without ordering to catch docs missing createdAt
+      if (quizzes.length === 0) {
+        const fallbackQ = query(collection(db, 'quizzes'));
+        const fallbackSnapshot = await getDocs(fallbackQ);
+        const allQuizzes = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz));
+        
+        return allQuizzes.sort((a: any, b: any) => {
+          const t1 = a.createdAt?.seconds || 0;
+          const t2 = b.createdAt?.seconds || 0;
+          return t2 - t1;
+        });
+      }
+      
+      return quizzes;
+    } catch (error: any) {
+      // If index error (most likely cause for failure in new environments)
+      if (error?.message?.includes('index')) {
+        const fallbackQ = query(collection(db, 'quizzes'));
+        const fallbackSnapshot = await getDocs(fallbackQ);
+        return fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz));
+      }
       handleFirestoreError(error, OperationType.GET, 'quizzes');
       return [];
     }
