@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, increment, arrayUnion, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, increment, arrayUnion, getDoc, getCountFromServer } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Referral } from '@/types';
 
@@ -57,8 +57,8 @@ export const referralService = {
   async getReferralCount(referrerId: string): Promise<number> {
     try {
       const q = query(collection(db, 'referrals'), where('referrerId', '==', referrerId));
-      const snapshot = await getDocs(q);
-      return snapshot.size;
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'referrals');
       throw error;

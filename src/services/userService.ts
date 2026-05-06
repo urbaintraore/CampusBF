@@ -3,13 +3,51 @@ import {
   deleteDoc, 
   doc,
   collection,
-  addDoc
+  addDoc,
+  query,
+  limit,
+  orderBy,
+  getDocs,
+  getCountFromServer,
+  where
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { User } from '@/types';
 import { logService } from './logService';
 
 export const userService = {
+  async getUsers(limitCount: number = 50) {
+    try {
+      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(limitCount));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'users');
+      throw error;
+    }
+  },
+
+  async getUsersCount() {
+    try {
+      const snapshot = await getCountFromServer(collection(db, 'users'));
+      return snapshot.data().count;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'users/count');
+      throw error;
+    }
+  },
+
+  async getUsersByRole(role: User['role'], limitCount: number = 50) {
+    try {
+      const q = query(collection(db, 'users'), where('role', '==', role), limit(limitCount));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `users/role/${role}`);
+      throw error;
+    }
+  },
+
   async updateUser(userId: string, data: Partial<User>) {
     try {
       await updateDoc(doc(db, 'users', userId), data as any);

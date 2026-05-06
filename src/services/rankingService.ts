@@ -2,7 +2,9 @@ import {
   collection, 
   getDocs,
   query,
-  limit
+  limit,
+  where,
+  orderBy
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { User, Document } from '@/types';
@@ -53,44 +55,34 @@ export const rankingService = {
     // We use a map with normalized names as keys to group variations together
     const normalizedMap: Record<string, { stat: UniversityStat; originalNames: Record<string, number>; canonicalName: string | null }> = {};
 
-    let allUsers: User[] = _usersFallback;
+    let allUsers: User[] = _usersFallback || [];
     let allDocuments: Document[] = [];
 
     try {
       const now = Date.now();
-      const usersCache = sessionStorage.getItem('ranking_full_users');
-      const usersTime = sessionStorage.getItem('ranking_full_users_time');
+      const statsCache = localStorage.getItem('local_cache_uni_rankings');
+      const statsTime = localStorage.getItem('local_cache_uni_rankings_time');
       
-      if (usersCache && usersTime && now - parseInt(usersTime) < 3600000) {
-        allUsers = JSON.parse(usersCache);
-      } else {
-        const q = query(collection(db, 'users'), limit(5000));
-        const snap = await getDocs(q);
-        const data = snap.docs.map(d => d.data() as User);
-        if (data.length > 0) allUsers = data;
-        try {
-          sessionStorage.setItem('ranking_full_users', JSON.stringify(data));
-          sessionStorage.setItem('ranking_full_users_time', now.toString());
-        } catch(e) {}
+      // Cache valid for 24 hours to save quota
+      if (statsCache && statsTime && now - parseInt(statsTime) < 86400000) {
+        return JSON.parse(statsCache);
       }
+
+      // To save quota, we pull only a small subset or use an aggregation strategy.
+      // Since we don't have cloud functions, let's limit to 100 recent active users and 100 docs
+      // to get a representative sample without blowing the quota.
+      // In a real production app, this should be done via a dedicated stats collection.
       
-      const docsCache = sessionStorage.getItem('ranking_full_docs');
-      const docsTime = sessionStorage.getItem('ranking_full_docs_time');
+      console.log("Fetching sample data for university rankings calculation...");
+      const [uSnap, dSnap] = await Promise.all([
+        getDocs(query(collection(db, 'users'), where('rankingScore', '>', 0), orderBy('rankingScore', 'desc'), limit(150))),
+        getDocs(query(collection(db, 'documents'), orderBy('downloads', 'desc'), limit(150)))
+      ]);
       
-      if (docsCache && docsTime && now - parseInt(docsTime) < 3600000) {
-        allDocuments = JSON.parse(docsCache);
-      } else {
-        const qDocs = query(collection(db, 'documents'), limit(5000));
-        const snapDocs = await getDocs(qDocs);
-        const dataDocs = snapDocs.docs.map(d => d.data() as Document);
-        if (dataDocs.length > 0) allDocuments = dataDocs;
-        try {
-          sessionStorage.setItem('ranking_full_docs', JSON.stringify(dataDocs));
-          sessionStorage.setItem('ranking_full_docs_time', now.toString());
-        } catch(e) {}
-      }
+      allUsers = uSnap.docs.map(d => ({ id: d.id, ...d.data() } as User));
+      allDocuments = dSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
     } catch(error) {
-      console.error("Error fetching full ranking stats, falling back to local memory", error);
+      console.error("Error fetching ranking stats:", error);
     }
 
     allUsers.forEach(user => {
@@ -104,7 +96,7 @@ export const rankingService = {
       if (!normalizedMap[normName]) {
         normalizedMap[normName] = {
           stat: {
-            university: rawName, // Temporary display name
+            university: rawName,
             studentCount: 0,
             documentCount: 0,
             totalScore: 0,
@@ -115,21 +107,17 @@ export const rankingService = {
         };
       }
 
-      // Track how many times each variation is used to pick the most common/best display name later
       normalizedMap[normName].originalNames[rawName] = (normalizedMap[normName].originalNames[rawName] || 0) + 1;
-      
       normalizedMap[normName].stat.studentCount += 1;
       normalizedMap[normName].stat.totalScore += (user.rankingScore || 0);
     });
 
-    // Phase 2: Fetch document count and downloads per university
     try {
       allDocuments.forEach(doc => {
         if (!doc.university) return;
         
         const { normName, displayName } = getCanonicalUniversity(doc.university);
         
-        // If this university exists in our student map (or we create it if it's new content)
         if (normName) {
           if (!normalizedMap[normName]) {
             normalizedMap[normName] = {
@@ -148,23 +136,24 @@ export const rankingService = {
           const entry = normalizedMap[normName];
           entry.stat.documentCount += 1;
           entry.stat.totalDownloads += (doc.downloads || 0);
-          entry.stat.totalScore += 50; // Each doc adds 50 points
-          entry.stat.totalScore += (doc.downloads || 0) * 2; // Each download adds 2 points
+          entry.stat.totalScore += 50;
+          entry.stat.totalScore += (doc.downloads || 0) * 2;
         }
       });
     } catch (error) {
       console.error("Error calculating document rankings:", error);
     }
 
-    // Phase 3: Finalize and pick the best display name
-    return Object.values(normalizedMap)
+    const result = Object.values(normalizedMap)
       .map(entry => {
         let finalName = entry.canonicalName;
-        
         if (!finalName) {
-          // Pick the most frequent original name as the display name
-          finalName = Object.entries(entry.originalNames)
-            .sort((a, b) => b[1] - a[1])[0][0];
+          const names = Object.entries(entry.originalNames);
+          if (names.length > 0) {
+            finalName = names.sort((a, b) => b[1] - a[1])[0][0];
+          } else {
+            finalName = entry.stat.university;
+          }
         }
         
         return {
@@ -174,5 +163,13 @@ export const rankingService = {
       })
       .sort((a, b) => b.totalScore - a.totalScore)
       .map((uni, index) => ({ ...uni, rank: index + 1 }));
+
+    try {
+      localStorage.setItem('local_cache_uni_rankings', JSON.stringify(result));
+      localStorage.setItem('local_cache_uni_rankings_time', Date.now().toString());
+    } catch (e) {}
+
+    return result;
   }
 };
+

@@ -92,7 +92,12 @@ export const QuizBuilder: React.FC<{ onClose: () => void; initialData?: any }> =
 
     try {
       if (generationMode === 'text') {
-        const result = await generateAdvancedQuizWithAI(courseText, subject, level, numQuestions, {
+        const truncatedText = courseText.slice(0, 15000); // Truncate very long courses
+        if (courseText.length > 15000) {
+          toast.loading('Texte très long détecté, tronqué pour la génération...', { id: loadingToast });
+        }
+        
+        const result = await generateAdvancedQuizWithAI(truncatedText, subject, level, numQuestions, {
           difficulty: aiDifficulty,
           language: aiLanguage,
           questionTypes: questionTypes

@@ -9,15 +9,49 @@ import { QuizCreator } from '@/components/QuizCreator';
 import { QuizBuilder } from '@/components/QuizBuilder';
 import { QuizStats } from '@/components/QuizStats';
 
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+
 export default function Quizzes() {
   const location = useLocation();
-  const { user, quizzes } = useAuth();
+  const { user } = useAuth();
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'explore' | 'stats'>('explore');
   const [showCreator, setShowCreator] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [initialBuilderData, setInitialBuilderData] = useState<any>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [activeFlashcards, setActiveFlashcards] = useState<Quiz | null>(null);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      const cacheKey = 'local_cache_quizzes_directory';
+      const cached = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
+        setQuizzes(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(collection(db, 'quizzes'), orderBy('createdAt', 'desc'), limit(50));
+        const snapshot = await getDocs(q);
+        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
+        setQuizzes(list);
+        localStorage.setItem(cacheKey, JSON.stringify(list));
+        localStorage.setItem(cacheKey + '_time', now.toString());
+      } catch (error) {
+        console.error("Error fetching quizzes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, []);
 
   useEffect(() => {
     if (location.state?.autoGenerate) {
@@ -105,7 +139,12 @@ export default function Quizzes() {
 
       {activeTab === 'explore' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {quizzes.map((quiz) => (
+        {loading ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-12 h-12 border-4 border-emerald-600/20 border-t-emerald-600 rounded-full animate-spin" />
+            <p className="text-slate-500 font-medium tracking-tight">Chargement des quiz...</p>
+          </div>
+        ) : quizzes.map((quiz) => (
           <div key={quiz.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all flex flex-col">
             <div className="flex items-start justify-between mb-4">
               <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
@@ -139,7 +178,7 @@ export default function Quizzes() {
             </div>
           </div>
         ))}
-        {quizzes.length === 0 && (
+        {!loading && quizzes.length === 0 && (
           <div className="col-span-full text-center py-12 bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
             <Brain className="mx-auto text-slate-300 mb-3" size={48} />
             <h3 className="text-lg font-bold text-slate-900 mb-1">Aucun quiz disponible</h3>

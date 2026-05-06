@@ -144,6 +144,8 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Google login disabled as per request */}
+          {/* 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
@@ -162,6 +164,7 @@ export default function Login() {
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
             Se connecter avec Google
           </button>
+          */}
 
           <div className="text-center text-sm text-slate-500 pt-2">
             Pas encore de compte ? <Link to="/signup" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">S'inscrire</Link>

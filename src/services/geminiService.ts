@@ -47,7 +47,7 @@ Réponds UNIQUEMENT avec un tableau JSON d'objets suivant ce schéma :
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -82,12 +82,15 @@ let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || 
-                   (import.meta as any).env.VITE_GEMINI_API_KEY || 
-                   (import.meta as any).env.GEMINI_API_KEY;
+    // Priority: 
+    // 1. Fixed Secrets (process.env.GEMINI_API_KEY)
+    // 2. Local fallback if explicitly provided during dev
+    const apiKey = (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') ? process.env.GEMINI_API_KEY : 
+                   (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                   (import.meta as any).env?.GEMINI_API_KEY;
     
-    if (!apiKey) {
-      console.error("Clé API Gemini non trouvée dans l'environnement.");
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+      console.error("Gemini API Key missing or incorrectly configured.");
     }
     
     aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
@@ -102,7 +105,7 @@ export const generateText = async (prompt: string): Promise<string> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
     });
     
@@ -119,7 +122,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 export const createCampusAssistantChat = () => {
   const ai = getAiClient();
   return ai.chats.create({
-    model: "gemini-3-flash-preview",
+    model: "gemini-flash-latest",
     config: {
       systemInstruction: `Tu es l'Assistant Intelligent Officiel de CampusBF, la plateforme communautaire de référence pour les étudiants au Burkina Faso (UJKZ, UTS, UNB, UNZ, UVBF, etc.).
 
@@ -221,11 +224,11 @@ Modèle de format attendu pour l'output :
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        maxOutputTokens: 8192, // Augmentation pour éviter les troncatures sur de longs quiz
+        maxOutputTokens: 8192, 
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -362,7 +365,7 @@ Pour chaque question :
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -469,7 +472,7 @@ export const summarizeDocument = async (documentTitle: string, documentDescripti
     const prompt = `En tant qu'assistant académique de CampusBF, donne-moi un bref aperçu de ce que pourrait contenir ce document et pourquoi il serait utile pour un étudiant, en te basant sur son titre et sa description.\n\nTitre: ${documentTitle}\nDescription: ${documentDescription}\n\nFais une réponse courte (2-3 sentences maximum) et motivante.`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: prompt,
     });
     

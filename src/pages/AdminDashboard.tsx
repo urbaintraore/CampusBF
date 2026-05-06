@@ -32,7 +32,6 @@ export default function AdminDashboard() {
     subscriptionRequests, 
     reviewSubscriptionRequest, 
     syncCommunityGroup,
-    users, 
     addPublicServiceContest,
     deletePublicServiceContest,
     updateUserRole, 
@@ -91,13 +90,16 @@ export default function AdminDashboard() {
     colocations,
     deleteColocation,
     logs,
-    totalUsersCount,
-    totalDocumentsCount,
     tutors,
     teachers
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'logs' | 'stats' | 'rankings'>('overview');
+  const [adminUsers, setAdminUsers] = useState<User[]>([]);
+  const [totalUsersCount, setTotalUsersCount] = useState<number>(0);
+  const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [contentTab, setContentTab] = useState<'documents' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
@@ -126,6 +128,49 @@ export default function AdminDashboard() {
 
   const [printOrders, setPrintOrders] = useState<any[]>([]);
   const [loadingPrintOrders, setLoadingPrintOrders] = useState(false);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoadingStats(true);
+      try {
+        const { userService } = await import('@/services/userService');
+        const { documentService } = await import('@/services/documentService');
+        
+        const [uCount, dCount] = await Promise.all([
+          userService.getUsersCount(),
+          documentService.getDocumentsCount()
+        ]);
+        
+        setTotalUsersCount(uCount);
+        setTotalDocumentsCount(dCount);
+      } catch (error) {
+        console.error("Error fetching admin stats:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users' || activeTab === 'rankings' || (activeTab === 'content' && contentTab === 'print_orders')) {
+      const fetchUsers = async () => {
+        if (adminUsers.length > 0) return; // Already fetched
+        setLoadingUsers(true);
+        try {
+          const { userService } = await import('@/services/userService');
+          // Fetch top 150 users for list and ranking view
+          const data = await userService.getUsers(150);
+          setAdminUsers(data);
+        } catch (error) {
+          console.error("Error fetching admin users:", error);
+        } finally {
+          setLoadingUsers(false);
+        }
+      };
+      fetchUsers();
+    }
+  }, [activeTab, contentTab, adminUsers.length]);
 
   useEffect(() => {
     if (contentTab === 'print_orders') {
@@ -380,7 +425,7 @@ export default function AdminDashboard() {
   };
 
   const exportStudentContacts = () => {
-    const studentUsers = users.filter(u => u.role === 'student');
+    const studentUsers = adminUsers.filter(u => u.role === 'student');
     
     if (studentUsers.length === 0) {
       alert("Aucun étudiant trouvé.");
@@ -496,14 +541,14 @@ export default function AdminDashboard() {
   const rejectedTeacherApplications = teacherApplications.filter(app => app.status === 'rejected');
   const pendingSubscriptions = subscriptionRequests.filter(req => req.status === 'pending');
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = adminUsers.filter(u => 
     u.firstName?.toLowerCase().includes(userSearch.toLowerCase()) || 
     u.lastName?.toLowerCase().includes(userSearch.toLowerCase()) ||
     u.email?.toLowerCase().includes(userSearch.toLowerCase())
   );
 
   const handleToggleUserRole = (userId: string) => {
-    const user = users.find(u => u.id === userId);
+    const user = adminUsers.find(u => u.id === userId);
     if (user) {
       updateUserRole(userId, user.role === 'admin' ? 'student' : 'admin');
     }
@@ -643,7 +688,14 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {users
+                  {loadingUsers ? (
+                    <tr>
+                      <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
+                        <Activity className="animate-spin inline-block mr-2" size={20} />
+                        Chargement des données...
+                      </td>
+                    </tr>
+                  ) : adminUsers
                     .filter(u => u.role === 'student' && (
                       u.firstName?.toLowerCase().includes(userSearch.toLowerCase()) || 
                       u.lastName?.toLowerCase().includes(userSearch.toLowerCase())
@@ -985,7 +1037,7 @@ export default function AdminDashboard() {
                 <button 
                   onClick={() => {
                     toast.success("Génération du rapport résumé...");
-                    generateSummaryReport({ users, documents, community, marketplace });
+                    generateSummaryReport({ users: adminUsers, documents, community, marketplace });
                   }}
                   className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center gap-2"
                 >
@@ -995,7 +1047,7 @@ export default function AdminDashboard() {
                 <button 
                   onClick={() => {
                     toast.success("Génération du rapport complet...");
-                    generateFullReport({ users, documents, community, marketplace, logs });
+                    generateFullReport({ users: adminUsers, documents, community, marketplace, logs });
                   }}
                   className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2"
                 >
@@ -1011,21 +1063,23 @@ export default function AdminDashboard() {
                   <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Répartition Utilisateurs</h3>
                   <div className="space-y-3">
                     {[
-                      { label: 'Étudiants', count: totalUsersCount - tutors.length - teachers.length, color: 'bg-blue-500' },
-                      { label: 'Répétiteurs & Prof de maison', count: tutors.length, color: 'bg-amber-500' },
-                      { label: 'Enseignants', count: teachers.length, color: 'bg-emerald-500' },
-                      { label: 'Entreprises', count: users.filter(u => u.role === 'company').length, color: 'bg-purple-500' },
-                      { label: 'Admins', count: users.filter(u => u.role === 'admin').length, color: 'bg-red-500' },
+                      { label: 'Étudiants', count: adminUsers.filter(u => u.role === 'student').length, color: 'bg-blue-500' },
+                      { label: 'Répétiteurs & Prof de maison', count: adminUsers.filter(u => u.role === 'tutor').length, color: 'bg-amber-500' },
+                      { label: 'Enseignants', count: adminUsers.filter(u => u.role === 'teacher').length, color: 'bg-emerald-500' },
+                      { label: 'Entreprises', count: adminUsers.filter(u => u.role === 'company').length, color: 'bg-purple-500' },
+                      { label: 'Admins', count: adminUsers.filter(u => u.role === 'admin').length, color: 'bg-red-500' },
                     ].map((item) => (
                       <div key={item.label} className="space-y-1">
                         <div className="flex justify-between text-xs font-medium">
                           <span className="text-gray-600">{item.label}</span>
-                          <span className="text-gray-900 font-bold">{item.count}</span>
+                          <span className="text-gray-900 font-bold">
+                            {item.label === 'Étudiants' && adminUsers.length === 150 ? `~${Math.round(totalUsersCount)}` : item.count}
+                          </span>
                         </div>
                         <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div 
                             className={`h-full ${item.color}`} 
-                            style={{ width: `${(item.count / Math.max(totalUsersCount, 1)) * 100}%` }}
+                            style={{ width: `${(item.count / Math.max(adminUsers.length, 1)) * 100}%` }}
                           ></div>
                         </div>
                       </div>
@@ -1066,7 +1120,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-900">Nouveaux inscrits</p>
-                        <p className="text-xs text-gray-500">7 derniers jours : {users.filter(u => {
+                        <p className="text-xs text-gray-500">7 derniers jours : {adminUsers.filter(u => {
                           const date = new Date(u.createdAt);
                           const sevenDaysAgo = new Date();
                           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -1286,7 +1340,7 @@ export default function AdminDashboard() {
                       </thead>
                       <tbody className="divide-y divide-gray-100/50">
                         {printOrders.map(order => {
-                          const orderUser = users.find(u => u.id === order.userId);
+                          const orderUser = adminUsers.find(u => u.id === order.userId);
                           return (
                           <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="py-4 px-6 text-sm text-gray-600">
@@ -1554,7 +1608,7 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {contentTab === 'enterprise' && users.filter(u => u.role === 'company').map(u => (
+              {contentTab === 'enterprise' && adminUsers.filter(u => u.role === 'company').map(u => (
                 <div key={u.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
@@ -1581,7 +1635,7 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {contentTab === 'university' && users.filter(u => u.role === 'institution').map(u => (
+              {contentTab === 'university' && adminUsers.filter(u => u.role === 'institution').map(u => (
                 <div key={u.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
@@ -2204,7 +2258,7 @@ export default function AdminDashboard() {
                         {motoRides.length} trajets
                       </span>
                       <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                        {users.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).length} vérifications en attente
+                        {adminUsers.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).length} vérifications en attente
                       </span>
                     </div>
                   </div>
@@ -2213,7 +2267,7 @@ export default function AdminDashboard() {
                   <div className="p-4 bg-blue-50/30 border-b border-blue-100">
                     <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">Vérifications Conducteurs en attente</h4>
                     <div className="space-y-3">
-                      {users.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).map(user => (
+                      {adminUsers.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).map(user => (
                         <div key={user.id} className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col md:flex-row justify-between gap-4">
                           <div className="flex gap-4">
                             <img src={user.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
@@ -2247,7 +2301,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
-                      {users.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).length === 0 && (
+                      {adminUsers.filter(u => u.isVerified && !u.isDriverVerified && u.vehicleDetails).length === 0 && (
                         <p className="text-center text-gray-400 text-sm py-4">Aucune demande de vérification en attente.</p>
                       )}
                     </div>
@@ -2320,10 +2374,10 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Suspended Users */}
-                  <div className="p-6 border-t border-gray-100 bg-red-50/30">
+                <div className="p-6 border-t border-gray-100 bg-red-50/30">
                     <h4 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-4">Utilisateurs MotoRide Suspendus</h4>
                     <div className="space-y-3">
-                      {users.filter(u => u.motoRideStatus === 'suspended').map(user => (
+                      {adminUsers.filter(u => u.motoRideStatus === 'suspended').map(user => (
                         <div key={user.id} className="bg-white p-4 rounded-xl border border-red-100 shadow-sm flex justify-between items-center">
                           <div className="flex items-center gap-3">
                             <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover grayscale" />
@@ -2344,7 +2398,7 @@ export default function AdminDashboard() {
                           </button>
                         </div>
                       ))}
-                      {users.filter(u => u.motoRideStatus === 'suspended').length === 0 && (
+                      {adminUsers.filter(u => u.motoRideStatus === 'suspended').length === 0 && (
                         <p className="text-center text-gray-400 text-sm py-4">Aucun utilisateur suspendu.</p>
                       )}
                     </div>
@@ -3639,10 +3693,10 @@ export default function AdminDashboard() {
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Étudiants', value: totalUsersCount - tutors.length - teachers.length },
-                        { name: 'Répétiteurs & Prof de maison', value: tutors.length },
-                        { name: 'Enseignants', value: teachers.length },
-                        { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
+                        { name: 'Étudiants', value: adminUsers.filter(u => u.role === 'student').length },
+                        { name: 'Répétiteurs & Prof de maison', value: adminUsers.filter(u => u.role === 'tutor').length },
+                        { name: 'Enseignants', value: adminUsers.filter(u => u.role === 'teacher').length },
+                        { name: 'Admins', value: adminUsers.filter(u => u.role === 'admin').length },
                       ]}
                       cx="50%"
                       cy="50%"
@@ -3663,19 +3717,19 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span className="text-xs text-gray-600">Étudiants ({totalUsersCount - tutors.length - teachers.length})</span>
+                  <span className="text-xs text-gray-600">Étudiants ({adminUsers.filter(u => u.role === 'student').length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-xs text-gray-600">Répétiteurs & Prof de maison ({tutors.length})</span>
+                  <span className="text-xs text-gray-600">Répétiteurs & Prof de maison ({adminUsers.filter(u => u.role === 'tutor').length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-xs text-gray-600">Enseignants ({teachers.length})</span>
+                  <span className="text-xs text-gray-600">Enseignants ({adminUsers.filter(u => u.role === 'teacher').length})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-purple-500" />
-                  <span className="text-xs text-gray-600">Admins ({users.filter(u => u.role === 'admin').length})</span>
+                  <span className="text-xs text-gray-600">Admins ({adminUsers.filter(u => u.role === 'admin').length})</span>
                 </div>
               </div>
             </div>
