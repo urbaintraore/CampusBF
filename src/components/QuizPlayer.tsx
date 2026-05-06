@@ -195,7 +195,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     }, 0);
     
     const finalPercentage = maxPossibleScore > 0 ? Math.round((Math.max(0, score) / maxPossibleScore) * 100) : 0;
-
+    
     // Gamification & Saving
     if (user) {
       try {
@@ -211,10 +211,12 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         let earnedPoints = 10; // Completion points
         if (finalPercentage >= 80) earnedPoints += 20;
 
-        await userService.updateUser(user.id, { rankingScore: (user.rankingScore || 0) + earnedPoints });
+        if (incrementActivity) {
+          // One atomic call for both activity count and points
+          await incrementActivity('quizzesCompleted', earnedPoints);
+        }
+        
         toast.success(`+${earnedPoints} points gagnés !`);
-
-        if (incrementActivity) incrementActivity('quizzesCompleted').catch(console.error);
       } catch (e) {
         console.error('Save failed', e);
       }

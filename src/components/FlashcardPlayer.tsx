@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Quiz } from '@/types';
 import { X, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 interface FlashcardPlayerProps {
   quiz: Quiz;
@@ -8,8 +10,10 @@ interface FlashcardPlayerProps {
 }
 
 export const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ quiz, onClose }) => {
+  const { incrementActivity } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [hasFinished, setHasFinished] = useState(false);
 
   const currentCard = quiz.questions[currentIndex];
 
@@ -17,6 +21,12 @@ export const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ quiz, onClose 
     if (currentIndex < quiz.questions.length - 1) {
       setIsFlipped(false);
       setTimeout(() => setCurrentIndex(currentIndex + 1), 150);
+    } else {
+      if (!hasFinished) {
+        setHasFinished(true);
+        incrementActivity?.('quizzesCompleted').catch(console.error);
+        toast.success("Révision terminée ! Activité enregistrée.");
+      }
     }
   };
 

@@ -434,7 +434,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logService.logAction(user, action, details);
   };
 
-  const incrementActivity = async (activity: keyof NonNullable<User['activityStats']>) => {
+  const incrementActivity = async (activity: keyof NonNullable<User['activityStats']>, additionalPoints?: number) => {
     if (!user) return;
     
     // Weighted points for each activity
@@ -455,12 +455,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       invitations: 50
     };
 
-    const pointValue = weights[activity] || 1;
+    const pointValue = additionalPoints !== undefined ? additionalPoints : (weights[activity] || 1);
 
     try {
       await updateDoc(doc(db, 'users', user.id), {
         [`activityStats.${activity}`]: increment(1),
-        rankingScore: increment(pointValue)
+        rankingScore: increment(pointValue),
+        lastActiveAt: serverTimestamp()
       });
       
       // Update Daily Quests
@@ -658,14 +659,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen to user profile changes in real-time
         const userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
           if (doc.exists()) {
-        const newData = doc.data() as User;
-        const normalizedData = { id: firebaseUser.uid, ...newData };
-        setUser(prev => {
-          // Robust comparison or just update if we want to be safe for authorization
-          // Since it's a profile snapshot, we should usually just update
-          return normalizedData;
-        });
-      }
+            const newData = doc.data() as User;
+            const normalizedData = { id: firebaseUser.uid, ...newData };
+            setUser(normalizedData);
+          }
         });
         unsubscribes.push(userUnsubscribe);
         
@@ -714,7 +711,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Listeners for data fetching - MOVED LOADING TO INDIVIDUAL PAGES TO SAVE QUOTA
+  // Listeners for groups
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, 'groups'), (snapshot) => {
+      setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group)));
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  // Sync missing stats for students once they are loaded
+  useEffect(() => {
+    if (user && user.role === 'student' && groups.length > 0) {
+      const syncMissingData = async () => {
+        // Sync Quiz stats if missing but history exists
+        if (!user.activityStats?.quizzesCompleted) {
+          try {
+            const results = await quizService.getQuizResultsByUser(user.id);
+            if (results.length > 0) {
+              console.log("[Auth] Background Sync: Updating missing quiz stats");
+              await updateDoc(doc(db, 'users', user.id), {
+                'activityStats.quizzesCompleted': results.length,
+                rankingScore: increment(results.length * 12)
+              });
+            }
+          } catch (e) {
+            console.error("Quiz sync failed", e);
+          }
+        }
+
+        // Sync Group membership if missing from profile but exists in group data
+        if (!user.joinedGroups || user.joinedGroups.length === 0) {
+          const communityGroup = groups.find(g => g.id === 'general' || g.id === 'community' || g.name?.toLowerCase().includes('communauté'));
+          if (communityGroup && communityGroup.members?.includes(user.id)) {
+             try {
+               await updateDoc(doc(db, 'users', user.id), {
+                 joinedGroups: arrayUnion(communityGroup.id)
+               });
+             } catch (e) {
+               console.error("Group sync failed", e);
+             }
+          }
+        }
+      };
+      
+      const timeoutId = setTimeout(syncMissingData, 3000); // 3s delay to ensure state settling
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user?.id, groups.length]);
+
+  // Other loaders
   useEffect(() => {
     if (!user) {
       setUsers([]);
