@@ -376,7 +376,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const normalizedRole = (user?.role || 'student').toLowerCase();
     const isStudent = normalizedRole === 'student';
     
-    if (isStudent && !isAdmin) {
+    if (isStudent && !isAdmin && mode === 'download') {
       // Robust member check: 1. Check user's profile joinedGroups 2. Check global groups state
       const userJoinedGroups = user.joinedGroups || [];
       const isInGroup = userJoinedGroups.length > 0 || (Array.isArray(groups) && groups.some(g => Array.isArray(g.members) && g.members.includes(user?.id)));
@@ -762,7 +762,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (shouldUpdate) {
         await updateDoc(doc(db, 'users', user.id), updates);
-        console.log("[Auth] Stats synced successfully");
+        console.log("[Auth] Stats synced successfully", updates);
+        
+        let message = "Profil synchronisé !";
+        if (updates['activityStats.quizzesCompleted']) message += " Quiz détecté.";
+        if (updates.hasPostedPresentation) message += " Présentation détectée.";
+        if (updates.joinedGroups) message += " Groupe détecté.";
+        
+        toast.success(message);
+      } else {
+        console.log("[Auth] Sync finished, no new criteria found");
       }
     } catch (err) {
       console.error("[Auth] Sync stats failed:", err);

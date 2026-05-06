@@ -78,10 +78,21 @@ service cloud.firestore {
       allow delete: if isAdmin() || (resource.data.authorId == request.auth.uid);
     }
 
+    match /quizResults/{resultId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /questionBank/{qId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
     match /notifications/{notifId} {
-      allow read: if isOwner(existing().userId) || existing().userId == 'all';
+      allow read: if isOwner(resource.data.userId) || resource.data.userId == 'all';
       allow create: if isSignedIn();
-      allow update, delete: if isOwner(existing().userId) || isAdmin();
+      allow update, delete: if isOwner(resource.data.userId) || isAdmin();
     }
 
     match /communityGroups/{groupId} {
@@ -119,5 +130,18 @@ service cloud.firestore {
     match /applications/{id} { allow read, write: if isSignedIn(); }
     match /teacherApplications/{id} { allow read, write: if isSignedIn(); }
     match /subscriptionRequests/{id} { allow read, write: if isSignedIn(); }
+
+    match /deals/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /dealSuggestions/{id} { allow read, write: if isSignedIn(); }
+    
+    match /colocations/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
+    match /colocationRequests/{id} { allow read, write: if isSignedIn(); }
+    match /colocationReviews/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
+
+    match /users/{userId}/reviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || isOwner(resource.data.authorId);
+    }
   }
 }

@@ -73,11 +73,33 @@ export const quizService = {
 
   async getQuizResultsByUser(userId: string): Promise<QuizResult[]> {
     try {
-      // Limit to 20 to prevent huge history loads
-      const q = query(collection(db, 'quizResults'), where('userId', '==', userId), orderBy('createdAt', 'desc'), limit(20));
+      // Try with ordering first
+      const q = query(
+        collection(db, 'quizResults'), 
+        where('userId', '==', userId), 
+        orderBy('createdAt', 'desc'), 
+        limit(20)
+      );
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizResult));
-    } catch (error) {
+    } catch (error: any) {
+      // Fallback if index is missing (common in new projects)
+      if (error?.message?.includes('index') || error?.code === 'failed-precondition') {
+        console.warn("[QuizService] Index missing for quizResults, falling back to basic query");
+        try {
+          const fallbackQ = query(collection(db, 'quizResults'), where('userId', '==', userId), limit(50));
+          const snapshot = await getDocs(fallbackQ);
+          const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizResult));
+          return results.sort((a, b) => {
+             const t1 = (a as any).createdAt?.seconds || 0;
+             const t2 = (b as any).createdAt?.seconds || 0;
+             return t2 - t1;
+          });
+        } catch (innerError) {
+          handleFirestoreError(innerError, OperationType.GET, 'quizResults-fallback');
+          return [];
+        }
+      }
       handleFirestoreError(error, OperationType.GET, 'quizResults');
       return [];
     }
