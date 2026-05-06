@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight, Brain } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight, Brain, RotateCw } from 'lucide-react';
 import PrintOrderModal from '../components/PrintOrderModal';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ export default function Documents() {
   const navigate = useNavigate();
   const { 
     user, isAdmin, documents: globalDocuments, logAction, groups, community, 
-    addDocument, incrementActivity, isDocumentLocked 
+    addDocument, incrementActivity, isDocumentLocked, syncUserStats 
   } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +137,19 @@ export default function Documents() {
     'Université Aube Nouvelle',
     ...documents.map(doc => doc.university)
   ]);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await syncUserStats();
+      toast.success("Synchronisation terminée !");
+    } catch (err) {
+      toast.error("Échec de la synchronisation");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const filteredDocuments = documents.filter(doc => {
     const matchesFilter = filter === 'tout' || doc.type === filterMap[filter];
@@ -977,8 +990,20 @@ export default function Documents() {
                     </div>
                         <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5 relative">
                       {Boolean(isDocumentLocked(doc, 'download')) && !isAdmin && (
-                        <div className="absolute -top-10 right-0 bg-amber-50 text-amber-700 text-[10px] px-3 py-1 rounded-lg border border-amber-200 whitespace-nowrap animate-in fade-in slide-in-from-right-1">
-                          {((isDocumentLocked(doc, 'download') as any)?.reason || "Vérifiez les critères")}
+                        <div className="absolute -top-12 right-0 flex flex-col items-end gap-1">
+                          <div className="bg-amber-50 text-amber-700 text-[10px] px-3 py-1 rounded-lg border border-amber-200 whitespace-nowrap animate-in fade-in slide-in-from-right-1">
+                            {((isDocumentLocked(doc, 'download') as any)?.reason || "Vérifiez les critères")}
+                          </div>
+                          {user?.role === 'student' && (
+                            <button 
+                              onClick={handleSync}
+                              disabled={isSyncing}
+                              className="text-[9px] text-emerald-600 hover:underline flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-emerald-100"
+                            >
+                              <RotateCw size={10} className={isSyncing ? 'animate-spin' : ''} />
+                              J'ai déjà fait le quiz/message ? Actualiser
+                            </button>
+                          )}
                         </div>
                       )}
                       {!isDocumentLocked(doc, 'download') && (

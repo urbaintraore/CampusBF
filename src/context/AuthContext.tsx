@@ -196,6 +196,9 @@ interface AuthContextType {
   signup: (userData: Partial<User> & { password?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (updatedUser: Partial<User>) => void;
+  syncUserStats: () => Promise<void>;
+  isDocumentLocked: (doc: any, mode?: 'view' | 'download') => any;
+  incrementActivity: (activity: keyof NonNullable<User['activityStats']>, additionalPoints?: number) => Promise<void>;
   submitTutorApplication: (
     description: string, 
     documentUrl: string,
@@ -226,8 +229,6 @@ interface AuthContextType {
   groups: Group[];
   addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
-  incrementActivity: (activity: keyof NonNullable<User['activityStats']>) => Promise<void>;
-  isDocumentLocked: (doc: any, mode?: 'view' | 'download') => false | { locked: boolean; reason: string };
   addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -382,9 +383,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
       const hasQuizzes = quizzesCompleted > 0;
-      const hasPresentation = (user.hasPostedPresentation === true);
+      const hasPresentation = user.hasPostedPresentation === true;
 
-      if (!isInGroup || !hasQuizzes || !hasPresentation) {
+      // Special case: if user says they did it, maybe we should double check if stats are 0
+      if (isStudent && !isAdmin && (!isInGroup || !hasQuizzes || !hasPresentation)) {
         let missing = [];
         if (!isInGroup) missing.push("Rejoindre un groupe");
         if (!hasPresentation) missing.push("Se présenter dans la Communauté (min. 15 car.)");
@@ -713,52 +715,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Listeners for groups
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setGroups([]);
+      return;
+    }
     const unsub = onSnapshot(collection(db, 'groups'), (snapshot) => {
       setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group)));
     });
     return () => unsub();
   }, [user?.id]);
 
+  /**
+   * Manual or automatic sync of user stats to fix issues like "Still locked"
+   */
+  const syncUserStats = React.useCallback(async () => {
+    if (!user || user.role !== 'student') return;
+    
+    console.log("[Auth] Manually syncing stats for", user.id);
+    const updates: any = {};
+    let shouldUpdate = false;
+
+    try {
+      // 1. Sync Quiz Results
+      const results = await quizService.getQuizResultsByUser(user.id);
+      if (results.length > (user.activityStats?.quizzesCompleted || 0)) {
+        updates['activityStats.quizzesCompleted'] = results.length;
+        if (!user.activityStats) updates['activityStats.logins'] = 1;
+        shouldUpdate = true;
+      }
+
+      // 2. Sync Group membership
+      const communityGroup = groups.find(g => g.id === 'general' || g.id === 'community' || g.name?.toLowerCase().includes('communauté'));
+      if (communityGroup && communityGroup.members?.includes(user.id) && !(user.joinedGroups || []).includes(communityGroup.id)) {
+        updates.joinedGroups = arrayUnion(communityGroup.id);
+        shouldUpdate = true;
+      }
+
+      // 3. Sync Presentation (check if user has any posts of significant length)
+      if (!user.hasPostedPresentation) {
+        const postsSnap = await getDocs(query(collection(db, 'posts'), where('author.id', '==', user.id), limit(1)));
+        if (!postsSnap.empty && (postsSnap.docs[0].data().content || '').length > 15) {
+          updates.hasPostedPresentation = true;
+          shouldUpdate = true;
+        }
+      }
+
+      if (shouldUpdate) {
+        await updateDoc(doc(db, 'users', user.id), updates);
+        console.log("[Auth] Stats synced successfully");
+      }
+    } catch (err) {
+      console.error("[Auth] Sync stats failed:", err);
+    }
+  }, [user, groups]);
+
   // Sync missing stats for students once they are loaded
   useEffect(() => {
     if (user && user.role === 'student' && groups.length > 0) {
-      const syncMissingData = async () => {
-        // Sync Quiz stats if missing but history exists
-        if (!user.activityStats?.quizzesCompleted) {
-          try {
-            const results = await quizService.getQuizResultsByUser(user.id);
-            if (results.length > 0) {
-              console.log("[Auth] Background Sync: Updating missing quiz stats");
-              await updateDoc(doc(db, 'users', user.id), {
-                'activityStats.quizzesCompleted': results.length,
-                rankingScore: increment(results.length * 12)
-              });
-            }
-          } catch (e) {
-            console.error("Quiz sync failed", e);
-          }
-        }
-
-        // Sync Group membership if missing from profile but exists in group data
-        if (!user.joinedGroups || user.joinedGroups.length === 0) {
-          const communityGroup = groups.find(g => g.id === 'general' || g.id === 'community' || g.name?.toLowerCase().includes('communauté'));
-          if (communityGroup && communityGroup.members?.includes(user.id)) {
-             try {
-               await updateDoc(doc(db, 'users', user.id), {
-                 joinedGroups: arrayUnion(communityGroup.id)
-               });
-             } catch (e) {
-               console.error("Group sync failed", e);
-             }
-          }
-        }
-      };
-      
-      const timeoutId = setTimeout(syncMissingData, 3000); // 3s delay to ensure state settling
+      const timeoutId = setTimeout(syncUserStats, 2000); 
       return () => clearTimeout(timeoutId);
     }
-  }, [user?.id, groups.length]);
+  }, [user?.id, groups.length, syncUserStats]);
 
   // Other loaders
   useEffect(() => {
@@ -1880,8 +1897,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       groups,
       addNotification,
       markNotificationAsRead,
-      incrementActivity,
+      syncUserStats,
       isDocumentLocked,
+      incrementActivity,
       addTeacherReview,
       isAuthenticated: !!user, 
       isLoading 
