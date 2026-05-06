@@ -23,7 +23,7 @@ const shuffleArray = (array: any[]) => {
 };
 
 export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
-  const { user, incrementActivity } = useAuth();
+  const { user, incrementActivity, syncUserStats } = useAuth();
   
   // Quiz State
   const [questions, setQuestions] = useState(quiz.questions);
@@ -214,6 +214,10 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         if (incrementActivity) {
           // One atomic call for both activity count and points
           await incrementActivity('quizzesCompleted', earnedPoints);
+        }
+
+        if (syncUserStats) {
+          await syncUserStats();
         }
         
         toast.success(`+${earnedPoints} points gagnés !`);

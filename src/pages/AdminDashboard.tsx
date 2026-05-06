@@ -1,6 +1,6 @@
 import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState, useEffect } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer, Unlock, Lock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
@@ -548,9 +548,23 @@ export default function AdminDashboard() {
   );
 
   const handleToggleUserRole = (userId: string) => {
-    const user = adminUsers.find(u => u.id === userId);
-    if (user) {
-      updateUserRole(userId, user.role === 'admin' ? 'student' : 'admin');
+    const userResult = adminUsers.find(u => u.id === userId);
+    if (userResult) {
+      updateUserRole(userId, userResult.role === 'admin' ? 'student' : 'admin');
+    }
+  };
+
+  const handleForceUnlock = async (userId: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        forceUnlocked: !currentStatus,
+        lastActiveAt: serverTimestamp()
+      });
+      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, forceUnlocked: !currentStatus } : u));
+      toast.success(!currentStatus ? "Accès COMPLET débloqué pour cet utilisateur" : "Restrictions rétablies");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors du déblocage");
     }
   };
 
@@ -3582,6 +3596,16 @@ export default function AdminDashboard() {
                           className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                         >
                           <Shield size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleForceUnlock(u.id, u.forceUnlocked || false)}
+                          title={u.forceUnlocked ? "Rétablir restrictions" : "DÉBLOQUER DE FORCE (ACCÈS COMPLET)"}
+                          className={cn(
+                            "p-2 rounded-lg transition-colors",
+                            u.forceUnlocked ? "text-rose-600 bg-rose-50" : "text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+                          )}
+                        >
+                          <Unlock size={18} />
                         </button>
                         <button 
                           onClick={() => handleDeleteUser(u.id)}

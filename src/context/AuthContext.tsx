@@ -375,6 +375,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 2. Student special restrictions (Onboarding)
     const normalizedRole = (user?.role || 'student').toLowerCase();
     const isStudent = normalizedRole === 'student';
+
+    // Emergency bypass
+    if (user?.forceUnlocked) return false;
     
     if (isStudent && !isAdmin && mode === 'download') {
       // Robust member check: 1. Check user's profile joinedGroups 2. Check global groups state
@@ -734,47 +737,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("[Auth] Manually syncing stats for", user.id);
     const updates: any = {};
     let shouldUpdate = false;
+    let quizDetected = false;
+    let presentationDetected = false;
+    let groupDetected = false;
 
     try {
-      // 1. Sync Quiz Results
-      const results = await quizService.getQuizResultsByUser(user.id);
-      if (results.length > (user.activityStats?.quizzesCompleted || 0)) {
-        updates['activityStats.quizzesCompleted'] = results.length;
-        if (!user.activityStats) updates['activityStats.logins'] = 1;
-        shouldUpdate = true;
+      // 1. Sync Quiz Results (Try-Catch per step)
+      try {
+        const results = await quizService.getQuizResultsByUser(user.id);
+        if (results.length > (user.activityStats?.quizzesCompleted || 0)) {
+          updates['activityStats.quizzesCompleted'] = results.length;
+          if (!user.activityStats) updates['activityStats.logins'] = 1;
+          shouldUpdate = true;
+          quizDetected = true;
+        }
+      } catch (e) {
+        console.error("Quiz sync step failed", e);
       }
 
       // 2. Sync Group membership
-      const communityGroup = groups.find(g => g.id === 'general' || g.id === 'community' || g.name?.toLowerCase().includes('communauté'));
-      if (communityGroup && communityGroup.members?.includes(user.id) && !(user.joinedGroups || []).includes(communityGroup.id)) {
-        updates.joinedGroups = arrayUnion(communityGroup.id);
-        shouldUpdate = true;
+      try {
+        const communityGroup = groups.find(g => 
+          g.id === 'general' || 
+          g.id === 'community' || 
+          g.name?.toLowerCase().includes('communauté') ||
+          g.name?.toLowerCase().includes('campus')
+        );
+        if (communityGroup && communityGroup.members?.includes(user.id) && !(user.joinedGroups || []).includes(communityGroup.id)) {
+          updates.joinedGroups = arrayUnion(communityGroup.id);
+          shouldUpdate = true;
+          groupDetected = true;
+        }
+      } catch (e) {
+        console.error("Group sync step failed", e);
       }
 
-      // 3. Sync Presentation (check if user has any posts of significant length)
-      if (!user.hasPostedPresentation) {
-        const postsSnap = await getDocs(query(collection(db, 'posts'), where('author.id', '==', user.id), limit(1)));
-        if (!postsSnap.empty && (postsSnap.docs[0].data().content || '').length > 15) {
-          updates.hasPostedPresentation = true;
-          shouldUpdate = true;
+      // 3. Sync Presentation
+      try {
+        if (!user.hasPostedPresentation) {
+          const postsSnap = await getDocs(query(
+            collection(db, 'posts'), 
+            where('authorId', '==', user.id), // Try both authorId and author.id
+            limit(5)
+          ));
+          
+          let longPost = postsSnap.docs.find(d => (d.data().content || '').length > 15);
+          
+          if (!longPost) {
+             const postsSnap2 = await getDocs(query(
+               collection(db, 'posts'), 
+               where('author.id', '==', user.id),
+               limit(5)
+             ));
+             longPost = postsSnap2.docs.find(d => (d.data().content || '').length > 15);
+          }
+
+          if (longPost) {
+            updates.hasPostedPresentation = true;
+            shouldUpdate = true;
+            presentationDetected = true;
+          }
         }
+      } catch (e) {
+        console.error("Presentation sync step failed", e);
       }
 
       if (shouldUpdate) {
-        await updateDoc(doc(db, 'users', user.id), updates);
+        await updateDoc(doc(db, 'users', user.id), {
+           ...updates,
+           lastActiveAt: serverTimestamp()
+        });
         console.log("[Auth] Stats synced successfully", updates);
         
         let message = "Profil synchronisé !";
-        if (updates['activityStats.quizzesCompleted']) message += " Quiz détecté.";
-        if (updates.hasPostedPresentation) message += " Présentation détectée.";
-        if (updates.joinedGroups) message += " Groupe détecté.";
+        if (quizDetected) message += " Quiz trouvé.";
+        if (presentationDetected) message += " Message trouvé.";
+        if (groupDetected) message += " Groupe trouvé.";
         
         toast.success(message);
       } else {
         console.log("[Auth] Sync finished, no new criteria found");
       }
     } catch (err) {
-      console.error("[Auth] Sync stats failed:", err);
+      console.error("[Auth] Overall sync stats failed:", err);
     }
   }, [user, groups]);
 

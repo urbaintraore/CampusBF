@@ -196,6 +196,8 @@ export interface User {
   };
   rankingScore?: number;
   contributionCount?: number;
+  forceUnlocked?: boolean;
+  forceUnlockReason?: string;
 }
 
 export interface Training {
