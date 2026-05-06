@@ -376,8 +376,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isStudent = normalizedRole === 'student';
     
     if (isStudent && !isAdmin) {
-      // Use a safer member check that doesn't depend on groups being loaded if not available
-      const isInGroup = Array.isArray(groups) && groups.some(g => Array.isArray(g.members) && g.members.includes(user?.id));
+      // Robust member check: 1. Check user's profile joinedGroups 2. Check global groups state
+      const userJoinedGroups = user.joinedGroups || [];
+      const isInGroup = userJoinedGroups.length > 0 || (Array.isArray(groups) && groups.some(g => Array.isArray(g.members) && g.members.includes(user?.id)));
+      
       const quizzesCompleted = user.activityStats?.quizzesCompleted || 0;
       const hasQuizzes = quizzesCompleted > 0;
       const hasPresentation = (user.hasPostedPresentation === true);
@@ -656,15 +658,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen to user profile changes in real-time
         const userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
           if (doc.exists()) {
-            setUser(prev => {
-              const newData = doc.data() as User;
-              // Only update if data changed to avoid infinite loops or unnecessary renders
-              if (JSON.stringify(prev) !== JSON.stringify({ id: firebaseUser.uid, ...newData })) {
-                return { id: firebaseUser.uid, ...newData };
-              }
-              return prev;
-            });
-          }
+        const newData = doc.data() as User;
+        const normalizedData = { id: firebaseUser.uid, ...newData };
+        setUser(prev => {
+          // Robust comparison or just update if we want to be safe for authorization
+          // Since it's a profile snapshot, we should usually just update
+          return normalizedData;
+        });
+      }
         });
         unsubscribes.push(userUnsubscribe);
         

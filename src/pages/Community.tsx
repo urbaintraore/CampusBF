@@ -263,8 +263,13 @@ export default function Community() {
   const handleJoinGroup = async (groupId: string) => {
     if (!user) return;
     try {
+      // 1. Update the group's member list
       await updateDoc(doc(db, 'groups', groupId), {
         members: arrayUnion(user.id)
+      });
+      // 2. Update the user's joinedGroups list for reliable global checks
+      await updateDoc(doc(db, 'users', user.id), {
+        joinedGroups: arrayUnion(groupId)
       });
       showToast('Vous avez rejoint le groupe !');
     } catch (error) {
@@ -275,8 +280,13 @@ export default function Community() {
   const handleLeaveGroup = async (groupId: string) => {
     if (!user) return;
     try {
+      // 1. Update the group's member list
       await updateDoc(doc(db, 'groups', groupId), {
         members: arrayRemove(user.id)
+      });
+      // 2. Update the user's joinedGroups list
+      await updateDoc(doc(db, 'users', user.id), {
+        joinedGroups: arrayRemove(groupId)
       });
       showToast('Vous avez quitté le groupe.');
     } catch (error) {

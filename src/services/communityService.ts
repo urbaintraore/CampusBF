@@ -83,6 +83,13 @@ export const communityService = {
           });
         }
       }
+
+      // ALSO update the user document to track this membership reliably
+      if (communityGroupId) {
+        await updateDoc(doc(db, 'users', userId), {
+          joinedGroups: arrayUnion(communityGroupId)
+        });
+      }
     } catch (error) {
       console.error("Error ensuring user in community group:", error);
     }

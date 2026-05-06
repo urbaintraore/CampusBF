@@ -160,6 +160,7 @@ export interface User {
   lastActiveAt?: any;
   lastDownloadAt?: any;
   hasPostedPresentation?: boolean;
+  joinedGroups?: string[];
   activityStats?: {
     logins: number;
     docsViewed: number;
