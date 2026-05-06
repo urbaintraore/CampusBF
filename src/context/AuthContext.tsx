@@ -299,7 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       'traoreurb@gmail.com',
       'urbain.traore@gmail.com',
       'urbain.traore@yahoo.fr',
-      'urbain.traoreurb@gmail.com.'
+      'urbain.traoreurb@gmail.com'
     ];
 
     const isExplicit = hardcodedAdmins.some(ae => lowerEmail.includes(ae.toLowerCase().trim()) || ae.toLowerCase().trim().includes(lowerEmail));
@@ -377,7 +377,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isStudent = normalizedRole === 'student';
 
     // Emergency bypass
-    if (user?.forceUnlocked) return { locked: false };
+    if (user?.forceUnlocked) return false;
     
     if (isStudent && !isAdmin && mode === 'download') {
       // Robust member check: 1. Check user's profile joinedGroups 2. Check global groups state
@@ -739,21 +739,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let groupDetected = false;
 
     try {
-      // 1. Sync Quiz Results (Try-Catch per step)
-      try {
-        console.log("[Auth] Checking quiz results...");
-        const results = await quizService.getQuizResultsByUser(user.id);
-        if (results.length > (user.activityStats?.quizzesCompleted || 0)) {
-          updates['activityStats.quizzesCompleted'] = results.length;
-          if (!user.activityStats) updates['activityStats.logins'] = 1;
-          shouldUpdate = true;
-          quizDetected = true;
-        }
-      } catch (e) {
-        console.warn("[Auth] Quiz sync step failed:", e);
-      }
-
-      // 2. Sync Group membership
+      // 1. Sync Group membership
       try {
         console.log("[Auth] Checking group membership...");
         const communityGroup = groups.find(g => 
@@ -771,7 +757,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn("[Auth] Group sync step failed:", e);
       }
 
-      // 3. Sync Presentation
+      // 2. Sync Presentation
       try {
         if (!user.hasPostedPresentation) {
           console.log("[Auth] Checking posts for presentation...");
@@ -810,7 +796,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         let message = "Profil synchronisé !";
-        if (quizDetected) message += " Quiz trouvé.";
         if (presentationDetected) message += " Message trouvé.";
         if (groupDetected) message += " Groupe trouvé.";
         

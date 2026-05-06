@@ -701,11 +701,16 @@ export default function Dashboard() {
                 >
                   <div className="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0 ring-1 ring-emerald-200/50 group-hover:scale-105 transition-transform relative">
                     <span className="font-bold text-sm uppercase tracking-wider">{doc.type.slice(0, 3)}</span>
-                    {isDocumentLocked(doc) && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm border-2 border-white">
-                        <Lock size={10} />
-                      </div>
-                    )}
+                    {(() => {
+                      const lock = isDocumentLocked(doc);
+                      const isLocked = lock && (typeof lock === 'object' ? lock.locked : lock);
+                      if (!isLocked || isAdmin) return null;
+                      return (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                          <Lock size={10} />
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

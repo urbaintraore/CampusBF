@@ -989,25 +989,26 @@ export default function Documents() {
                       </div>
                     </div>
                         <div className="flex flex-col md:flex-row items-center justify-end gap-3 md:border-l md:border-slate-100 md:pl-5 relative">
-                      {Boolean(isDocumentLocked(doc, 'download')) && !isAdmin && (
-                        <div className="absolute -top-12 right-0 flex flex-col items-end gap-1">
-                          <div className="bg-amber-50 text-amber-700 text-[10px] px-3 py-1 rounded-lg border border-amber-200 whitespace-nowrap animate-in fade-in slide-in-from-right-1">
-                            {((isDocumentLocked(doc, 'download') as any)?.reason || "Vérifiez les critères")}
+                      {(() => {
+                        const lock = isDocumentLocked(doc, 'download');
+                        const isLocked = lock && (typeof lock === 'object' ? lock.locked : lock);
+                        if (!isLocked || isAdmin) return null;
+                        
+                        return (
+                          <div className="absolute -top-12 right-0 flex flex-col items-end gap-1">
+                            <div className="bg-amber-50 text-amber-700 text-[10px] px-3 py-1 rounded-lg border border-amber-200 whitespace-nowrap animate-in fade-in slide-in-from-right-1">
+                              {((lock as any)?.reason || "Vérifiez les critères")}
+                            </div>
                           </div>
-                          {user?.role === 'student' && (
-                            <button 
-                              onClick={handleSync}
-                              disabled={isSyncing}
-                              className="text-[9px] text-emerald-600 hover:underline flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-emerald-100"
-                            >
-                              <RotateCw size={10} className={isSyncing ? 'animate-spin' : ''} />
-                              J'ai déjà fait le quiz/message ? Actualiser
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {!isDocumentLocked(doc, 'download') && (
-                        <button
+                        );
+                      })()}
+                      {(() => {
+                        const lock = isDocumentLocked(doc, 'download');
+                        const isLocked = lock && (typeof lock === 'object' ? lock.locked : lock);
+                        if (isLocked && !isAdmin) return null;
+                        
+                        return (
+                          <button
                           onClick={() => {
                             setSelectedDocForPrint({ url: doc.downloadUrl, name: doc.title || doc.fileName });
                             setShowPrintModal(true);
@@ -1017,7 +1018,8 @@ export default function Documents() {
                         >
                           <Printer size={18} className="text-emerald-600" />
                         </button>
-                      )}
+                        );
+                      })()}
                       {(isAdmin || user?.role !== 'student') && (
                         <button 
                           onClick={() => handleView(doc)}
