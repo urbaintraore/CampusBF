@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { createCampusAssistantChat } from '../services/geminiService';
+import { useAuth } from '../context/AuthContext';
 import Markdown from 'react-markdown';
 
 export default function Chatbot() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([
     { role: 'bot', content: 'Bonjour ! Je suis l\'assistant CampusBF 🎓. Comment puis-je vous aider aujourd\'hui ?' }
@@ -11,6 +13,7 @@ export default function Chatbot() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
   
   const quickActions = [
     { label: "Aide-moi à réviser", icon: "📚", prompt: "Je voudrais réviser mes cours de ce semestre. Peux-tu m'aider ?" },
@@ -18,6 +21,40 @@ export default function Chatbot() {
     { label: "Recherche stage", icon: "💼", prompt: "Je cherche un stage au Burkina Faso dans mon domaine." },
     { label: "MotoRide ?", icon: "🏍️", prompt: "C'est quoi MotoRide et comment ça marche ?" },
   ];
+
+  // Gestion de l'accueil automatique au login/connexion
+  useEffect(() => {
+    const welcomeKey = `campusbf_welcome_${user?.id || 'guest'}`;
+    const alreadyShown = sessionStorage.getItem(welcomeKey);
+    
+    if (!alreadyShown && user) {
+      // Attendre un peu après le chargement pour ne pas agresser l'utilisateur
+      const timer = setTimeout(() => {
+        setIsOpen(true);
+        setHasShownWelcome(true);
+        sessionStorage.setItem(welcomeKey, 'true');
+        
+        // Message d'introduction structuré
+        const introMessage = `👋 **Bienvenue sur CampusBF, ${user.firstName || 'Etudiant'} !**
+
+Je suis votre assistant virtuel. Laissez-moi vous présenter rapidement pourquoi notre plateforme est unique :
+
+✨ **Nos avantages :**
+* **Collaboration :** Échangez avec des milliers d'étudiants de toutes les universités (UJKZ, UNB, etc.).
+* **Ressources :** Accédez gratuitement à une DocThèque riche et préparez vos concours avec notre IA.
+* **Services Pratiques :** Économisez avec **MotoRide** (covoiturage) et le **Marketplace** étudiant.
+
+💡 **Différence avec Campus Faso :**
+Contrairement à *Campus Faso* (qui gère l'administratif, inscriptions et bourses), **CampusBF** est votre compagnon quotidien pour la réussite académique et l'entraide sociale. Nous sommes l'espace où la communauté étudiante vit et s'entraide réellement !
+
+Besoin d'aide pour démarrer ?`;
+
+        setMessages([{ role: 'bot', content: introMessage }]);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
   
   // Référence pour garder la session de chat active (avec historique)
   const chatSessionRef = useRef<any>(null);
