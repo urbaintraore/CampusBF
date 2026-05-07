@@ -24,16 +24,15 @@ export default function Chatbot() {
 
   // Gestion de l'accueil automatique au login/connexion
   useEffect(() => {
-    const welcomeKey = `campusbf_welcome_${user?.id || 'guest'}`;
-    const alreadyShown = sessionStorage.getItem(welcomeKey);
+    const welcomeKey = `campusbf_auto_welcome_${user?.id || 'guest'}`;
+    const autoOpenDone = sessionStorage.getItem(welcomeKey);
     
-    if (!alreadyShown && user) {
-      // Attendre un peu après le chargement pour ne pas agresser l'utilisateur
+    if (!autoOpenDone && user && !isOpen && messages.length <= 1) {
       const timer = setTimeout(() => {
         setIsOpen(true);
         setHasShownWelcome(true);
         sessionStorage.setItem(welcomeKey, 'true');
-        console.log("[Chatbot] Auto-opening welcome message for", user.id);
+        
         const introMessage = `👋 **Bienvenue sur CampusBF, ${user.firstName || 'Etudiant'} !**
 
 Je suis votre assistant virtuel. Laissez-moi vous présenter rapidement pourquoi notre plateforme est unique :
@@ -49,11 +48,11 @@ Contrairement à *Campus Faso* (qui gère l'administratif, inscriptions et bours
 Besoin d'aide pour démarrer ?`;
 
         setMessages([{ role: 'bot', content: introMessage }]);
-      }, 1000);
+      }, 800);
       
       return () => clearTimeout(timer);
     }
-  }, [user]);
+  }, [user, isOpen, messages.length]);
   
   // Référence pour garder la session de chat active (avec historique)
   const chatSessionRef = useRef<any>(null);

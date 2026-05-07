@@ -21,53 +21,53 @@ export default function Dashboard() {
   const [internships, setInternships] = useState<any[]>([]);
   const [tutors, setTutors] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
-  const [marketplace, setMarketplace] = useState<any[]>([]);
-  const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
-  const [groupsCount, setGroupsCount] = useState(0);
-  const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const navigate = useNavigate();
-
-  const loadDashboardData = async (force = false) => {
-    const cacheKey = 'dashboard_cache';
-    const cached = sessionStorage.getItem(cacheKey);
-    const cacheTime = sessionStorage.getItem(cacheKey + '_time');
-    const now = Date.now();
-
-    if (!force && cached && cacheTime && now - parseInt(cacheTime) < 3600000) { // 1 hour cache
-      const data = JSON.parse(cached);
-      setAds(data.ads || []);
-      setDocuments(data.documents || []);
-      setInternships(data.internships || []);
-      setTutors(data.tutors || []);
-      setTeachers(data.teachers || []);
-      setEvents(data.events || []);
-      setMarketplace(data.marketplace || []);
-      setPublicServiceContests(data.publicServiceContests || []);
-      setGroupsCount(data.groupsCount || 0);
-      setTotalDocumentsCount(data.totalDocumentsCount || 0);
-      setLoading(false);
-      return;
-    }
-
-    if (force) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      // Run fetches in parallel but limited
-      const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap, marketSnap] = await Promise.all([
-        getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
-        getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
-        getDocs(query(collection(db, 'internships'), limit(3))),
-        getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
-        getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
-        getDocs(query(collection(db, 'events'), limit(2))),
-        getDocs(query(collection(db, 'public_service_contests'), limit(5))),
-        getDocs(query(collection(db, 'marketplace'), limit(2)))
-      ]);
+    const [events, setEvents] = useState<any[]>([]);
+    const [marketplace, setMarketplace] = useState<any[]>([]);
+    const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
+    const [groupsCount, setGroupsCount] = useState(0);
+    const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+  
+    const navigate = useNavigate();
+  
+    const loadDashboardData = async (force = false) => {
+      const cacheKey = 'dashboard_cache';
+      const cached = sessionStorage.getItem(cacheKey);
+      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+      const now = Date.now();
+  
+      if (!force && cached && cacheTime && now - parseInt(cacheTime) < 1800000) { // 30 min cache instead of 1 hour
+        const data = JSON.parse(cached);
+        setAds(data.ads || []);
+        setDocuments(data.documents || []);
+        setInternships(data.internships || []);
+        setTutors(data.tutors || []);
+        setTeachers(data.teachers || []);
+        setEvents(data.events || []);
+        setMarketplace(data.marketplace || []);
+        setPublicServiceContests(data.publicServiceContests || []);
+        setGroupsCount(data.groupsCount || 0);
+        setTotalDocumentsCount(data.totalDocumentsCount || 0);
+        setLoading(false);
+        return;
+      }
+  
+      if (force) setRefreshing(true);
+      else setLoading(true);
+  
+      try {
+        // Run fetches in parallel but limited
+        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap, marketSnap] = await Promise.all([
+          getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
+          getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
+          getDocs(query(collection(db, 'internships'), limit(3))),
+          getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
+          getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
+          getDocs(query(collection(db, 'events'), limit(3))), // Fetching 3 instead of 2
+          getDocs(query(collection(db, 'public_service_contests'), limit(5))),
+          getDocs(query(collection(db, 'marketplace'), limit(2)))
+        ]);
 
       const dashboardData = {
         ads: adsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -856,11 +856,13 @@ export default function Dashboard() {
                           event.type === 'competition' ? "bg-amber-50 text-amber-600" :
                           event.type === 'cultural' ? "bg-pink-50 text-pink-600" : "bg-slate-50 text-slate-600"
                         )}>
-                          {event.type}
+                          {event.type || 'Événement'}
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        </span>
+                        {event.date && (
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
                       </div>
                       <h4 className="font-semibold text-slate-900 text-base group-hover:text-emerald-700 transition-colors line-clamp-2 flex-1">
                         {event.title}

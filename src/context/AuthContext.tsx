@@ -862,6 +862,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     unsubscribes.push(unsubNotifs);
 
+    // Events are used in Dashboard and Events page
+    const qEvents = query(collection(db, 'events'), orderBy('date', 'asc'), limit(20));
+    const unsubEvents = onSnapshot(qEvents, (snapshot) => {
+      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
+    }, (error) => {
+      console.error("onSnapshot Events Error:", error);
+    });
+    unsubscribes.push(unsubEvents);
+
     // Admin only lists
     if (isAdmin) {
       const qApps = query(collection(db, 'applications'), limit(20));
