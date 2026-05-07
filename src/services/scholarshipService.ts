@@ -23,28 +23,34 @@ export const scholarshipService = {
   getScholarships: async (filters?: { level?: string, domain?: string, country?: string }): Promise<Scholarship[]> => {
     try {
       const boursesRef = collection(db, 'bourses');
-      let q = query(boursesRef, orderBy('date_publication', 'desc'), limit(100));
-
-      if (filters) {
-        if (filters.level && filters.level !== 'all') {
+      let q;
+      
+      try {
+        // Premier essai avec tri (nécessite un index si combiné avec des filtres where)
+        if (filters && filters.level && filters.level !== 'all') {
           q = query(boursesRef, where('niveau', '==', filters.level), orderBy('date_publication', 'desc'), limit(100));
+        } else {
+          q = query(boursesRef, orderBy('date_publication', 'desc'), limit(100));
         }
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => {
+          return { id: doc.id, ...(doc.data() as any) } as Scholarship;
+        });
+      } catch (innerError) {
+        console.warn("[ScholarshipService] Ordered query failed, falling back to simple query", innerError);
+        // Fallback simple sans tri pour éviter les erreurs d'index ou de champs manquants
+        q = query(boursesRef, limit(100));
+        const snapshot = await getDocs(q);
+        const results = snapshot.docs.map(doc => {
+          return { id: doc.id, ...(doc.data() as any) } as Scholarship;
+        });
+        // Tri manuel côté client en cas de fallback (plus sûr)
+        return results.sort((a, b) => {
+          const dateA = a.date_publication?.toDate?.() || new Date(0);
+          const dateB = b.date_publication?.toDate?.() || new Date(0);
+          return dateB.getTime() - dateA.getTime();
+        });
       }
-
-      const snapshot = await getDocs(q);
-      let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scholarship));
-
-      // Post-filtering for other fields if needed (Firestore index limits)
-      if (filters) {
-        if (filters.domain && filters.domain !== 'all') {
-          results = results.filter(b => b.domaine && b.domaine.toLowerCase().includes(filters.domain!.toLowerCase()));
-        }
-        if (filters.country && filters.country !== 'all') {
-          results = results.filter(b => b.pays && b.pays.toLowerCase().includes(filters.country!.toLowerCase()));
-        }
-      }
-
-      return results;
     } catch (error) {
       console.error("Error fetching scholarships:", error);
       return [];

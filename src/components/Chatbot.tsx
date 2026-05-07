@@ -26,6 +26,24 @@ export default function Chatbot() {
 
   // Gestion de l'accueil automatique au login/connexion
   useEffect(() => {
+    const handleOpenChat = (e: any) => {
+      const { message, open } = e.detail || {};
+      if (open !== false) setIsOpen(true);
+      if (message) {
+        setInput(message);
+        // Ne pas envoyer automatiquement pour laisser l'utilisateur voir le prompt
+      }
+    };
+
+    window.addEventListener('open-campus-chat', handleOpenChat);
+    
+    return () => {
+      window.removeEventListener('open-campus-chat', handleOpenChat);
+    };
+  }, []);
+
+  // Effect séparé pour le message de bienvenue automatique
+  useEffect(() => {
     const welcomeKey = `campusbf_auto_welcome_v2_${user?.id || 'guest'}`;
     const autoOpenDone = localStorage.getItem(welcomeKey);
     

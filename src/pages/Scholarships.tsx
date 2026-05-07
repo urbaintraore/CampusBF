@@ -48,7 +48,7 @@ export default function Scholarships() {
         alert(`${newCount} nouvelles bourses ajoutées avec succès !`);
         fetchScholarships();
       } else {
-        alert("Aucune nouvelle bourse trouvée pour le moment.");
+        alert("Aucune nouvelle bourse trouvée pour le moment. Réessayez plus tard.");
       }
     } catch (error) {
       alert("Erreur lors de la synchronisation.");
@@ -75,6 +75,16 @@ export default function Scholarships() {
     } finally {
       setAnalyzingId(null);
     }
+  };
+
+  const handleOpenAssistant = () => {
+    const event = new CustomEvent('open-campus-chat', { 
+      detail: { 
+        message: "Bonjour ! Je souhaite avoir des conseils pour postuler aux bourses internationales. Peux-tu m'aider à optimiser mon dossier ?",
+        open: true 
+      } 
+    });
+    window.dispatchEvent(event);
   };
 
   const filteredScholarships = useMemo(() => {
@@ -200,13 +210,26 @@ export default function Scholarships() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 min-h-[400px]">
           <Loader2 size={48} className="text-emerald-600 animate-spin mb-4" />
-          <p className="text-slate-500 font-medium">Analyse des opportunités en cours...</p>
+          <p className="text-slate-500 font-medium">Recherche des meilleures opportunités mondiales...</p>
         </div>
       ) : filteredScholarships.length === 0 ? (
-        <div className="glass p-20 rounded-3xl text-center">
-          <BookOpen size={48} className="mx-auto text-slate-300 mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Aucune opportunité trouvée</h2>
-          <p className="text-slate-500">Essayez de modifier vos filtres ou de revenir plus tard.</p>
+        <div className="glass p-20 rounded-3xl text-center bg-white/50 border-2 border-dashed border-slate-200">
+          <BookOpen size={64} className="mx-auto text-slate-200 mb-6" />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Aucune opportunité disponible</h2>
+          <p className="text-slate-500 max-w-md mx-auto mb-8">
+            Nous n'avons pas encore trouvé d'offres correspondant à vos critères.
+            {isAdmin && " En tant qu'administrateur, vous pouvez lancer une synchronisation IA."}
+          </p>
+          {isAdmin && (
+            <button 
+              onClick={handleSync}
+              disabled={syncing}
+              className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-3 mx-auto"
+            >
+              {syncing ? <RefreshCw className="animate-spin" size={24} /> : <Sparkles size={24} />}
+              Lancer la recherche IA
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -271,7 +294,7 @@ export default function Scholarships() {
                       ) : (
                         <Sparkles className="text-emerald-500" size={18} />
                       )}
-                      Obtenir le résumé intelligent & score de match
+                      Obtenir l'analyse IA
                     </button>
                   ) : (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
@@ -342,7 +365,10 @@ export default function Scholarships() {
             Utilisez notre assistant personnel pour corriger votre CV et votre lettre de motivation. Une candidature soignée est la clé de la réussite internationale.
           </p>
         </div>
-        <button className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all">
+        <button 
+          onClick={handleOpenAssistant}
+          className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+        >
           Parler à l'Assistant IA
         </button>
       </div>
