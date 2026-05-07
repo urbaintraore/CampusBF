@@ -439,6 +439,12 @@ export default function Dashboard() {
               link: '/public-service-contests' 
             },
             {
+              label: 'Bourses IA', 
+              count: 'NEW', 
+              color: 'bg-indigo-600 text-white ring-indigo-600', 
+              link: '/scholarships' 
+            },
+            {
               label: 'Offres Stages', 
               count: internships.length.toString(), 
               color: 'bg-emerald-600 text-white ring-emerald-600', 

@@ -31,7 +31,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'teacher'] },
     { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['student', 'admin', 'teacher', 'company', 'institution'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'teacher'] },
-    { icon: Sparkles, label: 'Bourses & Opportunités IA', to: '/scholarships', roles: ['student', 'admin', 'teacher'] },
+    { icon: Sparkles, label: 'Bourses & Opportunités IA', to: '/scholarships', roles: ['student', 'admin', 'teacher', 'alumni', 'parent'] },
     { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'teacher', 'alumni', 'company'] },
     { icon: Users, label: 'Communauté', to: '/community', roles: ['student', 'admin', 'teacher', 'alumni'] },
     { icon: Bike, label: 'MotoRide', to: '/motoride', roles: ['student', 'admin', 'teacher', 'alumni'] },

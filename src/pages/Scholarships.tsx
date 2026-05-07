@@ -28,6 +28,11 @@ export default function Scholarships() {
     try {
       const data = await scholarshipService.getScholarships();
       setScholarships(data);
+      
+      // Auto-sync if empty and admin (to populate the site for everyone)
+      if (data.length === 0 && isAdmin && !syncing) {
+        handleSync();
+      }
     } catch (error) {
       console.error("Error fetching scholarships:", error);
     } finally {
