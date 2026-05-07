@@ -187,7 +187,7 @@ export default function Scholarships() {
               onChange={(e) => setCountryFilter(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl appearance-none outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
             >
-              <option value="all">Tous les pays</option>
+              <option value="all">{loading ? 'Chargement...' : 'Tous les pays'}</option>
               {uniqueCountries.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -199,7 +199,7 @@ export default function Scholarships() {
               onChange={(e) => setDomainFilter(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl appearance-none outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
             >
-              <option value="all">Tous les domaines</option>
+              <option value="all">{loading ? 'Chargement...' : 'Tous les domaines'}</option>
               {uniqueDomains.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
