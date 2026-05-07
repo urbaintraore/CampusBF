@@ -33,8 +33,7 @@ export default function Chatbot() {
         setIsOpen(true);
         setHasShownWelcome(true);
         sessionStorage.setItem(welcomeKey, 'true');
-        
-        // Message d'introduction structuré
+        console.log("[Chatbot] Auto-opening welcome message for", user.id);
         const introMessage = `👋 **Bienvenue sur CampusBF, ${user.firstName || 'Etudiant'} !**
 
 Je suis votre assistant virtuel. Laissez-moi vous présenter rapidement pourquoi notre plateforme est unique :
@@ -50,7 +49,7 @@ Contrairement à *Campus Faso* (qui gère l'administratif, inscriptions et bours
 Besoin d'aide pour démarrer ?`;
 
         setMessages([{ role: 'bot', content: introMessage }]);
-      }, 3000);
+      }, 1000);
       
       return () => clearTimeout(timer);
     }
