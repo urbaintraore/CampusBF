@@ -422,7 +422,7 @@ export default function Dashboard() {
             { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
-            { label: 'Événements', count: events?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
+            { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
           ].map((stat) => (
             <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
               <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
@@ -431,7 +431,7 @@ export default function Dashboard() {
           ))
         ) : (
           [
-            { label: 'Documents', count: totalDocumentsCount.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
+            { label: 'Documentation', count: totalDocumentsCount.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
             { 
               label: 'Concours FP', 
               count: publicServiceContests?.length.toString() || '0', 
@@ -439,17 +439,12 @@ export default function Dashboard() {
               link: '/public-service-contests' 
             },
             {
-              label: 'Stages & Emplois', 
+              label: 'Offres Stages', 
               count: internships.length.toString(), 
               color: 'bg-emerald-600 text-white ring-emerald-600', 
               link: '/internships' 
             },
-            { 
-              label: 'Groupes Communautaires', 
-              count: groupsCount.toString(), 
-              color: 'bg-purple-600 text-white ring-purple-600', 
-              link: '/community' 
-            },
+            { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Formations', count: '12', color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
           ].map((stat) => (
@@ -680,8 +675,125 @@ export default function Dashboard() {
         
         {/* Left Column: Recent Docs & Internships */}
         <div className="lg:col-span-2 space-y-8">
+
+          {/* Events - MOVED UP for better visibility based on user feedback */}
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Calendar size={20} className="text-purple-600" />
+                <h2 className="text-xl font-display font-bold text-slate-900">Prochains Événements</h2>
+              </div>
+              <Link to="/events" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5">
+              {globalEvents && globalEvents.length > 0 ? (
+                globalEvents.slice(0, 4).map((event) => (
+                  <div 
+                    key={event.id} 
+                    onClick={() => navigate('/events')}
+                    className="bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer overflow-hidden group flex flex-col md:flex-row h-full"
+                  >
+                    {event.imageUrl && (
+                      <div className="md:w-1/3 h-40 md:h-auto overflow-hidden">
+                        <img 
+                          src={event.imageUrl} 
+                          alt={event.title} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
+                    <div className="p-5 flex-1 flex flex-col">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider",
+                          event.type === 'conference' ? "bg-blue-50 text-blue-600" :
+                          event.type === 'defense' ? "bg-purple-50 text-purple-600" :
+                          event.type === 'competition' ? "bg-amber-50 text-amber-600" :
+                          event.type === 'cultural' ? "bg-pink-50 text-pink-600" : "bg-slate-50 text-slate-600"
+                        )}>
+                          {event.type || 'Événement'}
+                        </span>
+                        {event.date && (
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-base group-hover:text-emerald-700 transition-colors line-clamp-2 flex-1">
+                        {event.title}
+                      </h4>
+                      <div className="flex items-center gap-3 mt-4 text-[11px] text-slate-500 font-medium">
+                        <div className="flex items-center gap-1">
+                          <Calendar size={12} className="text-slate-400" />
+                          <span>{event.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1 truncate">
+                          <MapPin size={12} className="text-slate-400" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="sm:col-span-2 p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                   <Calendar className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
+                   <p className="text-sm text-slate-500">Aucun événement à venir</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Internships - MOVED UP */}
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Briefcase size={20} className="text-emerald-600" />
+                <h2 className="text-xl font-display font-bold text-slate-900">Offres de Stages & Emplois</h2>
+              </div>
+              <Link to="/internships" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-5">
+              {internships.slice(0, 3).map((job) => (
+                <div key={job.id} className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group flex flex-col">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm group-hover:scale-105 transition-transform">
+                      {job.company.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] uppercase tracking-widest rounded-full font-bold ring-1 ring-slate-200/50">
+                      {job.type}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mb-2 text-sm line-clamp-2">{job.title}</h3>
+                  <p className="text-[12px] text-slate-500 mb-4 font-medium flex-1">{job.company} • {job.location}</p>
+                  {job.applicationMethod === 'url' ? (
+                    <a 
+                      href={job.applicationValue}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent inline-block text-center"
+                    >
+                      Consulter
+                    </a>
+                  ) : (
+                    <Link 
+                      to="/internships"
+                      className="w-full py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent inline-block text-center"
+                    >
+                      Postuler
+                    </Link>
+                  )}
+                </div>
+              ))}
+              {internships.length === 0 && (
+                <div className="sm:col-span-3 text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
+                  Aucune offre disponible.
+                </div>
+              )}
+            </div>
+          </section>
           
-          {/* Recent Documents */}
+          {/* Recent Documents - MOVED DOWN */}
           <section>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-display font-bold text-slate-900">Documents Récents</h2>
@@ -762,123 +874,6 @@ export default function Dashboard() {
                 <div className="md:col-span-2 text-center py-8 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
                   <Trophy className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
                   <p className="text-sm">Bientôt de nouveaux challenges</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Internships */}
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Briefcase size={20} className="text-emerald-600" />
-                <h2 className="text-xl font-display font-bold text-slate-900">Offres de Stages & Emplois</h2>
-              </div>
-              <Link to="/internships" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
-            </div>
-            <div className="grid sm:grid-cols-3 gap-5">
-              {internships.slice(0, 3).map((job) => (
-                <div key={job.id} className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm group-hover:scale-105 transition-transform">
-                      {job.company.slice(0, 2).toUpperCase()}
-                    </div>
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] uppercase tracking-widest rounded-full font-bold ring-1 ring-slate-200/50">
-                      {job.type}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-slate-900 mb-2 text-sm line-clamp-2">{job.title}</h3>
-                  <p className="text-[12px] text-slate-500 mb-4 font-medium flex-1">{job.company} • {job.location}</p>
-                  {job.applicationMethod === 'url' ? (
-                    <a 
-                      href={job.applicationValue}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent inline-block text-center"
-                    >
-                      Consulter
-                    </a>
-                  ) : (
-                    <Link 
-                      to="/internships"
-                      className="w-full py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-200/50 hover:ring-transparent inline-block text-center"
-                    >
-                      Postuler
-                    </Link>
-                  )}
-                </div>
-              ))}
-              {internships.length === 0 && (
-                <div className="sm:col-span-3 text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
-                  Aucune offre disponible.
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Events */}
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Calendar size={20} className="text-purple-600" />
-                <h2 className="text-xl font-display font-bold text-slate-900">Prochains Événements</h2>
-              </div>
-              <Link to="/events" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-5">
-              {globalEvents && globalEvents.length > 0 ? (
-                globalEvents.slice(0, 4).map((event) => (
-                  <div 
-                    key={event.id} 
-                    onClick={() => navigate('/events')}
-                    className="bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer overflow-hidden group flex flex-col md:flex-row h-full"
-                  >
-                    {event.imageUrl && (
-                      <div className="md:w-1/3 h-40 md:h-auto overflow-hidden">
-                        <img 
-                          src={event.imageUrl} 
-                          alt={event.title} 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      </div>
-                    )}
-                    <div className="p-5 flex-1 flex flex-col">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider",
-                          event.type === 'conference' ? "bg-blue-50 text-blue-600" :
-                          event.type === 'defense' ? "bg-purple-50 text-purple-600" :
-                          event.type === 'competition' ? "bg-amber-50 text-amber-600" :
-                          event.type === 'cultural' ? "bg-pink-50 text-pink-600" : "bg-slate-50 text-slate-600"
-                        )}>
-                          {event.type || 'Événement'}
-                        </span>
-                        {event.date && (
-                          <span className="text-[10px] font-bold text-slate-400">
-                            {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="font-semibold text-slate-900 text-base group-hover:text-emerald-700 transition-colors line-clamp-2 flex-1">
-                        {event.title}
-                      </h4>
-                      <div className="flex items-center gap-3 mt-4 text-[11px] text-slate-500 font-medium">
-                        <div className="flex items-center gap-1">
-                          <Calendar size={12} className="text-slate-400" />
-                          <span>{event.time}</span>
-                        </div>
-                        <div className="flex items-center gap-1 truncate">
-                          <MapPin size={12} className="text-slate-400" />
-                          <span className="truncate">{event.location}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="sm:col-span-2 p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200">
-                   <Calendar className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
-                   <p className="text-sm text-slate-500">Aucun événement à venir</p>
                 </div>
               )}
             </div>

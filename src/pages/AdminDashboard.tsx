@@ -424,35 +424,129 @@ export default function AdminDashboard() {
     }
   };
 
-  const exportStudentContacts = () => {
-    const studentUsers = adminUsers.filter(u => u.role === 'student');
-    
-    if (studentUsers.length === 0) {
-      alert("Aucun étudiant trouvé.");
-      return;
-    }
+  const exportStudentContacts = async () => {
+    const loadingToast = toast.loading("Récupération des données étudiants...");
+    try {
+      const { userService } = await import('@/services/userService');
+      const allStudents = await userService.getUsersByRole('student', 2000);
+      
+      if (allStudents.length === 0) {
+        toast.dismiss(loadingToast);
+        alert("Aucun étudiant trouvé.");
+        return;
+      }
 
-    const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Université', 'Filière'];
-    const csvRows = studentUsers.map(u => {
-      return [
-        `"${u.firstName || ''}"`,
-        `"${u.lastName || ''}"`,
-        `"${u.email || ''}"`,
-        `"${u.phone || ''}"`,
-        `"${u.university || ''}"`,
-        `"${u.major || ''}"`
-      ].join(',');
-    });
-    
-    const csvContent = [headers.join(','), ...csvRows].join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `contacts_etudiants_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Université', 'Filière', 'Niveau', 'Promotion', 'INE', 'Ville', 'Quartier', 'Date Inscription'];
+      const csvRows = allStudents.map(u => {
+        const createdAtDate = u.createdAt?.toDate ? u.createdAt.toDate() : (u.createdAt ? new Date(u.createdAt) : null);
+        return [
+          `"${u.firstName || ''}"`,
+          `"${u.lastName || ''}"`,
+          `"${u.email || ''}"`,
+          `"${u.phone || ''}"`,
+          `"${u.university || ''}"`,
+          `"${u.major || ''}"`,
+          `"${u.level || ''}"`,
+          `"${u.promotion || ''}"`,
+          `"${u.ine || ''}"`,
+          `"${u.city || ''}"`,
+          `"${u.neighborhood || ''}"`,
+          `"${createdAtDate ? createdAtDate.toLocaleDateString() : ''}"`
+        ].join(',');
+      });
+      
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `contacts_etudiants_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.dismiss(loadingToast);
+    } catch (error) {
+       console.error("Export error:", error);
+       toast.dismiss(loadingToast);
+       toast.error("Erreur lors de l'exportation");
+    }
+  };
+
+  const handleImportCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const content = event.target?.result as string;
+          const lines = content.split('\n');
+          if (lines.length < 2) {
+            toast.error("Le fichier CSV est vide ou invalide");
+            return;
+          }
+
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const dataRows = lines.slice(1).filter(line => line.trim() !== '');
+
+          const loadingToast = toast.loading(`Traitement de ${dataRows.length} lignes...`);
+          
+          let updatedCount = 0;
+          let createdCount = 0;
+
+          const { userService } = await import('@/services/userService');
+          const allStudentsForMatch = await userService.getUsersByRole('student', 5000);
+
+          // Process in batches if many? For now just simple loop
+          for (const row of dataRows) {
+            // Regex to handle quoted CSV values properly
+            const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/"/g, '').trim()) || row.split(',');
+            const userData: any = { role: 'student', updatedAt: serverTimestamp() };
+            
+            headers.forEach((header, index) => {
+              const value = values[index];
+              if (!value) return;
+
+              if (header.includes('Prénom')) userData.firstName = value;
+              else if (header.includes('Nom')) userData.lastName = value;
+              else if (header.includes('Email')) userData.email = value;
+              else if (header.includes('Téléphone')) userData.phone = value;
+              else if (header.includes('Université')) userData.university = value;
+              else if (header.includes('Filière')) userData.major = value;
+              else if (header.includes('Niveau')) userData.level = value;
+              else if (header.includes('Promotion')) userData.promotion = value;
+              else if (header.includes('INE')) userData.ine = value;
+              else if (header.includes('Ville')) userData.city = value;
+              else if (header.includes('Quartier')) userData.neighborhood = value;
+            });
+
+            if (userData.email) {
+              const existingUser = allStudentsForMatch.find(u => u.email === userData.email);
+              if (existingUser) {
+                await updateDoc(doc(db, 'users', existingUser.id), userData);
+                updatedCount++;
+              }
+            }
+          }
+
+          toast.dismiss(loadingToast);
+          toast.success(`${updatedCount} étudiants mis à jour.`);
+          
+          // Re-fetch users for display
+          const data = await userService.getUsers(150);
+          setAdminUsers(data);
+        } catch (error) {
+          console.error("Error importing CSV:", error);
+          toast.error("Erreur lors de l'importation");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const handleManualContestCreate = async () => {
@@ -3517,6 +3611,14 @@ export default function AdminDashboard() {
               >
                 <Download size={14} />
                 Exporter Contacts (CSV)
+              </button>
+              <button 
+                onClick={handleImportCSV}
+                className="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors flex items-center gap-2"
+                title="Mettre à jour les étudiants via CSV"
+              >
+                <Upload size={14} />
+                Mettre à jour (CSV)
               </button>
             </div>
             <div className="relative">

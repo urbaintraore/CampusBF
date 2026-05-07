@@ -865,7 +865,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Events are used in Dashboard and Events page
     const qEvents = query(collection(db, 'events'), limit(50));
     const unsubEvents = onSnapshot(qEvents, (snapshot) => {
-      const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent));
+      const loadedEvents = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          attendees: data.attendees || [] // Essential fix: ensure attendees is always an array to prevent crash in Events page
+        } as CampusEvent;
+      });
+      console.log(`[AuthContext] Loaded ${loadedEvents.length} events`);
+      
+      // Auto-seeding for empty events collection to help visibility
+      if (loadedEvents.length === 0 && user && (user.role === 'admin' || user.role === 'teacher')) {
+        console.log('[AuthContext] Events collection empty, seeding mock events...');
+        const mockEvents = [
+          {
+            title: "Soutenance de Master - Informatique",
+            description: "Présentation des travaux de fin d'études sur l'IA appliquée au développement durable.",
+            type: "Soutenance",
+            location: "Amphi A600, UJKZ",
+            date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+            time: "09:00",
+            imageUrl: "https://images.unsplash.com/photo-1523050853064-80d1790a7401?w=800&auto=format&fit=crop"
+          },
+          {
+            title: "Conférence : Entrepreneuriat Étudiant",
+            description: "Venez apprendre comment lancer votre startup tout en étant étudiant.",
+            type: "conference",
+            location: "Salle de conférence, UNB",
+            date: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+            time: "14:30",
+            imageUrl: "https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?w=800&auto=format&fit=crop"
+          }
+        ];
+        mockEvents.forEach(evt => addEvent(evt as any));
+      }
+
       // Sort client-side to be resilient to missing fields and avoid index requirement
       const sorted = [...loadedEvents].sort((a, b) => {
         const dateA = a.date || '';

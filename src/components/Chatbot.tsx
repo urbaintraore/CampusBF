@@ -26,32 +26,37 @@ export default function Chatbot() {
 
   // Gestion de l'accueil automatique au login/connexion
   useEffect(() => {
-    const welcomeKey = `campusbf_auto_welcome_${user?.id || 'guest'}`;
-    const autoOpenDone = sessionStorage.getItem(welcomeKey);
+    const welcomeKey = `campusbf_auto_welcome_v2_${user?.id || 'guest'}`;
+    const autoOpenDone = localStorage.getItem(welcomeKey);
     
-    if (!autoOpenDone && user && !isOpen && messages.length <= 1 && !autoOpenAttempted.current) {
+    if (!autoOpenDone && user && !isOpen && !autoOpenAttempted.current) {
       autoOpenAttempted.current = true;
       const timer = setTimeout(() => {
         setIsOpen(true);
         setHasShownWelcome(true);
-        sessionStorage.setItem(welcomeKey, 'true');
+        localStorage.setItem(welcomeKey, 'true');
         
-        const introMessage = `👋 **Bienvenue sur CampusBF, ${user.firstName || 'Etudiant'} !**
+        const introMessage = `👋 **Bienvenue sur la nouvelle version de CampusBF, ${user.firstName || 'Etudiant'} !**
 
-Je suis votre assistant virtuel. Laissez-moi vous présenter rapidement pourquoi notre plateforme est unique :
+Je suis votre assistant virtuel. Laissez-moi vous présenter pourquoi notre plateforme est indispensable et comment elle vous aide concrètement :
 
-✨ **Nos avantages :**
-* **Collaboration :** Échangez avec des milliers d'étudiants de toutes les universités (UJKZ, UNB, etc.).
-* **Ressources :** Accédez gratuitement à une DocThèque riche et préparez vos concours avec notre IA.
-* **Services Pratiques :** Économisez avec **MotoRide** (covoiturage) et le **Marketplace** étudiant.
+✨ **Nos avantages exclusifs :**
+* **Collaboration & Études :** Échangez avec des étudiants de toutes les universités (UJKZ, UNB, etc.) sur un seul espace.
+* **Réussite Académique :** Accédez gratuitement à une DocThèque collaborative géante et préparez vos concours avec notre IA.
+* **Vie Étudiante simplifiée :** Économisez sur vos trajets avec **MotoRide** (le covoiturage étudiant) et trouvez de bonnes affaires sur le **Marketplace**.
 
 💡 **Différence avec Campus Faso :**
-Contrairement à *Campus Faso* (qui gère l'administratif, inscriptions et bourses), **CampusBF** est votre compagnon quotidien pour la réussite académique et l'entraide sociale. Nous sommes l'espace où la communauté étudiante vit et s'entraide réellement !
+Alors que **Campus Faso** gère principalement vos démarches administratives officielles (inscriptions, bourses, orientations), **CampusBF** est votre outil de travail et de vie au quotidien. Nous sommes là pour tout ce qui se passe *entre* les cours : révisions, entraide, transport et opportunités professionnelles.
 
-Besoin d'aide pour démarrer ?`;
+Je suis là pour vous guider. Que voulez-vous découvrir en premier ?`;
 
-        setMessages([{ role: 'bot', content: introMessage }]);
-      }, 800);
+        setMessages(prev => {
+          if (prev.length <= 1) {
+            return [{ role: 'bot', content: introMessage }];
+          }
+          return prev;
+        });
+      }, 2000);
       
       return () => clearTimeout(timer);
     }
