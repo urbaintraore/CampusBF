@@ -97,6 +97,25 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Scholarship": {
+      "title": "Bourses & Opportunités",
+      "description": "Offres de bourses internationales pour étudiants africains",
+      "type": "object",
+      "properties": {
+        "titre": { "type": "string" },
+        "pays": { "type": "string" },
+        "niveau": { "type": "string" },
+        "domaine": { "type": "string" },
+        "description": { "type": "string" },
+        "date_limite": { "type": "string", "format": "date" },
+        "lien_officiel": { "type": "string" },
+        "source": { "type": "string" },
+        "resume_ia": { "type": "string" },
+        "date_publication": { "type": "string", "format": "date-time" },
+        "tags": { "type": "array" }
+      },
+      "required": ["titre", "lien_officiel", "date_publication"]
     }
   },
   "firestore": {
@@ -127,6 +146,10 @@
     "/commandes_impression/{orderId}": {
       "schema": "PrintOrder",
       "description": "Commandes d'impression du kiosque"
+    },
+    "/bourses/{bourseId}": {
+      "schema": "Scholarship",
+      "description": "Base de données des bourses et opportunités"
     }
   }
 }

@@ -847,3 +847,20 @@ export interface PrintRates {
   bindingStaple: number;
   bindingSpiral: number;
 }
+
+export interface Scholarship {
+  id: string;
+  titre: string;
+  pays: string;
+  niveau: string;
+  domaine: string;
+  description: string;
+  date_limite?: string;
+  lien_officiel: string;
+  source: string;
+  resume_ia?: string;
+  conseils_ia?: string;
+  match_score?: number;
+  date_publication: any;
+  tags?: string[];
+}

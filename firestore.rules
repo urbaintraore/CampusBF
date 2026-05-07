@@ -25,6 +25,12 @@ service cloud.firestore {
              data.status in ['active', 'inactive', 'pending'];
     }
 
+    function isValidScholarship(data) {
+      return data.titre is string && data.titre.size() <= 300 &&
+             data.lien_officiel is string && data.lien_officiel.size() <= 1000 &&
+             data.source is string && data.source.size() <= 200;
+    }
+
     // -------------------------------------------------------------------------
     // PILLAR 0: Global Safety Net
     // -------------------------------------------------------------------------
@@ -121,6 +127,12 @@ service cloud.firestore {
     // Secure everything else with basic auth for now but move to specific schemas later
     match /ads/{id} { allow read: if true; allow write: if isAdmin(); }
     match /internships/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /bourses/{id} { 
+      allow read: if isSignedIn(); 
+      allow create: if isAdmin() && isValidScholarship(incoming());
+      allow update: if isAdmin() && isValidScholarship(incoming());
+      allow delete: if isAdmin();
+    }
     match /events/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /marketplace/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
     match /motoRides/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }

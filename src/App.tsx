@@ -19,6 +19,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import AdminDashboard from './pages/AdminDashboard';
 import MotoRide from './pages/MotoRide';
 import Events from './pages/Events';
+import Scholarships from './pages/Scholarships';
 import Orientation from './pages/Orientation';
 import TeachersDirectory from './pages/TeachersDirectory';
 import Notifications from './pages/Notifications';
@@ -190,6 +191,11 @@ export default function App() {
           <Route path="/internships" element={
             <ProtectedRoute>
               <Internships />
+            </ProtectedRoute>
+          } />
+          <Route path="/scholarships" element={
+            <ProtectedRoute>
+              <Scholarships />
             </ProtectedRoute>
           } />
           <Route path="/community" element={
