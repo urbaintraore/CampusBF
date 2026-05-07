@@ -22,12 +22,15 @@ export default function Chatbot() {
     { label: "MotoRide ?", icon: "🏍️", prompt: "C'est quoi MotoRide et comment ça marche ?" },
   ];
 
+  const autoOpenAttempted = useRef(false);
+
   // Gestion de l'accueil automatique au login/connexion
   useEffect(() => {
     const welcomeKey = `campusbf_auto_welcome_${user?.id || 'guest'}`;
     const autoOpenDone = sessionStorage.getItem(welcomeKey);
     
-    if (!autoOpenDone && user && !isOpen && messages.length <= 1) {
+    if (!autoOpenDone && user && !isOpen && messages.length <= 1 && !autoOpenAttempted.current) {
+      autoOpenAttempted.current = true;
       const timer = setTimeout(() => {
         setIsOpen(true);
         setHasShownWelcome(true);

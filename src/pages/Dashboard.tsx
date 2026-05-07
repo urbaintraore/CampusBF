@@ -13,7 +13,7 @@ import { User as UserType } from '@/types';
 
 export default function Dashboard() {
   const { 
-    user, isAdmin, notifications, isDocumentLocked, incrementActivity, logAction 
+    user, isAdmin, notifications, events: globalEvents, isDocumentLocked, incrementActivity, logAction 
   } = useAuth();
 
   const [ads, setAds] = useState<any[]>([]);
@@ -21,7 +21,6 @@ export default function Dashboard() {
   const [internships, setInternships] = useState<any[]>([]);
   const [tutors, setTutors] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
-    const [events, setEvents] = useState<any[]>([]);
     const [marketplace, setMarketplace] = useState<any[]>([]);
     const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
     const [groupsCount, setGroupsCount] = useState(0);
@@ -44,7 +43,6 @@ export default function Dashboard() {
         setInternships(data.internships || []);
         setTutors(data.tutors || []);
         setTeachers(data.teachers || []);
-        setEvents(data.events || []);
         setMarketplace(data.marketplace || []);
         setPublicServiceContests(data.publicServiceContests || []);
         setGroupsCount(data.groupsCount || 0);
@@ -58,13 +56,12 @@ export default function Dashboard() {
   
       try {
         // Run fetches in parallel but limited
-        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, eventSnap, contestSnap, marketSnap] = await Promise.all([
+        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, contestSnap, marketSnap] = await Promise.all([
           getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
           getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
           getDocs(query(collection(db, 'internships'), limit(3))),
           getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
           getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
-          getDocs(query(collection(db, 'events'), limit(3))), // Fetching 3 instead of 2
           getDocs(query(collection(db, 'public_service_contests'), limit(5))),
           getDocs(query(collection(db, 'marketplace'), limit(2)))
         ]);
@@ -75,7 +72,6 @@ export default function Dashboard() {
         internships: internSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         tutors: tutorSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         teachers: teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        events: eventSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         marketplace: marketSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         publicServiceContests: contestSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         groupsCount: 15, // Fixed estimation to save quota
@@ -87,7 +83,6 @@ export default function Dashboard() {
       setInternships(dashboardData.internships);
       setTutors(dashboardData.tutors);
       setTeachers(dashboardData.teachers);
-      setEvents(dashboardData.events);
       setMarketplace(dashboardData.marketplace);
       setPublicServiceContests(dashboardData.publicServiceContests);
       setGroupsCount(dashboardData.groupsCount);
@@ -831,8 +826,8 @@ export default function Dashboard() {
               <Link to="/events" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
             </div>
             <div className="grid sm:grid-cols-2 gap-5">
-              {events && events.length > 0 ? (
-                events.slice(0, 2).map((event) => (
+              {globalEvents && globalEvents.length > 0 ? (
+                globalEvents.slice(0, 4).map((event) => (
                   <div 
                     key={event.id} 
                     onClick={() => navigate('/events')}

@@ -863,11 +863,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     unsubscribes.push(unsubNotifs);
 
     // Events are used in Dashboard and Events page
-    const qEvents = query(collection(db, 'events'), orderBy('date', 'asc'), limit(20));
+    const qEvents = query(collection(db, 'events'), limit(50));
     const unsubEvents = onSnapshot(qEvents, (snapshot) => {
-      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent)));
+      const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CampusEvent));
+      // Sort client-side to be resilient to missing fields and avoid index requirement
+      const sorted = [...loadedEvents].sort((a, b) => {
+        const dateA = a.date || '';
+        const dateB = b.date || '';
+        return dateA.localeCompare(dateB);
+      });
+      setEvents(sorted);
     }, (error) => {
       console.error("onSnapshot Events Error:", error);
+      if (error.message?.includes('permission')) {
+        console.warn("Permission denied for events. Using empty list.");
+      }
     });
     unsubscribes.push(unsubEvents);
 

@@ -38,8 +38,10 @@ export default function Events() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         event.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const title = event.title || '';
+    const description = event.description || '';
+    const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || event.type === filterType;
     
     if (activeTab === 'my-events') {
