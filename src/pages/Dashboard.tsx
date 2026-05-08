@@ -440,7 +440,7 @@ export default function Dashboard() {
               roles: ['admin', 'teacher', 'alumni', 'parent']
             },
             {
-              label: 'Bourses IA', 
+              label: 'Bourses & Opportunités IA', 
               count: 'NEW', 
               color: 'bg-indigo-600 text-white ring-indigo-600', 
               link: '/scholarships' 

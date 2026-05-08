@@ -58,7 +58,7 @@ const features = [
     description: "Bénéficiez de conseils d'experts pour choisir votre filière et construire votre projet professionnel.",
     color: "bg-rose-50 text-rose-600",
     link: "/orientation",
-    roles: ['student', 'teacher', 'parent', 'admin']
+    roles: ['admin', 'teacher', 'parent']
   },
   {
     icon: Users,
@@ -74,7 +74,7 @@ const features = [
     description: "Facilitez vos déplacements vers le campus en partageant vos trajets avec d'autres étudiants.",
     color: "bg-orange-50 text-orange-600",
     link: "/motoride",
-    roles: ['student', 'teacher', 'admin']
+    roles: ['admin', 'teacher', 'alumni']
   },
   {
     icon: Calendar,
@@ -110,7 +110,7 @@ const features = [
     description: "Préparez-vous aux concours de la fonction publique avec des sujets officiels et des quiz interactifs.",
     color: "bg-rose-50 text-rose-600",
     link: "/public-service-contests",
-    roles: ['student', 'teacher', 'admin']
+    roles: ['admin', 'teacher', 'alumni', 'parent']
   },
   {
     icon: Users,
@@ -142,7 +142,7 @@ const features = [
     description: "Créez un CV professionnel et moderne en quelques secondes à partir de vos informations de profil.",
     color: "bg-blue-50 text-blue-600",
     link: "/cv-generator",
-    roles: ['student', 'teacher', 'admin', 'alumni']
+    roles: ['admin', 'teacher', 'alumni', 'parent']
   },
   {
     icon: Tag,
@@ -150,7 +150,7 @@ const features = [
     description: "Profitez de réductions exclusives chez nos partenaires (restauration, transport, loisirs) sur présentation de votre profil CampusBF.",
     color: "bg-emerald-50 text-emerald-600",
     link: "/deals",
-    roles: ['student', 'teacher', 'admin', 'alumni']
+    roles: ['admin', 'teacher', 'alumni', 'parent']
   },
   {
     icon: Home,
@@ -158,7 +158,7 @@ const features = [
     description: "Trouvez des colocataires fiables et sécurisés près de votre université grâce à notre système de vérification étudiante.",
     color: "bg-emerald-50 text-emerald-600",
     link: "/colocation",
-    roles: ['student', 'teacher', 'admin']
+    roles: ['admin', 'teacher', 'alumni', 'parent']
   },
   {
     icon: Library,

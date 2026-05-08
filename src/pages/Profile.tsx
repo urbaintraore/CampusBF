@@ -263,13 +263,15 @@ export default function Profile() {
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Mon Profil</h1>
         {!isEditing ? (
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setShowCVGenerator(true)}
-              className="px-5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-sm font-bold hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95"
-            >
-              <FileText size={16} />
-              Générer mon CV
-            </button>
+            {user.role !== 'student' && (
+              <button 
+                onClick={() => setShowCVGenerator(true)}
+                className="px-5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-sm font-bold hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95"
+              >
+                <FileText size={16} />
+                Générer mon CV
+              </button>
+            )}
             <button 
               onClick={() => setIsEditing(true)}
               className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
@@ -1036,86 +1038,88 @@ export default function Profile() {
       </div>
 
       {/* MotoRide Status Section */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 flex items-center gap-2">
-            <Bike className="text-orange-600" size={20} />
-            Mon statut MotoRide
-          </h3>
-          <div className="flex gap-2">
-            {user.isVerified && (
-              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1">
-                <CheckCircle size={10} /> Utilisateur Vérifié
-              </span>
-            )}
-            {user.isDriverVerified && (
-              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-blue-50 text-blue-700 flex items-center gap-1">
-                <Shield size={10} /> Conducteur Vérifié
-              </span>
-            )}
-            {user.motoRideStatus === 'suspended' && (
-              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-red-50 text-red-700 flex items-center gap-1">
-                <AlertTriangle size={10} /> Suspendu
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-gray-50 rounded-xl text-center">
-            <p className="text-2xl font-bold text-gray-900">{user.motoRideStats?.ridesCompleted || 0}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase">Trajets</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-xl text-center">
-            <div className="flex items-center justify-center gap-1">
-              <p className="text-2xl font-bold text-gray-900">{user.motoRideStats?.averageRating?.toFixed(1) || '0.0'}</p>
-              <Star size={16} className="text-amber-400 fill-amber-400" />
+      {user.role !== 'student' && (
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <Bike className="text-orange-600" size={20} />
+              Mon statut MotoRide
+            </h3>
+            <div className="flex gap-2">
+              {user.isVerified && (
+                <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1">
+                  <CheckCircle size={10} /> Utilisateur Vérifié
+                </span>
+              )}
+              {user.isDriverVerified && (
+                <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-blue-50 text-blue-700 flex items-center gap-1">
+                  <Shield size={10} /> Conducteur Vérifié
+                </span>
+              )}
+              {user.motoRideStatus === 'suspended' && (
+                <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-red-50 text-red-700 flex items-center gap-1">
+                  <AlertTriangle size={10} /> Suspendu
+                </span>
+              )}
             </div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase">Note moyenne</p>
           </div>
-          <div className="p-4 bg-gray-50 rounded-xl text-center">
-            <p className="text-2xl font-bold text-gray-900">{user.motoRideStats?.totalReports || 0}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase">Signalements</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-xl text-center">
-            <p className="text-sm font-bold text-gray-900 capitalize">{user.motoRideStatus || 'Actif'}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase">Statut</p>
-          </div>
-        </div>
 
-        {!user.isVerified && (
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3">
-            <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-amber-800">Compte non vérifié</p>
-              <p className="text-xs text-amber-700 mt-1">
-                Pour utiliser MotoRide, vous devez d'abord vérifier votre profil (Nom réel, Université, Téléphone, Photo).
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-gray-50 rounded-xl text-center">
+              <p className="text-2xl font-bold text-gray-900">{user.motoRideStats?.ridesCompleted || 0}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Trajets</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl text-center">
+              <div className="flex items-center justify-center gap-1">
+                <p className="text-2xl font-bold text-gray-900">{user.motoRideStats?.averageRating?.toFixed(1) || '0.0'}</p>
+                <Star size={16} className="text-amber-400 fill-amber-400" />
+              </div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Note moyenne</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl text-center">
+              <p className="text-2xl font-bold text-gray-900">{user.motoRideStats?.totalReports || 0}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Signalements</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl text-center">
+              <p className="text-sm font-bold text-gray-900 capitalize">{user.motoRideStatus || 'Actif'}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Statut</p>
+            </div>
+          </div>
+
+          {!user.isVerified && (
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3">
+              <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-amber-800">Compte non vérifié</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Pour utiliser MotoRide, vous devez d'abord vérifier votre profil (Nom réel, Université, Téléphone, Photo).
+                </p>
+              </div>
+            </div>
+          )}
+
+          {user.isVerified && !user.isDriverVerified && !user.vehicleDetails && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500 mb-4">Vous souhaitez proposer des trajets ?</p>
+              <button 
+                onClick={() => window.location.href = '/motoride'}
+                className="px-6 py-2 border-2 border-orange-600 text-orange-600 rounded-xl font-bold text-sm hover:bg-orange-50 transition-colors"
+              >
+                Devenir Conducteur
+              </button>
+            </div>
+          )}
+
+          {user.isVerified && !user.isDriverVerified && user.vehicleDetails && (
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
+              <Clock size={20} className="text-blue-600" />
+              <p className="text-sm font-medium text-blue-800">
+                Votre demande de vérification conducteur est en cours de traitement par l'administration.
               </p>
             </div>
-          </div>
-        )}
-
-        {user.isVerified && !user.isDriverVerified && !user.vehicleDetails && (
-          <div className="text-center py-4">
-            <p className="text-sm text-gray-500 mb-4">Vous souhaitez proposer des trajets ?</p>
-            <button 
-              onClick={() => window.location.href = '/motoride'}
-              className="px-6 py-2 border-2 border-orange-600 text-orange-600 rounded-xl font-bold text-sm hover:bg-orange-50 transition-colors"
-            >
-              Devenir Conducteur
-            </button>
-          </div>
-        )}
-
-        {user.isVerified && !user.isDriverVerified && user.vehicleDetails && (
-          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
-            <Clock size={20} className="text-blue-600" />
-            <p className="text-sm font-medium text-blue-800">
-              Votre demande de vérification conducteur est en cours de traitement par l'administration.
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Teacher Application Modal */}
       {showTeacherForm && (
