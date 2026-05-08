@@ -436,7 +436,8 @@ export default function Dashboard() {
               label: 'Concours FP', 
               count: publicServiceContests?.length.toString() || '0', 
               color: 'bg-amber-100 text-amber-700 ring-amber-200', 
-              link: '/public-service-contests' 
+              link: '/public-service-contests',
+              roles: ['admin', 'teacher', 'alumni', 'parent']
             },
             {
               label: 'Bourses IA', 
@@ -453,7 +454,7 @@ export default function Dashboard() {
             { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Formations', count: '12', color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
-          ].map((stat) => (
+          ].filter(stat => !stat.roles || stat.roles.includes(user?.role || '')).map((stat) => (
             <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
               <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
@@ -629,28 +630,30 @@ export default function Dashboard() {
       </section>
 
       {/* Public Service Contests Promo */}
-      <section className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200 overflow-hidden relative group">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-lg border border-white/20 group-hover:rotate-6 transition-transform">
-              <Trophy size={40} className="text-white" />
+      {user?.role !== 'student' && (
+        <section className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200 overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-lg border border-white/20 group-hover:rotate-6 transition-transform">
+                <Trophy size={40} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
+                <p className="text-orange-50 mt-2 max-w-md text-lg opacity-90 leading-relaxed">
+                  Prépare-toi aux concours de l'État avec nos QCM officiels et simulations d'examens.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
-              <p className="text-orange-50 mt-2 max-w-md text-lg opacity-90 leading-relaxed">
-                Prépare-toi aux concours de l'État avec nos QCM officiels et simulations d'examens.
-              </p>
-            </div>
+            <button 
+              onClick={() => navigate('/public-service-contests')}
+              className="px-10 py-4 bg-white text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-xl shadow-orange-600/20 active:scale-95 whitespace-nowrap text-lg"
+            >
+              S'entraîner maintenant
+            </button>
           </div>
-          <button 
-            onClick={() => navigate('/public-service-contests')}
-            className="px-10 py-4 bg-white text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-xl shadow-orange-600/20 active:scale-95 whitespace-nowrap text-lg"
-          >
-            S'entraîner maintenant
-          </button>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* University Ranking Highlight */}
       <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
@@ -852,38 +855,40 @@ export default function Dashboard() {
           </section>
 
           {/* Challenges & Concours */}
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Trophy size={20} className="text-amber-500" />
-                <h2 className="text-xl font-display font-bold text-slate-900">Challenges & Concours</h2>
+          {user?.role !== 'student' && (
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <Trophy size={20} className="text-amber-500" />
+                  <h2 className="text-xl font-display font-bold text-slate-900">Challenges & Concours</h2>
+                </div>
+                <Link to="/public-service-contests" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
               </div>
-              <Link to="/public-service-contests" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {publicServiceContests.slice(0, 4).map((contest) => (
-                <div 
-                  key={contest.id}
-                  onClick={() => navigate('/public-service-contests')}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-amber-200 transition-all flex items-center gap-4 cursor-pointer group"
-                >
-                  <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <Target size={24} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {publicServiceContests.slice(0, 4).map((contest) => (
+                  <div 
+                    key={contest.id}
+                    onClick={() => navigate('/public-service-contests')}
+                    className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-amber-200 transition-all flex items-center gap-4 cursor-pointer group"
+                  >
+                    <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <Target size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-slate-900 text-sm truncate uppercase tracking-tight">{contest.title}</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{contest.category} • {contest.questionsCount || 0} questions</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-slate-900 text-sm truncate uppercase tracking-tight">{contest.title}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{contest.category} • {contest.questionsCount || 0} questions</p>
+                ))}
+                {publicServiceContests.length === 0 && (
+                  <div className="md:col-span-2 text-center py-8 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
+                    <Trophy className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
+                    <p className="text-sm">Bientôt de nouveaux challenges</p>
                   </div>
-                </div>
-              ))}
-              {publicServiceContests.length === 0 && (
-                <div className="md:col-span-2 text-center py-8 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
-                  <Trophy className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
-                  <p className="text-sm">Bientôt de nouveaux challenges</p>
-                </div>
-              )}
-            </div>
-          </section>
+                )}
+              </div>
+            </section>
+          )}
 
         </div>
 
