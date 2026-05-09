@@ -34,6 +34,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   const [comments, setComments] = useState<VideoComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [likesCount, setLikesCount] = useState(video.likesCount);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (isActive && videoRef.current) {
@@ -155,9 +156,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           </button>
         </div>
 
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto pr-16">
           <h3 className="text-white font-bold text-base mb-1 drop-shadow-lg">{video.title}</h3>
-          <p className="text-white/90 text-sm line-clamp-2 mb-2 drop-shadow-md">{video.description}</p>
+          
+          <div 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="cursor-pointer mb-2"
+          >
+            <p className={`text-white/90 text-sm drop-shadow-md ${isExpanded ? '' : 'line-clamp-2'}`}>
+              {video.description}
+            </p>
+            {video.description && video.description.length > 80 && (
+              <span className="text-white/70 text-[11px] font-medium mt-1 inline-block">
+                {isExpanded ? 'voir moins' : 'voir plus'}
+              </span>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-2">
             {video.hashtags.map((tag, i) => (
               <span key={i} className="text-blue-300 text-xs font-bold hover:underline cursor-pointer">
