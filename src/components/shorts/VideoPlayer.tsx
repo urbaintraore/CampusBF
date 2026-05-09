@@ -64,6 +64,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           await containerRef.current.requestFullscreen();
         } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
           await (containerRef.current as any).webkitRequestFullscreen();
+        } else if ((videoRef.current as any)?.webkitEnterFullscreen) {
+          (videoRef.current as any).webkitEnterFullscreen();
         }
       } else {
         if (document.exitFullscreen) {
@@ -154,14 +156,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   };
 
   return (
-    <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'md:max-w-2xl lg:max-w-4xl md:mx-auto md:border-x md:border-white/10'}`}>
+    <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
       {/* Container vidéo */}
-      <div className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden min-h-0" onClick={togglePlay}>
+      <div className="relative flex-1 w-full bg-black overflow-hidden min-h-0" onClick={togglePlay}>
         <video
           ref={videoRef}
           src={video.videoUrl}
           poster={video.thumbnailUrl}
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover"
           loop
           muted={isMuted}
           playsInline
@@ -170,7 +172,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
         />
 
         {/* Action Buttons (Floating over video on the right like TikTok/Reels) */}
-        <div className="absolute right-3 bottom-14 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute right-3 bottom-6 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-1 group">
             <button 
               onClick={handleLike}
@@ -218,10 +220,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           )}
         </AnimatePresence>
         
-        {/* Playback Controls & Timeline Overlay on top of video at the very bottom */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-2 pt-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+      </div>
+
+      {/* Control Panel and Video Info - Placed strictly below the video */}
+      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col border-t border-white/5 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] relative">
+        {/* Playback Controls & Timeline strictly below the video, not overlapping */}
+        <div className="px-4 py-3 bg-gray-900 border-b border-white/5 pointer-events-auto shadow-md z-30">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-white/90 text-[11px] font-mono w-9 text-right font-bold drop-shadow-md">
+            <span className="text-white/70 text-[11px] font-mono w-9 text-right font-medium">
               {formatTime(currentTime)}
             </span>
             <input
@@ -231,18 +237,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
               step="any"
               value={currentTime}
               onChange={handleSeek}
-              className="flex-1 h-1.5 bg-white/30 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative shadow-sm"
+              className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative"
               style={{
-                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(currentTime / (duration || 1)) * 100}%)`
+                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.1) ${(currentTime / (duration || 1)) * 100}%)`
               }}
             />
-            <span className="text-white/90 text-[11px] font-mono w-9 font-bold drop-shadow-md">
+            <span className="text-white/70 text-[11px] font-mono w-9 font-medium">
               {formatTime(duration)}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6 text-white drop-shadow-md">
+            <div className="flex items-center gap-5 text-white/90">
               <button 
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 className="hover:text-blue-400 hover:scale-110 transition-all"
@@ -270,17 +276,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             
             <button 
               onClick={toggleFullscreen}
-              className="text-white hover:text-blue-400 hover:scale-110 transition-colors drop-shadow-md"
+              className="text-white/80 hover:text-white transition-colors"
               title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
             >
               {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Control Panel and Video Info - Placed strictly below the video */}
-      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col">
         {/* Video Details */}
         <div className="px-4 py-4 flex flex-col gap-3">
           {/* Author info */}
