@@ -41,6 +41,30 @@ export default function CampusShorts() {
     fetchVideos();
   }, [selectedCategory]);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = Number(entry.target.getAttribute('data-index'));
+            if (!isNaN(index)) {
+              setActiveVideoIndex(index);
+            }
+          }
+        });
+      },
+      {
+        root: feedRef.current,
+        threshold: 0.6, // Active when at least 60% visible
+      }
+    );
+
+    const elements = document.querySelectorAll('.video-container');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [videos]);
+
   const fetchVideos = async () => {
     setLoading(true);
     try {
@@ -53,15 +77,6 @@ export default function CampusShorts() {
       toast.error('Erreur lors du chargement des vidéos');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleScroll = () => {
-    if (feedRef.current) {
-      const index = Math.round(feedRef.current.scrollTop / feedRef.current.clientHeight);
-      if (index !== activeVideoIndex) {
-        setActiveVideoIndex(index);
-      }
     }
   };
 
@@ -130,15 +145,14 @@ export default function CampusShorts() {
         {/* Video Scroller */}
         <div 
           ref={feedRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto snap-y snap-mandatory scrollbar-none scroll-smooth bg-black"
+          className="flex-1 overflow-y-auto md:snap-y md:snap-mandatory scrollbar-none scroll-smooth bg-gray-100 md:bg-black"
         >
           {loading && videos.length === 0 ? (
             <div className="h-full w-full flex items-center justify-center">
               <Loader2 className="animate-spin text-blue-600" size={48} />
             </div>
           ) : videos.length === 0 ? (
-            <div className="h-full w-full flex flex-col items-center justify-center text-center p-10">
+            <div className="h-full w-full flex flex-col items-center justify-center text-center p-10 bg-black">
               <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10">
                 <AlertCircle className="text-white/20" size={40} />
               </div>
@@ -152,17 +166,20 @@ export default function CampusShorts() {
               </button>
             </div>
           ) : (
-            videos.map((video, index) => (
-              <div 
-                key={video.id} 
-                className="h-full w-full snap-start snap-always"
-              >
-                <VideoPlayer 
-                  video={video} 
-                  isActive={activeVideoIndex === index} 
-                />
-              </div>
-            ))
+            <div className="md:h-full flex flex-col md:block">
+              {videos.map((video, index) => (
+                <div 
+                  key={video.id} 
+                  data-index={index}
+                  className="video-container w-full md:h-full md:snap-start md:snap-always mb-2 md:mb-0 bg-black"
+                >
+                  <VideoPlayer 
+                    video={video} 
+                    isActive={activeVideoIndex === index} 
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

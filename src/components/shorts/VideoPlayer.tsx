@@ -156,14 +156,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   };
 
   return (
-    <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
+    <div ref={containerRef} className={`relative md:h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
       {/* Container vidéo */}
-      <div className="relative flex-1 w-full bg-black overflow-hidden min-h-0" onClick={togglePlay}>
+      <div className="relative w-full max-h-[40vh] sm:max-h-[60vh] md:max-h-none flex-shrink-0 md:flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
         <video
           ref={videoRef}
           src={video.videoUrl}
           poster={video.thumbnailUrl}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
           loop
           muted={isMuted}
           playsInline
@@ -171,8 +171,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           onLoadedMetadata={handleLoadedMetadata}
         />
 
-        {/* Action Buttons (Floating over video on the right like TikTok/Reels) */}
-        <div className="absolute right-3 bottom-6 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Action Buttons (Floating over video on the right like TikTok/Reels) - Hidden on mobile, shown on desktop */}
+        <div className="hidden md:flex absolute right-3 bottom-6 flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-1 group">
             <button 
               onClick={handleLike}
@@ -282,11 +282,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
       </div>
 
       {/* Control Panel and Video Info - Placed strictly below the video */}
-      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col relative">
+      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col relative pb-4 border-b-8 border-black md:border-b-0">
         {/* Video Details */}
         <div className="px-4 py-4 flex flex-col gap-3">
-          {/* Author info */}
-          <div className="flex items-center gap-3">
+          
+          {/* Title and Views */}
+          <div className="flex flex-col gap-1">
+            <h3 className="text-white font-bold text-base leading-tight">{video.title}</h3>
+            <div className="flex items-center gap-2 text-white/50 text-[11px] font-medium">
+              <span>{video.viewsCount || 0} vues</span>
+              <span>•</span>
+              <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: fr })}</span>
+            </div>
+          </div>
+
+          {/* Author info (YouTube style) */}
+          <div className="flex items-center gap-3 py-1">
             <img 
               src={video.userPhoto || `https://ui-avatars.com/api/?name=${video.username}`} 
               alt={video.username}
@@ -301,44 +312,66 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
               </div>
               <span className="text-white/50 text-[10px] font-medium truncate">{video.university}</span>
             </div>
-            <button className="px-5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5 whitespace-nowrap">
-              Suivre
+            <button className="px-5 py-1.5 bg-white text-black hover:bg-gray-200 rounded-full text-xs font-bold transition-all whitespace-nowrap">
+              S'abonner
             </button>
             <button 
               onClick={() => videoService.reportVideo(video.id, 'Contenu inapproprié')}
-              className="p-2 ml-1 bg-white/5 hover:bg-white/10 rounded-full transition-all text-white/50 hover:text-red-400"
+              className="p-2 ml-1 text-white/50 hover:text-red-400 transition-colors"
               title="Signaler"
             >
-              <Flag size={16} />
+              <Flag size={18} />
             </button>
           </div>
 
-          {/* Description & Hashtags */}
-          <div className="flex flex-col">
-            <h3 className="text-white font-bold text-sm mb-1">{video.title}</h3>
-            
-            <div 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="cursor-pointer"
+          {/* Mobile Action Buttons (Horizontal Row Like YouTube) */}
+          <div className="flex md:hidden items-center gap-2 overflow-x-auto scrollbar-none py-1">
+            <button 
+              onClick={handleLike}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 ${isLiked ? 'text-red-400' : 'text-white'}`}
             >
-              <p className={`text-white/70 text-xs leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-2'}`}>
-                {video.description}
-              </p>
-              {video.description && video.description.length > 80 && (
-                <span className="text-blue-400 hover:text-blue-300 text-[11px] font-bold mt-1 inline-block">
-                  {isExpanded ? 'voir moins' : 'voir plus'}
-                </span>
-              )}
-            </div>
+              <Heart size={18} fill={isLiked ? "currentColor" : "none"} />
+              <span className="text-xs font-bold">{likesCount}</span>
+            </button>
 
-            {/* Hashtags */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {video.hashtags.map((tag, i) => (
-                <span key={i} className="text-blue-300/70 hover:text-blue-400 text-[11px] font-medium cursor-pointer bg-blue-500/10 px-2 py-0.5 rounded-full transition-colors">
-                  #{tag}
-                </span>
-              ))}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowComments(true); }}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-white"
+            >
+              <MessageCircle size={18} />
+              <span className="text-xs font-bold">{video.commentsCount}</span>
+            </button>
+
+            <button 
+              onClick={handleShare}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-white"
+            >
+              <Share2 size={18} />
+              <span className="text-xs font-bold">Partager</span>
+            </button>
+          </div>
+
+          {/* Description & Hashtags Container */}
+          <div className="flex flex-col bg-white/5 rounded-xl p-3 mt-1 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
+            <div className={`text-white/80 text-xs leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-2'}`}>
+              {video.description || "Aucune description"}
             </div>
+            {video.description && video.description.length > 80 && (
+              <span className="text-white font-bold text-[11px] mt-1">
+                {isExpanded ? 'Moins' : 'Plus'}
+              </span>
+            )}
+            
+            {/* Hashtags */}
+            {video.hashtags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {video.hashtags.map((tag, i) => (
+                  <span key={i} className="text-blue-400 hover:text-blue-300 text-[11px] font-medium transition-colors">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
