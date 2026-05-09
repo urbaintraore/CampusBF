@@ -220,14 +220,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           )}
         </AnimatePresence>
         
-      </div>
-
-      {/* Control Panel and Video Info - Placed strictly below the video */}
-      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col border-t border-white/5 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] relative">
-        {/* Playback Controls & Timeline strictly below the video, not overlapping */}
-        <div className="px-4 py-3 bg-gray-900 border-b border-white/5 pointer-events-auto shadow-md z-30">
+        {/* Playback Controls & Timeline Overlay on top of video at the bottom */}
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-12 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-white/70 text-[11px] font-mono w-9 text-right font-medium">
+            <span className="text-white/80 text-[11px] font-mono w-9 text-right font-medium drop-shadow-md">
               {formatTime(currentTime)}
             </span>
             <input
@@ -237,18 +233,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
               step="any"
               value={currentTime}
               onChange={handleSeek}
-              className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative"
+              className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative overflow-hidden"
               style={{
-                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.1) ${(currentTime / (duration || 1)) * 100}%)`
+                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.2) ${(currentTime / (duration || 1)) * 100}%)`
               }}
             />
-            <span className="text-white/70 text-[11px] font-mono w-9 font-medium">
+            <span className="text-white/80 text-[11px] font-mono w-9 font-medium drop-shadow-md">
               {formatTime(duration)}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-5 text-white/90">
+            <div className="flex items-center gap-5 text-white drop-shadow-md">
               <button 
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 className="hover:text-blue-400 hover:scale-110 transition-all"
@@ -276,14 +272,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             
             <button 
               onClick={toggleFullscreen}
-              className="text-white/80 hover:text-white transition-colors"
+              className="text-white/90 hover:text-white hover:scale-110 transition-colors drop-shadow-md"
               title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
             >
               {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
             </button>
           </div>
         </div>
+      </div>
 
+      {/* Control Panel and Video Info - Placed strictly below the video */}
+      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col relative">
         {/* Video Details */}
         <div className="px-4 py-4 flex flex-col gap-3">
           {/* Author info */}

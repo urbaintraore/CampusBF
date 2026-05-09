@@ -7,46 +7,59 @@ class VideoService {
   private collectionName = 'community_videos';
 
   async uploadVideo(
-    file: File,
-    thumbnailFile: Blob,
+    videoSource: File | string,
+    thumbnailFile: Blob | null,
     metadata: Partial<CommunityVideo>
   ): Promise<string> {
     const user = auth.currentUser;
     if (!user) throw new Error('Utilisateur non connecté');
 
     const videoId = crypto.randomUUID();
-    const videoExt = file.name.split('.').pop();
-    const videoPath = `${user.uid}/${videoId}.${videoExt}`;
-    const thumbnailPath = `${user.uid}/${videoId}.jpg`;
+    let finalVideoUrl = '';
+    let finalThumbnailUrl = '';
 
-    // 1. Upload video to Supabase
-    const { error: videoError, data: videoData } = await supabase.storage
-      .from('videos') // User requested 'videos' bucket
-      .upload(videoPath, file);
-
-    if (videoError) throw videoError;
-
-    // 2. Upload thumbnail to Supabase
-    const { error: thumbnailError, data: thumbnailData } = await supabase.storage
-      .from('thumbnails') // User requested 'thumbnails' bucket or folder, assuming bucket based on wording
-      .upload(thumbnailPath, thumbnailFile, { contentType: 'image/jpeg' });
-
-    if (thumbnailError) {
-      // Cleanup video if thumbnail fails
-      await supabase.storage.from('videos').remove([videoPath]);
-      throw thumbnailError;
+    // Handle Video
+    if (typeof videoSource === 'string') {
+      finalVideoUrl = videoSource;
+    } else {
+      const videoExt = videoSource.name.split('.').pop();
+      const videoPath = `${user.uid}/${videoId}.${videoExt}`;
+      const { error: videoError } = await supabase.storage
+        .from('videos')
+        .upload(videoPath, videoSource);
+      if (videoError) throw videoError;
+      
+      const { data: videoUrlData } = supabase.storage
+        .from('videos')
+        .getPublicUrl(videoPath);
+      finalVideoUrl = videoUrlData.publicUrl;
     }
 
-    // 3. Get Public URLs
-    const { data: videoUrlData } = supabase.storage
-      .from('videos')
-      .getPublicUrl(videoPath);
-    
-    const { data: thumbnailUrlData } = supabase.storage
-      .from('thumbnails')
-      .getPublicUrl(thumbnailPath);
+    // Handle Thumbnail
+    if (thumbnailFile) {
+      const thumbnailPath = `${user.uid}/${videoId}.jpg`;
+      const { error: thumbnailError } = await supabase.storage
+        .from('thumbnails')
+        .upload(thumbnailPath, thumbnailFile, { contentType: 'image/jpeg' });
+      
+      if (thumbnailError) {
+        if (typeof videoSource !== 'string') {
+          // Cleanup video if thumbnail fails
+          await supabase.storage.from('videos').remove([`${user.uid}/${videoId}.${videoSource.name.split('.').pop()}`]);
+        }
+        throw thumbnailError;
+      }
+      
+      const { data: thumbnailUrlData } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(thumbnailPath);
+      finalThumbnailUrl = thumbnailUrlData.publicUrl;
+    } else {
+      // Create a default placeholder thumbnail if none provided
+      finalThumbnailUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(metadata.title || 'Vidéo')}&background=random&size=512`;
+    }
 
-    // 4. Save metadata to Firestore
+    // Save metadata to Firestore
     const videoDataToSave: any = {
       id: videoId,
       userId: user.uid,
@@ -59,8 +72,8 @@ class VideoService {
       hashtags: metadata.hashtags || [],
       category: metadata.category,
       visibility: metadata.visibility,
-      videoUrl: videoUrlData.publicUrl,
-      thumbnailUrl: thumbnailUrlData.publicUrl,
+      videoUrl: finalVideoUrl,
+      thumbnailUrl: finalThumbnailUrl,
       likesCount: 0,
       commentsCount: 0,
       viewsCount: 0,

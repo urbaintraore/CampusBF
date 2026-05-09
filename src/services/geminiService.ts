@@ -470,6 +470,52 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
   }
 };
 
+export const analyzeCampusShort = async (title: string, description: string, hashtags: string[], category: string, videoUrl?: string): Promise<{ approved: boolean; reason: string }> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `En tant que modérateur IA de CampusBF (plateforme éducative et communautaire pour les étudiants au Burkina Faso), analyse cette soumission de vidéo.
+Titre: "${title}"
+Description: "${description}"
+Hashtags: "${hashtags.join(', ')}"
+Catégorie: "${category}"
+URL: "${videoUrl || 'Aucune'}"
+
+Ta tâche est de déterminer si ce contenu cadre strictement avec la philosophie de CampusBF, qui promeut l'éducation, les astuces examens, la vie étudiante saine, l'orientation, les opportunités, l'humour étudiant respectueux et la motivation.
+Les contenus inappropriés, haineux, commerciaux excessifs ou totalement hors de la sphère étudiante/éducative doivent être refusés.
+
+Réponds avec un JSON strictement conforme:
+{
+  "approved": boolean,
+  "reason": "Explication courte du refus, ou petit mot d'encouragement si accepté."
+}`;
+
+    const response = await ai.models.generateContent({
+      model: DEFAULT_MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            approved: { type: Type.BOOLEAN },
+            reason: { type: Type.STRING }
+          },
+          required: ["approved", "reason"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) throw new Error("L'IA n'a pas répondu.");
+    
+    return JSON.parse(resultText) as { approved: boolean; reason: string };
+  } catch (error) {
+    console.error("Erreur lors de l'analyse IA de la vidéo:", error);
+    // En cas d'erreur de l'IA (quota, etc.), on accepte par défaut pour ne pas bloquer l'utilisateur
+    return { approved: true, reason: "Analyse automatique non disponible." };
+  }
+};
+
 export const summarizeDocument = async (documentTitle: string, documentDescription: string): Promise<string> => {
   try {
     const ai = getAiClient();
