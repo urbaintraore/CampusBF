@@ -16,38 +16,38 @@ class VideoService {
 
     const videoId = crypto.randomUUID();
     const videoExt = file.name.split('.').pop();
-    const videoPath = `videos/${user.uid}/${videoId}.${videoExt}`;
-    const thumbnailPath = `thumbnails/${user.uid}/${videoId}.jpg`;
+    const videoPath = `${user.uid}/${videoId}.${videoExt}`;
+    const thumbnailPath = `${user.uid}/${videoId}.jpg`;
 
     // 1. Upload video to Supabase
     const { error: videoError, data: videoData } = await supabase.storage
-      .from('campus_shorts') // User might need to create this bucket, but assuming it exists as per request
+      .from('videos') // User requested 'videos' bucket
       .upload(videoPath, file);
 
     if (videoError) throw videoError;
 
     // 2. Upload thumbnail to Supabase
     const { error: thumbnailError, data: thumbnailData } = await supabase.storage
-      .from('campus_shorts')
+      .from('thumbnails') // User requested 'thumbnails' bucket or folder, assuming bucket based on wording
       .upload(thumbnailPath, thumbnailFile, { contentType: 'image/jpeg' });
 
     if (thumbnailError) {
       // Cleanup video if thumbnail fails
-      await supabase.storage.from('campus_shorts').remove([videoPath]);
+      await supabase.storage.from('videos').remove([videoPath]);
       throw thumbnailError;
     }
 
     // 3. Get Public URLs
     const { data: videoUrlData } = supabase.storage
-      .from('campus_shorts')
+      .from('videos')
       .getPublicUrl(videoPath);
     
     const { data: thumbnailUrlData } = supabase.storage
-      .from('campus_shorts')
+      .from('thumbnails')
       .getPublicUrl(thumbnailPath);
 
     // 4. Save metadata to Firestore
-    const videoDataToSave: CommunityVideo = {
+    const videoDataToSave: any = {
       id: videoId,
       userId: user.uid,
       username: metadata.username || user.displayName || 'Anonyme',
@@ -57,8 +57,8 @@ class VideoService {
       title: metadata.title || '',
       description: metadata.description || '',
       hashtags: metadata.hashtags || [],
-      category: metadata.category as any,
-      visibility: metadata.visibility as any,
+      category: metadata.category,
+      visibility: metadata.visibility,
       videoUrl: videoUrlData.publicUrl,
       thumbnailUrl: thumbnailUrlData.publicUrl,
       likesCount: 0,
@@ -66,7 +66,7 @@ class VideoService {
       viewsCount: 0,
       sharesCount: 0,
       isVerifiedEducational: false,
-      createdAt: Timestamp.now() as any
+      createdAt: serverTimestamp()
     };
 
     await setDoc(doc(db, this.collectionName, videoId), videoDataToSave);

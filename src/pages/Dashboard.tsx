@@ -420,6 +420,12 @@ export default function Dashboard() {
         {user?.role === 'parent' ? (
           [
             { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
+            { 
+              label: 'Campus Shorts', 
+              count: 'NEW', 
+              color: 'bg-black text-white ring-black', 
+              link: '/shorts' 
+            },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
             { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
@@ -454,13 +460,14 @@ export default function Dashboard() {
               label: 'Campus Shorts', 
               count: 'POPULAR', 
               color: 'bg-black text-white ring-black', 
+              shadow: 'shadow-lg shadow-black/20',
               link: '/shorts' 
             },
             { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Formations', count: '12', color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
-          ].filter(stat => !stat.roles || stat.roles.includes(user?.role || '')).map((stat) => (
-            <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
+          ].filter(stat => !stat.roles || stat.roles.includes(user?.role || '')).map((stat: any) => (
+            <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} ${stat.shadow || ''} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
               <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
             </Link>

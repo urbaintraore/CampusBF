@@ -16,8 +16,8 @@ service cloud.firestore {
     function getUserRole(uid) { return get(/databases/$(database)/documents/users/$(uid)).data.role; }
     function isAdmin() { 
       return isSignedIn() && (
-        getUserRole(request.auth.uid) == 'admin' || 
-        request.auth.token.email == 'urbain.traoreurb@gmail.com'
+        request.auth.token.email == 'urbain.traoreurb@gmail.com' ||
+        getUserRole(request.auth.uid) == 'admin'
       ); 
     }
     function isTeacher() { return isSignedIn() && getUserRole(request.auth.uid) == 'teacher'; }
@@ -38,7 +38,7 @@ service cloud.firestore {
 
     function isValidVideo(data) {
       return data.userId == request.auth.uid &&
-             data.videoUrl is string && data.videoUrl.size() <= 1000 &&
+             data.videoUrl is string &&
              data.category in ["Cours", "Astuces Examens", "Vie Étudiante", "Orientation", "Opportunités", "Humour Campus", "Motivation"] &&
              data.visibility in ["public", "friends", "group", "university"] &&
              data.createdAt == request.time;
@@ -46,20 +46,20 @@ service cloud.firestore {
 
     function isValidVideoComment(data) {
       return data.userId == request.auth.uid &&
-             data.message is string && data.message.size() <= 1000 &&
+             data.message is string &&
              data.createdAt == request.time;
     }
 
     function isValidVideoLike(data) {
       return data.userId == request.auth.uid &&
-             data.videoId is string && data.videoId.size() <= 128 &&
+             data.videoId is string &&
              data.createdAt == request.time;
     }
 
     function isValidVideoReport(data) {
       return data.reportedBy == request.auth.uid &&
-             data.videoId is string && data.videoId.size() <= 128 &&
-             data.reason is string && data.reason.size() <= 500 &&
+             data.videoId is string &&
+             data.reason is string &&
              data.createdAt == request.time;
     }
 
@@ -123,9 +123,14 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    match /questionBank/{qId} {
+    match /public_service_questions/{id} {
       allow read: if isSignedIn();
       allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    match /public_service_subscriptions/{id} {
+      allow read: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
     }
 
     match /notifications/{notifId} {
@@ -169,6 +174,7 @@ service cloud.firestore {
     match /trainings/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
     match /public_service_contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /public_service_contest_details/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
+    match /public_service_results/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
     match /logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
     match /applications/{id} { allow read, write: if isSignedIn(); }
     match /teacherApplications/{id} { allow read, write: if isSignedIn(); }
@@ -183,12 +189,7 @@ service cloud.firestore {
 
     // Campus Shorts
     match /community_videos/{videoId} {
-      allow read: if isSignedIn() && (
-        resource.data.visibility == 'public' ||
-        resource.data.userId == request.auth.uid ||
-        (resource.data.visibility == 'university' && resource.data.university == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university)
-        // Note: 'friends' and 'group' would require complex joins, keeping it simple for now or using get() checks if needed
-      );
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidVideo(incoming());
       allow update: if isSignedIn() && (
         isOwner(resource.data.userId) || 

@@ -40,7 +40,10 @@ const VISIBILITIES = [
   { id: 'group', label: 'Groupe', icon: Users, description: 'Seulement vos groupes' }
 ];
 
+import { useAuth } from '@/context/AuthContext';
+
 export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }) => {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<Blob | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -50,7 +53,6 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [visibility, setVisibility] = useState('public');
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +87,6 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
     }
 
     setIsUploading(true);
-    setProgress(0);
 
     try {
       const hashtagsArray = hashtags
@@ -99,14 +100,21 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
         hashtags: hashtagsArray,
         category: category as any,
         visibility: visibility as any,
+        username: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : (user?.firstName || 'Anonyme'),
+        userPhoto: user?.avatarUrl || '',
+        university: user?.university || 'Université non spécifiée',
       });
 
       toast.success('Vidéo publiée avec succès !');
       onSuccess(videoId);
       onClose();
     } catch (err: any) {
-      console.error('Upload error:', err);
-      toast.error(`Erreur lors de la publication : ${err.message}`);
+      console.error('Upload error details:', err);
+      if (err.message?.includes('Bucket not found')) {
+        toast.error('Erreur Supabase: Les buckets "videos" et "thumbnails" n\'ont pas été créés.');
+      } else {
+        toast.error(`Erreur: ${err.message || 'Problème lors de la publication'}`);
+      }
     } finally {
       setIsUploading(false);
     }
