@@ -665,6 +665,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const normalizedData = { id: firebaseUser.uid, ...newData };
             setUser(normalizedData);
           }
+        }, (error) => {
+          console.error("userSnapshot Error:", error);
         });
         unsubscribes.push(userUnsubscribe);
         
@@ -721,6 +723,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const unsub = onSnapshot(collection(db, 'groups'), (snapshot) => {
       setGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group)));
+    }, (error) => {
+      console.error("groups snapshot error in useEffect:", error);
     });
     return () => unsub();
   }, [user?.id]);

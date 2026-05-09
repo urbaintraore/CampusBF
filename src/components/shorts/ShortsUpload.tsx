@@ -53,26 +53,47 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [visibility, setVisibility] = useState('public');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    if (selectedFile.size > 20 * 1024 * 1024) {
-      toast.error('La vidéo est trop grande. Maximum 20 MB.');
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedTypes.includes(selectedFile.type)) {
+      toast.error('Format non supporté. Utilisez MP4, WebM ou MOV.');
       return;
     }
 
-    setFile(selectedFile);
-    try {
-      const thumb = await generateVideoThumbnail(selectedFile);
-      setThumbnail(thumb);
-      setThumbnailUrl(URL.createObjectURL(thumb));
-    } catch (err) {
-      console.error('Thumbnail error:', err);
-      toast.error('Erreur lors de la génération de la miniature');
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      toast.error('La vidéo est trop grande. Maximum 50 MB.');
+      return;
     }
+
+    // Check duration
+    const videoElement = document.createElement('video');
+    videoElement.preload = 'metadata';
+    
+    videoElement.onloadedmetadata = async () => {
+      window.URL.revokeObjectURL(videoElement.src);
+      if (videoElement.duration > 120) {
+        toast.error('La vidéo est trop longue. Maximum 120 secondes.');
+        return;
+      }
+      
+      setFile(selectedFile);
+      try {
+        const thumb = await generateVideoThumbnail(selectedFile);
+        setThumbnail(thumb);
+        setThumbnailUrl(URL.createObjectURL(thumb));
+      } catch (err) {
+        console.error('Thumbnail error:', err);
+        toast.error('Erreur lors de la génération de la miniature');
+      }
+    };
+    
+    videoElement.src = URL.createObjectURL(selectedFile);
   };
 
   const handleUpload = async () => {
@@ -87,6 +108,15 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 95) return prev;
+        return prev + Math.floor(Math.random() * 10) + 1;
+      });
+    }, 500);
 
     try {
       const hashtagsArray = hashtags
@@ -105,10 +135,17 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
         university: user?.university || 'Université non spécifiée',
       });
 
-      toast.success('Vidéo publiée avec succès !');
-      onSuccess(videoId);
-      onClose();
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      setTimeout(() => {
+        toast.success('Vidéo publiée avec succès !');
+        onSuccess(videoId);
+        onClose();
+      }, 500);
     } catch (err: any) {
+      clearInterval(progressInterval);
+      setUploadProgress(0);
       console.error('Upload error details:', err);
       if (err.message?.includes('Bucket not found')) {
         toast.error('Erreur Supabase: Les buckets "videos" et "thumbnails" n\'ont pas été créés.');
@@ -145,12 +182,12 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
               </div>
               <div className="text-center">
                 <p className="text-white font-bold">Sélectionner une vidéo</p>
-                <p className="text-gray-500 text-xs mt-1">MP4, MOV ou WebM • Max 120s • Max 20MB</p>
+                <p className="text-gray-500 text-xs mt-1">MP4, MOV ou WebM • Max 120s • Max 50MB</p>
               </div>
               <input 
                 ref={fileInputRef}
                 type="file" 
-                accept="video/*" 
+                accept="video/mp4,video/webm,video/quicktime" 
                 className="hidden" 
                 onChange={handleFileSelect}
               />
@@ -279,23 +316,33 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
             <button 
               onClick={handleUpload}
               disabled={isUploading || !file}
-              className={`w-full py-4 rounded-xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl ${
+              className={`w-full py-4 rounded-xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl relative overflow-hidden ${
                 isUploading || !file
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20 active:scale-[0.98]'
               }`}
             >
-              {isUploading ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Publication en cours...
-                </>
-              ) : (
-                <>
-                  <Upload size={24} />
-                  Publier Campus Short
-                </>
+              {/* Progress Bar Background */}
+              {isUploading && (
+                <div 
+                  className="absolute left-0 top-0 bottom-0 bg-blue-500 transition-all duration-300 ease-out opacity-20"
+                  style={{ width: `${uploadProgress}%` }}
+                />
               )}
+              
+              <div className="relative z-10 flex items-center gap-3">
+                {isUploading ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Publication en cours... {uploadProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Upload size={24} />
+                    Publier Campus Short
+                  </>
+                )}
+              </div>
             </button>
           </div>
         </div>
