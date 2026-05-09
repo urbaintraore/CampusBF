@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import ReactPlayer from 'react-player';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Heart, 
@@ -31,7 +32,7 @@ interface VideoPlayerProps {
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<any>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -64,8 +65,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           await containerRef.current.requestFullscreen();
         } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
           await (containerRef.current as any).webkitRequestFullscreen();
-        } else if ((videoRef.current as any)?.webkitEnterFullscreen) {
-          (videoRef.current as any).webkitEnterFullscreen();
         }
       } else {
         if (document.exitFullscreen) {
@@ -87,25 +86,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   };
 
   useEffect(() => {
-    if (isActive && videoRef.current) {
-      videoRef.current.play().catch(console.error);
+    if (isActive) {
       setIsPlaying(true);
       videoService.incrementView(video.id);
-    } else if (videoRef.current) {
-      videoRef.current.pause();
+    } else {
       setIsPlaying(false);
     }
-  }, [isActive]);
+  }, [isActive, video.id]);
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
+    setIsPlaying(!isPlaying);
   };
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -126,31 +116,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
+  const handleProgress = (state: any) => {
+    setCurrentTime(state.playedSeconds);
   };
 
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-    }
+  const handleDuration = (dur: any) => {
+    setDuration(dur);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = Number(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      setCurrentTime(time);
+    setCurrentTime(time);
+    if (playerRef.current) {
+      playerRef.current.seekTo(time);
     }
   };
 
   const handleSkip = (seconds: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (videoRef.current) {
-      const newTime = Math.max(0, Math.min(duration, videoRef.current.currentTime + seconds));
-      videoRef.current.currentTime = newTime;
+    if (playerRef.current) {
+      const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+      playerRef.current.seekTo(newTime);
       setCurrentTime(newTime);
     }
   };
@@ -159,17 +145,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
     <div ref={containerRef} className={`relative md:h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
       {/* Container vidéo */}
       <div className="relative w-full max-h-[40vh] sm:max-h-[60vh] md:max-h-none flex-shrink-0 md:flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
-        <video
-          ref={videoRef}
-          src={video.videoUrl}
-          poster={video.thumbnailUrl}
-          className="h-full w-full object-contain"
-          loop
-          muted={isMuted}
-          playsInline
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-        />
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          {/* @ts-ignore */}
+          {React.createElement(ReactPlayer as any, {
+            ref: playerRef,
+            url: video.videoUrl,
+            width: "100%",
+            height: "100%",
+            playing: isPlaying,
+            loop: true,
+            muted: isMuted,
+            playsinline: true,
+            onProgress: handleProgress,
+            onDuration: handleDuration,
+            style: { pointerEvents: 'none' },
+            config: {
+              youtube: {
+                playerVars: { controls: 0, rel: 0 }
+              }
+            }
+          })}
+        </div>
 
         {/* Action Buttons (Floating over video on the right like TikTok/Reels) - Hidden on mobile, shown on desktop */}
         <div className="hidden md:flex absolute right-3 bottom-6 flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>

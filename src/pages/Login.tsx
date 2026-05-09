@@ -144,8 +144,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Google login disabled as per request */}
-          {/* 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
@@ -157,16 +155,15 @@ export default function Login() {
 
           <button 
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={loginWithGoogle}
             disabled={isLoading}
-            className="w-full py-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 font-medium text-slate-700 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 font-medium text-slate-700 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
             Se connecter avec Google
           </button>
-          */}
 
-          <div className="text-center text-sm text-slate-500 pt-2">
+          <div className="text-center text-sm text-slate-500 pt-2 mt-4">
             Pas encore de compte ? <Link to="/signup" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">S'inscrire</Link>
           </div>
         </div>
