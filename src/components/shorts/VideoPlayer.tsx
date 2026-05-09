@@ -11,6 +11,7 @@ import {
   Volume2,
   VolumeX,
   Play,
+  Pause,
   RotateCcw,
   RotateCw,
   Flag,
@@ -54,16 +55,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
     };
   }, []);
 
-  const toggleFullscreen = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!document.fullscreenElement) {
-      if (containerRef.current?.requestFullscreen) {
-        await containerRef.current.requestFullscreen();
+  const toggleFullscreen = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    try {
+      if (!document.fullscreenElement) {
+        if (containerRef.current?.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        }
       }
-    } else {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      }
+    } catch (err) {
+      console.error("Fullscreen error:", err);
     }
   };
 
@@ -96,13 +106,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
     }
   };
 
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const res = await videoService.likeVideo(video.id);
     setIsLiked(res);
     setLikesCount(prev => res ? prev + 1 : prev - 1);
   };
 
-  const handleShare = () => {
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (navigator.share) {
       navigator.share({
         title: video.title,
@@ -143,7 +155,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
 
   return (
     <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'md:max-w-md md:mx-auto md:border-x md:border-white/10'}`}>
-      {/* Container vidéo avec layout flex */}
+      {/* Container vidéo */}
       <div className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden min-h-0" onClick={togglePlay}>
         <video
           ref={videoRef}
@@ -157,31 +169,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           onLoadedMetadata={handleLoadedMetadata}
         />
 
-        {/* Overlay UI (juste un léger gradient top pour les actions du haut) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent pointer-events-none" />
-
-        {/* Play/Pause indicator center */}
-        <AnimatePresence>
-          {!isPlaying && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 2 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 2 }}
-              className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
-            >
-              <div className="p-6 bg-black/40 rounded-full text-white border border-white/20 backdrop-blur-sm">
-                <Play size={48} fill="currentColor" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Action Buttons (Absolute right) */}
-        <div className="absolute right-3 bottom-6 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Action Buttons (Floating over video on the right like TikTok/Reels) */}
+        <div className="absolute right-3 bottom-4 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-1 group">
             <button 
               onClick={handleLike}
-              className={`p-3 rounded-full transition-all active:scale-125 shadow-lg ${isLiked ? 'bg-red-500 text-white' : 'bg-black/60 text-white hover:bg-black/80 backdrop-blur-md'}`}
+              className={`p-3 rounded-full transition-all active:scale-125 shadow-lg ${isLiked ? 'bg-red-500/90 text-white' : 'bg-black/40 text-white hover:bg-black/60 backdrop-blur-md'}`}
             >
               <Heart size={24} fill={isLiked ? "currentColor" : "none"} />
             </button>
@@ -190,8 +183,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
 
           <div className="flex flex-col items-center gap-1 group">
             <button 
-              onClick={() => setShowComments(true)}
-              className="p-3 bg-black/60 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/80 transition-all active:scale-125"
+              onClick={(e) => { e.stopPropagation(); setShowComments(true); }}
+              className="p-3 bg-black/40 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/60 transition-all active:scale-125"
             >
               <MessageCircle size={24} />
             </button>
@@ -201,131 +194,148 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
           <div className="flex flex-col items-center gap-1 group">
             <button 
               onClick={handleShare}
-              className="p-3 bg-black/60 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/80 transition-all active:scale-125"
+              className="p-3 bg-black/40 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/60 transition-all active:scale-125"
             >
               <Share2 size={24} />
             </button>
             <span className="text-white text-[11px] font-bold drop-shadow-md">{video.sharesCount}</span>
           </div>
-
-          <button className="p-3 bg-black/60 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/80 transition-all">
-            <Bookmark size={24} />
-          </button>
-
-          <button 
-            onClick={() => videoService.reportVideo(video.id, 'Contenu inapproprié')}
-            className="p-3 bg-black/60 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/80 transition-all text-red-400"
-          >
-            <Flag size={18} />
-          </button>
         </div>
 
-        {/* Controls Overlay (Mute & Fullscreen) */}
-        <div className="absolute top-4 right-4 z-20 flex gap-2 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-          <button 
-            onClick={() => setIsMuted(!isMuted)}
-            className="p-2.5 bg-black/50 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/70 transition-all"
-            title={isMuted ? "Activer le son" : "Désactiver le son"}
-          >
-            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </button>
-          <button 
-            onClick={toggleFullscreen}
-            className="p-2.5 bg-black/50 backdrop-blur-md rounded-full shadow-lg text-white hover:bg-black/70 transition-all"
-            title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
-          >
-            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
-          </button>
-        </div>
-        
-        {/* Rewind/Forward Gestures Overlay (Invisible click areas if preferred, but explicit buttons added below) */}
+        {/* Play/Pause center overlay animation when toggled */}
+        <AnimatePresence>
+          {!isPlaying && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 2 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 2 }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
+            >
+              <div className="p-6 bg-black/40 rounded-full text-white border border-white/20 backdrop-blur-sm shadow-xl">
+                <Play size={48} fill="currentColor" className="ml-2" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Video Info - Placé EN DESSOUS de la vidéo */}
-      <div className="w-full flex-none bg-gray-950 p-4 border-t border-white/5 z-20">
+      {/* Control Panel and Video Info - Placed strictly below the video */}
+      <div className="w-full flex-none bg-gray-950 border-t border-white/10 z-20 flex flex-col">
         
-        {/* Custom Progress Bar */}
-        <div className="flex flex-col gap-2 mb-3">
-          <input
-            type="range"
-            min="0"
-            max={duration || 100}
-            step="any"
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all"
-            style={{
-              background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.2) ${(currentTime / (duration || 1)) * 100}%)`
-            }}
-          />
-          
-          <div className="flex justify-between items-center px-1">
-            <span className="text-white/60 text-[11px] font-mono font-medium">
-              {formatTime(currentTime)} / {formatTime(duration)}
+        {/* Playback Controls & Timeline */}
+        <div className="px-4 py-3 bg-gray-900/50">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-white/60 text-[11px] font-mono w-9 text-right font-medium">
+              {formatTime(currentTime)}
             </span>
-            <div className="flex gap-4">
-              <button onClick={(e) => handleSkip(-10, e)} className="text-white/60 hover:text-white transition-colors" title="Reculer 10s">
-                <RotateCcw size={16} />
+            <input
+              type="range"
+              min="0"
+              max={duration || 100}
+              step="any"
+              value={currentTime}
+              onChange={handleSeek}
+              className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative"
+              style={{
+                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.1) ${(currentTime / (duration || 1)) * 100}%)`
+              }}
+            />
+            <span className="text-white/60 text-[11px] font-mono w-9 font-medium">
+              {formatTime(duration)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-5 text-white/90">
+              <button 
+                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                className="hover:text-white hover:scale-110 transition-all"
+                title={isPlaying ? "Pause" : "Lecture"}
+              >
+                {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
               </button>
-              <button onClick={(e) => handleSkip(10, e)} className="text-white/60 hover:text-white transition-colors" title="Avancer 10s">
-                <RotateCw size={16} />
+              
+              <button onClick={(e) => handleSkip(-10, e)} className="hover:text-blue-400 hover:scale-110 transition-all" title="Reculer de 10s">
+                <RotateCcw size={18} />
+              </button>
+              
+              <button onClick={(e) => handleSkip(10, e)} className="hover:text-blue-400 hover:scale-110 transition-all" title="Avancer de 10s">
+                <RotateCw size={18} />
+              </button>
+
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                className="hover:text-white transition-colors"
+                title={isMuted ? "Activer le son" : "Désactiver le son"}
+              >
+                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
             </div>
+            
+            <button 
+              onClick={toggleFullscreen}
+              className="text-white/80 hover:text-white transition-colors"
+              title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+            >
+              {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            </button>
           </div>
         </div>
 
-        {/* Author info */}
-        <div className="flex items-center gap-3 mb-3">
-          <img 
-            src={video.userPhoto || `https://ui-avatars.com/api/?name=${video.username}`} 
-            alt={video.username}
-            className="w-10 h-10 rounded-full border border-white/20 shadow-md"
-          />
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center gap-1">
-              <span className="text-white font-bold text-sm">@{video.username}</span>
-              {video.isVerifiedEducational && (
-                <CheckCircle size={14} className="text-blue-400 fill-white" />
+        {/* Video Details */}
+        <div className="px-4 py-3 flex flex-col gap-3">
+          {/* Author info */}
+          <div className="flex items-center gap-3">
+            <img 
+              src={video.userPhoto || `https://ui-avatars.com/api/?name=${video.username}`} 
+              alt={video.username}
+              className="w-10 h-10 rounded-full border border-white/10 shadow-sm"
+            />
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex items-center gap-1">
+                <span className="text-white font-bold text-sm truncate">@{video.username}</span>
+                {video.isVerifiedEducational && (
+                  <CheckCircle size={14} className="text-blue-400 fill-white shrink-0" />
+                )}
+              </div>
+              <span className="text-white/50 text-[10px] font-medium truncate">{video.university}</span>
+            </div>
+            <button className="px-5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5 whitespace-nowrap">
+              Suivre
+            </button>
+          </div>
+
+          {/* Description & Hashtags */}
+          <div className="flex flex-col">
+            <h3 className="text-white font-bold text-sm mb-1">{video.title}</h3>
+            
+            <div 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="cursor-pointer"
+            >
+              <p className={`text-white/70 text-xs leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-2'}`}>
+                {video.description}
+              </p>
+              {video.description && video.description.length > 80 && (
+                <span className="text-blue-400 hover:text-blue-300 text-[11px] font-bold mt-1 inline-block">
+                  {isExpanded ? 'voir moins' : 'voir plus'}
+                </span>
               )}
             </div>
-            <span className="text-white/60 text-[10px] font-medium">{video.university}</span>
-          </div>
-          <button className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/10 shadow-sm">
-            Suivre
-          </button>
-        </div>
 
-        {/* Video Description */}
-        <div className="pr-2">
-          <h3 className="text-white font-bold text-sm mb-1">{video.title}</h3>
-          
-          <div 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="cursor-pointer mb-2"
-          >
-            <p className={`text-white/80 text-xs leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
-              {video.description}
-            </p>
-            {video.description && video.description.length > 80 && (
-              <span className="text-blue-400 hover:text-blue-300 text-[11px] font-bold mt-1 inline-block">
-                {isExpanded ? 'voir moins' : 'voir plus'}
-              </span>
-            )}
-          </div>
-
-          {/* Hashtags */}
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {video.hashtags.map((tag, i) => (
-              <span key={i} className="text-blue-300/80 hover:text-blue-400 text-[11px] font-bold cursor-pointer">
-                #{tag}
-              </span>
-            ))}
+            {/* Hashtags */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {video.hashtags.map((tag, i) => (
+                <span key={i} className="text-blue-300/70 hover:text-blue-400 text-[11px] font-medium cursor-pointer bg-blue-500/10 px-2 py-0.5 rounded-full transition-colors">
+                  #{tag}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-
-      {/* Comments Drawer (Simulated) */}
+      {/* Comments Drawer */}
       <AnimatePresence>
         {showComments && (
           <>
@@ -334,40 +344,40 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowComments(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm z-40"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
             />
             <motion.div 
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl h-[70%] z-50 flex flex-col"
+              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl h-[75%] z-50 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
             >
               <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-3xl">
                 <span className="font-bold text-gray-900">{video.commentsCount} commentaires</span>
                 <button 
                   onClick={() => setShowComments(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full"
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <MoreVertical size={20} />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Comments list would go here */}
-                <div className="text-center py-10 text-gray-400">
-                  <MessageCircle size={40} className="mx-auto mb-2 opacity-20" />
-                  <p>Pas encore de commentaires...</p>
+                <div className="text-center py-10 text-gray-400 flex flex-col items-center">
+                  <MessageCircle size={48} className="mb-3 opacity-20" />
+                  <p className="font-medium">Pas encore de commentaires...</p>
+                  <p className="text-sm">Soyez le premier à réagir !</p>
                 </div>
               </div>
 
               <div className="p-4 border-t bg-gray-50 flex items-center gap-3">
-                <div className="flex-1 bg-white rounded-full px-4 py-2 border flex items-center">
+                <div className="flex-1 bg-white rounded-full px-4 py-2.5 border shadow-sm flex items-center focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                   <input 
                     type="text" 
                     placeholder="Ajouter un commentaire..." 
-                    className="flex-1 outline-none text-sm"
+                    className="flex-1 outline-none text-sm bg-transparent"
                   />
-                  <button className="text-blue-600 font-bold text-sm ml-2">Publier</button>
+                  <button className="text-blue-600 font-bold text-sm ml-2 hover:text-blue-700 transition-colors">Publier</button>
                 </div>
               </div>
             </motion.div>
