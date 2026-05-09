@@ -864,3 +864,48 @@ export interface Scholarship {
   date_publication: any;
   tags?: string[];
 }
+
+export interface CommunityVideo {
+  id: string;
+  userId: string;
+  username: string;
+  userPhoto: string;
+  university: string;
+  groupId?: string;
+  title: string;
+  description: string;
+  hashtags: string[];
+  category: 'Cours' | 'Astuces Examens' | 'Vie Étudiante' | 'Orientation' | 'Opportunités' | 'Humour Campus' | 'Motivation';
+  visibility: 'public' | 'friends' | 'group' | 'university';
+  videoUrl: string;
+  thumbnailUrl: string;
+  likesCount: number;
+  commentsCount: number;
+  viewsCount: number;
+  sharesCount: number;
+  isVerifiedEducational: boolean;
+  createdAt: any;
+}
+
+export interface VideoComment {
+  id: string;
+  userId: string;
+  username: string;
+  photo: string;
+  message: string;
+  createdAt: any;
+}
+
+export interface VideoLike {
+  userId: string;
+  videoId: string;
+  createdAt: any;
+}
+
+export interface VideoReport {
+  videoId: string;
+  reportedBy: string;
+  reason: string;
+  createdAt: any;
+}
+

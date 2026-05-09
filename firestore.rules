@@ -36,6 +36,33 @@ service cloud.firestore {
              data.lien_officiel is string && data.lien_officiel.size() <= 1500;
     }
 
+    function isValidVideo(data) {
+      return data.userId == request.auth.uid &&
+             data.videoUrl is string && data.videoUrl.size() <= 1000 &&
+             data.category in ["Cours", "Astuces Examens", "Vie Étudiante", "Orientation", "Opportunités", "Humour Campus", "Motivation"] &&
+             data.visibility in ["public", "friends", "group", "university"] &&
+             data.createdAt == request.time;
+    }
+
+    function isValidVideoComment(data) {
+      return data.userId == request.auth.uid &&
+             data.message is string && data.message.size() <= 1000 &&
+             data.createdAt == request.time;
+    }
+
+    function isValidVideoLike(data) {
+      return data.userId == request.auth.uid &&
+             data.videoId is string && data.videoId.size() <= 128 &&
+             data.createdAt == request.time;
+    }
+
+    function isValidVideoReport(data) {
+      return data.reportedBy == request.auth.uid &&
+             data.videoId is string && data.videoId.size() <= 128 &&
+             data.reason is string && data.reason.size() <= 500 &&
+             data.createdAt == request.time;
+    }
+
     // -------------------------------------------------------------------------
     // PILLAR 0: Global Safety Net
     // -------------------------------------------------------------------------
@@ -153,6 +180,40 @@ service cloud.firestore {
     match /colocations/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
     match /colocationRequests/{id} { allow read, write: if isSignedIn(); }
     match /colocationReviews/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
+
+    // Campus Shorts
+    match /community_videos/{videoId} {
+      allow read: if isSignedIn() && (
+        resource.data.visibility == 'public' ||
+        resource.data.userId == request.auth.uid ||
+        (resource.data.visibility == 'university' && resource.data.university == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university)
+        // Note: 'friends' and 'group' would require complex joins, keeping it simple for now or using get() checks if needed
+      );
+      allow create: if isSignedIn() && isValidVideo(incoming());
+      allow update: if isSignedIn() && (
+        isOwner(resource.data.userId) || 
+        isAdmin() || 
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'viewsCount', 'sharesCount']))
+      );
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isValidVideoComment(incoming());
+        allow delete: if isAdmin() || isOwner(resource.data.userId);
+      }
+    }
+
+    match /video_likes/{likeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidVideoLike(incoming());
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    match /video_reports/{reportId} {
+      allow create: if isSignedIn() && isValidVideoReport(incoming());
+      allow read: if isAdmin();
+    }
 
     match /users/{userId}/reviews/{reviewId} {
       allow read: if isSignedIn();

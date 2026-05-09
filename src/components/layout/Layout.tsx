@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy, Brain, Tag, Home, School, Building2 } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy, Brain, Tag, Home, School, Building2, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
@@ -27,6 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
     { icon: School, label: 'Classement Universités', to: '/ranking', roles: ['student', 'teacher', 'alumni', 'admin'] },
     { icon: Trophy, label: 'Challenge & Concours', to: '/contests', roles: ['admin', 'teacher', 'alumni', 'parent'] },
+    { icon: Video, label: 'Campus Shorts', to: '/shorts' },
     { icon: MessageCircle, label: 'Messages', to: '/messages' },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'teacher'] },

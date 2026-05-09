@@ -116,6 +116,68 @@
         "tags": { "type": "array" }
       },
       "required": ["titre", "lien_officiel", "date_publication"]
+    },
+    "CommunityVideo": {
+      "title": "Campus Shorts",
+      "description": "Courtes vidéos éducatives ou communautaires",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "university": { "type": "string" },
+        "groupId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "hashtags": { "type": "array" },
+        "category": { "type": "string", "enum": ["Cours", "Astuces Examens", "Vie Étudiante", "Orientation", "Opportunités", "Humour Campus", "Motivation"] },
+        "visibility": { "type": "string", "enum": ["public", "friends", "group", "university"] },
+        "videoUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "viewsCount": { "type": "number" },
+        "sharesCount": { "type": "number" },
+        "isVerifiedEducational": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "videoUrl", "category", "visibility", "createdAt"]
+    },
+    "VideoComment": {
+      "title": "Commentaire Vidéo",
+      "description": "Commentaire sur un Campus Short",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "photo": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "message", "createdAt"]
+    },
+    "VideoLike": {
+      "title": "Like Vidéo",
+      "description": "Indique qu'un utilisateur aime une vidéo",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "videoId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "videoId", "createdAt"]
+    },
+    "VideoReport": {
+      "title": "Signalement Vidéo",
+      "description": "Signalement d'un contenu inapproprié",
+      "type": "object",
+      "properties": {
+        "videoId": { "type": "string" },
+        "reportedBy": { "type": "string" },
+        "reason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["videoId", "reportedBy", "reason", "createdAt"]
     }
   },
   "firestore": {
@@ -150,6 +212,22 @@
     "/bourses/{bourseId}": {
       "schema": "Scholarship",
       "description": "Base de données des bourses et opportunités"
+    },
+    "/community_videos/{videoId}": {
+      "schema": "CommunityVideo",
+      "description": "Vidéos de la communauté"
+    },
+    "/community_videos/{videoId}/comments/{commentId}": {
+      "schema": "VideoComment",
+      "description": "Commentaires des vidéos"
+    },
+    "/video_likes/{likeId}": {
+      "schema": "VideoLike",
+      "description": "Likes des vidéos"
+    },
+    "/video_reports/{reportId}": {
+      "schema": "VideoReport",
+      "description": "Signalements des vidéos"
     }
   }
 }

@@ -445,11 +445,16 @@ export default function Dashboard() {
               color: 'bg-indigo-600 text-white ring-indigo-600', 
               link: '/scholarships' 
             },
-            {
-              label: 'Offres Stages', 
+            { label: 'Offres Stages', 
               count: internships.length.toString(), 
               color: 'bg-emerald-600 text-white ring-emerald-600', 
               link: '/internships' 
+            },
+            {
+              label: 'Campus Shorts', 
+              count: 'POPULAR', 
+              color: 'bg-black text-white ring-black', 
+              link: '/shorts' 
             },
             { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
