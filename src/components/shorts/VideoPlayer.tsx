@@ -154,7 +154,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   };
 
   return (
-    <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'md:max-w-md md:mx-auto md:border-x md:border-white/10'}`}>
+    <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'md:max-w-2xl lg:max-w-4xl md:mx-auto md:border-x md:border-white/10'}`}>
       {/* Container vidéo */}
       <div className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden min-h-0" onClick={togglePlay}>
         <video
@@ -170,7 +170,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
         />
 
         {/* Action Buttons (Floating over video on the right like TikTok/Reels) */}
-        <div className="absolute right-3 bottom-4 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute right-3 bottom-14 flex flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-1 group">
             <button 
               onClick={handleLike}
@@ -217,15 +217,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* Control Panel and Video Info - Placed strictly below the video */}
-      <div className="w-full flex-none bg-gray-950 border-t border-white/10 z-20 flex flex-col">
         
-        {/* Playback Controls & Timeline */}
-        <div className="px-4 py-3 bg-gray-900/50">
+        {/* Playback Controls & Timeline Overlay on top of video at the very bottom */}
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-2 pt-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-white/60 text-[11px] font-mono w-9 text-right font-medium">
+            <span className="text-white/90 text-[11px] font-mono w-9 text-right font-bold drop-shadow-md">
               {formatTime(currentTime)}
             </span>
             <input
@@ -235,21 +231,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
               step="any"
               value={currentTime}
               onChange={handleSeek}
-              className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative"
+              className="flex-1 h-1.5 bg-white/30 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-2 transition-all relative shadow-sm"
               style={{
-                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.1) ${(currentTime / (duration || 1)) * 100}%)`
+                background: `linear-gradient(to right, #3b82f6 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(currentTime / (duration || 1)) * 100}%)`
               }}
             />
-            <span className="text-white/60 text-[11px] font-mono w-9 font-medium">
+            <span className="text-white/90 text-[11px] font-mono w-9 font-bold drop-shadow-md">
               {formatTime(duration)}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-5 text-white/90">
+            <div className="flex items-center gap-6 text-white drop-shadow-md">
               <button 
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                className="hover:text-white hover:scale-110 transition-all"
+                className="hover:text-blue-400 hover:scale-110 transition-all"
                 title={isPlaying ? "Pause" : "Lecture"}
               >
                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
@@ -265,7 +261,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
 
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                className="hover:text-white transition-colors"
+                className="hover:text-blue-400 hover:scale-110 transition-colors"
                 title={isMuted ? "Activer le son" : "Désactiver le son"}
               >
                 {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
@@ -274,16 +270,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             
             <button 
               onClick={toggleFullscreen}
-              className="text-white/80 hover:text-white transition-colors"
+              className="text-white hover:text-blue-400 hover:scale-110 transition-colors drop-shadow-md"
               title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
             >
               {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
             </button>
           </div>
         </div>
+      </div>
 
+      {/* Control Panel and Video Info - Placed strictly below the video */}
+      <div className="w-full flex-none bg-gray-950 z-20 flex flex-col">
         {/* Video Details */}
-        <div className="px-4 py-3 flex flex-col gap-3">
+        <div className="px-4 py-4 flex flex-col gap-3">
           {/* Author info */}
           <div className="flex items-center gap-3">
             <img 
@@ -302,6 +301,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             </div>
             <button className="px-5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all border border-white/5 whitespace-nowrap">
               Suivre
+            </button>
+            <button 
+              onClick={() => videoService.reportVideo(video.id, 'Contenu inapproprié')}
+              className="p-2 ml-1 bg-white/5 hover:bg-white/10 rounded-full transition-all text-white/50 hover:text-red-400"
+              title="Signaler"
+            >
+              <Flag size={16} />
             </button>
           </div>
 
