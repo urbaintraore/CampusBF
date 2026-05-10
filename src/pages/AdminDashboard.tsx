@@ -1290,7 +1290,6 @@ export default function AdminDashboard() {
               { id: 'contests', label: 'Concours', icon: Trophy },
               { id: 'deals', label: 'Bons Plans', icon: Tag },
               { id: 'colocation', label: 'Colocation', icon: Home },
-              { id: 'payments', label: 'Paiements', icon: CreditCard },
               { id: 'public_service_contests', label: 'Concours Fonction Publique', icon: Trophy },
             ].map((tab) => (
               <button 
@@ -2784,11 +2783,6 @@ export default function AdminDashboard() {
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
                                       {deal.category}
                                     </span>
-                                    {deal.isPremiumOnly && (
-                                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase">
-                                        Premium
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -4299,7 +4293,7 @@ function AddDealModal({ isOpen, onClose, onSave, deal, setDeal }: any) {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 pt-2">
+           <div className="flex items-center gap-6 pt-2">
             <label className="flex items-center gap-2 cursor-pointer group">
               <div className="relative flex items-center">
                 <input
@@ -4312,20 +4306,6 @@ function AddDealModal({ isOpen, onClose, onSave, deal, setDeal }: any) {
                 <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
               </div>
               <span className="text-sm font-medium text-gray-700 group-hover:text-emerald-600 transition-colors">Actif</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <div className="relative flex items-center">
-                <input
-                  type="checkbox"
-                  checked={deal.isPremiumOnly}
-                  onChange={(e) => setDeal({ ...deal, isPremiumOnly: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-amber-500 transition-all"></div>
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-              </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-amber-600 transition-colors">Premium Uniquement</span>
             </label>
           </div>
         </form>

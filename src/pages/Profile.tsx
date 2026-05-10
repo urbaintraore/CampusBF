@@ -793,97 +793,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Subscriptions Section */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-        <h3 className="font-bold text-gray-900 flex items-center gap-2">
-          <CreditCard className="text-indigo-600" size={20} />
-          Mes Abonnements
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Premium Subscription */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Star size={16} className="text-purple-600" />
-                  Accès Premium
-                </p>
-                <span className={cn(
-                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
-                  user.premiumSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
-                  user.premiumSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
-                  "bg-gray-100 text-gray-500"
-                )}>
-                  {user.premiumSubscriptionStatus === 'active' ? 'Actif' : 
-                   user.premiumSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mb-2">Stages, Communauté</p>
-              {user.premiumSubscriptionStatus === 'active' && user.premiumSubscriptionExpiry && (
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
-                  <Calendar size={12} />
-                  Expire le {new Date(user.premiumSubscriptionExpiry).toLocaleDateString()}
-                </p>
-              )}
-              {user.premiumSubscriptionStatus === 'pending' && (
-                <p className="text-xs text-amber-600 mt-2">
-                  Vérification du paiement en cours...
-                </p>
-              )}
-            </div>
-            {user.premiumSubscriptionStatus !== 'active' && user.premiumSubscriptionStatus !== 'pending' && (
-              <button 
-                onClick={() => setShowPremiumPayment(true)}
-                className="mt-4 w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
-              >
-                S'abonner (5 000 CFA / mois)
-              </button>
-            )}
-          </div>
 
-          {/* Event Subscription */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Calendar size={16} className="text-indigo-600" />
-                  Événements
-                </p>
-                <span className={cn(
-                  "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
-                  user.eventSubscriptionStatus === 'active' ? "bg-emerald-50 text-emerald-700" :
-                  user.eventSubscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700" :
-                  "bg-gray-100 text-gray-500"
-                )}>
-                  {user.eventSubscriptionStatus === 'active' ? 'Actif' : 
-                   user.eventSubscriptionStatus === 'pending' ? 'En attente' : 'Inactif'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mb-2">Publier des conférences et activités</p>
-              {user.eventSubscriptionStatus === 'active' && user.eventSubscriptionExpiry && (
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
-                  <Calendar size={12} />
-                  Expire le {new Date(user.eventSubscriptionExpiry).toLocaleDateString()}
-                </p>
-              )}
-              {user.eventSubscriptionStatus === 'pending' && (
-                <p className="text-xs text-amber-600 mt-2">
-                  Vérification du paiement en cours...
-                </p>
-              )}
-            </div>
-            {user.eventSubscriptionStatus !== 'active' && user.eventSubscriptionStatus !== 'pending' && (
-              <button 
-                onClick={() => setShowEventPayment(true)}
-                className="mt-4 w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors"
-              >
-                S'abonner (2 000 CFA / mois)
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Tutor Status Section */}
       {user.role !== 'parent' && (
@@ -1382,25 +1292,6 @@ export default function Profile() {
           <span className="font-medium">Se déconnecter</span>
         </button>
       </div>
-
-      {/* Payment Modals */}
-      <ManualPaymentModal 
-        isOpen={showPremiumPayment}
-        onClose={() => setShowPremiumPayment(false)}
-        type="premium"
-        amount={5000}
-        title="Abonnement Premium"
-        description="Accédez aux fonctionnalités de publication (Stages, Communauté) pendant 30 jours."
-      />
-
-      <ManualPaymentModal 
-        isOpen={showEventPayment}
-        onClose={() => setShowEventPayment(false)}
-        type="event"
-        amount={2000}
-        title="Abonnement Événements"
-        description="Publiez vos conférences, soutenances et activités culturelles pendant 30 jours."
-      />
 
       {showCVGenerator && (
         <CVGenerator 

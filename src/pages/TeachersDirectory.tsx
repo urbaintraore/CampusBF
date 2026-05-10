@@ -91,15 +91,8 @@ export default function TeachersDirectory() {
   const ranks = ['Tous', 'Assistant', 'Maître Assistant', 'Maître de Conférences', 'Professeur Titulaire'];
 
   const isInstitution = user?.role === 'institution';
-  const hasActiveSubscription = isAdmin || (isInstitution && user?.institutionProfile?.subscriptionStatus === 'active');
-  const isPendingSubscription = isInstitution && user?.institutionProfile?.subscriptionStatus === 'pending';
-
-  const handleSubscribe = () => {
-    if (window.confirm("Voulez-vous souscrire à l'abonnement Établissement (50 000 FCFA / an) pour accéder aux coordonnées complètes des enseignants ?")) {
-      submitSubscriptionRequest('institution', 50000);
-      alert('Demande d\'abonnement envoyée ! En attente de validation par un administrateur.');
-    }
-  };
+  const hasActiveSubscription = true;
+  const isPendingSubscription = false;
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedTeacher || !user) return;

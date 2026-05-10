@@ -399,14 +399,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 3. For Sale / Premium check (Global for all non-admins)
-    const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active';
-    if (doc?.isForSale && !isPremium) {
-      return { 
-        locked: true, 
-        reason: 'Document payant : Abonnement Premium requis.' 
-      };
-    }
+    // 3. For Sale / Premium check removed to make platform free
     
     return false;
   }, [user, isAdmin, groups]);

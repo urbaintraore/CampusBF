@@ -202,12 +202,7 @@ export default function Deals() {
                       <div className="px-2 py-1 rounded-lg bg-white/90 backdrop-blur-md text-slate-900 text-[10px] font-black uppercase tracking-wider shadow-sm">
                         {deal.discountValue}
                       </div>
-                      {deal.isPremiumOnly && (
-                        <div className="px-2 py-1 rounded-lg bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-amber-500/20">
-                          <Lock size={9} />
-                          Premium
-                        </div>
-                      )}
+
                     </div>
 
                     <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3">
@@ -249,35 +244,25 @@ export default function Deals() {
                         </div>
                       </div>
 
-                      {deal.isPremiumOnly && user?.premiumSubscriptionStatus !== 'active' ? (
-                        <button 
-                          className="w-full py-3 bg-slate-100 text-slate-400 rounded-xl font-bold cursor-not-allowed flex items-center justify-center gap-2 text-xs"
-                          disabled
-                        >
-                          <Lock size={14} />
-                          Réservé aux membres Premium
-                        </button>
-                      ) : (
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          {deal.promoCode && (
-                            <div className="flex-1 px-3 py-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-center">
-                              <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-widest">Code Promo</span>
-                              <span className="text-base font-mono font-black text-slate-900 tracking-widest">{deal.promoCode}</span>
-                            </div>
-                          )}
-                          {deal.linkUrl && (
-                            <a 
-                              href={deal.linkUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20 text-sm"
-                            >
-                              Profiter
-                              <ExternalLink size={16} />
-                            </a>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {deal.promoCode && (
+                          <div className="flex-1 px-3 py-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-center">
+                            <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-widest">Code Promo</span>
+                            <span className="text-base font-mono font-black text-slate-900 tracking-widest">{deal.promoCode}</span>
+                          </div>
+                        )}
+                        {deal.linkUrl && (
+                          <a 
+                            href={deal.linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20 text-sm"
+                          >
+                            Profiter
+                            <ExternalLink size={16} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>

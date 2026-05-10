@@ -481,17 +481,6 @@ export default function Documents() {
 
       {showInviteModal && <InviteFriendsModal onClose={() => setShowInviteModal(false)} />}
       
-      {showPaymentModal && selectedDocForPayment && (
-        <ManualPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          type="exam"
-          amount={selectedDocForPayment.price || 1000}
-          title={selectedDocForPayment.title}
-          description={`Accès complet au document : ${selectedDocForPayment.title}. Un abonnement "Examen" ou "Premium" active tous les documents.`}
-        />
-      )}
-      
       {/* Upload Modal */}
 
       {showUploadModal && (

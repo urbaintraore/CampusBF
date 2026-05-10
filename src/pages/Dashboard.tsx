@@ -129,10 +129,7 @@ export default function Dashboard() {
     if (!isAdmin) {
       const lockStatus: any = isDocumentLocked(docData, 'download');
       if (lockStatus && lockStatus.locked) {
-        if (docData.isForSale && !isPremium) {
-           setSelectedDocForPayment(docData);
-           setShowPaymentModal(true);
-        } else if (user?.role === 'student' && (user?.referralsCount || 0) < 5 && lockStatus.reason.includes('parrainage')) {
+        if (user?.role === 'student' && (user?.referralsCount || 0) < 5 && lockStatus.reason.includes('parrainage')) {
           // Legacy referrals check if we still want it, but the centralized one 
           // usually covers onboarding now.
           setShowInviteModal(true);
@@ -998,17 +995,6 @@ export default function Dashboard() {
       </div>
 
       {showInviteModal && <InviteFriendsModal onClose={() => setShowInviteModal(false)} />}
-      
-      {showPaymentModal && selectedDocForPayment && (
-        <ManualPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          type="exam"
-          amount={selectedDocForPayment.price || 1000}
-          title={selectedDocForPayment.title}
-          description={`Accès complet au document : ${selectedDocForPayment.title}. Un abonnement "Examen" ou "Premium" active tous les documents.`}
-        />
-      )}
     </div>
   );
 }

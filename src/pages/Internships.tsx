@@ -358,20 +358,7 @@ export default function Internships() {
         </div>
       </div>
 
-      {/* Subscription Status Banner */}
-      {user && !isSubscriptionActive && !isAdmin && (
-        <div className="glass border-amber-200/50 p-5 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4">
-          <div className="w-10 h-10 rounded-full bg-amber-100/50 flex items-center justify-center flex-shrink-0">
-            <AlertCircle className="text-amber-600" size={20} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-amber-900">Abonnement Recruteur Requis</h3>
-            <p className="text-sm text-amber-800/80 mt-1">
-              Vous devez avoir un abonnement Recruteur actif (5 000 CFA / 30 jours) pour publier des offres d'emploi ou de bourse. Les stages et jobs étudiants sont gratuits.
-            </p>
-          </div>
-        </div>
-      )}
+
 
       {/* Success Toast */}
       {showApplySuccess && (
@@ -739,52 +726,6 @@ export default function Internships() {
             </div>
 
             <div className="p-6 sm:p-8 overflow-y-auto bg-white/20">
-              {!isSubscriptionActive && !isAdmin && newInternship.type !== 'Stage' && newInternship.type !== 'Job Etudiant' ? (
-                isSubscriptionPending ? (
-                  <div className="space-y-6">
-                    <div className="bg-amber-50/80 p-8 rounded-3xl border border-amber-100/50 text-center">
-                      <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <AlertCircle size={28} className="text-amber-600" />
-                      </div>
-                      <h3 className="text-xl font-bold text-amber-900 mb-2">
-                        Abonnement en cours d'activation
-                      </h3>
-                      <p className="text-amber-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-                        Votre demande d'abonnement a bien été reçue et est en cours de traitement par un administrateur. Vous pourrez publier des offres dès son activation.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="bg-blue-50/80 p-8 rounded-3xl border border-blue-100/50 text-center">
-                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Briefcase size={28} className="text-blue-600" />
-                      </div>
-                      <h3 className="text-xl font-bold text-blue-900 mb-2">
-                        Abonnement Entreprise Requis
-                      </h3>
-                      <p className="text-blue-700/80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-                        Pour publier des offres de stage, d'emploi ou de bourse sur CampusBF et accéder à notre vivier de talents, vous devez souscrire à un abonnement de 30 jours.
-                      </p>
-                      
-                      <div className="bg-white rounded-2xl p-6 border border-blue-100 shadow-sm max-w-sm mx-auto">
-                        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Tarif unique</p>
-                        <div className="flex items-baseline justify-center gap-1 mb-6">
-                          <span className="text-4xl font-black text-slate-900">5 000</span>
-                          <span className="text-lg font-bold text-slate-600">CFA</span>
-                          <span className="text-sm font-medium text-slate-400">/ 30 jours</span>
-                        </div>
-                        <button 
-                          onClick={() => setShowPayment(true)}
-                          className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
-                        >
-                          S'abonner maintenant
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              ) : (
                 <form className="space-y-6" onSubmit={handleSubmitInternship}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -902,21 +843,11 @@ export default function Internships() {
                     </button>
                   </div>
                 </form>
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Payment Modal */}
-      <ManualPaymentModal 
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        type="premium"
-        amount={5000}
-        title="Abonnement Recruteur CampusBF"
-        description="Accédez aux fonctionnalités de publication pendant 30 jours."
-      />
     </div>
   );
 }

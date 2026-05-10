@@ -28,7 +28,6 @@ import AlumniMentorship from './pages/AlumniMentorship';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Chatbot from './components/Chatbot';
-import { SubscriptionNotification } from './components/SubscriptionNotification';
 import Features from './pages/Features';
 import Messages from './pages/Messages';
 import FindClassmates from './pages/FindClassmates';
@@ -295,7 +294,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Chatbot />
-        <SubscriptionNotification />
         <Toaster position="top-right" />
       </ThemeProvider>
     </AuthProvider>
