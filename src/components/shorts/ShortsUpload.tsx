@@ -81,10 +81,6 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
     
     videoElement.onloadedmetadata = async () => {
       window.URL.revokeObjectURL(videoElement.src);
-      if (videoElement.duration > 120) {
-        toast.error('La vidéo est trop longue. Maximum 120 secondes.');
-        return;
-      }
       
       setFile(selectedFile);
       try {
@@ -236,7 +232,7 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
                   </div>
                   <div className="text-center">
                     <p className="text-white font-bold">Sélectionner une vidéo</p>
-                    <p className="text-gray-500 text-xs mt-1">MP4, MOV ou WebM • Max 120s • Max 50MB</p>
+                    <p className="text-gray-500 text-xs mt-1">MP4, MOV ou WebM • Max 50MB</p>
                   </div>
                   <input 
                     ref={fileInputRef}

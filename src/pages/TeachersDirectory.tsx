@@ -326,24 +326,6 @@ export default function TeachersDirectory() {
                         Envoyer un message
                       </button>
                     </div>
-                  ) : isPendingSubscription ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center space-y-3">
-                      <Clock size={24} className="mx-auto text-amber-400" />
-                      <h4 className="text-sm font-bold text-amber-900">Abonnement en cours</h4>
-                      <p className="text-xs text-amber-700">Votre demande est en cours de traitement par l'administration.</p>
-                    </div>
-                  ) : isInstitution ? (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center space-y-3">
-                      <Lock size={24} className="mx-auto text-slate-400" />
-                      <h4 className="text-sm font-bold text-slate-900">Accès Restreint</h4>
-                      <p className="text-xs text-slate-500">Abonnez-vous pour accéder aux coordonnées et contacter cet enseignant.</p>
-                      <button 
-                        onClick={handleSubscribe}
-                        className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        S'abonner
-                      </button>
-                    </div>
                   ) : (
                     <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-3">
                       <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-2">

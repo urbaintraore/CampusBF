@@ -1028,14 +1028,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting Firebase login for:", normalizedEmail);
       // Removed authStateReady() as it can sometimes hang in specific environments
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, normalizedEmail, password);
       console.log("Firebase login successful");
     } catch (error: any) {
       console.error("Firebase login error:", error);
       let errorMessage = 'Erreur de connexion';
       
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = 'Email ou mot de passe incorrect. Si vous utilisiez la connexion Google auparavant, veuillez utiliser "Google Login" ou définir un nouveau mot de passe.';
+        errorMessage = 'Email ou mot de passe incorrect. Si vous aviez créé votre compte avec Google, veuillez cliquer sur "Oublié ?" pour définir un mot de passe.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Trop de tentatives infructueuses. Veuillez réessayer plus tard.';
       } else if (error.code === 'auth/network-request-failed') {
@@ -1063,9 +1063,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     if (!email) throw new Error('Email requis');
+    const normalizedEmail = email.toLowerCase().trim();
     try {
-      console.log("Attempting to send password reset email to:", email);
-      await sendPasswordResetEmail(auth, email);
+      console.log("Attempting to send password reset email to:", normalizedEmail);
+      await sendPasswordResetEmail(auth, normalizedEmail);
       console.log("Password reset email sent successfully");
     } catch (error: any) {
       console.error("Firebase password reset error:", error.code, error.message);
@@ -1078,10 +1079,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Email et mot de passe requis');
     }
 
+    const normalizedEmail = userData.email.toLowerCase().trim();
+
     isSigningUp.current = true;
     try {
       await auth.authStateReady();
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, userData.password);
       const firebaseUser = userCredential.user;
       
       // L'envoi automatique de l'email de vérification a été retiré pour ne pas obliger l'utilisateur à vérifier son email immédiatement
@@ -1090,9 +1093,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const newUser: Partial<User> = {
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
-        email: userData.email,
+        email: normalizedEmail,
         university: userData.university || '',
-        role: isAdminEmail(userData.email) ? 'admin' : (userData.role || 'student'),
+        role: isAdminEmail(normalizedEmail) ? 'admin' : (userData.role || 'student'),
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
         status: 'active',
         createdAt: new Date().toISOString(),

@@ -155,7 +155,7 @@ export default function Login() {
 
           <button 
             type="button"
-            onClick={loginWithGoogle}
+            onClick={handleGoogleLogin}
             disabled={isLoading}
             className="w-full py-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 font-medium text-slate-700 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
           >
