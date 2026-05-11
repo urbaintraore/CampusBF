@@ -323,9 +323,9 @@ export default function AdminDashboard() {
         criteria: [{ id: '1', label: 'Score', key: 'score', weight: 100 }],
         status: 'draft'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erreur lors de l\'enregistrement du concours');
+      alert('Erreur lors de l\'enregistrement du concours: ' + error.message);
     }
   };
 
@@ -3549,19 +3549,24 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="pt-4">
-                <button 
+                  <button 
                   onClick={async () => {
                     if (!newAd.title || !newAd.imageUrl) {
                       return;
                     }
-                    await createAd({
-                      ...newAd,
-                      userId: currentUser?.id || '',
-                      active: true,
-                      createdAt: new Date().toISOString()
-                    });
-                    setShowAddAdModal(false);
-                    setNewAd({ title: '', imageUrl: '', linkUrl: '', userId: '', active: true, createdAt: '' });
+                    try {
+                      await createAd({
+                        ...newAd,
+                        userId: currentUser?.id || '',
+                        active: true,
+                        createdAt: new Date().toISOString()
+                      });
+                      setShowAddAdModal(false);
+                      setNewAd({ title: '', imageUrl: '', linkUrl: '', userId: '', active: true, createdAt: '' });
+                    } catch (error: any) {
+                      console.error("Ad creation error:", error);
+                      alert('Erreur lors de la création de la publicité: ' + error.message);
+                    }
                   }}
                   disabled={!newAd.title || !newAd.imageUrl}
                   className={cn(

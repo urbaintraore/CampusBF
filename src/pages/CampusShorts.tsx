@@ -9,7 +9,8 @@ import {
   Sparkles,
   Trophy,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft
 } from 'lucide-react';
 import { VideoPlayer } from '@/components/shorts/VideoPlayer';
 import { ShortsUpload } from '@/components/shorts/ShortsUpload';
@@ -123,22 +124,43 @@ export default function CampusShorts() {
       </div>
 
       {/* Main Feed */}
-      <div className="flex-1 flex flex-col relative">
-        {/* Mobile Header */}
-        <div className="md:hidden absolute top-0 left-0 right-0 p-4 z-30 flex items-center justify-between pointer-events-none">
-          <h1 className="text-xl font-black text-white italic tracking-tighter drop-shadow-lg pointer-events-auto">
-            CAMPUS<span className="text-blue-600">SHORTS</span>
-          </h1>
-          <div className="flex gap-3 pointer-events-auto">
-            <button className="p-2 bg-black/40 rounded-full text-white backdrop-blur-md border border-white/20">
-              <Search size={20} />
-            </button>
-            <button 
-              onClick={() => setShowUpload(true)}
-              className="p-2 bg-blue-600 rounded-full text-white shadow-lg shadow-blue-600/20"
-            >
-              <Plus size={20} />
-            </button>
+      <div className="flex-1 flex flex-col relative w-full overflow-hidden">
+        {/* Mobile Header with Categories */}
+        <div className="md:hidden absolute top-0 left-0 right-0 z-30 pointer-events-none flex flex-col bg-gradient-to-b from-black/80 to-transparent pt-4 pb-6">
+          <div className="flex items-center justify-between px-4 mb-3 pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <button onClick={() => window.history.back()} className="text-white hover:text-blue-400">
+                <ChevronLeft size={24} />
+              </button>
+              <h1 className="text-xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                CAMPUS<span className="text-blue-600">SHORTS</span>
+              </h1>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowUpload(true)}
+                className="p-2 bg-blue-600 rounded-full text-white shadow-lg shadow-blue-600/20"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+          </div>
+          
+          {/* Mobile Categories Scroll */}
+          <div className="w-full overflow-x-auto scrollbar-none pointer-events-auto px-4">
+            <div className="flex gap-2">
+              {CATEGORIES.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    selectedCategory === cat ? 'bg-blue-600 text-white shadow-lg' : 'bg-black/40 text-white/80 backdrop-blur-md border border-white/10'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

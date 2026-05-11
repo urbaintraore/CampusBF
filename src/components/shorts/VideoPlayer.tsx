@@ -146,7 +146,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
     <div ref={containerRef} className={`relative md:h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
       {/* Container vidéo */}
       <div className="relative w-full max-h-[40vh] sm:max-h-[60vh] md:max-h-none flex-shrink-0 md:flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center">
           {/* @ts-ignore */}
           {React.createElement((ReactPlayer as any).default || ReactPlayer, {
             ref: playerRef,
@@ -157,20 +157,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             loop: true,
             muted: isMuted,
             playsinline: true,
+            controls: true,
             onProgress: handleProgress,
             onDuration: handleDuration,
+            onPlay: () => setIsPlaying(true),
+            onPause: () => setIsPlaying(false),
             onError: (e: any) => console.error("VideoPlayer error:", e, "URL:", video.videoUrl),
-            style: { pointerEvents: 'none' },
             config: {
               youtube: {
-                playerVars: { controls: 0, rel: 0 }
+                playerVars: { controls: 1, rel: 0 }
               }
             }
           })}
         </div>
 
-        {/* Action Buttons (Floating over video on the right like TikTok/Reels) - Hidden on mobile, shown on desktop */}
-        <div className="hidden md:flex absolute right-3 bottom-6 flex-col items-center gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Action Buttons (Floating over video on the right like TikTok/Reels) */}
+        <div className="flex absolute right-2 md:right-4 bottom-20 md:bottom-12 flex-col items-center gap-4 md:gap-5 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-1 group">
             <button 
               onClick={handleLike}
