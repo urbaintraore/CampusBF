@@ -1032,10 +1032,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Firebase login successful");
     } catch (error: any) {
       console.error("Firebase login error:", error);
+      
+      // Auto-create admin account if it apparently doesn't exist
+      if (error.code === 'auth/invalid-credential' && isAdminEmail(normalizedEmail)) {
+        console.log("Attempting to auto-create missing admin account...");
+        try {
+          await signup({ email: normalizedEmail, password, firstName: 'Admin', lastName: 'System', role: 'admin' });
+          console.log("Admin account auto-created and logged in.");
+          return;
+        } catch (signupError: any) {
+          if (signupError.code !== 'auth/email-already-in-use') {
+             console.error("Admin auto-create failed:", signupError);
+          }
+        }
+      }
+
       let errorMessage = 'Erreur de connexion';
       
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = 'Email ou mot de passe incorrect. Si vous aviez créé votre compte avec Google, veuillez cliquer sur "Oublié ?" pour définir un mot de passe.';
+        errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, veuillez vous inscrire.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Trop de tentatives infructueuses. Veuillez réessayer plus tard.';
       } else if (error.code === 'auth/network-request-failed') {

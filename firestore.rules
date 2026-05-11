@@ -162,6 +162,8 @@ service cloud.firestore {
     }
 
     // Secure everything else with basic auth for now but move to specific schemas later
+    match /contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /contest_participants/{id} { allow read, write: if isSignedIn(); }
     match /ads/{id} { allow read: if true; allow write: if isAdmin(); }
     match /internships/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
     match /bourses/{id} { 

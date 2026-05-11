@@ -46,7 +46,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }) => {
   const { user } = useAuth();
-  const [uploadType, setUploadType] = useState<'file' | 'link'>('file');
+  const [uploadType, setUploadType] = useState<'file' | 'link'>('link');
   const [videoLink, setVideoLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<Blob | null>(null);

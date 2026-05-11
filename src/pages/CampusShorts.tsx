@@ -167,7 +167,9 @@ export default function CampusShorts() {
             </div>
           ) : (
             <div className="md:h-full flex flex-col md:block">
-              {videos.map((video, index) => (
+              {videos.map((video, index) => {
+                if (!video || !video.id) return null;
+                return (
                 <div 
                   key={video.id} 
                   data-index={index}
@@ -178,7 +180,7 @@ export default function CampusShorts() {
                     isActive={activeVideoIndex === index} 
                   />
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

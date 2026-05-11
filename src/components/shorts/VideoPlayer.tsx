@@ -87,7 +87,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
 
   useEffect(() => {
     if (isActive) {
-      setIsPlaying(true);
+      // Do not auto-play per user request
+      setIsPlaying(false);
       videoService.incrementView(video.id);
     } else {
       setIsPlaying(false);
@@ -147,7 +148,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
       <div className="relative w-full max-h-[40vh] sm:max-h-[60vh] md:max-h-none flex-shrink-0 md:flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           {/* @ts-ignore */}
-          {React.createElement(ReactPlayer as any, {
+          {React.createElement((ReactPlayer as any).default || ReactPlayer, {
             ref: playerRef,
             url: video.videoUrl,
             width: "100%",
@@ -158,6 +159,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             playsinline: true,
             onProgress: handleProgress,
             onDuration: handleDuration,
+            onError: (e: any) => console.error("VideoPlayer error:", e, "URL:", video.videoUrl),
             style: { pointerEvents: 'none' },
             config: {
               youtube: {
@@ -288,7 +290,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             <div className="flex items-center gap-2 text-white/50 text-[11px] font-medium">
               <span>{video.viewsCount || 0} vues</span>
               <span>•</span>
-              <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: fr })}</span>
+              <span>{(() => {
+                try {
+                  if (!video.createdAt) return 'Récemment';
+                  const dateInfo = video.createdAt as any;
+                  // Handle Firestore Timestamp objects just in case
+                  const dateObj = dateInfo?.toDate ? dateInfo.toDate() : new Date(dateInfo);
+                  if (isNaN(dateObj.getTime())) return 'Récemment';
+                  return formatDistanceToNow(dateObj, { addSuffix: true, locale: fr });
+                } catch {
+                  return 'Récemment';
+                }
+              })()}</span>
             </div>
           </div>
 

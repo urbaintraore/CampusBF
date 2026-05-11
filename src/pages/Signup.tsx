@@ -14,19 +14,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], []);
 
-  const handleGoogleSignup = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      await loginWithGoogle();
-      navigate('/');
-    } catch (err: any) {
-      console.error("Google signup error:", err);
-      setError(err.message || "Erreur lors de l'inscription avec Google");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -451,24 +439,7 @@ export default function Signup() {
             </button>
           </form>
 
-          <div className="relative mt-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-slate-500">Ou s'inscrire avec</span>
-            </div>
-          </div>
 
-          <button 
-            type="button"
-            onClick={handleGoogleSignup}
-            disabled={isLoading}
-            className="w-full py-4 mt-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 font-medium text-slate-700 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-            S'inscrire avec Google
-          </button>
 
           <div className="text-center text-sm text-slate-500 pt-2 mt-4">
             Déjà un compte ? <Link to="/login" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">Se connecter</Link>
