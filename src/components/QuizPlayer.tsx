@@ -23,7 +23,7 @@ const shuffleArray = (array: any[]) => {
 };
 
 export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
-  const { user, incrementActivity, syncUserStats } = useAuth();
+  const { user, incrementActivity, syncUserStats, logActivity } = useAuth();
   
   // Quiz State
   const [questions, setQuestions] = useState(quiz.questions);
@@ -210,6 +210,21 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         
         let earnedPoints = 10; // Completion points
         if (finalPercentage >= 80) earnedPoints += 20;
+
+        if (logActivity) {
+          logActivity({
+            action: 'Participation à un quiz',
+            module: 'Quiz & Évaluations',
+            details: `Quiz: ${quiz.title} - Score: ${Math.max(0, score)}/${maxPossibleScore} (${finalPercentage}%)`,
+            metadata: { 
+              quizId: quiz.id, 
+              score: Math.max(0, score),
+              maxScore: maxPossibleScore,
+              percentage: finalPercentage,
+              timeSpentSeconds: timeSpent
+            }
+          });
+        }
 
         if (incrementActivity) {
           // One atomic call for both activity count and points

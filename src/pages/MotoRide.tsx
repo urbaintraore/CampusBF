@@ -6,7 +6,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user, addMotoRide, motoRides, reserveMotoRide, logAction, reportRideUser, reviewRide, updateRideStatus, users, incrementActivity } = useAuth();
+  const { user, addMotoRide, motoRides, reserveMotoRide, logActivity, reportRideUser, reviewRide, updateRideStatus, users, incrementActivity } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states

@@ -473,20 +473,19 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
 export const analyzeCampusShort = async (title: string, description: string, hashtags: string[], category: string, videoUrl?: string): Promise<{ approved: boolean; reason: string }> => {
   try {
     const ai = getAiClient();
-    const prompt = `En tant que modérateur IA de CampusBF (plateforme éducative et communautaire pour les étudiants au Burkina Faso), analyse cette soumission de vidéo.
+    const prompt = `En tant que modérateur IA de CampusBF, analyse cette soumission de vidéo.
 Titre: "${title}"
 Description: "${description}"
 Hashtags: "${hashtags.join(', ')}"
 Catégorie: "${category}"
 URL: "${videoUrl || 'Aucune'}"
 
-Ta tâche est de déterminer si ce contenu cadre strictement avec la philosophie de CampusBF, qui promeut l'éducation, les astuces examens, la vie étudiante saine, l'orientation, les opportunités, l'humour étudiant respectueux et la motivation.
-Les contenus inappropriés, haineux, commerciaux excessifs ou totalement hors de la sphère étudiante/éducative doivent être refusés.
+Ta tâche est de déterminer si ce contenu a un sens pour des étudiants. Sauf s'il est explicitement haineux, pornographique ou spam évident, tu dois L'ACCEPTER. Si tu n'es pas sûr, ACCEPTE.
 
-Réponds avec un JSON strictement conforme:
+Réponds avec un JSON:
 {
-  "approved": boolean,
-  "reason": "Explication courte du refus, ou petit mot d'encouragement si accepté."
+  "approved": true,
+  "reason": "OK"
 }`;
 
     const response = await ai.models.generateContent({

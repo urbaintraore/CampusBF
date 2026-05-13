@@ -87,8 +87,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
 
   useEffect(() => {
     if (isActive) {
-      // Do not auto-play per user request
-      setIsPlaying(false);
+      setIsPlaying(true);
       videoService.incrementView(video.id);
     } else {
       setIsPlaying(false);
@@ -96,6 +95,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   }, [isActive, video.id]);
 
   const togglePlay = () => {
+    console.log("togglePlay called. current isPlaying:", isPlaying);
     setIsPlaying(!isPlaying);
   };
 
@@ -143,9 +143,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   };
 
   return (
-    <div ref={containerRef} className={`relative md:h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
+    <div ref={containerRef} className={`relative h-full w-full bg-black flex flex-col shadow-2xl overflow-hidden ${isFullscreen ? '' : 'w-full'}`}>
       {/* Container vidéo */}
-      <div className="relative w-full max-h-[40vh] sm:max-h-[60vh] md:max-h-none flex-shrink-0 md:flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
+      <div className="relative w-full h-full max-h-none flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
         <div className="absolute inset-0 flex items-center justify-center">
           {/* @ts-ignore */}
           {React.createElement((ReactPlayer as any).default || ReactPlayer, {
@@ -157,15 +157,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
             loop: true,
             muted: isMuted,
             playsinline: true,
-            controls: true,
+            controls: false,
             onProgress: handleProgress,
             onDuration: handleDuration,
-            onPlay: () => setIsPlaying(true),
-            onPause: () => setIsPlaying(false),
             onError: (e: any) => console.error("VideoPlayer error:", e, "URL:", video.videoUrl),
+            style: { pointerEvents: 'none' },
             config: {
+              file: {
+                forceVideo: true,
+              },
               youtube: {
-                playerVars: { controls: 1, rel: 0 }
+                playerVars: { controls: 0, rel: 0, modestbranding: 1 }
               }
             }
           })}

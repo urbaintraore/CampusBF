@@ -151,6 +151,7 @@ interface AuthContextType {
   sendColocationRequest: (request: Omit<ColocationRequest, 'id' | 'createdAt' | 'senderId' | 'senderName' | 'senderAvatar' | 'senderUniversity' | 'senderLevel' | 'status'>) => Promise<void>;
   updateColocationRequestStatus: (id: string, status: 'accepted' | 'rejected') => Promise<void>;
   addColocationReview: (review: Omit<ColocationReview, 'id' | 'createdAt' | 'authorId' | 'authorName'>) => Promise<void>;
+  logActivity: (data: Omit<import('@/services/logService').LogData, 'userId' | 'userName' | 'email' | 'filiere' | 'universite'>) => Promise<void>;
   logAction: (action: string, details?: string) => Promise<void>;
   updateAd: (id: string, data: Partial<Ad>) => Promise<void>;
   createAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
@@ -425,6 +426,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const logActivity = async (data: Omit<import('@/services/logService').LogData, 'userId' | 'userName' | 'email' | 'filiere' | 'universite'>) => {
+    if (!user) return;
+    await logService.logActivity({
+      ...data,
+      userId: user.id,
+      userName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      universite: user.university,
+      filiere: user.major || ''
+    });
+  };
+
   const logAction = async (action: string, details?: string) => {
     await logService.logAction(user, action, details);
   };
@@ -670,7 +683,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Log login
         try {
-          await logService.logAction(initialUserData, 'Connexion', 'Session ouverte');
+          await logService.logActivity({
+            userId: initialUserData.id,
+            userName: `${initialUserData.firstName} ${initialUserData.lastName}`,
+            email: initialUserData.email,
+            universite: initialUserData.university,
+            filiere: initialUserData.major || '',
+            action: 'Connexion',
+            module: 'Authentification',
+            details: 'Session ouverte',
+            severity: 'info'
+          });
         } catch (err: any) {
           console.error("Error logging login action:", err);
         }
@@ -912,6 +935,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     unsubscribes.push(unsubEvents);
+
+    // Load contests
+    const qContests = query(collection(db, 'contests'), orderBy('createdAt', 'desc'), limit(50));
+    unsubscribes.push(onSnapshot(qContests, (snapshot) => {
+      setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
+    }, (error) => console.error("onSnapshot Contests Error:", error)));
+
+    // Load Deals
+    const qDeals = query(collection(db, 'deals'), orderBy('createdAt', 'desc'), limit(50));
+    unsubscribes.push(onSnapshot(qDeals, (snapshot) => {
+      setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
+    }, (error) => console.error("onSnapshot Deals Error:", error)));
 
     // Admin only lists
     if (isAdmin) {
@@ -1593,6 +1628,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           discussionTitle: post.content.substring(0, 30) + '...'
         });
       }
+
+      await logActivity({
+        action: 'Commentaires',
+        module: 'Communauté',
+        details: `Nouveau commentaire sur le post ${postId}`,
+        metadata: { postId }
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'comments');
       throw error;
@@ -1909,6 +1951,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reports,
       motoRides,
       logs,
+      logActivity,
       logAction,
       deleteAd,
       updateAd,

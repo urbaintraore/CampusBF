@@ -14,7 +14,7 @@ interface CVGeneratorProps {
 }
 
 export const CVGenerator: React.FC<CVGeneratorProps> = ({ user, onClose, isModal = true }) => {
-  const { incrementActivity } = useAuth();
+  const { incrementActivity, logActivity } = useAuth();
   const componentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -42,6 +42,13 @@ export const CVGenerator: React.FC<CVGeneratorProps> = ({ user, onClose, isModal
     onAfterPrint: () => {
       if (incrementActivity) {
         incrementActivity('cvGenerated').catch(console.error);
+      }
+      if (logActivity) {
+        logActivity({
+          action: 'Génération CV',
+          module: 'Services Étudiants',
+          details: `CV généré pour ${user.firstName} ${user.lastName}`
+        }).catch(console.error);
       }
     }
   });

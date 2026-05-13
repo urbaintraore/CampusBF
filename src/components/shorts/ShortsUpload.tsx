@@ -45,7 +45,7 @@ const VISIBILITIES = [
 import { useAuth } from '@/context/AuthContext';
 
 export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }) => {
-  const { user } = useAuth();
+  const { user, logActivity } = useAuth();
   const [uploadType, setUploadType] = useState<'file' | 'link'>('link');
   const [videoLink, setVideoLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -102,9 +102,15 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
       return;
     }
 
-    if (uploadType === 'link' && !videoLink.trim()) {
-      toast.error('Veuillez fournir un lien vidéo');
-      return;
+    let finalLink = videoLink.trim();
+    if (uploadType === 'link') {
+      if (!finalLink) {
+        toast.error('Veuillez fournir un lien vidéo');
+        return;
+      }
+      if (!finalLink.startsWith('http')) {
+        finalLink = 'https://' + finalLink;
+      }
     }
 
     if (!title.trim()) {
@@ -124,7 +130,7 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
       // 1. Analyse par l'IA
       setUploadProgress(20);
       toast('Analyse de la vidéo par l\'IA de modération...', { icon: '🤖' });
-      const currentVideoUrl = uploadType === 'link' ? videoLink.trim() : 'Fichier uploadé';
+      const currentVideoUrl = uploadType === 'link' ? finalLink : 'Fichier uploadé';
       const moderationResult = await analyzeCampusShort(title, description, hashtagsArray, category, currentVideoUrl);
 
       if (!moderationResult.approved) {
@@ -146,7 +152,7 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
       }, 500);
 
       // 2. Upload effectif
-      const videoSource = uploadType === 'link' ? videoLink.trim() : file!;
+      const videoSource = uploadType === 'link' ? finalLink : file!;
       const videoId = await videoService.uploadVideo(videoSource, uploadType === 'file' ? thumbnail : null, {
         title,
         description,
@@ -161,6 +167,15 @@ export const ShortsUpload: React.FC<ShortsUploadProps> = ({ onClose, onSuccess }
       clearInterval(progressInterval);
       setUploadProgress(100);
       
+      if (logActivity) {
+        logActivity({
+          action: 'Upload de Campus Short',
+          module: 'Campus Shorts',
+          details: `Upload: ${title}`,
+          metadata: { videoId, category, uploadType }
+        });
+      }
+
       setTimeout(() => {
         toast.success('Vidéo publiée avec succès !');
         onSuccess(videoId);

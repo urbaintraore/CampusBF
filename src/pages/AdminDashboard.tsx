@@ -6,8 +6,9 @@ import { User, Log, Contest } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
+import { ActivityLogsAdmin } from '@/components/admin/ActivityLogsAdmin';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { generateDevReport, generateSummaryReport, generateFullReport } from '@/services/devReportService';
 import { generatePublicServiceExam } from '@/services/geminiService';
@@ -18,7 +19,7 @@ import { useCachedQuery } from '@/hooks/useCachedQuery';
 export default function AdminDashboard() {
   const { data: publicServiceContests, loading: loadingContests, loadMore: loadMoreContests, hasMore: hasMoreContests, invalidateCache: invalidateContestsCache } = useCachedQuery(
     'public_service_contests',
-    [],
+    [orderBy('createdAt', 'desc')],
     'admin_public_service_contests_cache',
     50
   );
@@ -324,8 +325,8 @@ export default function AdminDashboard() {
         status: 'draft'
       });
     } catch (error: any) {
-      console.error(error);
-      alert('Erreur lors de l\'enregistrement du concours: ' + error.message);
+      console.error("Full error on Save Contest:", error);
+      alert('Erreur lors de l\'enregistrement du concours: ' + error.message + '\n\n' + JSON.stringify(error));
     }
   };
 
@@ -3726,82 +3727,7 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === 'logs' && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <h2 className="font-bold text-gray-900">Journaux d'activité</h2>
-                <div className="flex gap-2">
-                  <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] rounded-full font-bold">
-                    Aujourd'hui : {logs.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length}
-                  </span>
-                  <span className="px-2 py-1 bg-gray-50 text-gray-700 text-[10px] rounded-full font-bold">
-                    Total : {logs.length}
-                  </span>
-                </div>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Rechercher dans les journaux..."
-                  value={logSearch}
-                  onChange={(e) => setLogSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 w-full md:w-64"
-                />
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
-                  <tr>
-                    <th className="px-6 py-4">Date & Heure</th>
-                    <th className="px-6 py-4">Utilisateur</th>
-                    <th className="px-6 py-4">Action</th>
-                    <th className="px-6 py-4">Détails</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {logs
-                    .filter(l => 
-                      l.action?.toLowerCase().includes(logSearch.toLowerCase()) || 
-                      l.userName?.toLowerCase().includes(logSearch.toLowerCase()) ||
-                      l.details?.toLowerCase().includes(logSearch.toLowerCase())
-                    )
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-xs text-gray-500">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700">
-                            {log.userName?.charAt(0) || '?'}
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">{log.userName || 'Système'}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-bold text-gray-700">{log.action}</span>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">
-                        {log.details || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                  {logs.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
-                        Aucun journal d'activité trouvé.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <ActivityLogsAdmin />
       )}
 
       {activeTab === 'stats' && (

@@ -18,8 +18,7 @@ import {
   updateDoc, 
   doc, 
   increment,
-  serverTimestamp,
-  limit
+  serverTimestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
@@ -27,7 +26,7 @@ import { uploadFile } from '@/services/storageService';
 export default function Documents() {
   const navigate = useNavigate();
   const { 
-    user, isAdmin, documents: globalDocuments, logAction, groups, community, 
+    user, isAdmin, documents: globalDocuments, logActivity, groups, community, 
     addDocument, incrementActivity, isDocumentLocked, syncUserStats 
   } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
@@ -79,7 +78,7 @@ export default function Documents() {
       }
 
       try {
-        const q = query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(50));
+        const q = query(collection(db, 'documents'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
           const docsList = snapshot.docs.map(doc => {
             const data = doc.data();
@@ -312,8 +311,13 @@ export default function Documents() {
       await addDocument(newDoc);
       console.log("[Documents] Document ajouté avec succès.");
       
-      if (logAction) {
-        logAction('Partage de document', `Document: ${uploadTitle} (${uploadSubject})`);
+      if (logActivity) {
+        logActivity({
+          action: 'Upload de document',
+          module: 'Documents Académiques',
+          details: `Upload: ${uploadTitle} (${uploadSubject})`,
+          metadata: { documentId: newDoc.id, size: uploadFileState?.size }
+        });
       }
       
       resetUploadForm();
@@ -385,8 +389,13 @@ export default function Documents() {
         })
       ]);
 
-      if (logAction) {
-        logAction('Téléchargement de document', `Document: ${docData.title}`);
+      if (logActivity) {
+        logActivity({
+          action: 'Téléchargement de document',
+          module: 'Documents Académiques',
+          details: `Téléchargement: ${docData.title}`,
+          metadata: { documentId: docId }
+        });
       }
 
       // 2. Trigger actual file download
@@ -414,8 +423,13 @@ export default function Documents() {
       await updateDoc(doc(db, 'documents', docId), {
         likes: increment(1)
       });
-      if (logAction) {
-        logAction('Like de document', `Document: ${docTitle}`);
+      if (logActivity) {
+        logActivity({
+          action: 'Like de document',
+          module: 'Documents Académiques',
+          details: `Like: ${docTitle}`,
+          metadata: { documentId: docId }
+        });
       }
     } catch (error) {
       console.error("Error liking document:", error);

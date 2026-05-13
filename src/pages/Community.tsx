@@ -23,7 +23,7 @@ import autoTable from 'jspdf-autotable';
 import { uploadFile } from '@/services/storageService';
 
 export default function Community() {
-  const { user, groups, users, addGroupMember, removeGroupMember, logAction, addComment, incrementActivity, triggerNotification } = useAuth();
+  const { user, groups, users, addGroupMember, removeGroupMember, logActivity, addComment, incrementActivity, triggerNotification } = useAuth();
   const [postContent, setPostContent] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -157,8 +157,13 @@ export default function Community() {
       setPostContent('');
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      if (logAction) {
-        logAction('Nouvelle publication', `Groupe ID: ${selectedGroupId}`);
+      if (logActivity) {
+        logActivity({
+          action: 'Publication dans la communauté',
+          module: 'Communauté',
+          details: `Publication dans le groupe: ${group?.name || selectedGroupId}`,
+          metadata: { groupId: selectedGroupId, hasMedia: !!mediaUrl }
+        });
       }
       showToast('Publication partagée avec succès !');
     } catch (error) {
@@ -188,8 +193,13 @@ export default function Community() {
         likes: isLiked ? post.likes - 1 : post.likes + 1,
         likedBy: isLiked ? arrayRemove(user.id) : arrayUnion(user.id)
       });
-      if (logAction && !isLiked) {
-        logAction('Like de publication', `Post ID: ${postId}`);
+      if (logActivity && !isLiked) {
+        logActivity({
+          action: 'Likes / réactions',
+          module: 'Communauté',
+          details: `Like de post (ID: ${postId})`,
+          metadata: { postId }
+        });
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);

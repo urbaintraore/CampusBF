@@ -167,7 +167,7 @@ export default function CampusShorts() {
         {/* Video Scroller */}
         <div 
           ref={feedRef}
-          className="flex-1 overflow-y-auto md:snap-y md:snap-mandatory scrollbar-none scroll-smooth bg-gray-100 md:bg-black"
+          className="flex-1 overflow-y-auto snap-y snap-mandatory scrollbar-none scroll-smooth bg-black"
         >
           {loading && videos.length === 0 ? (
             <div className="h-full w-full flex items-center justify-center">
@@ -188,14 +188,14 @@ export default function CampusShorts() {
               </button>
             </div>
           ) : (
-            <div className="md:h-full flex flex-col md:block">
+            <>
               {videos.map((video, index) => {
                 if (!video || !video.id) return null;
                 return (
                 <div 
                   key={video.id} 
                   data-index={index}
-                  className="video-container w-full md:h-full md:snap-start md:snap-always mb-2 md:mb-0 bg-black"
+                  className="video-container w-full h-[100dvh] md:h-full snap-start snap-always bg-black"
                 >
                   <VideoPlayer 
                     video={video} 
@@ -203,7 +203,7 @@ export default function CampusShorts() {
                   />
                 </div>
               )})}
-            </div>
+            </>
           )}
         </div>
 

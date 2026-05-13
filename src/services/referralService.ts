@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, increment, arrayUnion, getDoc, getCountFromServer } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, increment, arrayUnion, getDoc, getCountFromServer, limit } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Referral } from '@/types';
 
@@ -10,7 +10,7 @@ export const referralService = {
       // If the provided ID doesn't look like a Firebase UID (typically 28 chars),
       // it might be a referral code (typically 6-8 chars).
       if (referrerIdOrCode.length < 20) {
-        const q = query(collection(db, 'users'), where('referralCode', '==', referrerIdOrCode.toUpperCase()));
+        const q = query(collection(db, 'users'), where('referralCode', '==', referrerIdOrCode.toUpperCase()), limit(1));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           referrerId = snapshot.docs[0].id;

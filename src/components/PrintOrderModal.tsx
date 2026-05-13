@@ -97,6 +97,21 @@ export default function PrintOrderModal({ isOpen, onClose, initialFileUrl, initi
         comment
       });
 
+      if (user) {
+         try {
+           const { logService } = await import('@/services/logService');
+           await logService.logActivity({
+             userId: user.id,
+             userName: `${user.firstName} ${user.lastName}`,
+             email: user.email,
+             action: 'Commande impression',
+             module: 'Services Étudiants',
+             details: `Fichier: ${finalFileName} - ${pageCount} pages, Total: ${totalPrice} FCFA`,
+             metadata: { pageCount, totalPrice, options }
+           });
+         } catch(e) { }
+      }
+
       // Also trigger a notification for admins/user
       fetch('/api/notify/print_order', {
         method: 'POST',

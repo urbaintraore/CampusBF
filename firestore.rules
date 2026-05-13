@@ -178,6 +178,7 @@ service cloud.firestore {
     match /public_service_contest_details/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /public_service_results/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
     match /logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
+    match /activity_logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); allow update, delete: if isAdmin(); }
     match /applications/{id} { allow read, write: if isSignedIn(); }
     match /teacherApplications/{id} { allow read, write: if isSignedIn(); }
     match /subscriptionRequests/{id} { allow read, write: if isSignedIn(); }
