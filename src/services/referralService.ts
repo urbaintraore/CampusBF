@@ -50,7 +50,7 @@ export const referralService = {
     } catch (error) {
       console.error("Error creating referral:", error);
       // We don't want to block signup if referral fails, but we should log it
-      handleFirestoreError(error, OperationType.CREATE, 'referrals');
+      // handleFirestoreError(error, OperationType.CREATE, 'referrals');
     }
   },
 

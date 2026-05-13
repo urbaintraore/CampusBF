@@ -26,7 +26,7 @@ class VideoService {
       const videoPath = `${user.uid}/${videoId}.${videoExt}`;
       const { error: videoError } = await supabase.storage
         .from('videos')
-        .upload(videoPath, videoSource);
+        .upload(videoPath, videoSource, { contentType: videoSource.type || 'video/mp4' });
       if (videoError) throw videoError;
       
       const { data: videoUrlData } = supabase.storage
@@ -88,16 +88,21 @@ class VideoService {
   }
 
   async getVideos(category?: string, visibility: string = 'public', limitCount: number = 20) {
+    // Avoid composite index requirement by only sorting and then filtering in memory
     const q = query(
       collection(db, this.collectionName),
-      where('visibility', '==', visibility),
-      ...(category ? [where('category', '==', category)] : []),
       orderBy('createdAt', 'desc'),
-      limit(limitCount)
+      limit(limitCount * 3) // fetch more to account for client side filtering
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityVideo));
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityVideo));
+    
+    return docs.filter(doc => {
+      if (doc.visibility !== visibility) return false;
+      if (category && doc.category !== category) return false;
+      return true;
+    }).slice(0, limitCount);
   }
 
   async likeVideo(videoId: string) {

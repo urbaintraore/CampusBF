@@ -86,16 +86,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
   };
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     if (isActive) {
-      setIsPlaying(true);
-      videoService.incrementView(video.id);
+      timeout = setTimeout(() => {
+        setIsPlaying(true);
+      }, 150);
+      videoService.incrementView(video.id).catch(console.error);
     } else {
       setIsPlaying(false);
     }
+    return () => clearTimeout(timeout);
   }, [isActive, video.id]);
 
   const togglePlay = () => {
-    console.log("togglePlay called. current isPlaying:", isPlaying);
     setIsPlaying(!isPlaying);
   };
 
@@ -119,10 +122,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
 
   const handleProgress = (state: any) => {
     setCurrentTime(state.playedSeconds);
-  };
-
-  const handleDuration = (dur: any) => {
-    setDuration(dur);
+    if (!duration && playerRef.current) {
+      const dur = playerRef.current.getDuration();
+      if (dur) setDuration(dur);
+    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,30 +150,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
       {/* Container vidéo */}
       <div className="relative w-full h-full max-h-none flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
         <div className="absolute inset-0 flex items-center justify-center">
-          {/* @ts-ignore */}
-          {React.createElement((ReactPlayer as any).default || ReactPlayer, {
-            ref: playerRef,
-            url: video.videoUrl,
-            width: "100%",
-            height: "100%",
-            playing: isPlaying,
-            loop: true,
-            muted: isMuted,
-            playsinline: true,
-            controls: false,
-            onProgress: handleProgress,
-            onDuration: handleDuration,
-            onError: (e: any) => console.error("VideoPlayer error:", e, "URL:", video.videoUrl),
-            style: { pointerEvents: 'none' },
-            config: {
+          <ReactPlayer
+            ref={playerRef}
+            url={video.videoUrl}
+            width="100%"
+            height="100%"
+            playing={isPlaying}
+            loop={true}
+            muted={isMuted}
+            playsInline={true}
+            controls={false}
+            onProgress={handleProgress}
+            onError={(e: any) => console.error("VideoPlayer error:", e, "URL:", video.videoUrl)}
+            style={{ pointerEvents: 'none' }}
+            config={{
               file: {
                 forceVideo: true,
               },
               youtube: {
                 playerVars: { controls: 0, rel: 0, modestbranding: 1 }
               }
-            }
-          })}
+            }}
+          />
         </div>
 
         {/* Action Buttons (Floating over video on the right like TikTok/Reels) */}

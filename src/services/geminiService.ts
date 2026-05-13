@@ -211,11 +211,12 @@ DIRECTIVES POUR LES QUESTIONS :
 2. true_false : Exactement 2 options (Vrai/Faux).
 3. matching : Liste de paires (left/right) à associer.
 4. cloze : Un texte avec des [[gap1]], [[gap2]] et leurs réponses respectives (clozeAnswers doit être un tableau d'objets {gapId, answer}).
-5. numerical : Question demandant un chiffre précis avec une tolérance numérique.
+5. numerical : Question demandant un chiffre précis (utiliser des string au lieu de float pour éviter les erreurs).
 6. short_answer : Réponse textuelle courte et sans ambiguïté.
 
 CONTRANTES JSON :
 - Réponds UNIQUEMENT avec un objet JSON valide et complet.
+- NE JAMAIS METTRE DE FLOAT INTERMINABLES (ex: 0.333333333). Arrondissez.
 - Chaque question DOIT inclure une explication pédagogique détaillée ("explanation").
 - Assure-toi que les questions sont directement dérivées du texte source.
 
