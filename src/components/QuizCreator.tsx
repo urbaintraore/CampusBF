@@ -5,9 +5,10 @@ import { X, Plus, Trash2, Save, ArrowRight } from 'lucide-react';
 
 interface QuizCreatorProps {
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export const QuizCreator: React.FC<QuizCreatorProps> = ({ onClose }) => {
+export const QuizCreator: React.FC<QuizCreatorProps> = ({ onClose, onSuccess }) => {
   const { user, addQuiz } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -104,6 +105,7 @@ export const QuizCreator: React.FC<QuizCreatorProps> = ({ onClose }) => {
 
       await addQuiz(newQuiz);
       alert('Quiz créé avec succès !');
+      if (onSuccess) onSuccess();
       onClose();
     } catch (error) {
       console.error(error);

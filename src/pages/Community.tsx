@@ -158,11 +158,12 @@ export default function Community() {
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (logActivity) {
+        const group = groups.find(g => g.id === selectedGroupId);
         logActivity({
           action: 'Publication dans la communauté',
           module: 'Communauté',
           details: `Publication dans le groupe: ${group?.name || selectedGroupId}`,
-          metadata: { groupId: selectedGroupId, hasMedia: !!mediaUrl }
+          metadata: { groupId: selectedGroupId, hasMedia: !!fileUrl }
         });
       }
       showToast('Publication partagée avec succès !');

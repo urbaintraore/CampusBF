@@ -316,7 +316,7 @@ export default function Documents() {
           action: 'Upload de document',
           module: 'Documents Académiques',
           details: `Upload: ${uploadTitle} (${uploadSubject})`,
-          metadata: { documentId: newDoc.id, size: uploadFileState?.size }
+          metadata: { documentId: newDoc.id, size: selectedFile?.size }
         });
       }
       
@@ -394,7 +394,7 @@ export default function Documents() {
           action: 'Téléchargement de document',
           module: 'Documents Académiques',
           details: `Téléchargement: ${docData.title}`,
-          metadata: { documentId: docId }
+          metadata: { documentId: docData.id }
         });
       }
 

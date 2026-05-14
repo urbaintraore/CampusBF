@@ -942,6 +942,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setContests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest)));
     }, (error) => console.error("onSnapshot Contests Error:", error)));
 
+    // Load Quizzes
+    const qQuizzes = query(collection(db, 'quizzes'), limit(100));
+    const unsubQuizzes = onSnapshot(qQuizzes, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz));
+      const sorted = list.sort((a, b) => {
+        const t1 = (a.createdAt as any)?.seconds || Date.now() / 1000;
+        const t2 = (b.createdAt as any)?.seconds || Date.now() / 1000;
+        return t2 - t1;
+      });
+      setQuizzes(sorted);
+    }, (error) => console.error("onSnapshot Quizzes Error:", error));
+    unsubscribes.push(unsubQuizzes);
+
     // Load Deals
     const qDeals = query(collection(db, 'deals'), orderBy('createdAt', 'desc'), limit(50));
     unsubscribes.push(onSnapshot(qDeals, (snapshot) => {

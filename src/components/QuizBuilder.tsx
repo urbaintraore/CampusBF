@@ -7,8 +7,8 @@ import { generateAdvancedQuizWithAI } from '@/services/geminiService';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
-export const QuizBuilder: React.FC<{ onClose: () => void; initialData?: any }> = ({ onClose, initialData }) => {
-  const { user } = useAuth();
+export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void; initialData?: any }> = ({ onClose, onSuccess, initialData }) => {
+  const { user, addQuiz } = useAuth();
   
   const [title, setTitle] = useState(initialData?.title || '');
   const [subject, setSubject] = useState(initialData?.subject || '');
@@ -162,8 +162,9 @@ export const QuizBuilder: React.FC<{ onClose: () => void; initialData?: any }> =
         }
       };
 
-      await quizService.addQuiz(newQuiz);
+      await addQuiz(newQuiz);
       toast.success('Quiz créé avec succès !', { id: toastId });
+      if (onSuccess) onSuccess();
       onClose();
     } catch (error) {
       toast.error('Erreur lors de la sauvegarde.', { id: toastId });

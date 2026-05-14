@@ -14,72 +14,14 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export default function Quizzes() {
   const location = useLocation();
-  const { user } = useAuth();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, quizzes, isLoading: authLoading } = useAuth();
+  
   const [activeTab, setActiveTab] = useState<'explore' | 'stats'>('explore');
   const [showCreator, setShowCreator] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [initialBuilderData, setInitialBuilderData] = useState<any>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [activeFlashcards, setActiveFlashcards] = useState<Quiz | null>(null);
-
-  const fetchQuizzes = async (force: boolean = false) => {
-    setLoading(true);
-    const cacheKey = 'local_cache_quizzes_directory';
-    const cached = localStorage.getItem(cacheKey);
-    const cacheTime = localStorage.getItem(cacheKey + '_time');
-    const now = Date.now();
-
-    // Only use cache if not forced and less than 1 hour old (was 12h, reduced for better production visibility)
-    if (!force && cached && cacheTime && now - parseInt(cacheTime) < 3600000) {
-      setQuizzes(JSON.parse(cached));
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Primary attempt: Sorted by most recent
-      const q = query(collection(db, 'quizzes'), orderBy('createdAt', 'desc'), limit(50));
-      const snapshot = await getDocs(q);
-      let list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
-      
-      // Fallback: If no results found or error, try without sorting (in case createdAt index is missing or fields are missing)
-      if (list.length === 0) {
-        console.log("No quizzes found with sorted query, trying unsorted...");
-        const qSimple = query(collection(db, 'quizzes'), limit(100));
-        const simpleSnapshot = await getDocs(qSimple);
-        list = simpleSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
-        
-        // Sort client-side if possible
-        list.sort((a, b) => {
-          const dateA = a.createdAt ? (typeof a.createdAt === 'object' ? a.createdAt.toDate?.() || 0 : new Date(a.createdAt).getTime()) : 0;
-          const dateB = b.createdAt ? (typeof b.createdAt === 'object' ? b.createdAt.toDate?.() || 0 : new Date(b.createdAt).getTime()) : 0;
-          return dateB - dateA;
-        });
-      }
-
-      setQuizzes(list);
-      localStorage.setItem(cacheKey, JSON.stringify(list));
-      localStorage.setItem(cacheKey + '_time', now.toString());
-    } catch (error) {
-      console.error("Error fetching quizzes, trying simple query:", error);
-      try {
-        const qSimple = query(collection(db, 'quizzes'), limit(100));
-        const simpleSnapshot = await getDocs(qSimple);
-        const list = simpleSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Quiz));
-        setQuizzes(list);
-      } catch (err) {
-        console.error("Final quiz fetch fail:", err);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchQuizzes();
-  }, []);
 
   useEffect(() => {
     if (location.state?.autoGenerate) {
@@ -103,11 +45,11 @@ export default function Quizzes() {
   }
 
   if (showCreator) {
-    return <QuizCreator onClose={() => setShowCreator(false)} />;
+    return <QuizCreator onClose={() => setShowCreator(false)} onSuccess={() => {}} />;
   }
   
   if (showBuilder) {
-    return <QuizBuilder onClose={() => setShowBuilder(false)} initialData={initialBuilderData} />;
+    return <QuizBuilder onClose={() => setShowBuilder(false)} onSuccess={() => {}} initialData={initialBuilderData} />;
   }
 
   return (
@@ -144,14 +86,6 @@ export default function Quizzes() {
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => fetchQuizzes(true)}
-            className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-slate-200 bg-white shadow-sm"
-            title="Rafraîchir"
-            disabled={loading}
-          >
-            <RotateCw size={18} className={loading ? 'animate-spin' : ''} />
-          </button>
           <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
             <button
               onClick={() => setActiveTab('explore')}
@@ -179,7 +113,7 @@ export default function Quizzes() {
 
       {activeTab === 'explore' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
+        {authLoading ? (
           <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-12 h-12 border-4 border-emerald-600/20 border-t-emerald-600 rounded-full animate-spin" />
             <p className="text-slate-500 font-medium tracking-tight">Chargement des quiz...</p>
@@ -218,7 +152,7 @@ export default function Quizzes() {
             </div>
           </div>
         ))}
-        {!loading && quizzes.length === 0 && (
+        {!authLoading && quizzes.length === 0 && (
           <div className="col-span-full text-center py-12 bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
             <Brain className="mx-auto text-slate-300 mb-3" size={48} />
             <h3 className="text-lg font-bold text-slate-900 mb-1">Aucun quiz disponible</h3>

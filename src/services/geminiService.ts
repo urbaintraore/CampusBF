@@ -4,6 +4,37 @@ import { QuizQuestion, PublicServiceQuestion } from "@/types";
 // ... existing code ...
 
 /**
+ * Helper pour nettoyer et parser le JSON de l'IA
+ */
+const parseAiJson = (text: string): any => {
+  try {
+    // Tentative de parse direct
+    return JSON.parse(text);
+  } catch (e) {
+    // Si échec, on cherche le premier '{' et dernier '}' ou '[' et ']'
+    const startBrace = text.indexOf('{');
+    const startBracket = text.indexOf('[');
+    const start = (startBrace !== -1 && (startBracket === -1 || startBrace < startBracket)) ? startBrace : startBracket;
+    
+    if (start === -1) throw new Error("Format JSON non trouvé dans la réponse de l'IA.");
+    
+    const endBrace = text.lastIndexOf('}');
+    const endBracket = text.lastIndexOf(']');
+    const end = Math.max(endBrace, endBracket);
+    
+    if (end === -1 || end < start) throw new Error("Format JSON incomplet dans la réponse de l'IA.");
+    
+    const cleaned = text.substring(start, end + 1);
+    try {
+      return JSON.parse(cleaned);
+    } catch (e2) {
+      console.error("Failed to parse cleaned JSON:", cleaned);
+      throw new Error("L'IA a généré un JSON invalide.");
+    }
+  }
+};
+
+/**
  * Génère spécialisée pour les concours de la fonction publique au Burkina Faso
  */
 export const generatePublicServiceExam = async (
@@ -70,7 +101,7 @@ Réponds UNIQUEMENT avec un tableau JSON d'objets suivant ce schéma :
     const resultText = response.text;
     if (!resultText) throw new Error("Aucun résultat de l'IA");
     
-    return JSON.parse(resultText) as PublicServiceQuestion[];
+    return parseAiJson(resultText) as PublicServiceQuestion[];
   } catch (error: any) {
     console.error("Public Service Exam AI Prep Error:", error);
     throw new Error(`La génération de concours a échoué: ${error.message}`);
@@ -98,7 +129,7 @@ const getAiClient = (): GoogleGenAI => {
   return aiClient;
 };
 
-const DEFAULT_MODEL = "gemini-3-flash-preview";
+const DEFAULT_MODEL = "gemini-1.5-flash";
 
 /**
  * Fonction pour générer du texte avec Gemini
@@ -216,8 +247,9 @@ DIRECTIVES POUR LES QUESTIONS :
 
 CONTRANTES JSON :
 - Réponds UNIQUEMENT avec un objet JSON valide et complet.
-- NE JAMAIS METTRE DE FLOAT INTERMINABLES (ex: 0.333333333). Arrondissez.
-- Chaque question DOIT inclure une explication pédagogique détaillée ("explanation").
+- SOIS CONCIS. Tes explications ("explanation") MUST be less than 20 words to save tokens.
+- Pour les questions 'numerical', 'correctNumericAnswer' et 'tolerance' doivent obligatoirement être des nombres ENTIERS (pas de virgule).
+- Chaque question DOIT inclure une courte explication pédagogique ("explanation").
 - Assure-toi que les questions sont directement dérivées du texte source.
 
 Modèle de format attendu pour l'output :
@@ -252,8 +284,8 @@ Modèle de format attendu pour l'output :
                   correctAnswerIndex: { type: Type.NUMBER },
                   explanation: { type: Type.STRING },
                   correctTextAnswer: { type: Type.STRING },
-                  correctNumericAnswer: { type: Type.NUMBER },
-                  tolerance: { type: Type.NUMBER },
+                  correctNumericAnswer: { type: Type.STRING },
+                  tolerance: { type: Type.STRING },
                   matchingPairs: {
                     type: Type.ARRAY,
                     items: {
@@ -290,15 +322,15 @@ Modèle de format attendu pour l'output :
       throw new Error("L'IA n'a renvoyé aucun résultat.");
     }
 
+    // Traitement post-génération pour assurer la compatibilité
     let data;
     try {
-      data = JSON.parse(resultText);
-    } catch (e) {
-      console.error("JSON Parse Error. Full text:", resultText);
-      throw new Error("L'IA a généré une réponse trop longue ou malformée. Essayez de réduire le nombre de questions demandées.");
+      data = parseAiJson(resultText);
+    } catch (e: any) {
+      console.error("Quiz Parse Error:", e.message, "Full text:", resultText);
+      throw new Error("L'IA a généré une réponse malformée. Essayez de réduire le nombre de questions.");
     }
     
-    // Traitement post-génération pour assurer la compatibilité
     const processedQuestions = data.questions.map((q: any) => {
       if (!q.options) q.options = [];
       q.id = 'q_' + Math.random().toString(36).substring(2, 9);
@@ -315,6 +347,15 @@ Modèle de format attendu pour l'output :
           }
         });
         q.clozeAnswers = answersObj;
+      }
+      
+      if (q.type === 'numerical') {
+        if (typeof q.correctNumericAnswer === 'string') {
+          q.correctNumericAnswer = parseFloat(q.correctNumericAnswer) || 0;
+        }
+        if (typeof q.tolerance === 'string') {
+          q.tolerance = parseFloat(q.tolerance) || 0;
+        }
       }
       
       return q as QuizQuestion;
@@ -364,7 +405,8 @@ Utilise une variété de types de questions inspirés de Moodle pour rendre le q
 
 Pour chaque question :
 - Attribue des points appropriés dans pointsPerOption ou via le score global.
-- Fournis une explication pédagogique claire.
+- Fournis une explication pédagogique claire (TRÈS COURTE - max 15 mots pour économiser les tokens).
+- Pour 'numerical', 'correctNumericAnswer' et 'tolerance' DOIVENT être des ENTIERS (aucune virgule).
 - Assure-toi que les questions sont pertinentes au niveau ${level}.
 
 Retourne le résultat sous forme d'un tableau d'objets JSON respectant strictement le schéma fourni.`;
@@ -402,8 +444,8 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
                 }
               },
               correctTextAnswer: { type: Type.STRING },
-              correctNumericAnswer: { type: Type.NUMBER },
-              tolerance: { type: Type.NUMBER },
+              correctNumericAnswer: { type: Type.STRING },
+              tolerance: { type: Type.STRING },
               formula: { type: Type.STRING },
               clozeTemplate: { type: Type.STRING },
               clozeAnswers: { 
@@ -431,10 +473,17 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
     
     let rawQuestions: any[];
     try {
-      rawQuestions = JSON.parse(text);
-    } catch (e) {
-      console.error("JSON Parse Error (Simple Generator):", text);
-      throw new Error("Réponse de l'IA tronquée. Essayez de demander moins de questions.");
+      rawQuestions = parseAiJson(text);
+      if (!Array.isArray(rawQuestions)) {
+        if ((rawQuestions as any).questions && Array.isArray((rawQuestions as any).questions)) {
+          rawQuestions = (rawQuestions as any).questions;
+        } else {
+          throw new Error("Format de tableau attendu.");
+        }
+      }
+    } catch (e: any) {
+      console.error("JSON Parse Error (Simple Generator):", e.message, text);
+      throw new Error("Réponse de l'IA malformée ou incomplète.");
     }
     
     // Conversion et nettoyage
@@ -450,6 +499,15 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
         q.clozeAnswers.forEach((item: any) => {
           sanitized.clozeAnswers[item.gapId] = item.answer;
         });
+      }
+
+      if (q.type === 'numerical') {
+        if (typeof sanitized.correctNumericAnswer === 'string') {
+          sanitized.correctNumericAnswer = parseFloat(sanitized.correctNumericAnswer) || 0;
+        }
+        if (typeof sanitized.tolerance === 'string') {
+          sanitized.tolerance = parseFloat(sanitized.tolerance) || 0;
+        }
       }
 
       return sanitized as QuizQuestion;
@@ -508,7 +566,7 @@ Réponds avec un JSON:
     const resultText = response.text;
     if (!resultText) throw new Error("L'IA n'a pas répondu.");
     
-    return JSON.parse(resultText) as { approved: boolean; reason: string };
+    return parseAiJson(resultText) as { approved: boolean; reason: string };
   } catch (error) {
     console.error("Erreur lors de l'analyse IA de la vidéo:", error);
     // En cas d'erreur de l'IA (quota, etc.), on accepte par défaut pour ne pas bloquer l'utilisateur

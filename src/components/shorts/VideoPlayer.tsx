@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactPlayer from 'react-player';
+const Player = ReactPlayer as any;
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Heart, 
@@ -89,17 +90,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
     let timeout: NodeJS.Timeout;
     if (isActive) {
       timeout = setTimeout(() => {
+        // Only start playing if still active
         setIsPlaying(true);
       }, 150);
       videoService.incrementView(video.id).catch(console.error);
     } else {
       setIsPlaying(false);
     }
-    return () => clearTimeout(timeout);
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [isActive, video.id]);
 
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsPlaying(prev => !prev);
   };
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -150,7 +155,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isActive }) => 
       {/* Container vidéo */}
       <div className="relative w-full h-full max-h-none flex-1 bg-black overflow-hidden flex items-center justify-center" onClick={togglePlay}>
         <div className="absolute inset-0 flex items-center justify-center">
-          <ReactPlayer
+          <Player
             ref={playerRef}
             url={video.videoUrl}
             width="100%"
