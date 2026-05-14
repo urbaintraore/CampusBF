@@ -5,9 +5,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
+import multer from 'multer';
+import { createWorker } from 'tesseract.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const upload = multer({ storage: multer.memoryStorage() });
 
 dotenv.config();
 
@@ -18,6 +21,21 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
+app.post('/api/ocr', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  try {
+      const worker = await createWorker('fra', 1, {
+        workerPath: path.resolve(process.cwd(), 'node_modules/tesseract.js/dist/worker.min.js'),
+        corePath: path.resolve(process.cwd(), 'node_modules/tesseract.js-core/tesseract-core.wasm.js'),
+      });
+    const { data: { text } } = await worker.recognize(req.file.buffer);
+    await worker.terminate();
+    res.json({ text });
+  } catch (error) {
+    console.error('OCR Error detailed:', error);
+    res.status(500).json({ error: 'OCR failed', details: error instanceof Error ? error.message : String(error) });
+  }
+});
 app.post('/api/notify/:type', async (req, res) => {
   const { type } = req.params;
   try {

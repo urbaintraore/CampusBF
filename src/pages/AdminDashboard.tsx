@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { DocumentModal } from '@/components/DocumentModal';
+import { DocumentProcessor } from '@/components/admin/document-processor/DocumentProcessor';
+import { ExamProcessor } from '@/components/admin/exam-processor/ExamProcessor';
 import { ActivityLogsAdmin } from '@/components/admin/ActivityLogsAdmin';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { generateDevReport, generateSummaryReport, generateFullReport } from '@/services/devReportService';
@@ -101,7 +103,7 @@ export default function AdminDashboard() {
   const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [contentTab, setContentTab] = useState<'documents' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university' | 'doc_processor' | 'exam_processor'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -1292,6 +1294,8 @@ export default function AdminDashboard() {
               { id: 'deals', label: 'Bons Plans', icon: Tag },
               { id: 'colocation', label: 'Colocation', icon: Home },
               { id: 'public_service_contests', label: 'Concours Fonction Publique', icon: Trophy },
+              { id: 'doc_processor', label: 'Traitement Doc (IA)', icon: Sparkles },
+              { id: 'exam_processor', label: 'Sujets Concours (IA)', icon: Sparkles },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -1386,7 +1390,17 @@ export default function AdminDashboard() {
             </div>
             
             <div className="divide-y divide-gray-50">
-              {contentTab === 'documents' && documents.map(doc => (
+        {contentTab === 'doc_processor' && (
+          <div className="p-6">
+            <DocumentProcessor />
+          </div>
+        )}
+        {contentTab === 'exam_processor' && (
+          <div className="p-6">
+            <ExamProcessor />
+          </div>
+        )}
+        {contentTab === 'documents' && documents.map(doc => (
                 <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">

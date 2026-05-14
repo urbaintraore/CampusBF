@@ -178,6 +178,48 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["videoId", "reportedBy", "reason", "createdAt"]
+    },
+    "ProcessedDocument": {
+      "title": "Document Traité",
+      "description": "Document académique traité par IA",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "filiere": { "type": "string" },
+        "universite": { "type": "string" },
+        "niveau": { "type": "string" },
+        "originalFileUrl": { "type": "string" },
+        "processedPdfUrl": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "pages": { "type": "number" },
+        "tags": { "type": "array" },
+        "validated": { "type": "boolean" },
+        "views": { "type": "number" },
+        "downloads": { "type": "number" }
+      },
+      "required": ["title", "originalFileUrl", "processedPdfUrl", "uploadedBy", "createdAt"]
+    },
+    "PublicExamQuiz": {
+      "title": "Quiz Concours",
+      "description": "Quiz interactif généré à partir de sujets de concours",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "concours": { "type": "string" },
+        "categorie": { "type": "string" },
+        "annee": { "type": "number" },
+        "questions": { "type": "array" },
+        "corrections": { "type": "array" },
+        "generatedByAI": { "type": "boolean" },
+        "validated": { "type": "boolean" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "difficulty": { "type": "string" },
+        "tags": { "type": "array" },
+        "duration": { "type": "number" }
+      },
+      "required": ["title", "concours", "annee", "questions", "createdAt"]
     }
   },
   "firestore": {
@@ -228,6 +270,14 @@
     "/video_reports/{reportId}": {
       "schema": "VideoReport",
       "description": "Signalements des vidéos"
+    },
+    "/processed_documents/{docId}": {
+      "schema": "ProcessedDocument",
+      "description": "Documents académiques traités"
+    },
+    "/public_exam_quizzes/{quizId}": {
+      "schema": "PublicExamQuiz",
+      "description": "Quiz de concours générés"
     }
   }
 }

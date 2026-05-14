@@ -129,7 +129,7 @@ const getAiClient = (): GoogleGenAI => {
   return aiClient;
 };
 
-const DEFAULT_MODEL = "gemini-3-flash-preview";
+const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 /**
  * Fonction pour générer du texte avec Gemini
