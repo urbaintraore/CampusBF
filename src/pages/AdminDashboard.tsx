@@ -18,6 +18,18 @@ import { PublicServiceCategory, PublicServiceLevel } from '@/types';
 import { toast } from 'react-hot-toast';
 import { useCachedQuery } from '@/hooks/useCachedQuery';
 
+// Helper for safe JSON stringify
+const safeStringify = (obj: any) => {
+  const seen = new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return;
+      seen.add(value);
+    }
+    return value;
+  }, 2);
+};
+
 export default function AdminDashboard() {
   const { data: publicServiceContests, loading: loadingContests, loadMore: loadMoreContests, hasMore: hasMoreContests, invalidateCache: invalidateContestsCache } = useCachedQuery(
     'public_service_contests',
@@ -328,7 +340,7 @@ export default function AdminDashboard() {
       });
     } catch (error: any) {
       console.error("Full error on Save Contest:", error);
-      alert('Erreur lors de l\'enregistrement du concours: ' + error.message + '\n\n' + JSON.stringify(error));
+      alert('Erreur lors de l\'enregistrement du concours: ' + error.message + '\n\n' + safeStringify(error));
     }
   };
 

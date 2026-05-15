@@ -38,7 +38,6 @@ import UserGuide from './pages/UserGuide';
 import EnterprisePortal from './pages/EnterprisePortal';
 import UniversityPortal from './pages/UniversityPortal';
 import ParentPortal from './pages/ParentPortal';
-import CampusShorts from './pages/CampusShorts';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
@@ -283,11 +282,6 @@ export default function App() {
           <Route path="/parent-portal" element={
             <ProtectedRoute>
               <ParentPortal />
-            </ProtectedRoute>
-          } />
-          <Route path="/shorts" element={
-            <ProtectedRoute>
-              <CampusShorts />
             </ProtectedRoute>
           } />
           

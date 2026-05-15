@@ -16,6 +16,18 @@ export function ExamProcessor() {
   const [progress, setProgress] = useState(0);
   const [generatedQuiz, setGeneratedQuiz] = useState<any>(null);
 
+  // Helper for safe JSON stringify to avoid circular structure errors
+  const safeStringify = (obj: any) => {
+    const seen = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) return;
+        seen.add(value);
+      }
+      return value;
+    }, 2);
+  };
+
   const onDrop = (acceptedFiles: File[], fileRejections: any[]) => {
     console.log("onDrop acceptedFiles:", acceptedFiles);
     console.log("onDrop fileRejections:", fileRejections);
@@ -78,11 +90,12 @@ export function ExamProcessor() {
       }`;
       const quizJsonStr = await generateText(prompt);
       const quiz = JSON.parse(quizJsonStr.replace(/```json|```/g, ''));
+      console.log("Setting generatedQuiz:", quiz);
       setGeneratedQuiz(quiz);
       setProgress(100);
       toast.success("Quiz généré !");
     } catch (err) {
-      console.error(err);
+      console.error("Error in processExam:", err);
       toast.error("Erreur génération quiz: " + (err instanceof Error ? err.message : 'Inconnue'));
     } finally {
       setIsProcessing(false);
@@ -91,19 +104,32 @@ export function ExamProcessor() {
   };
 
   const publishQuiz = async () => {
-    if (!generatedQuiz || !file) return;
+    console.log("=== publishQuiz start ===");
+    console.log("generatedQuiz:", generatedQuiz);
+    console.log("file:", file);
+    
+    if (!generatedQuiz || !file) {
+      console.error("Early return in publishQuiz: missing generatedQuiz or file");
+      console.log("=== publishQuiz end ===");
+      return;
+    }
+    
     try {
-      console.log("Publishing quiz. File:", file.name);
+      console.log("Publishing quiz. FileName:", file.name);
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       console.log("Uploading file to bucket 'public_exam_subjects' with name:", fileName);
       
+      console.log("Attempting upload to Supabase...");
+
       const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('public_exam_subjects')
         .upload(fileName, file);
 
+      console.log("Supabase upload attempted. Result:", { uploadData, uploadError });
+      
       if (uploadError) {
         console.error("Supabase upload error:", uploadError);
         throw uploadError;
@@ -116,7 +142,9 @@ export function ExamProcessor() {
         .from('public_exam_subjects')
         .getPublicUrl(fileName);
       
-      console.log("Public URL:", publicUrl);
+      console.log("Public URL fetched:", publicUrl);
+
+      console.log("Adding document to Firestore...");
 
       await addDoc(collection(db, 'public_exam_quizzes'), {
         ...generatedQuiz,
@@ -129,10 +157,14 @@ export function ExamProcessor() {
         createdAt: serverTimestamp(),
         subjectFileUrl: publicUrl
       });
+      console.log("Document added to Firestore successfully.");
+      
       toast.success("Quiz publié !");
+      console.log("=== publishQuiz success ===");
     } catch (err) {
       console.error("Error in publishQuiz:", err);
       toast.error("Échec publication: " + (err instanceof Error ? err.message : String(err)));
+      console.log("=== publishQuiz failure ===");
     }
   };
 
@@ -160,8 +192,8 @@ export function ExamProcessor() {
       
       {generatedQuiz && (
         <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-            <pre className="text-xs">{JSON.stringify(generatedQuiz, null, 2)}</pre>
-            <button onClick={publishQuiz} className="mt-4 w-full bg-blue-600 text-white p-2 rounded-lg">Publier</button>
+            <pre className="text-xs">{safeStringify(generatedQuiz)}</pre>
+            <button onClick={() => publishQuiz()} className="mt-4 w-full bg-blue-600 text-white p-2 rounded-lg">Publier</button>
         </div>
       )}
     </div>
