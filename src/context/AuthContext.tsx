@@ -961,6 +961,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
     }, (error) => console.error("onSnapshot Deals Error:", error)));
 
+    // Load Trainings
+    const qTrainings = query(collection(db, 'trainings'), orderBy('createdAt', 'desc'), limit(50));
+    unsubscribes.push(onSnapshot(qTrainings, (snapshot) => {
+      setTrainings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Training)));
+    }, (error) => console.error("onSnapshot Trainings Error:", error)));
+
+    // Load Colocations
+    const qColocations = query(collection(db, 'colocations'), orderBy('createdAt', 'desc'), limit(50));
+    unsubscribes.push(onSnapshot(qColocations, (snapshot) => {
+      setColocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Colocation)));
+    }, (error) => console.error("onSnapshot Colocations Error:", error)));
+
     // Admin only lists
     if (isAdmin) {
       const qApps = query(collection(db, 'applications'), limit(20));

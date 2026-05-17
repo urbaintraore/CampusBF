@@ -144,19 +144,34 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['members', 'membersCount']))
+      );
+      allow delete: if isAdmin() || isOwner(resource.data.createdBy);
     }
 
     match /posts/{postId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || isOwner(existing().authorId);
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        isOwner(existing().authorId) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy']))
+      );
+      allow delete: if isAdmin() || isOwner(existing().authorId);
     }
 
     match /comments/{commentId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || isOwner(existing().authorId);
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        isOwner(existing().authorId) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy']))
+      );
+      allow delete: if isAdmin() || isOwner(existing().authorId);
     }
 
     // Secure everything else with basic auth for now but move to specific schemas later
@@ -171,7 +186,20 @@ service cloud.firestore {
     match /events/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /marketplace/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
     match /motoRides/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
-    match /trainings/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /trainings/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isOwner(resource.data.trainerId) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['participants']))
+      );
+      allow delete: if isAdmin() || isOwner(resource.data.trainerId);
+    }
+    
+    match /training_enrollments/{id} { allow create, read: if isSignedIn(); }
+    match /training_reviews/{id} { allow create, read: if isSignedIn(); }
+    match /training_reports/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
     match /public_service_contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /public_service_contest_details/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /public_service_results/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
