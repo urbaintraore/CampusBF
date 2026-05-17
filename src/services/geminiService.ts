@@ -244,6 +244,7 @@ DIRECTIVES POUR LES QUESTIONS :
 4. cloze : Un texte avec des [[gap1]], [[gap2]] et leurs réponses respectives (clozeAnswers doit être un tableau d'objets {gapId, answer}).
 5. numerical : Question demandant un chiffre précis (utiliser des string au lieu de float pour éviter les erreurs).
 6. short_answer : Réponse textuelle courte et sans ambiguïté.
+7. essay : Une question de rédaction. L'étudiant rédigera sa propre réponse qui sera évaluée par l'IA. Renseigner "correctTextAnswer" avec un guide ou résumé de ce qui est attendu.
 
 CONTRANTES JSON :
 - Réponds UNIQUEMENT avec un objet JSON valide et complet.
@@ -402,6 +403,7 @@ Utilise une variété de types de questions inspirés de Moodle pour rendre le q
 6. description : Un bloc informatif ou une consigne entre des questions (ne nécessite pas de réponse).
 7. cloze : Texte à trous (fournis clozeTemplate avec des [[gap1]] et clozeAnswers comme un tableau d'objets { gapId: "gap1", answer: "réponse" }).
 8. calculated : Question numérique avec une formule simple (fournis formula et correctNumericAnswer pour un exemple).
+9. essay : Question de composition. L'étudiant rédigera sa réponse qui sera ensuite évaluée par l'IA (fournis un mot-clé ou résumé attendu dans correctTextAnswer).
 
 Pour chaque question :
 - Attribue des points appropriés dans pointsPerOption ou via le score global.
@@ -575,6 +577,47 @@ export const analyzeCommunityVideo = async (title: string, description: string, 
   }
 };
 
+export const evaluateEssayAction = async (question: string, correctTextAnswer: string, studentAnswer: string): Promise<{ score: number, feedback: string }> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `Tu es un professeur notant la réponse d'un étudiant à une question de composition (essai).
+Question posée: "${question}"
+Critère principal (éléments attendus): "${correctTextAnswer}"
+Réponse de l'étudiant: "${studentAnswer}"
+
+Évalue la réponse de l'étudiant selon les critères. Donne un retour court et encourageant, et attribue une note (score) de 0 ou 1. Si la réponse est partiellement bonne ou démontre une bonne compréhension, tu peux donner 1. Sinon 0.
+
+Retourne un objet JSON: { "score": 1, "feedback": "Ton explication..." }`;
+    
+    const response = await ai.models.generateContent({
+      model: DEFAULT_MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            score: { type: Type.NUMBER },
+            feedback: { type: Type.STRING }
+          },
+          required: ["score", "feedback"]
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("Format AI invalide");
+    
+    const result = parseAiJson(text);
+    return {
+      score: result.score || 0,
+      feedback: result.feedback || "Aucun retour."
+    };
+  } catch (error) {
+    console.error("Erreur lors de l'évaluation:", error);
+    return { score: 0, feedback: "Impossible de générer l'évaluation pour le moment." };
+  }
+};
 export const summarizeDocument = async (documentTitle: string, documentDescription: string): Promise<string> => {
   try {
     const ai = getAiClient();
@@ -591,3 +634,85 @@ export const summarizeDocument = async (documentTitle: string, documentDescripti
     return "Impossible de générer un aperçu pour le moment.";
   }
 };
+
+export const verifyAndCorrectQuizWithAI = async (questions: QuizQuestion[]): Promise<{ correctedQuestions: QuizQuestion[], qualityScore: number, flaggedIssues: string[] }> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `Tu es un Auditeur Qualité Pédagogique IA. Ta mission est d'analyser, vérifier et corriger un quiz généré.
+Critères de vérification :
+1. Une seule bonne réponse correcte valide (pour QCM/Vrai Faux).
+2. Absence d'ambiguïté, de coquilles, d'erreurs d'orthographe ou de grammaire.
+3. Absence de doublons dans les réponses d'une même question.
+4. Validité scientifique et pertinence.
+5. Explications justes et pédagogiques.
+6. Reformuler et corriger les questions et réponses automatiquement pour les rendre parfaites.
+
+Voici le quiz actuel (JSON) :
+${JSON.stringify(questions, null, 2)}
+
+Analyse le quiz complet, corrige les erreurs, et retourne un JSON strict contenant :
+1. "correctedQuestions": la liste complète des questions (modifiées ou inchangées). Doit respecter le même schéma (objets questions).
+2. "qualityScore": le score de qualité perçu du quiz original avant tes corrections (0 à 100).
+3. "flaggedIssues": liste (tableau de strings) des erreurs principales trouvées dans le quiz original et les corrections que tu as appliquées. (ex: ["Question 2: doublon retiré", "Question 5: correction de l'orthographe"]).
+
+Retourne UNIQUEMENT LE JSON selon le schéma suivant.`;
+
+    const response = await ai.models.generateContent({
+      model: DEFAULT_MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            qualityScore: { type: Type.NUMBER },
+            flaggedIssues: { type: Type.ARRAY, items: { type: Type.STRING } },
+            correctedQuestions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  type: { type: Type.STRING },
+                  question: { type: Type.STRING },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  correctAnswerIndex: { type: Type.NUMBER },
+                  explanation: { type: Type.STRING },
+                  matchingPairs: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: { left: { type: Type.STRING }, right: { type: Type.STRING } }
+                    }
+                  },
+                  correctTextAnswer: { type: Type.STRING },
+                  correctNumericAnswer: { type: Type.NUMBER },
+                  tolerance: { type: Type.NUMBER },
+                  formula: { type: Type.STRING },
+                  clozeTemplate: { type: Type.STRING },
+                  clozeAnswers: {
+                    type: Type.OBJECT
+                  }
+                },
+                required: ["id", "type", "question"]
+              }
+            }
+          },
+          required: ["qualityScore", "flaggedIssues", "correctedQuestions"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) throw new Error("L'IA n'a pas répondu.");
+    
+    const parsed = parseAiJson(resultText);
+    return parsed as { correctedQuestions: QuizQuestion[], qualityScore: number, flaggedIssues: string[] };
+  } catch (error) {
+    console.error("Erreur lors de la double vérification du quiz:", error);
+    // Return original questions as a fallback
+    return { correctedQuestions: questions, qualityScore: 50, flaggedIssues: ["Échec de la vérification IA automatique - veuillez vérifier manuellement."] };
+  }
+};
+

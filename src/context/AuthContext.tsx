@@ -134,6 +134,7 @@ interface AuthContextType {
   deletePublicServiceContest: (id: string) => Promise<void>;
   addQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt'>) => Promise<void>;
   deleteQuiz: (id: string) => Promise<void>;
+  updateQuiz: (id: string, data: Partial<Quiz>) => Promise<void>;
   createContest: (contest: Omit<Contest, 'id' | 'createdAt'>) => Promise<void>;
   updateContest: (id: string, data: Partial<Contest>) => Promise<void>;
   deleteContest: (id: string) => Promise<void>;
@@ -1772,10 +1773,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addTraining = async (trainingData: Omit<Training, 'id' | 'createdAt' | 'status' | 'participants'>) => {
     if (!user) return;
-    if (!user.isVerified) {
-      alert("Vous devez vérifier votre compte avant de publier une formation.");
-      return;
-    }
     await trainingService.addTraining(user, trainingData);
   };
 
@@ -1849,6 +1846,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     await quizService.addQuiz(quiz);
     await triggerNotification('quiz', quiz);
+  };
+
+  const updateQuiz = async (id: string, quizData: Partial<Quiz>) => {
+    if (!user) return;
+    await quizService.updateQuiz(id, quizData);
   };
 
   const deleteQuiz = async (id: string) => {
@@ -2032,6 +2034,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       colocationReviews,
       addQuiz,
       deleteQuiz,
+      updateQuiz,
       createDeal,
       updateDeal,
       deleteDeal,

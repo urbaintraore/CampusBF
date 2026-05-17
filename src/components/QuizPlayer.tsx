@@ -103,7 +103,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   if (!currentQuestion) return null;
   const questionType = currentQuestion.type || 'multiple_choice';
 
-  const handleSubmitAnswer = (answer: any) => {
+  const handleSubmitAnswer = async (answer: any) => {
     if (isAnswered) return;
     setUserInput(answer);
     setIsAnswered(true);
@@ -150,6 +150,26 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         break;
       
       case 'essay':
+        const loadingToast = toast.loading("L'IA évalue votre composition...");
+        try {
+          const { evaluateEssayAction } = await import('@/services/geminiService');
+          const evalResult = await evaluateEssayAction(currentQuestion.question, currentQuestion.correctTextAnswer || '', answer as string);
+          points = evalResult.score;
+          toast.success("Évaluation terminée.", { id: loadingToast });
+          // Optionally, we could store the AI's feedback in state to display it to the user.
+          // For now, we'll just add it to user answers or display it via a toast.
+          if (evalResult.feedback) {
+            setUserAnswers(prev => ({
+              ...prev,
+              [currentQuestion.id + '_feedback']: evalResult.feedback,
+              [currentQuestion.id + '_points']: evalResult.score
+            }));
+          }
+        } catch (e: any) {
+          toast.error("Échec de l'évaluation l'IA.", { id: loadingToast });
+        }
+        break;
+
       case 'description':
         points = 0; // Requires manual grading
         break;
@@ -480,6 +500,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         );
 
       case 'essay':
+        const feedback = userAnswers[currentQuestion.id + '_feedback'];
         return (
           <div className="space-y-4">
             <textarea
@@ -495,14 +516,19 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                 disabled={!userInput}
                 className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
               >
-                Enregistrer la réponse
+                Soumettre à l'IA pour évaluation
               </button>
             )}
-            {isAnswered && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <p className="text-sm text-amber-800">
-                  <strong>Note:</strong> Les essais nécessitent une correction manuelle par un enseignant. Votre score actuel ne reflète pas encore cette question.
-                </p>
+            {isAnswered && feedback && (
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-2">
+                <h3 className="font-bold text-purple-900 flex items-center gap-2">
+                  <Sparkles size={18} className="text-purple-600"/>
+                  Évaluation de l'IA
+                </h3>
+                <p className="text-sm text-purple-800 whitespace-pre-wrap">{feedback}</p>
+                <div className="text-xs font-bold bg-white px-3 py-1 w-fit rounded text-purple-700 mt-2">
+                  Points reçus: {userAnswers[`${currentQuestion.id}_points`] || 1} / 1
+                </div>
               </div>
             )}
           </div>

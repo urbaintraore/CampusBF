@@ -62,7 +62,7 @@ export default function Quizzes() {
           </h1>
           <p className="text-slate-500 mt-2">Générez et révisez avec les quiz créés par les enseignants et l'IA.</p>
         </div>
-        {(user?.role === 'teacher' || user?.role === 'admin' || user?.role === 'student') && (
+        {(user?.role === 'admin') && (
           <div className="flex gap-2">
             <button
               onClick={() => setShowBuilder(true)}
@@ -71,15 +71,13 @@ export default function Quizzes() {
               <Sparkles size={18} />
               Générateur IA Moodle
             </button>
-            {(user?.role === 'teacher' || user?.role === 'admin') && (
-              <button
-                onClick={() => setShowCreator(true)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
-              >
-                <Plus size={18} />
-                Créer Manuel
-              </button>
-            )}
+            <button
+              onClick={() => setShowCreator(true)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
+            >
+              <Plus size={18} />
+              Créer Manuel
+            </button>
           </div>
         )}
       </div>
@@ -118,8 +116,13 @@ export default function Quizzes() {
             <div className="w-12 h-12 border-4 border-emerald-600/20 border-t-emerald-600 rounded-full animate-spin" />
             <p className="text-slate-500 font-medium tracking-tight">Chargement des quiz...</p>
           </div>
-        ) : quizzes.map((quiz) => (
-          <div key={quiz.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all flex flex-col">
+        ) : quizzes.filter(q => q.validationStatus === 'published' || !q.validationStatus || user?.role === 'admin').map((quiz) => (
+          <div key={quiz.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all flex flex-col relative overflow-hidden">
+            {user?.role === 'admin' && quiz.validationStatus && quiz.validationStatus !== 'published' && (
+              <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg z-10 shadow-sm">
+                BROUILLON / EN ATTENTE
+              </div>
+            )}
             <div className="flex items-start justify-between mb-4">
               <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
                 quiz.type === 'ai' 
@@ -131,28 +134,48 @@ export default function Quizzes() {
               </div>
               <span className="text-xs font-medium text-slate-400">{quiz.level}</span>
             </div>
-            <h3 className="font-bold text-slate-900 text-lg mb-2">{quiz.title}</h3>
+            <h3 className="font-bold text-slate-900 text-lg mb-2 flex items-center justify-between">
+              {quiz.title}
+              {quiz.qualityScore && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md ml-2 border border-emerald-100 shrink-0" title="Score de Qualité IA">{quiz.qualityScore}%</span>}
+            </h3>
             <p className="text-sm text-slate-500 mb-4 line-clamp-2 flex-1">{quiz.description}</p>
             
-            <div className="flex items-center gap-2 mt-auto pt-4 border-t border-slate-100">
-              <button
-                onClick={() => setActiveQuiz(quiz)}
-                className="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Play size={16} />
-                Jouer
-              </button>
-              <button
-                onClick={() => setActiveFlashcards(quiz)}
-                className="flex-1 py-2 bg-slate-50 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Layers size={16} />
-                Flashcards
-              </button>
+            <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveQuiz(quiz)}
+                  className="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 flex items-center justify-center gap-2 transition-colors"
+                  disabled={user?.role !== 'admin' && quiz.validationStatus && quiz.validationStatus !== 'published'}
+                >
+                  <Play size={16} />
+                  Jouer
+                </button>
+                <button
+                  onClick={() => setActiveFlashcards(quiz)}
+                  className="flex-1 py-2 bg-slate-50 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Layers size={16} />
+                  Flashcards
+                </button>
+              </div>
+              
+              {user?.role === 'admin' && (
+                 <button
+                 onClick={() => {
+                   // We setup initialBuilderData and showBuilder
+                   setInitialBuilderData(quiz);
+                   setShowBuilder(true);
+                 }}
+                 className="w-full py-2 bg-amber-50 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-100 flex items-center justify-center gap-2 transition-colors"
+               >
+                 <Sparkles size={16} />
+                 Modération IA & Édition
+               </button>
+              )}
             </div>
           </div>
         ))}
-        {!authLoading && quizzes.length === 0 && (
+        {!authLoading && quizzes.filter(q => q.validationStatus === 'published' || !q.validationStatus || user?.role === 'admin').length === 0 && (
           <div className="col-span-full text-center py-12 bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
             <Brain className="mx-auto text-slate-300 mb-3" size={48} />
             <h3 className="text-lg font-bold text-slate-900 mb-1">Aucun quiz disponible</h3>

@@ -67,31 +67,37 @@ export default function Trainings() {
     e.preventDefault();
     if (!user) return;
     
-    await addTraining({
-      ...newTraining,
-      trainerId: user.id,
-      trainerName: `${user.firstName} ${user.lastName}`,
-      trainerAvatar: user.avatarUrl,
-      trainerUniversity: user.university,
-      trainerRating: user.trainingStats?.averageRating || 5,
-      trainerTrainingsCount: user.trainingStats?.trainingsOrganized || 0
-    });
-    
-    setShowAddModal(false);
-    setNewTraining({
-      title: '',
-      description: '',
-      domain: DOMAINS[0],
-      type: 'online',
-      location: '',
-      meetingLink: '',
-      price: 0,
-      startDate: '',
-      duration: '',
-      maxParticipants: 20,
-      imageUrl: ''
-    });
-    alert("Votre formation a été soumise pour validation.");
+    try {
+      await addTraining({
+        ...newTraining,
+        location: newTraining.type === 'in_person' ? newTraining.location : '',
+        meetingLink: newTraining.type === 'online' ? newTraining.meetingLink : '',
+        trainerId: user.id,
+        trainerName: `${user.firstName} ${user.lastName}`,
+        trainerAvatar: user.avatarUrl || `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}`,
+        trainerUniversity: user.university || '',
+        trainerRating: user.trainingStats?.averageRating || 5,
+        trainerTrainingsCount: user.trainingStats?.trainingsOrganized || 0
+      });
+      
+      setShowAddModal(false);
+      setNewTraining({
+        title: '',
+        description: '',
+        domain: DOMAINS[0],
+        type: 'online',
+        location: '',
+        meetingLink: '',
+        price: 0,
+        startDate: '',
+        duration: '',
+        maxParticipants: 20,
+        imageUrl: ''
+      });
+      alert("Votre formation a été soumise pour validation.");
+    } catch (e: any) {
+      alert("Une erreur est survenue: " + e.message);
+    }
   };
 
   const handleEnroll = async (trainingId: string) => {

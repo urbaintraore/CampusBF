@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Brain, Sparkles, BookOpen, Clock, Settings, Save, List, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, Sparkles, BookOpen, Clock, Settings, Save, List, FileText, CheckCircle2, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { Quiz, QuizQuestion } from '@/types';
 import { quizService } from '@/services/quizService';
 import { generateAdvancedQuizWithAI } from '@/services/geminiService';
@@ -8,19 +8,19 @@ import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
 export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void; initialData?: any }> = ({ onClose, onSuccess, initialData }) => {
-  const { user, addQuiz } = useAuth();
+  const { user, addQuiz, updateQuiz, deleteQuiz } = useAuth();
   
   const [title, setTitle] = useState(initialData?.title || '');
   const [subject, setSubject] = useState(initialData?.subject || '');
   const [level, setLevel] = useState(initialData?.level || 'Licence 1');
-  const [duration, setDuration] = useState<number>(30); // minutes
+  const [duration, setDuration] = useState<number>(initialData?.duration || 30); // minutes
   
   // Advanced settings
-  const [shuffleQuestions, setShuffleQuestions] = useState(false);
-  const [shuffleAnswers, setShuffleAnswers] = useState(false);
-  const [attemptsLimit, setAttemptsLimit] = useState<number>(0); // 0 = unlimited
-  const [penaltyPerWrongAnswer, setPenaltyPerWrongAnswer] = useState<number>(0);
-  const [showCorrections, setShowCorrections] = useState<'always' | 'never' | 'after_submit'>('after_submit');
+  const [shuffleQuestions, setShuffleQuestions] = useState(initialData?.settings?.shuffleQuestions || false);
+  const [shuffleAnswers, setShuffleAnswers] = useState(initialData?.settings?.shuffleAnswers || false);
+  const [attemptsLimit, setAttemptsLimit] = useState<number>(initialData?.settings?.attemptsLimit || 0); // 0 = unlimited
+  const [penaltyPerWrongAnswer, setPenaltyPerWrongAnswer] = useState<number>(initialData?.settings?.penaltyPerWrongAnswer || 0);
+  const [showCorrections, setShowCorrections] = useState<'always' | 'never' | 'after_submit'>(initialData?.settings?.showCorrections || 'after_submit');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // AI Generation params
@@ -35,7 +35,7 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
   const [pubServiceLevel, setPubServiceLevel] = useState<string>('BAC');
 
   // Generated questions
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<QuizQuestion[]>(initialData?.questions || []);
   const [currentFact, setCurrentFact] = useState(0);
 
   const eduFacts = [
@@ -91,6 +91,9 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
     setIsGenerating(true);
 
     try {
+      let generatedQuestions = [];
+      let finalTitle = title;
+      
       if (generationMode === 'text') {
         const truncatedText = courseText.slice(0, 15000); // Truncate very long courses
         if (courseText.length > 15000) {
@@ -104,9 +107,8 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
         });
 
         if (result) {
-          if (!title) setTitle(result.title);
-          setQuestions(result.questions);
-          toast.success(`Généré avec succès ! (${result.questions.length} questions importées)`, { id: loadingToast });
+          if (!finalTitle) finalTitle = result.title;
+          generatedQuestions = result.questions;
         }
       } else {
         // Mode Fonction Publique
@@ -114,7 +116,7 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
         const examQuestions = await generatePublicServiceExam(pubServiceCategory, pubServiceLevel, numQuestions);
         
         // Conversion de PublicServiceQuestion vers QuizQuestion
-        const convertedQuestions: QuizQuestion[] = examQuestions.map((q, idx) => ({
+        generatedQuestions = examQuestions.map((q, idx) => ({
           id: `ai-pub-${Date.now()}-${idx}`,
           type: 'multiple_choice',
           question: q.question,
@@ -123,10 +125,18 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
           explanation: q.explication,
           pointsPerOption: q.options.map((_, i) => i === q.bonne_reponse ? 1 : 0)
         }));
-
-        setQuestions(convertedQuestions);
         if (!subject) setSubject(categoryLabels[pubServiceCategory]);
-        toast.success(`Concours généré ! (${convertedQuestions.length} questions)`, { id: loadingToast });
+      }
+      
+      if (generatedQuestions.length > 0) {
+        toast.loading('Double vérification et correction par l\'IA...', { id: loadingToast });
+        const { verifyAndCorrectQuizWithAI } = await import('@/services/geminiService');
+        const verificationResult = await verifyAndCorrectQuizWithAI(generatedQuestions);
+        
+        setTitle(finalTitle);
+        setQuestions(verificationResult.correctedQuestions);
+        // We could store the qualityScore and flaggedIssues in state here if needed
+        toast.success(`Généré & Vérifié ! (${verificationResult.correctedQuestions.length} questions, Score Qualité: ${verificationResult.qualityScore}%)`, { id: loadingToast });
       }
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la génération.', { id: loadingToast });
@@ -135,7 +145,7 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
     }
   };
 
-  const handleSaveQuiz = async () => {
+  const handleSaveQuiz = async (status: 'published' | 'pending_admin' | 'draft' = 'published') => {
     if (!title.trim() || questions.length === 0 || !user) {
       toast.error('Veuillez donner un titre et générer des questions.');
       return;
@@ -143,14 +153,14 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
 
     const toastId = toast.loading('Sauvegarde du quiz...');
     try {
-      const newQuiz: Omit<Quiz, 'id' | 'createdAt'> = {
+      const quizData: Partial<Quiz> = {
         title,
-        description: `Quiz de ${subject} - Niveau ${level}`,
+        description: initialData?.description || `Quiz de ${subject} - Niveau ${level}`,
         subject,
         level,
         creatorId: user.id,
         creatorName: `${user.firstName} ${user.lastName}`,
-        type: user.role === 'teacher' || user.role === 'admin' ? 'teacher' : 'ai',
+        type: 'ai',
         duration,
         questions,
         settings: {
@@ -159,11 +169,19 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
           attemptsLimit,
           penaltyPerWrongAnswer,
           showCorrections
-        }
+        },
+        validationStatus: status,
+        qualityScore: initialData?.qualityScore || 100
       };
 
-      await addQuiz(newQuiz);
-      toast.success('Quiz créé avec succès !', { id: toastId });
+      if (initialData?.id) {
+        await updateQuiz(initialData.id, quizData);
+        toast.success('Quiz mis à jour avec succès !', { id: toastId });
+      } else {
+        await addQuiz(quizData as Omit<Quiz, 'id' | 'createdAt'>);
+        toast.success('Quiz créé avec succès !', { id: toastId });
+      }
+      
       if (onSuccess) onSuccess();
       onClose();
     } catch (error) {
@@ -184,13 +202,41 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
             <p className="text-slate-500 mt-2">Créez automatiquement des quiz académiques similaires à Moodle avec l'IA.</p>
           </div>
           <div className="flex items-center gap-3">
+            {initialData?.id && (
+              <button 
+                onClick={async () => {
+                  if (window.confirm('Voulez-vous vraiment supprimer ce quiz ?')) {
+                    const toastId = toast.loading('Suppression en cours...');
+                    try {
+                      await deleteQuiz(initialData.id);
+                      toast.success('Quiz supprimé', { id: toastId });
+                      if (onSuccess) onSuccess();
+                      onClose();
+                    } catch (e: any) {
+                      toast.error('Erreur: ' + e.message, { id: toastId });
+                    }
+                  }
+                }}
+                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-bold"
+              >
+                Supprimer
+              </button>
+            )}
             <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-bold">Annuler</button>
             <button 
-              onClick={handleSaveQuiz}
+              onClick={() => handleSaveQuiz('pending_admin')}
+              disabled={questions.length === 0}
+              className="px-6 py-2 bg-slate-200 text-slate-800 rounded-xl font-bold hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Save size={18} />
+              Enregistrer Brouillon
+            </button>
+            <button 
+              onClick={() => handleSaveQuiz('published')}
               disabled={questions.length === 0}
               className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <Save size={18} />
+              <Sparkles size={18} />
               Publier le Quiz
             </button>
           </div>
@@ -200,6 +246,20 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
           
           {/* LEFT COLUMN: SETTINGS */}
           <div className="lg:col-span-1 space-y-6">
+            {initialData?.flaggedIssues && initialData?.flaggedIssues.length > 0 && (
+              <div className="bg-amber-50 rounded-2xl shadow-sm border border-amber-200 p-6 space-y-2">
+                <h2 className="font-bold text-amber-900 flex items-center gap-2">
+                  <AlertTriangle size={20} className="text-amber-600" />
+                  Notes de l'IA (Qualité: {initialData?.qualityScore}%)
+                </h2>
+                <ul className="text-sm text-amber-800 space-y-1 list-disc pl-5 font-medium">
+                  {initialData.flaggedIssues.map((issue: string, idx: number) => (
+                    <li key={idx}>{issue}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
               <h2 className="font-bold text-lg text-slate-900 flex items-center gap-2">
                 <BookOpen size={20} className="text-blue-600" />
@@ -380,7 +440,8 @@ export const QuizBuilder: React.FC<{ onClose: () => void; onSuccess?: () => void
                         { id: 'true_false', label: 'Vrai/Faux' },
                         { id: 'short_answer', label: 'Rép. courte' },
                         { id: 'matching', label: 'Correspondance' },
-                        { id: 'numerical', label: 'Numérique' }
+                        { id: 'numerical', label: 'Numérique' },
+                        { id: 'essay', label: 'Composition (IA évalue)' }
                       ].map(type => (
                         <button
                           key={type.id}

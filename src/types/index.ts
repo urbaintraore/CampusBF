@@ -50,6 +50,9 @@ export interface Quiz {
     penaltyPerWrongAnswer?: number;
     showCorrections?: 'always' | 'never' | 'after_submit';
   };
+  validationStatus?: 'draft' | 'ai_review' | 'pending_admin' | 'published' | 'rejected';
+  qualityScore?: number;
+  flaggedIssues?: string[];
 }
 
 export interface QuizResult {

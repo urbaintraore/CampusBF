@@ -58,6 +58,22 @@ export const quizService = {
     }
   },
 
+  async updateQuiz(id: string, quizData: Partial<Quiz>): Promise<void> {
+    try {
+      if (quizData.id) delete quizData.id;
+      // Do not update createdAt
+      if (quizData.createdAt) delete quizData.createdAt;
+
+      await updateDoc(doc(db, 'quizzes', id), {
+        ...quizData,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `quizzes/${id}`);
+      throw error;
+    }
+  },
+
   async saveQuizResult(result: Omit<QuizResult, 'id' | 'createdAt'>): Promise<string> {
     try {
       const docRef = await addDoc(collection(db, 'quizResults'), {
