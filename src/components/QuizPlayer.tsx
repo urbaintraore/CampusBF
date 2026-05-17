@@ -53,9 +53,9 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           const optionsObjects = q.options.map((opt, i) => ({ opt, index: i }));
           const shuffledOptions = shuffleArray(optionsObjects);
           
-          let newCorrectAnswerIndex = q.correctAnswerIndex;
+          let newCorrectAnswerIndex = Number(q.correctAnswerIndex);
           shuffledOptions.forEach((o, newIndex) => {
-            if (o.index === q.correctAnswerIndex) newCorrectAnswerIndex = newIndex;
+            if (o.index === Number(q.correctAnswerIndex)) newCorrectAnswerIndex = newIndex;
           });
 
           // Also shuffle points
@@ -122,7 +122,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         const index = answer as number;
         if (currentQuestion.pointsPerOption && currentQuestion.pointsPerOption.length > 0) {
           points = currentQuestion.pointsPerOption[index] || 0;
-        } else if (index === currentQuestion.correctAnswerIndex) {
+        } else if (index === Number(currentQuestion.correctAnswerIndex)) {
           points = 1;
         }
         break;
@@ -278,8 +278,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               const maxPoints = hasPoints ? Math.max(...currentQuestion.pointsPerOption!) : 1;
               const isBestAnswer = hasPoints 
                 ? currentQuestion.pointsPerOption![index] === maxPoints && maxPoints > 0
-                : index === currentQuestion.correctAnswerIndex;
-              const pointsForOption = hasPoints ? currentQuestion.pointsPerOption![index] : (index === currentQuestion.correctAnswerIndex ? 1 : 0);
+                : index === Number(currentQuestion.correctAnswerIndex);
+              const pointsForOption = hasPoints ? currentQuestion.pointsPerOption![index] : (index === Number(currentQuestion.correctAnswerIndex) ? 1 : 0);
               const isSelected = index === userInput;
               
               const showCorr = quiz.settings?.showCorrections !== 'never' && (quiz.settings?.showCorrections === 'always' || typeof quiz.settings?.showCorrections === 'undefined');

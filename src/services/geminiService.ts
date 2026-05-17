@@ -574,6 +574,50 @@ Réponds avec un JSON:
   }
 };
 
+export const analyzeCommunityVideo = async (title: string, description: string, hashtags: string[], category: string, videoUrl?: string): Promise<{ score: number, status: 'approved' | 'rejected', reason: string }> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `En tant que modérateur IA de CampusBF, analyse cette soumission de vidéo.
+    Titre: "${title}"
+    Description: "${description}"
+    Hashtags: "${hashtags.join(', ')}"
+    Catégorie: "${category}"
+    URL: "${videoUrl || 'Aucune'}"
+    
+    Ton rôle est de valider le contenu éducatif et académique de CampusBF.
+    - Bloque strictement : contenus inappropriés, violents, non éducatifs, spam, arnaques, contenu adulte.
+    - Autorise : Orientation, études, universités, métiers, bourses, conférences, tech, entrepreneuriat, carrière, sciences, éducation, vie étudiante.
+    
+    Retourne un objet JSON : {"score": number (0-100), "status": "approved" | "rejected", "reason": string}`;
+    
+    const response = await ai.models.generateContent({
+      model: DEFAULT_MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            score: { type: Type.NUMBER },
+            status: { type: Type.STRING, enum: ['approved', 'rejected'] },
+            reason: { type: Type.STRING }
+          },
+          required: ["score", "status", "reason"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) throw new Error("L'IA n'a pas répondu.");
+    
+    return parseAiJson(resultText) as { score: number, status: 'approved' | 'rejected', reason: string };
+  } catch (error) {
+    console.error("Erreur lors de l'analyse IA de la vidéo communautaire:", error);
+    // En cas d'erreur de l'IA (quota, etc.), on rejette par sécurité pour cette fonctionnalité
+    return { score: 0, status: 'rejected', reason: "Analyse automatique indisponible. Veuillez réessayer plus tard." };
+  }
+};
+
 export const summarizeDocument = async (documentTitle: string, documentDescription: string): Promise<string> => {
   try {
     const ai = getAiClient();

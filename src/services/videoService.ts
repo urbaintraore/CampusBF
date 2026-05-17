@@ -66,43 +66,44 @@ class VideoService {
       username: metadata.username || user.displayName || 'Anonyme',
       userPhoto: metadata.userPhoto || user.photoURL || '',
       university: metadata.university || '',
-      groupId: metadata.groupId || '',
       title: metadata.title || '',
       description: metadata.description || '',
       hashtags: metadata.hashtags || [],
       category: metadata.category,
-      visibility: metadata.visibility,
+      platform: metadata.platform || 'youtube',
       videoUrl: finalVideoUrl,
-      thumbnailUrl: finalThumbnailUrl,
+      thumbnail: finalThumbnailUrl,
+      duration: metadata.duration || '0:00',
       likesCount: 0,
       commentsCount: 0,
       viewsCount: 0,
       sharesCount: 0,
-      isVerifiedEducational: false,
+      aiModerationScore: 100, // Assuming trusted upload?
+      status: 'approved',
       createdAt: serverTimestamp()
     };
-
+    
     await setDoc(doc(db, this.collectionName, videoId), videoDataToSave);
     
     return videoId;
   }
 
-  async getVideos(category?: string, visibility: string = 'public', limitCount: number = 20) {
-    // Avoid composite index requirement by only sorting and then filtering in memory
+  async getVideos(category?: string, limitCount: number = 20) {
     const q = query(
       collection(db, this.collectionName),
+      where('status', '==', 'approved'),
       orderBy('createdAt', 'desc'),
-      limit(limitCount * 3) // fetch more to account for client side filtering
+      limit(limitCount)
     );
 
     const snapshot = await getDocs(q);
-    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityVideo));
+    let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityVideo));
     
-    return docs.filter(doc => {
-      if (doc.visibility !== visibility) return false;
-      if (category && doc.category !== category) return false;
-      return true;
-    }).slice(0, limitCount);
+    if (category && category !== 'Tous') {
+      docs = docs.filter(doc => doc.category === category);
+    }
+    
+    return docs;
   }
 
   async likeVideo(videoId: string) {

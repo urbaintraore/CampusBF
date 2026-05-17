@@ -115,9 +115,12 @@ export default function AdminDashboard() {
   const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [contentTab, setContentTab] = useState<'documents' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university' | 'doc_processor' | 'exam_processor'>('documents');
+  const [contentTab, setContentTab] = useState<'documents' | 'videos' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university' | 'doc_processor' | 'exam_processor'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
+
+  const [communityVideos, setCommunityVideos] = useState<any[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
   const [logSearch, setLogSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
@@ -186,6 +189,25 @@ export default function AdminDashboard() {
       fetchUsers();
     }
   }, [activeTab, contentTab, adminUsers.length]);
+
+  useEffect(() => {
+    if (contentTab === 'videos') {
+      const fetchVideos = async () => {
+        setLoadingVideos(true);
+        try {
+          const { communityVideoService } = await import('@/services/communityVideoService');
+          // On liste tout sans catégorie pour l'admin
+          const vids = await communityVideoService.getCommunityVideos();
+          setCommunityVideos(vids);
+        } catch (error) {
+          console.error("Failed to load videos", error);
+        } finally {
+          setLoadingVideos(false);
+        }
+      };
+      fetchVideos();
+    }
+  }, [contentTab]);
 
   useEffect(() => {
     if (contentTab === 'print_orders') {
@@ -261,6 +283,17 @@ export default function AdminDashboard() {
       setParsedQuestionsCount(0);
     }
   };
+  const handleDeleteVideo = async (videoId: string) => {
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'community_videos', videoId));
+      setCommunityVideos(prev => prev.filter(v => v.id !== videoId));
+      toast.success('Vidéo supprimée.');
+    } catch (e: any) {
+      toast.error('Erreur lors de la suppression.');
+    }
+  };
+
   const [aiGenData, setAiGenData] = useState({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
   const [isGenerating, setIsGenerating] = useState(false);
   const [newDeal, setNewDeal] = useState<any>({
@@ -1287,6 +1320,7 @@ export default function AdminDashboard() {
           <div className="flex bg-gray-100 p-1 rounded-xl w-fit flex-wrap gap-1">
             {[
               { id: 'documents', label: 'Documents', icon: FileText },
+              { id: 'videos', label: 'Vidéos Communautaires', icon: Sparkles },
               { id: 'print_orders', label: 'Imprimerie', icon: Printer },
               { id: 'stages', label: 'Stages & Emplois & Bourses', icon: Briefcase },
               { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
@@ -1402,6 +1436,58 @@ export default function AdminDashboard() {
             </div>
             
             <div className="divide-y divide-gray-50">
+        {contentTab === 'videos' && (
+          <div className="divide-y divide-gray-50">
+            {loadingVideos ? (
+              <div className="p-8 text-center text-gray-500">Chargement...</div>
+            ) : communityVideos.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">Aucune vidéo.</div>
+            ) : (
+              communityVideos.map((video: any) => (
+                <div key={video.id} className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between hover:bg-gray-50 transition-colors gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-16 bg-slate-900 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      {(() => {
+                        const ytMatch = typeof video.videoUrl === 'string' ? video.videoUrl.match(/^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/) : null;
+                        let thumb = video.thumbnail;
+                        if (!thumb && ytMatch && ytMatch[2].length === 11) {
+                          thumb = `https://img.youtube.com/vi/${ytMatch[2]}/hqdefault.jpg`;
+                        }
+                        return thumb ? (
+                           <img src={thumb} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : (
+                           <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-400 text-[10px] font-bold">INFO</div>
+                        );
+                      })()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{video.title}</p>
+                      <p className="text-xs text-gray-500 mt-1">{video.username} • {video.category}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{video.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a 
+                      href={video.videoUrl} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="px-4 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-bold transition-colors"
+                    >
+                      Regarder
+                    </a>
+                    <button 
+                      onClick={() => handleDeleteVideo(video.id)}
+                      className="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg text-sm font-bold transition-colors"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {contentTab === 'doc_processor' && (
           <div className="p-6">
             <DocumentProcessor />

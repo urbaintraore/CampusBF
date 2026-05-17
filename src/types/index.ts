@@ -871,19 +871,20 @@ export interface CommunityVideo {
   username: string;
   userPhoto: string;
   university: string;
-  groupId?: string;
+  platform: 'youtube' | 'vimeo' | 'tiktok' | 'facebook' | 'dailymotion';
   title: string;
   description: string;
+  category: 'Orientation' | 'Universités' | 'Bourses' | 'IA & Tech' | 'Carrière' | 'Entrepreneuriat' | 'Motivation' | 'Sciences' | 'Examens' | 'Vie Étudiante';
   hashtags: string[];
-  category: 'Cours' | 'Astuces Examens' | 'Vie Étudiante' | 'Orientation' | 'Opportunités' | 'Humour Campus' | 'Motivation';
-  visibility: 'public' | 'friends' | 'group' | 'university';
   videoUrl: string;
-  thumbnailUrl: string;
+  thumbnail: string;
+  duration: string;
   likesCount: number;
   commentsCount: number;
   viewsCount: number;
   sharesCount: number;
-  isVerifiedEducational: boolean;
+  aiModerationScore: number;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: any;
 }
 

@@ -39,8 +39,7 @@ service cloud.firestore {
     function isValidVideo(data) {
       return data.userId == request.auth.uid &&
              data.videoUrl is string &&
-             data.category in ["Cours", "Astuces Examens", "Vie Étudiante", "Orientation", "Opportunités", "Humour Campus", "Motivation"] &&
-             data.visibility in ["public", "friends", "group", "university"] &&
+             data.category in ["Orientation", "Universités", "Bourses", "IA & Tech", "Carrière", "Entrepreneuriat", "Motivation", "Sciences", "Examens", "Vie Étudiante"] &&
              data.createdAt == request.time;
     }
 

@@ -38,6 +38,7 @@ import UserGuide from './pages/UserGuide';
 import EnterprisePortal from './pages/EnterprisePortal';
 import UniversityPortal from './pages/UniversityPortal';
 import ParentPortal from './pages/ParentPortal';
+import CommunityVideos from './pages/CommunityVideos';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
@@ -284,8 +285,11 @@ export default function App() {
               <ParentPortal />
             </ProtectedRoute>
           } />
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/videos" element={
+            <ProtectedRoute>
+              <CommunityVideos />
+            </ProtectedRoute>
+          } />
         </Routes>
         <Chatbot />
         <Toaster position="top-right" />

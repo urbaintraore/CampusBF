@@ -418,10 +418,10 @@ export default function Dashboard() {
           [
             { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
             { 
-              label: 'Campus Shorts', 
+              label: 'Vidéos Communautaires', 
               count: 'NEW', 
               color: 'bg-black text-white ring-black', 
-              link: '/shorts' 
+              link: '/videos' 
             },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
@@ -454,11 +454,11 @@ export default function Dashboard() {
               link: '/internships' 
             },
             {
-              label: 'Campus Shorts', 
+              label: 'Vidéos Communautaires', 
               count: 'POPULAR', 
               color: 'bg-black text-white ring-black', 
               shadow: 'shadow-lg shadow-black/20',
-              link: '/shorts' 
+              link: '/videos' 
             },
             { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
