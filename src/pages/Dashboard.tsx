@@ -963,7 +963,7 @@ export default function Dashboard() {
           </section>
 
           {/* Marketplace Preview */}
-          {user?.role !== 'parent' && (
+          {user?.role !== 'parent' && user?.role !== 'student' && (
             <section>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-xl font-display font-bold text-slate-900">Marketplace</h2>

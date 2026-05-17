@@ -30,9 +30,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Video, label: 'Vidéos Communautaires', to: '/videos-communautaires', roles: ['student', 'teacher', 'alumni', 'admin', 'parent'] },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'teacher'] },
-    { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['student', 'admin', 'teacher', 'company', 'institution'] },
+    { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['admin', 'teacher', 'company', 'institution'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'teacher'] },
-    { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'teacher', 'alumni', 'company'] },
+    { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['admin', 'teacher', 'alumni', 'company'] },
     { icon: Users, label: 'Communauté', to: '/community', roles: ['student', 'admin', 'teacher', 'alumni'] },
     { icon: Bike, label: 'MotoRide', to: '/motoride', roles: ['admin', 'teacher', 'alumni'] },
     { icon: Calendar, label: 'Événements', to: '/events' },
@@ -46,7 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['admin', 'alumni', 'teacher', 'parent', 'institution'] },
     { icon: BookOpen, label: 'Formations', to: '/trainings' },
     { icon: Sparkles, label: 'Fonctionnalités', to: '/features', roles: ['admin', 'teacher', 'alumni', 'parent'] },
-    { icon: BookOpen, label: 'Guide d\'utilisation', to: '/guide' },
+    { icon: BookOpen, label: 'Guide d\'utilisation', to: '/guide', roles: ['admin', 'teacher', 'alumni', 'parent', 'company', 'institution'] },
   ];
 
   console.log("Layout Navigation State:", { isAdmin, userRole: user?.role, userId: user?.id });
