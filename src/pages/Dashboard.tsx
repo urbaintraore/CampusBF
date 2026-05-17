@@ -421,7 +421,7 @@ export default function Dashboard() {
               label: 'Vidéos Communautaires', 
               count: 'NEW', 
               color: 'bg-black text-white ring-black', 
-              link: '/videos' 
+              link: '/videos-communautaires' 
             },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
             { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
@@ -458,7 +458,7 @@ export default function Dashboard() {
               count: 'POPULAR', 
               color: 'bg-black text-white ring-black', 
               shadow: 'shadow-lg shadow-black/20',
-              link: '/videos' 
+              link: '/videos-communautaires' 
             },
             { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
             { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },

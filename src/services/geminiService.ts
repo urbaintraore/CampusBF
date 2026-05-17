@@ -529,50 +529,7 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
   }
 };
 
-export const analyzeCampusShort = async (title: string, description: string, hashtags: string[], category: string, videoUrl?: string): Promise<{ approved: boolean; reason: string }> => {
-  try {
-    const ai = getAiClient();
-    const prompt = `En tant que modérateur IA de CampusBF, analyse cette soumission de vidéo.
-Titre: "${title}"
-Description: "${description}"
-Hashtags: "${hashtags.join(', ')}"
-Catégorie: "${category}"
-URL: "${videoUrl || 'Aucune'}"
 
-Ta tâche est de déterminer si ce contenu a un sens pour des étudiants. Sauf s'il est explicitement haineux, pornographique ou spam évident, tu dois L'ACCEPTER. Si tu n'es pas sûr, ACCEPTE.
-
-Réponds avec un JSON:
-{
-  "approved": true,
-  "reason": "OK"
-}`;
-
-    const response = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            approved: { type: Type.BOOLEAN },
-            reason: { type: Type.STRING }
-          },
-          required: ["approved", "reason"]
-        }
-      }
-    });
-
-    const resultText = response.text;
-    if (!resultText) throw new Error("L'IA n'a pas répondu.");
-    
-    return parseAiJson(resultText) as { approved: boolean; reason: string };
-  } catch (error) {
-    console.error("Erreur lors de l'analyse IA de la vidéo:", error);
-    // En cas d'erreur de l'IA (quota, etc.), on accepte par défaut pour ne pas bloquer l'utilisateur
-    return { approved: true, reason: "Analyse automatique non disponible." };
-  }
-};
 
 export const analyzeCommunityVideo = async (title: string, description: string, hashtags: string[], category: string, videoUrl?: string): Promise<{ score: number, status: 'approved' | 'rejected', reason: string }> => {
   try {

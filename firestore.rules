@@ -188,7 +188,7 @@ service cloud.firestore {
     match /colocationRequests/{id} { allow read, write: if isSignedIn(); }
     match /colocationReviews/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
 
-    // Campus Shorts
+    // Vidéos Communautaires
     match /community_videos/{videoId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidVideo(incoming());

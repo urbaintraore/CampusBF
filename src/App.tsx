@@ -285,7 +285,10 @@ export default function App() {
               <ParentPortal />
             </ProtectedRoute>
           } />
-          <Route path="/videos" element={
+          <Route path="/videos" element={<Navigate to="/videos-communautaires" replace />} />
+          <Route path="/shorts" element={<Navigate to="/videos-communautaires" replace />} />
+          <Route path="/campus-short" element={<Navigate to="/videos-communautaires" replace />} />
+          <Route path="/videos-communautaires" element={
             <ProtectedRoute>
               <CommunityVideos />
             </ProtectedRoute>
