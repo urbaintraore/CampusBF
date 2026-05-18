@@ -108,6 +108,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /processed_documents/{docId} {
+      allow read, write: if isAdmin();
+    }
+
     match /quizzes/{quizId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
