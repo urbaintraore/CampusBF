@@ -184,6 +184,7 @@ interface AuthContextType {
   addReport: (report: Omit<Report, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   addMotoRide: (ride: Omit<MotoRide, 'id' | 'createdAt'>) => Promise<void>;
   addTraining: (training: Omit<Training, 'id' | 'createdAt' | 'status' | 'participants'>) => Promise<void>;
+  updateTraining: (trainingId: string, data: Partial<Training>) => Promise<void>;
   enrollInTraining: (trainingId: string) => Promise<void>;
   reviewTraining: (trainingId: string, rating: number, comment: string) => Promise<void>;
   reportTraining: (trainingId: string, reason: string, details: string) => Promise<void>;
@@ -1776,6 +1777,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await trainingService.addTraining(user, trainingData);
   };
 
+  const updateTraining = async (trainingId: string, data: Partial<Training>) => {
+    if (!user || user.role !== 'admin') return;
+    await trainingService.updateTraining(user, trainingId, data);
+  };
+
   const enrollInTraining = async (trainingId: string) => {
     if (!user) return;
     const training = trainings.find(t => t.id === trainingId);
@@ -2016,6 +2022,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       trainingReviews,
       trainingReports,
       addTraining,
+      updateTraining,
       enrollInTraining,
       reviewTraining,
       reportTraining,

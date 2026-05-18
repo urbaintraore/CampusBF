@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, BookOpen, Clock, Users, MapPin, Globe, CheckCircle, AlertTriangle, Star, Shield, ChevronRight, Info, Flag, X, Check, Calendar } from 'lucide-react';
+import { Search, Plus, Filter, BookOpen, Clock, Users, MapPin, Globe, CheckCircle, AlertTriangle, Star, Shield, ChevronRight, Info, Flag, X, Check, Calendar, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Training } from '@/types';
@@ -18,13 +18,16 @@ const DOMAINS = [
 ];
 
 export default function Trainings() {
-  const { user, trainings, addTraining, enrollInTraining, reportTraining, reviewTraining, deleteTraining } = useAuth();
+  const { user, trainings, addTraining, updateTraining, enrollInTraining, reportTraining, reviewTraining, deleteTraining } = useAuth();
   const [activeTab, setActiveTab] = useState<'browse' | 'my-trainings' | 'organized'>('browse');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<string | 'all'>('all');
   const [selectedType, setSelectedType] = useState<'all' | 'online' | 'in_person'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
+  const [editTrainingData, setEditTrainingData] = useState<Partial<Training> | null>(null);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
@@ -95,6 +98,24 @@ export default function Trainings() {
         imageUrl: ''
       });
       alert("Votre formation a été soumise pour validation.");
+    } catch (e: any) {
+      alert("Une erreur est survenue: " + e.message);
+    }
+  };
+
+  const handleUpdateTraining = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || user.role !== 'admin' || !editTrainingData?.id) return;
+    
+    try {
+      await updateTraining(editTrainingData.id, editTrainingData);
+      setShowEditModal(false);
+      setEditTrainingData(null);
+      alert("La formation a été modifiée avec succès.");
+      // Close details if open
+      if (selectedTraining && selectedTraining.id === editTrainingData.id) {
+         setSelectedTraining(null);
+      }
     } catch (e: any) {
       alert("Une erreur est survenue: " + e.message);
     }
@@ -456,6 +477,36 @@ export default function Trainings() {
                       Laisser un avis
                     </button>
                   )}
+                  {user?.role === 'admin' && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setEditTrainingData(selectedTraining);
+                          setShowEditModal(true);
+                        }}
+                        className="p-3 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                        title="Modifier"
+                      >
+                        <Edit2 size={20} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (window.confirm("Voulez-vous vraiment supprimer cette formation ?")) {
+                            deleteTraining(selectedTraining.id)
+                              .then(() => {
+                                setSelectedTraining(null);
+                                alert("Formation supprimée.");
+                              })
+                              .catch((e: any) => alert("Erreur: " + e.message));
+                          }
+                        }}
+                        className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </>
+                  )}
                   <button 
                     onClick={() => setShowReportModal(true)}
                     className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all"
@@ -628,6 +679,124 @@ export default function Trainings() {
                 className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95"
               >
                 Soumettre la formation
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editTrainingData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Modifier la formation</h2>
+              <button onClick={() => { setShowEditModal(false); setEditTrainingData(null); }} className="p-2 hover:bg-slate-100 rounded-full transition-all">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateTraining} className="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700">Titre de la formation</label>
+                  <input
+                    required
+                    type="text"
+                    value={editTrainingData.title || ''}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, title: e.target.value})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700">Description détaillée</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={editTrainingData.description || ''}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, description: e.target.value})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Type</label>
+                  <select
+                    value={editTrainingData.type || 'online'}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, type: e.target.value as any})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="online">En ligne</option>
+                    <option value="in_person">Présentiel</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Prix (CFA)</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="500"
+                    value={editTrainingData.price || 0}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, price: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                {editTrainingData.type === 'in_person' ? (
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700">Lieu de rencontre</label>
+                    <input
+                      required
+                      type="text"
+                      value={editTrainingData.location || ''}
+                      onChange={(e) => setEditTrainingData({...editTrainingData, location: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700">Lien de réunion</label>
+                    <input
+                      required
+                      type="url"
+                      value={editTrainingData.meetingLink || ''}
+                      onChange={(e) => setEditTrainingData({...editTrainingData, meetingLink: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Date et heure de début</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={editTrainingData.startDate || ''}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, startDate: e.target.value})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Durée</label>
+                  <input
+                    required
+                    type="text"
+                    value={editTrainingData.duration || ''}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, duration: e.target.value})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95"
+              >
+                Mettre à jour la formation
               </button>
             </form>
           </div>

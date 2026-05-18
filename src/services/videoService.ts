@@ -110,7 +110,7 @@ class VideoService {
     const user = auth.currentUser;
     if (!user) throw new Error('Utilisateur non connecté');
 
-    const likeId = `${user.uid}_${videoId}`;
+    const likeId = `${videoId}_${user.uid}`;
     const likeRef = doc(db, 'video_likes', likeId);
 
     // Check if already liked
@@ -182,6 +182,28 @@ class VideoService {
       reason,
       createdAt: serverTimestamp()
     } as VideoReport);
+  }
+  async shareVideo(videoId: string, platform: string) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Utilisateur non connecté');
+
+    await addDoc(collection(db, 'video_shares'), {
+      videoId,
+      userId: user.uid,
+      platform,
+      createdAt: serverTimestamp()
+    });
+
+    await updateDoc(doc(db, this.collectionName, videoId), {
+      sharesCount: increment(1)
+    });
+  }
+
+  async deleteComment(videoId: string, commentId: string) {
+    await deleteDoc(doc(db, this.collectionName, videoId, 'comments', commentId));
+    await updateDoc(doc(db, this.collectionName, videoId), {
+      commentsCount: increment(-1)
+    });
   }
 }
 

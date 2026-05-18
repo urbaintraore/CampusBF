@@ -27,6 +27,19 @@ export const trainingService = {
     }
   },
 
+  async updateTraining(user: User, trainingId: string, data: Partial<Training>) {
+    try {
+      if (data.id) delete data.id;
+      if (data.createdAt) delete data.createdAt;
+
+      await updateDoc(doc(db, 'trainings', trainingId), data);
+      await logService.logAction(user, 'Modification formation', `ID: ${trainingId}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `trainings/${trainingId}`);
+      throw error;
+    }
+  },
+
   async enrollInTraining(user: User, training: Training) {
     try {
       await updateDoc(doc(db, 'trainings', training.id), {

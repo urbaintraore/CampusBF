@@ -533,6 +533,43 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
 
 
 
+export const analyzeComment = async (comment: string): Promise<{ isSafe: boolean, reason: string }> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `En tant que modérateur IA de l'application CampusBF (destinée aux étudiants burkinabè), analyse ce commentaire posté sur une vidéo éducative.
+    Commentaire: "${comment}"
+    
+    Ton rôle est strict : tu dois détecter et bloquer tout contenu qui contient des insultes, du harcèlement, de la toxicité extrême, du SPAM évident, des discours de haine, ou des liens malveillants/suspects.
+    
+    Retourne un objet JSON: {"isSafe": boolean, "reason": "Si isSafe est false, courte explication pour l'utilisateur, sinon vide"}`;
+    
+    const response = await ai.models.generateContent({
+      model: DEFAULT_MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isSafe: { type: Type.BOOLEAN },
+            reason: { type: Type.STRING }
+          },
+          required: ["isSafe", "reason"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) return { isSafe: true, reason: "" }; // default if empty
+    
+    return parseAiJson(resultText) as { isSafe: boolean, reason: string };
+  } catch (error) {
+    console.error("Erreur d'analyse IA modération commentaire:", error);
+    // En cas de panne de l'IA on laisse passer pour pas bloquer la prod, le signalement manuel reste possible.
+    return { isSafe: true, reason: "" };
+  }
+};
+
 export const analyzeCommunityVideo = async (title: string, description: string, hashtags: string[], category: string, videoUrl?: string): Promise<{ score: number, status: 'approved' | 'rejected', reason: string }> => {
   try {
     const ai = getAiClient();
