@@ -62,7 +62,7 @@ export function DocumentProcessor() {
     page.drawText(`Modifié le : ${new Date().toLocaleDateString()}`, { x: width - 200, y: height - 40, size: 10, color: rgb(0.5, 0.5, 0.5) });
   };
 
-  const processAndUploadSequence = async () => {
+  const processAndUploadSequence = async (retryCount = 0) => {
     if (!file) return;
     
     // START PIPELINE
@@ -87,7 +87,7 @@ export function DocumentProcessor() {
         status: 'pending',
         processingProgress: 5,
         errorMessage: '',
-        retryCount: 0,
+        retryCount: retryCount,
         processingStartedAt: serverTimestamp(),
       });
       docRefId = docRef.id;
@@ -147,7 +147,7 @@ export function DocumentProcessor() {
       
       const { data: uploadData, error: uploadError } = await supabase
         .storage
-        .from('processed_documents')
+        .from('documents')
         .upload(fileName, pdfBytes, {
           contentType: 'application/pdf',
           upsert: false
@@ -160,7 +160,7 @@ export function DocumentProcessor() {
 
       const { data: { publicUrl } } = supabase
         .storage
-        .from('processed_documents')
+        .from('documents')
         .getPublicUrl(fileName);
       
       // 4. FINALIZE PUBLICATION
@@ -204,6 +204,12 @@ export function DocumentProcessor() {
 
     } catch (err: any) {
       console.error("Processing pipeline error:", err);
+      
+      if (retryCount < 2) {
+        toast.error(`Erreur, nouvelle tentative (${retryCount + 1}/2)...`);
+        return processAndUploadSequence(retryCount + 1);
+      }
+      
       setStatus('failed');
       setErrorMsg(err.message || "Une erreur inattendue est survenue");
       
@@ -214,7 +220,7 @@ export function DocumentProcessor() {
            processingCompletedAt: serverTimestamp()
         }).catch(console.error);
       }
-      toast.error("Échec du traitement du document");
+      toast.error("Échec du traitement du document après 3 tentatives.");
     } finally {
       if (processingTimeoutRef.current) clearTimeout(processingTimeoutRef.current);
     }
@@ -276,7 +282,7 @@ export function DocumentProcessor() {
 
               {(status === 'idle' || status === 'failed') && (
                 <button 
-                    onClick={processAndUploadSequence}
+                    onClick={() => processAndUploadSequence(0)}
                     className="w-full bg-emerald-600 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
                 >
                     <Sparkles size={18} />
