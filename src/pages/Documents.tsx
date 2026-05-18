@@ -752,7 +752,7 @@ export default function Documents() {
                 className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
               >
                 <option>Toutes les universités</option>
-                {universities.map(uni => (
+                {knownUniversities.map(uni => (
                   <option key={uni} value={uni}>{uni}</option>
                 ))}
               </select>

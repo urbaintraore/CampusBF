@@ -9,9 +9,15 @@ import { PDFDocument, rgb } from 'pdf-lib';
 
 export function DocumentProcessor() {
   const [file, setFile] = useState<File | null>(null);
-  const [universite, setUniversite] = useState('');
-  const [filiere, setFiliere] = useState('');
-  
+  const [institution, setInstitution] = useState('');
+  const [institutionType, setInstitutionType] = useState('Université');
+  const [academicYear, setAcademicYear] = useState('2025-2026');
+  const [subject, setSubject] = useState('');
+  const [documentType, setDocumentType] = useState('TD');
+  const [duration, setDuration] = useState('');
+  const [level, setLevel] = useState('Licence 1');
+  const [field, setField] = useState('');
+
   // Pipeline states
   const [status, setStatus] = useState<'idle' | 'pending' | 'uploading' | 'processing' | 'completed' | 'failed'>('idle');
   const [progress, setProgress] = useState(0);
@@ -181,13 +187,17 @@ export function DocumentProcessor() {
       // 5. PUBLISH TO FRONTEND "documents" COLLECTION
       await addDoc(collection(db, 'documents'), {
         title: file.name,
-        type: 'summary', // Default to summary or ask user
-        university: universite || 'Général',
-        ufr: '',
-        department: filiere || 'Générale',
-        major: filiere || 'Générale',
-        year: new Date().getFullYear().toString(),
-        subject: file.name.split('.')[0], // Use filename without extension as subject placeholder
+        institution,
+        institutionType,
+        academicYear,
+        subject,
+        documentType,
+        duration,
+        level,
+        field,
+        type: documentType === 'Devoir' ? 'exam' : documentType === 'TD' ? 'exercise' : 'summary', // Mapping to old type
+        university: institution,
+        major: field,
         authorId: 'admin',
         downloadUrl: publicUrl,
         fileName: file.name,
@@ -271,12 +281,36 @@ export function DocumentProcessor() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Université</label>
-                  <input type="text" placeholder="Ex: UJKZ" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={universite} onChange={e => setUniversite(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Établissement</label>
+                  <input type="text" placeholder="Ex: UJKZ" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={institution} onChange={e => setInstitution(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Type Établissement</label>
+                  <select className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={institutionType} onChange={e => setInstitutionType(e.target.value)} disabled={status !== 'idle' && status !== 'failed'}>
+                    {['Université', 'École Supérieure', 'Institut', 'Lycée', 'Collège'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Année Académique</label>
+                  <input type="text" placeholder="Ex: 2025-2026" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={academicYear} onChange={e => setAcademicYear(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Matière</label>
+                  <input type="text" placeholder="Ex: Mathématiques" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={subject} onChange={e => setSubject(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Type de Document</label>
+                  <select className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={documentType} onChange={e => setDocumentType(e.target.value)} disabled={status !== 'idle' && status !== 'failed'}>
+                    {['Devoir', 'TD', 'Examen', 'Contrôle', 'Concours', 'Support cours'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Niveau</label>
+                  <input type="text" placeholder="Ex: Licence 1" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={level} onChange={e => setLevel(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Filière</label>
-                  <input type="text" placeholder="Ex: Math-Info" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={filiere} onChange={e => setFiliere(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
+                  <input type="text" placeholder="Ex: Math-Info" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm" value={field} onChange={e => setField(e.target.value)} disabled={status !== 'idle' && status !== 'failed'} />
                 </div>
               </div>
 
