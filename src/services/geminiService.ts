@@ -1,7 +1,59 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, PublicServiceQuestion } from "@/types";
 
-// ... existing code ...
+// ... existing exports ...
+
+/**
+ * Restructure un document académique avec IA.
+ */
+export const restructureAcademicDocument = async (
+  rawText: string,
+  metadata: {
+    institution: string;
+    subject: string;
+    academicYear: string;
+    documentType: string;
+    level: string;
+  }
+): Promise<string> => {
+  try {
+    const ai = getAiClient();
+    const prompt = `Tu es un expert en mise en page académique moderne pour CampusBF.
+    
+    Ton objectif : prendre le texte brut d'un document académique (provenant d'un OCR) et le restructurer de manière professionnelle.
+    
+    MÉTA-DONNÉES DU DOCUMENT :
+    - Établissement : ${metadata.institution}
+    - Année : ${metadata.academicYear}
+    - Matière : ${metadata.subject}
+    - Type : ${metadata.documentType}
+    - Niveau : ${metadata.level}
+
+    DIRECTIVES DE RESTRUCTURATION :
+    1. Crée une hiérarchie claire avec des titres (H1, H2, H3), paragraphes, listes.
+    2. Utilise un langage académique professionnel.
+    3. Ajoute des encadrés markdown pour les définitions clés, formules importantes ou conseils.
+    4. Sépare bien les sections.
+    5. N'ajoute pas d'entête textuel (ils seront ajoutés ailleurs), mais structure le CONTENU principal.
+    6. Le résultat final doit être en format Markdown propre.
+
+    CONTENU À RESTRUCTURER :
+    """
+    ${rawText}
+    """
+    `;
+
+    const response = await ai.models.generateContent({
+      model: DEFAULT_MODEL,
+      contents: prompt,
+    });
+    
+    return response.text || "Erreur lors de la restructuration.";
+  } catch (error) {
+    console.error("Erreur lors de la restructuration IA:", error);
+    throw new Error("Impossible de restructurer le document avec l'IA.");
+  }
+};
 
 /**
  * Helper pour nettoyer et parser le JSON de l'IA

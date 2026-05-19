@@ -21,9 +21,18 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
-app.post('/api/ocr', upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+app.get('/api/test', (req, res) => {
+  res.json({ test: 'ok' });
+});
+
+app.post('/backend/ocr', upload.single('file'), async (req, res) => {
+  console.log('Received /backend/ocr request');
+  if (!req.file) {
+      console.log('No file in request');
+      return res.status(400).json({ error: 'No file uploaded' });
+  }
   try {
+      console.log('Processing file:', req.file.originalname);
       const worker = await createWorker('fra', 1, {
         workerPath: path.resolve(process.cwd(), 'node_modules/tesseract.js/dist/worker.min.js'),
         corePath: path.resolve(process.cwd(), 'node_modules/tesseract.js-core/tesseract-core.wasm.js'),

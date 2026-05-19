@@ -289,7 +289,7 @@ export const CommunityVideoPlayer = ({ video: initialVideo }: { video: Community
                     </div>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{comment.message}</p>
                     
-                      {user && (user.uid === comment.userId || user.id === comment.userId || user.email === 'urbain.traoreurb@gmail.com' || user.role === 'admin') ? (
+                      {user && (user.id === comment.userId || user.email === 'urbain.traoreurb@gmail.com' || user.role === 'admin') ? (
                         <button 
                           onClick={() => handleDeleteComment(comment.id)}
                           className="absolute -right-2 -top-2 p-1.5 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"

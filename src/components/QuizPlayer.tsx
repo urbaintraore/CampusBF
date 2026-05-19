@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Quiz } from '@/types';
-import { X, CheckCircle, XCircle, ArrowRight, RotateCcw, Clock, Target } from 'lucide-react';
+import { X, CheckCircle, XCircle, ArrowRight, RotateCcw, Clock, Target, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { quizService } from '@/services/quizService';
@@ -187,7 +187,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       points = -Math.abs(quiz.settings.penaltyPerWrongAnswer);
     }
 
-    setScore(score + points);
+    setScore(prev => prev + points);
   };
 
   const handleNext = () => {

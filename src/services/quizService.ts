@@ -1,5 +1,5 @@
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, deleteDoc, query, where, serverTimestamp, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { Quiz, QuizResult, QuestionBankItem } from '@/types';
 
 export const quizService = {

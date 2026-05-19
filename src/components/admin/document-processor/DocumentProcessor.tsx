@@ -5,7 +5,9 @@ import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { restructureAcademicDocument } from '@/services/geminiService';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export function DocumentProcessor() {
   const [file, setFile] = useState<File | null>(null);
@@ -45,27 +47,18 @@ export function DocumentProcessor() {
     multiple: false
   });
 
-  const addCampusBFHeaderPdfLib = async (pdfDoc: PDFDocument) => {
-    const pages = pdfDoc.getPages();
-    if (pages.length === 0) return;
-    const page = pages[0];
-    const { width, height } = page.getSize();
-    
-    // Draw white rectangle to hide existing header
-    page.drawRectangle({
-      x: 0,
-      y: height - 120, // Top 120 units
-      width: width,
-      height: 120,
-      color: rgb(1, 1, 1),
-    });
-
-    // Draw new header
-    page.drawText("CAMPUSBF", { x: 20, y: height - 40, size: 24, color: rgb(0, 0.4, 0.2) });
-    page.drawText("La plateforme des étudiants", { x: 20, y: height - 60, size: 12, color: rgb(0.3, 0.3, 0.3) });
-    page.drawText(`Université : ${universite || 'Général'}`, { x: 20, y: height - 85, size: 12, color: rgb(0, 0, 0) });
-    page.drawText(`Filière : ${filiere || 'Générale'}`, { x: 20, y: height - 105, size: 12, color: rgb(0, 0, 0) });
-    page.drawText(`Modifié le : ${new Date().toLocaleDateString()}`, { x: width - 200, y: height - 40, size: 10, color: rgb(0.5, 0.5, 0.5) });
+  const generateModernHeader = (doc: jsPDF, pageWidth: number) => {
+    doc.setFillColor(240, 248, 255); // Light Azure
+    doc.rect(0, 0, pageWidth, 50, 'F');
+    doc.setTextColor(0, 50, 100);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("CAMPUSBF", 15, 20);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    doc.text(`Établissement: ${institution} (${institutionType}) | Année: ${academicYear}`, 15, 30);
+    doc.text(`Matière: ${subject} | Niveau: ${level} | Type: ${documentType}`, 15, 40);
   };
 
   const processAndUploadSequence = async (retryCount = 0) => {
@@ -76,20 +69,19 @@ export function DocumentProcessor() {
     setProgress(5);
     let docRefId = '';
     
-    // Set failsafe timeout to prevent infinite loops
     processingTimeoutRef.current = setTimeout(() => {
        if (status === 'uploading' || status === 'processing' || status === 'pending') {
           setStatus('failed');
-          setErrorMsg("Délai de traitement dépassé (Timeout). Relancez l'opération.");
+          setErrorMsg("Délai de traitement dépassé.");
        }
-    }, 60000); // 1 minute timeout
+    }, 120000); 
 
     try {
       // 1. CREATE RECORD IN FIRESTORE
       const docRef = await addDoc(collection(db, 'processed_documents'), {
         title: file.name,
-        universite: universite || 'Général',
-        filiere: filiere || 'Générale',
+        institution: institution || 'Général',
+        field: field || 'Générale',
         status: 'pending',
         processingProgress: 5,
         errorMessage: '',
@@ -98,71 +90,57 @@ export function DocumentProcessor() {
       });
       docRefId = docRef.id;
 
-      // 2. PROCESS FILE (Processing)
+      // 2. OCR & IA RESTRUCTURATION
       setStatus('processing');
       setProgress(25);
       await updateDoc(docRef, { status: 'processing', processingProgress: 25 });
-
-      let pdfBytes: Uint8Array;
-      if (file.type.startsWith('image/')) {
-        const imageBytes = await file.arrayBuffer();
-        const pdfDoc = await PDFDocument.create();
-        
-        // Handle jpg vs png
-        let image;
-        if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-          image = await pdfDoc.embedJpg(imageBytes);
-        } else {
-          image = await pdfDoc.embedPng(imageBytes);
-        }
-
-        const page = pdfDoc.addPage();
-        const { width, height } = page.getSize();
-        // Scale image to fit page, keeping aspect ratio
-        const imgDims = image.scaleToFit(width - 40, height - 160);
-        
-        page.drawImage(image, {
-          x: width / 2 - imgDims.width / 2,
-          y: height - 160 - imgDims.height,
-          width: imgDims.width,
-          height: imgDims.height,
-        });
-        
-        // Add Header
-        await addCampusBFHeaderPdfLib(pdfDoc);
-        pdfBytes = await pdfDoc.save();
-      } else if (file.type === 'application/pdf') {
-        const existingPdfBytes = await file.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(existingPdfBytes);
-        await addCampusBFHeaderPdfLib(pdfDoc);
-        pdfBytes = await pdfDoc.save();
-      } else {
-        throw new Error("Format non supporté. Veuillez utiliser un PDF ou une image.");
-      }
-
-      setProgress(60);
-      await updateDoc(docRef, { processingProgress: 60 });
-
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const ocrResp = await fetch('/backend/ocr', { method: 'POST', body: formData });
+      if (!ocrResp.ok) throw new Error("Erreur OCR");
+      const { text: rawText } = await ocrResp.json();
+      
+      setProgress(50);
+      await updateDoc(docRef, { processingProgress: 50 });
+      
+      const restructuredMarkdown = await restructureAcademicDocument(rawText, {
+          institution, subject, academicYear, documentType, level
+      });
+      
+      // GENERATION PDF MODERNE avec jsPDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      generateModernHeader(doc, pageWidth);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      const splitText = doc.splitTextToSize(restructuredMarkdown, pageWidth - 30);
+      doc.text(splitText, 15, 65);
+      
+      const pdfBytes = doc.output('arraybuffer');
+      
+      setProgress(75);
+      await updateDoc(docRef, { processingProgress: 75 });
+      
       // 3. UPLOAD TO STORAGE
       setStatus('uploading');
-      setProgress(70);
-      await updateDoc(docRef, { status: 'uploading', processingProgress: 70 });
+      setProgress(85);
+      await updateDoc(docRef, { status: 'uploading', processingProgress: 85 });
       
-      const fileExt = '.pdf'; // we always output PDF
-      const fileName = `doc_${Date.now()}_${Math.random().toString(36).slice(2)}${fileExt}`;
+      const fileName = `doc_${Date.now()}_${Math.random().toString(36).slice(2)}.pdf`;
       
-      const { data: uploadData, error: uploadError } = await supabase
+      const { error: uploadError } = await supabase
         .storage
         .from('documents')
-        .upload(fileName, pdfBytes, {
+        .upload(fileName, new Uint8Array(pdfBytes), {
           contentType: 'application/pdf',
           upsert: false
         });
         
-      if (uploadError) throw new Error("Erreur lors de l'upload du fichier: " + uploadError.message);
-
-      setProgress(90);
-      await updateDoc(docRef, { processingProgress: 90 });
+      if (uploadError) throw new Error("Erreur upload: " + uploadError.message);
 
       const { data: { publicUrl } } = supabase
         .storage
@@ -171,14 +149,7 @@ export function DocumentProcessor() {
       
       // 4. FINALIZE PUBLICATION
       await updateDoc(docRef, {
-        niveau: 'Inconnu',
         processedPdfUrl: publicUrl,
-        uploadedBy: 'Admin',
-        pages: 1, // Optional: Update based on real pages
-        tags: [],
-        validated: true,
-        views: 0,
-        downloads: 0,
         status: 'completed',
         processingProgress: 100,
         processingCompletedAt: serverTimestamp()
@@ -187,33 +158,23 @@ export function DocumentProcessor() {
       // 5. PUBLISH TO FRONTEND "documents" COLLECTION
       await addDoc(collection(db, 'documents'), {
         title: file.name,
-        institution,
-        institutionType,
-        academicYear,
-        subject,
-        documentType,
-        duration,
-        level,
-        field,
-        type: documentType === 'Devoir' ? 'exam' : documentType === 'TD' ? 'exercise' : 'summary', // Mapping to old type
-        university: institution,
-        major: field,
+        institution, institutionType, academicYear, subject, documentType, duration, level, field,
+        type: documentType === 'Devoir' ? 'exam' : documentType === 'TD' ? 'exercise' : 'summary',
+        university: institution, major: field,
         authorId: 'admin',
         downloadUrl: publicUrl,
         fileName: file.name,
-        downloads: 0,
-        likes: 0,
-        isForSale: false,
+        downloads: 0, likes: 0, isForSale: false,
         createdAt: serverTimestamp(),
       });
 
       setProcessedUrl(publicUrl);
       setStatus('completed');
       setProgress(100);
-      toast.success("Document traité et publié avec succès !");
+      toast.success("Document traité et publié !");
 
     } catch (err: any) {
-      console.error("Processing pipeline error:", err);
+      console.error("Pipeline error:", err);
       
       if (retryCount < 2) {
         toast.error(`Erreur, nouvelle tentative (${retryCount + 1}/2)...`);
