@@ -327,7 +327,7 @@ export default function Signup() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 col-span-2">
                         <label className="text-sm font-medium text-slate-700 ml-1">Numéro WhatsApp</label>
                         <input 
                           type="tel" 
@@ -336,17 +336,6 @@ export default function Signup() {
                           value={formData.phone}
                           onChange={handleChange}
                           placeholder="Ex: +226 70 00 00 00"
-                          className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-slate-700 ml-1">INE / Matricule <span className="text-slate-400 font-normal">(Optionnel)</span></label>
-                        <input 
-                          type="text" 
-                          name="ine"
-                          value={formData.ine}
-                          onChange={handleChange}
-                          placeholder="Votre identifiant national"
                           className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
                         />
                       </div>

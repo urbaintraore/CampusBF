@@ -531,14 +531,6 @@ export default function Profile() {
                   placeholder="Filière"
                   className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 />
-                <input 
-                  type="text" 
-                  name="ine"
-                  value={formData.ine}
-                  onChange={handleChange}
-                  placeholder="INE / Matricule"
-                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                />
                 <select 
                   name="level"
                   value={formData.level}
@@ -572,11 +564,6 @@ export default function Profile() {
                   {user.promotion && (
                     <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg uppercase tracking-wider">
                       Promotion {user.promotion}
-                    </div>
-                  )}
-                  {user.ine && (
-                    <div className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg uppercase tracking-wider">
-                      INE: {user.ine}
                     </div>
                   )}
                 </div>
