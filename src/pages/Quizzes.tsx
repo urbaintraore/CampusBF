@@ -119,8 +119,19 @@ export default function Quizzes() {
         ) : (
           (() => {
             const filteredQuizzes = quizzes.filter(q => q.validationStatus === 'published' || !q.validationStatus || user?.role === 'admin');
+            const normalizeSubject = (sub: string | undefined): string => {
+              if (!sub) return 'Autres';
+              const s = sub.toLowerCase().trim();
+              if (['tic', 'programmation', 'architecture', 'informatique', 'algorithme'].some(keyword => s.includes(keyword))) return 'Informatique';
+              if (['algèbre', 'math', 'analyse', 'topologie', 'suites', 'fonction', 'limites', 'continuité', 'dérivabilité', 'développement limité', 'statistique'].some(keyword => s.includes(keyword))) return 'Mathématiques';
+              if (['mécanique', 'atomistique', 'optique', 'electricité', 'thermodynamique', 'physique'].some(keyword => s.includes(keyword))) return 'Physique';
+              if (['chimie'].some(keyword => s.includes(keyword))) return 'Chimie';
+              if (s.includes('culture')) return 'Culture Générale';
+              return sub.charAt(0).toUpperCase() + sub.slice(1);
+            };
+
             const groupedQuizzes = filteredQuizzes.reduce((acc, q) => {
-              const subject = q.subject || 'Autres';
+              const subject = normalizeSubject(q.subject);
               if (!acc[subject]) acc[subject] = [];
               acc[subject].push(q);
               return acc;
