@@ -66,15 +66,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       !!user.major && 
       !!user.level;
     
-    console.log("DEBUG: ProtectedRoute: Checking profile completion for:", user.id, user.email, "isComplete:", isProfileComplete, "User fields:", {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      university: user.university,
-      major: user.major,
-      level: user.level
-    });
-
     if (!isProfileComplete && location.pathname !== '/profile') {
       return <Navigate to="/profile" state={{ forceComplete: true }} replace />;
     }

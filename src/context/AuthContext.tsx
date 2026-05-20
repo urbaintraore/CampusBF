@@ -1252,28 +1252,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = async (updatedUser: Partial<User>) => {
     if (user && user.id) {
-      console.log("DEBUG: updateUser: Updating user", user.id, "with", JSON.stringify(updatedUser));
       try {
         const userRef = doc(db, 'users', user.id);
-        
-        // Log individual required fields to check for empty strings
-        console.log("DEBUG: updateUser: Checking required fields:", {
-          firstName: updatedUser.firstName,
-          lastName: updatedUser.lastName,
-          phone: updatedUser.phone,
-          university: updatedUser.university,
-          major: updatedUser.major,
-          level: updatedUser.level
-        });
 
         await updateDoc(userRef, updatedUser);
         await syncProfile(user.id, updatedUser);
         
         const newUserState = { ...user, ...updatedUser };
         setUser(newUserState);
-        console.log("DEBUG: updateUser: User updated, new state:", JSON.stringify(newUserState));
         
-        console.log("DEBUG: updateUser: User updated successfully in local state");
         await logAction('Mise à jour profil', 'Modification des informations personnelles');
       } catch (error) {
         console.error("updateUser: Error", error);
