@@ -1455,10 +1455,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = async (userId: string) => {
+    console.log("DEBUG AuthContext.deleteUser: Check user:", user, "isAdmin:", user?.role === 'admin');
     if (!user || user.role !== 'admin') {
       throw new Error('Action non autorisée. Seuls les administrateurs peuvent supprimer des utilisateurs.');
     }
+    console.log("DEBUG AuthContext.deleteUser: Calling userService.deleteUser for:", userId);
     await userService.deleteUser(user, userId);
+    console.log("DEBUG AuthContext.deleteUser: Successfully called userService.deleteUser");
   };
 
   const deleteDocument = async (id: string) => {

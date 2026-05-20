@@ -820,12 +820,14 @@ export default function AdminDashboard() {
   const handleDeleteUser = async (userId: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
       try {
+        console.log("DEBUG handleDeleteUser: Attempting to delete user:", userId);
         await deleteUser(userId);
+        console.log("DEBUG handleDeleteUser: User deleted successfully, updating state");
         setAdminUsers(prev => prev.filter(u => u.id !== userId));
         alert('Utilisateur supprimé avec succès.');
       } catch (error) {
         console.error("Error in handleDeleteUser:", error);
-        alert('Erreur lors de la suppression de l\'utilisateur.');
+        alert('Erreur lors de la suppression de l\'utilisateur : ' + error);
       }
     }
   };
