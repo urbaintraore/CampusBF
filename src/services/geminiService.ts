@@ -564,6 +564,24 @@ Retourne le résultat sous forme d'un tableau d'objets JSON respectant stricteme
         }
       }
 
+      if (q.type === 'multiple_choice' || q.type === 'true_false') {
+        if (typeof sanitized.correctAnswerIndex === 'string') {
+          // If it's a string that can be parsed as int
+          const parsed = parseInt(sanitized.correctAnswerIndex);
+          if (!isNaN(parsed) && parsed >= 0 && parsed < (sanitized.options?.length || 0)) {
+            sanitized.correctAnswerIndex = parsed;
+          } else {
+            // Find by matching string
+            const foundIdx = sanitized.options?.findIndex((opt: string) => opt.toLowerCase().trim() === String(sanitized.correctAnswerIndex).toLowerCase().trim());
+            sanitized.correctAnswerIndex = foundIdx !== -1 ? foundIdx : 0;
+          }
+        } else if (typeof sanitized.correctAnswerIndex !== 'number' || isNaN(sanitized.correctAnswerIndex)) {
+          sanitized.correctAnswerIndex = 0;
+        } else if (sanitized.correctAnswerIndex < 0 || sanitized.correctAnswerIndex >= (sanitized.options?.length || 0)) {
+          sanitized.correctAnswerIndex = 0;
+        }
+      }
+
       return sanitized as QuizQuestion;
     });
     

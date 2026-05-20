@@ -9,28 +9,28 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<'student' | 'institution' | 'teacher' | 'parent'>('student');
+  const [parentAuthMethod, setParentAuthMethod] = useState<'email' | 'phone'>('email');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
   const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], []);
-
-
 
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
+    phone: '',
+    parentPhone: '',
     university: '',
     major: '',
     level: '',
     promotion: '',
-    phone: '',
     ine: '',
-    // Institution specific
     institutionName: '',
     institutionType: 'Université Publique',
-    // Teacher specific
     academicRank: 'Assistant'
   });
 
@@ -52,9 +52,22 @@ export default function Signup() {
     setError('');
 
     try {
+      let userEmail = formData.email;
+      let userPassword = formData.password;
+      
+      if (accountType === 'parent' && parentAuthMethod === 'phone') {
+        if (otpCode !== '123456' && otpCode !== '000000') {
+           setError('Code OTP incorrect. Veuillez réessayer.');
+           setIsLoading(false);
+           return;
+        }
+        // Build mock email for firebase auth
+        userEmail = `${formData.parentPhone.replace(/[^0-9]/g, '')}@parent.campusbf.bf`;
+      }
+
       const signupData: any = {
-        email: formData.email,
-        password: formData.password,
+        email: userEmail,
+        password: userPassword,
         role: accountType,
         referrerId: searchParams.get('ref') || undefined,
       };
@@ -71,6 +84,8 @@ export default function Signup() {
       } else if (accountType === 'parent') {
         signupData.firstName = formData.firstName;
         signupData.lastName = formData.lastName;
+        signupData.phone = parentAuthMethod === 'phone' ? formData.parentPhone : formData.phone;
+        signupData.authMethod = parentAuthMethod;
         signupData.role = 'parent';
       } else if (accountType === 'teacher') {
         signupData.firstName = formData.firstName;
@@ -215,6 +230,25 @@ export default function Signup() {
                   </div>
                 </div>
 
+                {accountType === 'parent' && (
+                  <div className="flex bg-slate-100/80 p-1.5 rounded-2xl mb-2 flex-wrap md:flex-nowrap border border-slate-200/60 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => { setParentAuthMethod('email'); setOtpSent(false); }}
+                      className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${parentAuthMethod === 'email' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                    >
+                      S'inscrire par Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setParentAuthMethod('phone')}
+                      className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${parentAuthMethod === 'phone' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                    >
+                      S'inscrire par Téléphone
+                    </button>
+                  </div>
+                )}
+
                 {accountType === 'student' && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -280,11 +314,10 @@ export default function Signup() {
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-slate-700 ml-1">Promotion (Année)</label>
+                        <label className="text-sm font-medium text-slate-700 ml-1">Promotion (Année) <span className="text-slate-400 font-normal">(Optionnel)</span></label>
                         <input 
                           type="text" 
                           name="promotion"
-                          required
                           value={formData.promotion}
                           onChange={handleChange}
                           placeholder="Ex: 2024"
@@ -307,11 +340,10 @@ export default function Signup() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-slate-700 ml-1">INE / Matricule</label>
+                        <label className="text-sm font-medium text-slate-700 ml-1">INE / Matricule <span className="text-slate-400 font-normal">(Optionnel)</span></label>
                         <input 
                           type="text" 
                           name="ine"
-                          required
                           value={formData.ine}
                           onChange={handleChange}
                           placeholder="Votre identifiant national"
@@ -395,43 +427,109 @@ export default function Signup() {
               </>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 ml-1">Email {accountType === 'student' ? 'étudiant' : 'professionnel'}</label>
-              <input 
-                type="email" 
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder={accountType === 'student' ? "etudiant@campusbf.bf" : "contact@etablissement.bf"}
-                className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
-              />
-            </div>
+            {accountType === 'parent' && parentAuthMethod === 'phone' ? (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Numéro de téléphone</label>
+                  <input 
+                    type="tel" 
+                    name="parentPhone"
+                    required
+                    value={formData.parentPhone}
+                    onChange={handleChange}
+                    placeholder="Ex: +226 70 00 00 00"
+                    className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                  />
+                </div>
+                {otpSent && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm font-medium text-slate-700 ml-1">Code OTP (Simulation: utilisez 123456)</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      placeholder="Ex: 123456"
+                      className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                    />
+                  </div>
+                )}
+                {!otpSent && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                        if(formData.parentPhone.length > 5) setOtpSent(true);
+                        else setError('Veuillez entrer un numéro valide.');
+                    }}
+                    className="w-full bg-emerald-100 text-emerald-700 font-bold py-3 rounded-2xl hover:bg-emerald-200 transition-colors mt-2"
+                  >
+                    Recevoir le code OTP par SMS
+                  </button>
+                )}
+                
+                <div className="space-y-1.5 mt-4">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Mot de passe <span className="text-xs font-normal text-slate-400">(pour les prochaines connexions)</span></label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 ml-1">Email {accountType === 'student' ? 'étudiant' : 'ou nom d\'utilisateur'}</label>
+                    <input 
+                      type="email" 
+                      name="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder={accountType === 'student' ? "etudiant@campusbf.bf" : "contact@etablissement.bf"}
+                      className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                    />
+                  </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 ml-1">Mot de passe</label>
-              <div className="relative">
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
+                  <div className="space-y-1.5 mt-4">
+                    <label className="text-sm font-medium text-slate-700 ml-1">Mot de passe</label>
+                    <div className="relative">
+                      <input 
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        required
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-3.5 bg-white/50 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+            )}
 
             <button 
-              type="submit" 
+              type="submit"  
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-8 mb-4"
             >

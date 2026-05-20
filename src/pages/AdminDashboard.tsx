@@ -1,8 +1,10 @@
 import { seedContestParticipants } from '@/utils/seedData';
 import React, { useState, useEffect } from 'react';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer, Unlock, Lock } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer, Unlock, Lock, ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Log, Contest } from '@/types';
+import { User, Log, Contest, Training } from '@/types';
 import { uploadFile } from '@/services/storageService';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
@@ -118,7 +120,52 @@ export default function AdminDashboard() {
   const [contentTab, setContentTab] = useState<'documents' | 'videos' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university' | 'doc_processor' | 'exam_processor'>('documents');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
+  const [selectedTrainingForParticipants, setSelectedTrainingForParticipants] = useState<Training | null>(null);
+  const [trainingSearchTerm, setTrainingSearchTerm] = useState('');
 
+  const [trainingParticipantsData, setTrainingParticipantsData] = useState<any[]>([]);
+  const [loadingTrainingParticipants, setLoadingTrainingParticipants] = useState(false);
+
+  useEffect(() => {
+    if (selectedTrainingForParticipants && selectedTrainingForParticipants.participants?.length > 0) {
+      const fetchParticipants = async () => {
+        setLoadingTrainingParticipants(true);
+        try {
+          const { userService } = await import('@/services/userService');
+          // Fetch users in chunks of 30 due to Firestore 'in' query limits (max 30)
+          const ids = selectedTrainingForParticipants.participants!;
+          let finalUsers: any[] = [];
+          for (let i = 0; i < ids.length; i += 30) {
+            const chunk = ids.slice(i, i + 30);
+            const usersChunk = await userService.getUsersByIds(chunk);
+            finalUsers = [...finalUsers, ...usersChunk];
+          }
+          
+          const formattedData = ids.map((participantId: string) => {
+            const u = finalUsers.find((fu: any) => fu.id === participantId);
+            return {
+              id: participantId,
+              firstName: u?.firstName || 'Inconnu',
+              lastName: u?.lastName || '',
+              email: u?.email || 'N/A',
+              phone: u?.phone || (u?.parentPhone) || 'N/A',
+              role: u?.role || 'student',
+              joinedAt: u?.createdAt || null
+            };
+          });
+          setTrainingParticipantsData(formattedData);
+        } catch (error) {
+          console.error("Error fetching participants:", error);
+          toast.error("Erreur du chargement des participants");
+        } finally {
+          setLoadingTrainingParticipants(false);
+        }
+      };
+      fetchParticipants();
+    } else {
+      setTrainingParticipantsData([]);
+    }
+  }, [selectedTrainingForParticipants]);
   const [communityVideos, setCommunityVideos] = useState<any[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [logSearch, setLogSearch] = useState('');
@@ -595,6 +642,66 @@ export default function AdminDashboard() {
       reader.readAsText(file);
     };
     input.click();
+  };
+
+  const getTrainingParticipantsData = (training: Training) => {
+    return (training.participants || []).map((participantId: string) => {
+      const userObj = adminUsers.find(u => u.id === participantId);
+      const u = userObj as any;
+      return {
+        id: participantId,
+        firstName: u?.firstName || 'Inconnu',
+        lastName: u?.lastName || '',
+        email: u?.email || 'N/A',
+        phone: u?.phone || (u?.parentPhone) || 'N/A',
+        role: u?.role || 'student',
+        joinedAt: u?.createdAt || null // Better mapping would require training_enrollments
+      };
+    });
+  };
+
+  const exportTrainingParticipantsToCSV = (training: Training) => {
+    if (!trainingParticipantsData || trainingParticipantsData.length === 0) {
+      toast.error('Aucun participant à exporter');
+      return;
+    }
+    const headers = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Date d\'inscription'];
+    const rows = trainingParticipantsData.map((p: any) => [
+      `"${p.lastName || ''}"`,
+      `"${p.firstName || ''}"`,
+      `"${p.email || ''}"`,
+      `"${p.phone || ''}"`,
+      `"${p.joinedAt ? new Date(p.joinedAt).toLocaleDateString() : 'N/A'}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `participants_${training.title.replace(/\s+/g, '_')}.csv`;
+    link.click();
+  };
+
+  const exportTrainingParticipantsToPDF = (training: Training) => {
+    if (!trainingParticipantsData || trainingParticipantsData.length === 0) {
+      toast.error('Aucun participant à exporter');
+      return;
+    }
+    const doc = new jsPDF();
+    doc.text(`Liste des inscrits - ${training.title}`, 14, 20);
+    const tableData = trainingParticipantsData.map((p: any) => [
+      p.lastName || '',
+      p.firstName || '',
+      p.email || '',
+      p.phone || '',
+      p.joinedAt ? new Date(p.joinedAt).toLocaleDateString() : 'N/A'
+    ]);
+    (doc as any).autoTable({
+      head: [['Nom', 'Prénom', 'Email', 'Tel', 'Date d\'inscription']],
+      body: tableData,
+      startY: 30,
+    });
+    doc.save(`participants_${training.title.replace(/\s+/g, '_')}.pdf`);
   };
 
   const handleManualContestCreate = async () => {
@@ -2628,112 +2735,248 @@ export default function AdminDashboard() {
 
               {contentTab === 'formations' && (
                 <div className="p-0">
-                  {/* Pending Trainings */}
-                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <BookOpen className="text-emerald-600" size={18} />
-                      Formations en attente de validation
-                    </h3>
-                    <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
-                      {trainings.filter(t => t.status === 'pending').length} en attente
-                    </span>
-                  </div>
-                  <div className="divide-y divide-gray-50">
-                    {trainings.filter(t => t.status === 'pending').length > 0 ? (
-                      trainings.filter(t => t.status === 'pending').map((training) => (
-                        <div key={training.id} className="p-6 hover:bg-gray-50 transition-colors">
-                          <div className="flex flex-col md:flex-row justify-between gap-6">
-                            <div className="flex gap-4">
-                              <img src={training.imageUrl || `https://picsum.photos/seed/${training.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
-                              <div>
-                                <h3 className="font-bold text-gray-900">{training.title}</h3>
-                                <p className="text-xs text-gray-500 mb-2">Par {training.trainerName} • {training.domain} • {training.type === 'online' ? 'En ligne' : 'Présentiel'}</p>
-                                <p className="text-sm text-gray-600 line-clamp-2 max-w-xl">{training.description}</p>
-                                <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-400">
-                                  <span className="flex items-center gap-1"><Users size={12} /> {training.participants.length} / {training.maxParticipants} inscrits</span>
-                                  <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(training.startDate).toLocaleDateString()}</span>
-                                  <span className="font-bold text-emerald-600">{training.price === 0 ? 'GRATUIT' : `${training.price} CFA`}</span>
+                  {selectedTrainingForParticipants ? (
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <button 
+                          onClick={() => setSelectedTrainingForParticipants(null)}
+                          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                        >
+                          <ChevronLeft size={16} /> Retour aux formations
+                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => exportTrainingParticipantsToCSV(selectedTrainingForParticipants)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-medium text-sm rounded-lg hover:bg-slate-200 transition-colors"
+                          >
+                            <Download size={16} /> Exporter CSV
+                          </button>
+                          <button 
+                            onClick={() => exportTrainingParticipantsToPDF(selectedTrainingForParticipants)}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 font-medium text-sm rounded-lg hover:bg-emerald-100 transition-colors"
+                          >
+                            <FileText size={16} /> Exporter PDF
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mb-6 flex flex-col md:flex-row gap-6 items-start md:items-center">
+                        <img src={selectedTrainingForParticipants.imageUrl || `https://picsum.photos/seed/${selectedTrainingForParticipants.id}/200/200`} className="w-24 h-24 rounded-xl object-cover bg-slate-100" alt="" />
+                        <div className="flex-1">
+                          <h2 className="text-xl font-bold text-slate-900 mb-1">{selectedTrainingForParticipants.title}</h2>
+                          <p className="text-sm text-slate-500 mb-3">Par {selectedTrainingForParticipants.trainerName} • {selectedTrainingForParticipants.domain}</p>
+                          <div className="flex items-center gap-4 text-sm font-medium">
+                            <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md"><Users size={14} /> {selectedTrainingForParticipants.participants?.length || 0} inscrits</span>
+                            <span className="flex items-center gap-1 text-slate-600"><Calendar size={14} /> Début: {new Date(selectedTrainingForParticipants.startDate).toLocaleDateString()}</span>
+                            <span className="flex items-center gap-1 text-slate-600"><CheckCircle2 size={14} /> Places: {selectedTrainingForParticipants.maxParticipants}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="relative flex-1">
+                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                           <input 
+                             type="text" 
+                             placeholder="Rechercher un participant (nom, email)..."
+                             value={trainingSearchTerm}
+                             onChange={(e) => setTrainingSearchTerm(e.target.value)}
+                             className="w-full pl-9 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                           />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-sm whitespace-nowrap">
+                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                              <tr>
+                                <th className="px-4 py-3">Participant</th>
+                                <th className="px-4 py-3">Contacts</th>
+                                <th className="px-4 py-3">Rôle</th>
+                                <th className="px-4 py-3">Date d'inscription</th>
+                                <th className="px-4 py-3 text-center">Statut Paiement</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {loadingTrainingParticipants ? (
+                                <tr>
+                                  <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
+                                    <RefreshCw className="animate-spin mx-auto mb-2 text-emerald-500" size={24} />
+                                    Chargement des participants...
+                                  </td>
+                                </tr>
+                              ) : (
+                                <>
+                                  {trainingParticipantsData
+                                    .filter((p: any) => 
+                                      !trainingSearchTerm || 
+                                      `${p.firstName} ${p.lastName}`.toLowerCase().includes(trainingSearchTerm.toLowerCase()) ||
+                                      p.email?.toLowerCase().includes(trainingSearchTerm.toLowerCase()) ||
+                                      p.phone?.includes(trainingSearchTerm)
+                                    )
+                                    .map((participant: any, index: number) => (
+                                    <tr key={participant.id || index} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-4 py-3">
+                                        <div className="font-medium text-slate-900">{participant.firstName} {participant.lastName}</div>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <div className="text-slate-600">{participant.email || 'N/A'}</div>
+                                        <div className="text-slate-500 text-xs">{participant.phone || 'N/A'}</div>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span className="capitalize text-slate-600">{participant.role || 'Étudiant'}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-slate-500">
+                                        {participant.joinedAt ? new Date(participant.joinedAt).toLocaleDateString() : '-'}
+                                      </td>
+                                      <td className="px-4 py-3 text-center">
+                                        {selectedTrainingForParticipants.price === 0 ? (
+                                          <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">GRATUIT</span>
+                                        ) : (
+                                          <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600">EN ATTENTE</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                  {(!trainingParticipantsData || trainingParticipantsData.length === 0) && (
+                                    <tr>
+                                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">Aucun participant inscrit pour l'instant.</td>
+                                    </tr>
+                                  )}
+                                </>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Pending Trainings */}
+                      <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                          <BookOpen className="text-emerald-600" size={18} />
+                          Formations en attente de validation
+                        </h3>
+                        <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                          {trainings.filter(t => t.status === 'pending').length} en attente
+                        </span>
+                      </div>
+                      <div className="divide-y divide-gray-50">
+                        {trainings.filter(t => t.status === 'pending').length > 0 ? (
+                          trainings.filter(t => t.status === 'pending').map((training) => (
+                            <div key={training.id} className="p-6 hover:bg-gray-50 transition-colors">
+                              <div className="flex flex-col md:flex-row justify-between gap-6">
+                                <div className="flex gap-4">
+                                  <img src={training.imageUrl || `https://picsum.photos/seed/${training.id}/200/200`} alt="" className="w-20 h-20 rounded-xl object-cover bg-gray-100" />
+                                  <div>
+                                    <h3 className="font-bold text-gray-900">{training.title}</h3>
+                                    <p className="text-xs text-gray-500 mb-2">Par {training.trainerName} • {training.domain} • {training.type === 'online' ? 'En ligne' : 'Présentiel'}</p>
+                                    <p className="text-sm text-gray-600 line-clamp-2 max-w-xl">{training.description}</p>
+                                    <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-400">
+                                      <span className="flex items-center gap-1"><Users size={12} /> {training.participants.length} / {training.maxParticipants} inscrits</span>
+                                      <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(training.startDate).toLocaleDateString()}</span>
+                                      <span className="font-bold text-emerald-600">{training.price === 0 ? 'GRATUIT' : `${training.price} CFA`}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2 min-w-[150px]">
+                                  <button 
+                                    onClick={() => updateTrainingStatus(training.id, 'approved')}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                                  >
+                                    <Check size={16} />
+                                    Approuver
+                                  </button>
+                                  <button 
+                                    onClick={() => updateTrainingStatus(training.id, 'rejected')}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                                  >
+                                    <X size={16} />
+                                    Rejeter
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                                  >
+                                    <Trash2 size={16} />
+                                    Supprimer
+                                  </button>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex flex-col gap-2 min-w-[150px]">
+                          ))
+                        ) : (
+                          <div className="p-12 text-center text-gray-400">
+                            <p>Aucune formation en attente.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Approved Trainings */}
+                      <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-gray-50/50 mt-4">
+                        <div className="flex items-center gap-4">
+                          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                            <CheckCircle2 className="text-blue-600" size={18} />
+                            Formations actives
+                          </h3>
+                          <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                            {trainings.filter(t => t.status === 'approved').length} actives
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 font-medium">Cliquez sur une formation pour voir les inscrits</div>
+                      </div>
+                      <div className="divide-y divide-gray-50">
+                        {trainings.filter(t => t.status === 'approved').map(training => (
+                          <div key={training.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center cursor-pointer group" onClick={() => setSelectedTrainingForParticipants(training)}>
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                              <img src={training.imageUrl || `https://picsum.photos/seed/${training.id}/200/200`} alt="" className="w-16 h-16 rounded-xl object-cover bg-gray-100 group-hover:ring-2 ring-emerald-500/50 transition-all" />
+                              <div>
+                                <h3 className="font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">{training.title}</h3>
+                                <p className="text-xs text-gray-500">{training.trainerName} • {training.domain}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <span className="text-[10px] font-bold text-emerald-600 uppercase bg-emerald-50 px-2 py-0.5 rounded-sm flex items-center gap-1"><Users size={10}/> {training.participants.length} inscrits</span>
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase">{training.type}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0" onClick={(e) => e.stopPropagation()}>
                               <button 
-                                onClick={() => updateTrainingStatus(training.id, 'approved')}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTrainingForParticipants(training);
+                                }}
+                                className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-colors flex items-center gap-1"
                               >
-                                <Check size={16} />
-                                Approuver
+                                <Users size={14}/> Voir
                               </button>
                               <button 
-                                onClick={() => updateTrainingStatus(training.id, 'rejected')}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateTrainingStatus(training.id, 'rejected');
+                                }}
+                                className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors flex items-center gap-1"
                               >
-                                <X size={16} />
-                                Rejeter
+                                <Ban size={14}/>
                               </button>
                               <button 
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
                                 }}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center"
                               >
-                                <Trash2 size={16} />
-                                Supprimer
+                                <Trash2 size={18} />
                               </button>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-12 text-center text-gray-400">
-                        <p>Aucune formation en attente.</p>
+                        ))}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Approved Trainings */}
-                  <div className="p-6 border-y border-gray-50 flex justify-between items-center bg-gray-50/50 mt-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <CheckCircle2 className="text-blue-600" size={18} />
-                      Formations actives
-                    </h3>
-                    <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                      {trainings.filter(t => t.status === 'approved').length} actives
-                    </span>
-                  </div>
-                  <div className="divide-y divide-gray-50">
-                    {trainings.filter(t => t.status === 'approved').map(training => (
-                      <div key={training.id} className="p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between gap-4 items-center">
-                        <div className="flex items-center gap-4 w-full md:w-auto">
-                          <img src={training.imageUrl || `https://picsum.photos/seed/${training.id}/200/200`} alt="" className="w-16 h-16 rounded-xl object-cover bg-gray-100" />
-                          <div>
-                            <h3 className="font-bold text-gray-900">{training.title}</h3>
-                            <p className="text-xs text-gray-500">{training.trainerName} • {training.domain}</p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-[10px] font-bold text-emerald-600 uppercase">{training.participants.length} participants</span>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase">{training.type}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                          <button 
-                            onClick={() => updateTrainingStatus(training.id, 'rejected')}
-                            className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold hover:bg-amber-100 transition-colors"
-                          >
-                            Désactiver
-                          </button>
-                          <button 
-                            onClick={() => {
-                              if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
-                            }}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
               )}
 

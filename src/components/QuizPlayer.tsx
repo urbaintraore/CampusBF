@@ -31,6 +31,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [userInput, setUserInput] = useState<any>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [currentQuestionPoints, setCurrentQuestionPoints] = useState<number>(0);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
@@ -48,14 +50,17 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     // Deep clone to safely shuffle options
     if (quiz.settings?.shuffleAnswers) {
       qList = qList.map(q => {
-        if ((q.type === 'multiple_choice' || (!q.type)) && q.options) {
+        if ((q.type === 'multiple_choice' || q.type === 'true_false' || (!q.type)) && q.options) {
           // We need to keep track of the correct answer when shuffling
           const optionsObjects = q.options.map((opt, i) => ({ opt, index: i }));
           const shuffledOptions = shuffleArray(optionsObjects);
           
-          let newCorrectAnswerIndex = Number(q.correctAnswerIndex);
+          let oldCorrectIndex = q.correctAnswerIndex !== undefined ? Number(q.correctAnswerIndex) : 0;
+          if (isNaN(oldCorrectIndex)) oldCorrectIndex = 0;
+          
+          let newCorrectAnswerIndex = oldCorrectIndex;
           shuffledOptions.forEach((o, newIndex) => {
-            if (o.index === Number(q.correctAnswerIndex)) newCorrectAnswerIndex = newIndex;
+            if (o.index === oldCorrectIndex) newCorrectAnswerIndex = newIndex;
           });
 
           // Also shuffle points
@@ -115,20 +120,33 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     }));
 
     let points = 0;
+    const cleanStr = (s: string) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+
+    console.log(`[Quiz Debug] Question ID: ${currentQuestion.id}, Type: ${questionType}`);
+    console.log(`[Quiz Debug] User Answer:`, answer);
 
     switch (questionType) {
       case 'multiple_choice':
       case 'true_false':
         const index = answer as number;
+        const validCorrectIndex = currentQuestion.correctAnswerIndex !== undefined && !isNaN(Number(currentQuestion.correctAnswerIndex)) 
+          ? Number(currentQuestion.correctAnswerIndex) 
+          : 0;
+
+        console.log(`[Quiz Debug] Selected Index: ${index}, Correct Index: ${validCorrectIndex}, Options:`, currentQuestion.options);
+
         if (currentQuestion.pointsPerOption && currentQuestion.pointsPerOption.length > 0) {
           points = currentQuestion.pointsPerOption[index] || 0;
-        } else if (index === Number(currentQuestion.correctAnswerIndex)) {
+        } else if (index === validCorrectIndex) {
           points = 1;
         }
         break;
       
       case 'short_answer':
-        if (currentQuestion.correctTextAnswer?.toLowerCase().trim() === (answer as string).toLowerCase().trim()) {
+        const expectedText = cleanStr(currentQuestion.correctTextAnswer || '');
+        const actualText = cleanStr(answer as string);
+        console.log(`[Quiz Debug] Expected Text: "${expectedText}", Actual Text: "${actualText}"`);
+        if (expectedText === actualText) {
           points = 1;
         }
         break;
@@ -136,8 +154,9 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       case 'numerical':
       case 'calculated':
         const num = parseFloat(answer);
-        const target = currentQuestion.correctNumericAnswer || 0;
-        const tolerance = currentQuestion.tolerance || 0;
+        const target = parseFloat(currentQuestion.correctNumericAnswer as any) || 0;
+        const tolerance = parseFloat(currentQuestion.tolerance as any) || 0;
+        console.log(`[Quiz Debug] Numerical Target: ${target}, Tolerance: ${tolerance}, Actual: ${num}`);
         if (Math.abs(num - target) <= tolerance) {
           points = 1;
         }
@@ -145,19 +164,22 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       
       case 'matching':
         const matches = answer as { [key: string]: string };
-        const correctMatches = currentQuestion.matchingPairs?.every(pair => matches[pair.left] === pair.right);
+        const correctMatches = currentQuestion.matchingPairs?.every(pair => {
+            const isMatch = cleanStr(matches[pair.left]) === cleanStr(pair.right);
+            if (!isMatch) console.log(`[Quiz Debug] Mismatch: "${matches[pair.left]}" (user) != "${pair.right}" (expected)`);
+            return isMatch;
+        });
         if (correctMatches) points = 1;
         break;
       
       case 'essay':
         const loadingToast = toast.loading("L'IA évalue votre composition...");
+        setIsEvaluating(true);
         try {
           const { evaluateEssayAction } = await import('@/services/geminiService');
           const evalResult = await evaluateEssayAction(currentQuestion.question, currentQuestion.correctTextAnswer || '', answer as string);
           points = evalResult.score;
           toast.success("Évaluation terminée.", { id: loadingToast });
-          // Optionally, we could store the AI's feedback in state to display it to the user.
-          // For now, we'll just add it to user answers or display it via a toast.
           if (evalResult.feedback) {
             setUserAnswers(prev => ({
               ...prev,
@@ -167,6 +189,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           }
         } catch (e: any) {
           toast.error("Échec de l'évaluation l'IA.", { id: loadingToast });
+        } finally {
+          setIsEvaluating(false);
         }
         break;
 
@@ -176,9 +200,13 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       
       case 'cloze':
         const gapAnswers = answer as { [key: string]: string };
-        const allCorrect = Object.entries(currentQuestion.clozeAnswers || {}).every(
-          ([gap, correct]) => gapAnswers[gap]?.toLowerCase().trim() === (correct as string).toLowerCase().trim()
-        );
+        const allCorrect = Object.entries(currentQuestion.clozeAnswers || {}).every(([gap, correct]) => {
+          const expectedGap = cleanStr(correct as string);
+          const actualGap = cleanStr(gapAnswers[gap]);
+          const isGapMatch = expectedGap === actualGap;
+          if (!isGapMatch) console.log(`[Quiz Debug] Cloze Mismatch for gap ${gap}: "${actualGap}" (user) != "${expectedGap}" (expected)`);
+          return isGapMatch;
+        });
         if (allCorrect) points = 1;
         break;
     }
@@ -187,6 +215,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       points = -Math.abs(quiz.settings.penaltyPerWrongAnswer);
     }
 
+    setCurrentQuestionPoints(points);
     setScore(prev => prev + points);
   };
 
@@ -196,6 +225,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       setSelectedOption(null);
       setUserInput(null);
       setIsAnswered(false);
+      setCurrentQuestionPoints(0);
     } else {
       handleFinishQuiz();
     }
@@ -269,6 +299,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   };
 
   const renderQuestionInput = () => {
+    const cleanStr = (s: string) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+
     switch (questionType) {
       case 'description':
         return (
@@ -296,10 +328,11 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               let buttonClass = "w-full p-4 text-left rounded-xl border-2 transition-all font-medium flex items-center justify-between ";
               const hasPoints = currentQuestion.pointsPerOption && currentQuestion.pointsPerOption.length > 0;
               const maxPoints = hasPoints ? Math.max(...currentQuestion.pointsPerOption!) : 1;
+              const validCorrectIndex = currentQuestion.correctAnswerIndex !== undefined && !isNaN(Number(currentQuestion.correctAnswerIndex)) ? Number(currentQuestion.correctAnswerIndex) : 0;
               const isBestAnswer = hasPoints 
                 ? currentQuestion.pointsPerOption![index] === maxPoints && maxPoints > 0
-                : index === Number(currentQuestion.correctAnswerIndex);
-              const pointsForOption = hasPoints ? currentQuestion.pointsPerOption![index] : (index === Number(currentQuestion.correctAnswerIndex) ? 1 : 0);
+                : index === validCorrectIndex;
+              const pointsForOption = hasPoints ? currentQuestion.pointsPerOption![index] : (index === validCorrectIndex ? 1 : 0);
               const isSelected = index === userInput;
               
               const showCorr = quiz.settings?.showCorrections !== 'never' && (quiz.settings?.showCorrections === 'always' || typeof quiz.settings?.showCorrections === 'undefined');
@@ -354,7 +387,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               className={cn(
                 "w-full p-4 rounded-xl border-2 transition-all font-medium focus:outline-none focus:ring-2",
                 isAnswered 
-                  ? (showCorrInput ? (score > 0 ? "border-emerald-500 bg-emerald-50" : "border-red-500 bg-red-50") : "border-indigo-500 bg-indigo-50")
+                  ? (showCorrInput ? (currentQuestionPoints > 0 ? "border-emerald-500 bg-emerald-50" : "border-red-500 bg-red-50") : "border-indigo-500 bg-indigo-50")
                   : "border-slate-200 focus:ring-indigo-500/20 focus:border-indigo-500"
               )}
               value={userInput || ''}
@@ -406,7 +439,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                   className={cn(
                     "flex-1 p-3 rounded-xl border-2 transition-all font-medium",
                     isAnswered
-                      ? (showMatchingCorr && currentMatches[pair.left] === pair.right ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-500 bg-red-50 text-red-700")
+                      ? (showMatchingCorr && cleanStr(currentMatches[pair.left]) === cleanStr(pair.right) ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-500 bg-red-50 text-red-700")
                       : "border-slate-200 focus:border-indigo-500"
                   )}
                 >
@@ -452,7 +485,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                 const gapMatch = part.match(/\[\[(gap\d+)\]\]/);
                 if (gapMatch) {
                   const gapId = gapMatch[1];
-                  const isGapCorrect = currentGaps[gapId]?.toLowerCase().trim() === (currentQuestion.clozeAnswers?.[gapId] as string)?.toLowerCase().trim();
+                  const isGapCorrect = cleanStr(currentGaps[gapId]) === cleanStr(currentQuestion.clozeAnswers?.[gapId] as string);
                   
                   return (
                     <input
@@ -627,7 +660,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           </div>
         )}
 
-        {isAnswered && (
+        {isAnswered && !isEvaluating && (
           <div className="mt-8 flex justify-end animate-in fade-in">
             <button
               onClick={handleNext}

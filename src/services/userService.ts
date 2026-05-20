@@ -9,7 +9,8 @@ import {
   orderBy,
   getDocs,
   getCountFromServer,
-  where
+  where,
+  documentId
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { User } from '@/types';
@@ -44,6 +45,18 @@ export const userService = {
       return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `users/role/${role}`);
+      throw error;
+    }
+  },
+
+  async getUsersByIds(userIds: string[]) {
+    try {
+      if (!userIds || userIds.length === 0) return [];
+      const q = query(collection(db, 'users'), where(documentId(), 'in', userIds));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `users/ids`);
       throw error;
     }
   },
