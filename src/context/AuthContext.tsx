@@ -418,6 +418,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         promotion: userData.promotion,
         avatarUrl: userData.avatarUrl,
         role: userData.role,
+        phone: userData.phone,
       };
       // Remove undefined fields
       Object.keys(profileData).forEach(key => (profileData as any)[key] === undefined && delete (profileData as any)[key]);

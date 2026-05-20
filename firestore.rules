@@ -89,6 +89,7 @@ service cloud.firestore {
         // Action: Profile Update (Immutable role/status for user)
         incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups', 'forceUnlocked', 'forceUnlockReason', 'phone', 'city', 'neighborhood', 'ine', 'skills', 'notificationPreferences', 'bio', 'experiences'])
       ) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /profiles/{userId} {
