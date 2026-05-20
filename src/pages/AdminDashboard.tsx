@@ -821,6 +821,7 @@ export default function AdminDashboard() {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
       try {
         await deleteUser(userId);
+        setAdminUsers(prev => prev.filter(u => u.id !== userId));
         alert('Utilisateur supprimé avec succès.');
       } catch (error) {
         console.error("Error in handleDeleteUser:", error);

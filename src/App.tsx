@@ -58,14 +58,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Force profile completion for students (who are not admins)
   if (user?.role === 'student' && !isAdmin) {
-    const isProfileComplete = Boolean(
-      user.firstName && 
-      user.lastName && 
-      user.phone &&
-      user.university && 
-      user.major && 
-      user.level
-    );
+    const isProfileComplete = 
+      !!user.firstName && 
+      !!user.lastName && 
+      !!user.phone &&
+      !!user.university && 
+      !!user.major && 
+      !!user.level;
+    
+    console.log("DEBUG: ProtectedRoute: Checking profile completion for:", user.id, user.email, "isComplete:", isProfileComplete, "User fields:", {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      university: user.university,
+      major: user.major,
+      level: user.level
+    });
 
     if (!isProfileComplete && location.pathname !== '/profile') {
       return <Navigate to="/profile" state={{ forceComplete: true }} replace />;
