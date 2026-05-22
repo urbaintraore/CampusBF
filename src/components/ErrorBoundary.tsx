@@ -61,7 +61,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               const jsonPart = msg.substring(start, end + 1);
               const parsed = JSON.parse(jsonPart);
               if (parsed.error) {
-                errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+                errorMessage = typeof parsed.error === 'string' ? parsed.error : String(parsed.error);
               }
             } catch {
               errorMessage = msg;

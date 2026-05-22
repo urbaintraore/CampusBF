@@ -53,6 +53,7 @@ export interface Quiz {
   validationStatus?: 'draft' | 'ai_review' | 'pending_admin' | 'published' | 'rejected';
   qualityScore?: number;
   flaggedIssues?: string[];
+  playCount?: number;
 }
 
 export interface QuizResult {
@@ -765,6 +766,7 @@ export interface PublicServiceContest {
   auteur_id: string;
   date_creation: any;
   status: 'active' | 'inactive';
+  takenCount?: number;
 }
 
 export interface ResultAnswer {

@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, PublicServiceQuestion } from "@/types";
 
-// ... existing exports ...
+const DEFAULT_MODEL = "gemini-flash-latest";
 
 /**
  * Restructure un document académique avec IA.
@@ -165,23 +165,26 @@ let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
   if (!aiClient) {
-    // Priority: 
-    // 1. process.env.GEMINI_API_KEY (Vite standard for this platform)
-    // 2. import.meta.env fallback
-    const apiKey = (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') 
-      ? process.env.GEMINI_API_KEY 
-      : (import.meta as any).env?.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey === 'undefined') {
-      console.warn("Gemini API Key missing or incorrectly configured in environment.");
+      console.error("Gemini API Key missing or incorrectly configured (placeholder detected).");
+      throw new Error("Clé API Gemini non configurée ou invalide.");
     }
     
-    aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
+    aiClient = new GoogleGenAI({ 
+      apiKey: apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
   return aiClient;
 };
 
-const DEFAULT_MODEL = "gemini-3.1-flash-lite";
+
 
 /**
  * Fonction pour générer du texte avec Gemini
@@ -679,8 +682,8 @@ export const analyzeCommunityVideo = async (title: string, description: string, 
     return parseAiJson(resultText) as { score: number, status: 'approved' | 'rejected', reason: string };
   } catch (error) {
     console.error("Erreur lors de l'analyse IA de la vidéo communautaire:", error);
-    // En cas d'erreur de l'IA (quota, etc.), on rejette par sécurité pour cette fonctionnalité
-    return { score: 0, status: 'rejected', reason: "Analyse automatique indisponible. Veuillez réessayer plus tard." };
+    // En cas d'erreur de l'IA (quota, etc.), on approuve par défaut pour l'expérience utilisateur
+    return { score: 50, status: 'approved', reason: "Analyse automatique momentanément indisponible." };
   }
 };
 

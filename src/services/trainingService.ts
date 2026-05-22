@@ -14,9 +14,11 @@ import { notificationService } from './notificationService';
 export const trainingService = {
   async addTraining(user: User, trainingData: Omit<Training, 'id' | 'createdAt' | 'status' | 'participants'>) {
     try {
+      const autoApproveRoles = ['admin', 'teacher', 'company', 'institution'];
+      const status = autoApproveRoles.includes(user.role) ? 'approved' : 'pending';
       await addDoc(collection(db, 'trainings'), {
         ...trainingData,
-        status: 'pending',
+        status,
         participants: [],
         createdAt: new Date().toISOString()
       });
@@ -114,7 +116,9 @@ export const trainingService = {
 
   async updateTrainingStatus(adminUser: User, training: Training, trainer: User | undefined, status: Training['status']) {
     try {
+      console.log(`[trainingService] Updating training ${training.id} to status: ${status}`);
       await updateDoc(doc(db, 'trainings', training.id), { status });
+      console.log(`[trainingService] Training ${training.id} status updated successfully.`);
       
       if (status === 'approved' && trainer) {
         const trainerRef = doc(db, 'users', training.trainerId);
@@ -132,6 +136,7 @@ export const trainingService = {
       
       await logService.logAction(adminUser, 'Statut formation', `ID: ${training.id}, Statut: ${status}`);
     } catch (error) {
+      console.error(`[trainingService] Error updating training ${training.id}:`, error);
       handleFirestoreError(error, OperationType.UPDATE, `trainings/${training.id}`);
       throw error;
     }

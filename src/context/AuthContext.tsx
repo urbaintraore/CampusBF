@@ -23,7 +23,7 @@ import { quizService } from '@/services/quizService';
 import { dealService } from '@/services/dealService';
 import { colocationService } from '@/services/colocationService';
 import { requestNotificationPermission } from '@/services/messagingService';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -71,10 +71,31 @@ async function fetchWithSessionCache(cacheKey: string, q: any) {
   const snapshot = await getDocs(q);
   const data = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() }));
   try {
-    localStorage.setItem(cacheKey, JSON.stringify(data));
+    // Basic serialization to remove non-serializable Firestore objects (Timestamps, References)
+    const serializableData = data.map(item => {
+      const sanitized: any = {};
+      for (const [key, value] of Object.entries(item)) {
+        if (value && typeof value === 'object') {
+          if ('seconds' in value && 'nanoseconds' in value) {
+            // Firestore Timestamp fallback
+            sanitized[key] = new Date((value as any).seconds * 1000).toISOString();
+          } else if ('_firestore' in value || 'path' in value) {
+            // Firestore Reference fallback
+            sanitized[key] = (value as any).path || '[Reference]';
+          } else {
+            sanitized[key] = value;
+          }
+        } else {
+          sanitized[key] = value;
+        }
+      }
+      return sanitized;
+    });
+
+    localStorage.setItem(cacheKey, JSON.stringify(serializableData));
     localStorage.setItem(cacheKey + '_time', now.toString());
   } catch (e) {
-    console.warn("Storage quota full");
+    console.warn("Storage quota full or serialization failed:", e);
   }
   return data;
 }

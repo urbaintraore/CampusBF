@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
 import multer from 'multer';
 import { createWorker } from 'tesseract.js';
+import { aiContestService } from './src/services/aiContestService';
+import { notifyUsersByFilter, sendNotificationToUser } from './src/services/adminNotificationService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +25,32 @@ app.use(express.json());
 // API Routes
 app.get('/api/test', (req, res) => {
   res.json({ test: 'ok' });
+});
+
+app.post('/api/public-service/generate-contest', async (req, res) => {
+  const { category, level, questionCount } = req.body;
+  console.log(`[API] Start Generating contest for ${category} (${level}), count: ${questionCount}`);
+  try {
+    const contest = await aiContestService.generateContest(category, level, questionCount || 10);
+    console.log(`[API] Generation success for ${category}`);
+    res.json(contest);
+  } catch (err: any) {
+    console.error(`[API] Generation failed for ${category}:`, err);
+    res.status(500).json({ error: err.message || 'Generation failed' });
+  }
+});
+
+app.post('/api/public-service/verify-contest', async (req, res) => {
+  const { titre, category, level, questions } = req.body;
+  console.log(`[API] Start Verifying contest: ${titre}`);
+  try {
+    const result = await aiContestService.verifyContest(titre, category, level, questions);
+    console.log(`[API] Verification success for: ${titre}`);
+    res.json(result);
+  } catch (err: any) {
+    console.error(`[API] Verification failed for: ${titre}:`, err);
+    res.status(500).json({ error: err.message || 'Verification failed' });
+  }
 });
 
 app.post('/backend/ocr', upload.single('file'), async (req, res) => {
@@ -48,8 +76,6 @@ app.post('/backend/ocr', upload.single('file'), async (req, res) => {
 app.post('/api/notify/:type', async (req, res) => {
   const { type } = req.params;
   try {
-    const { notifyUsersByFilter, sendNotificationToUser } = await import('./src/services/adminNotificationService.ts');
-    
     if (type === 'document') {
       const { title, subject, university, major } = req.body;
       await notifyUsersByFilter(
@@ -64,7 +90,6 @@ app.post('/api/notify/:type', async (req, res) => {
         type: 'forums'
       });
     }
-    // ... (other types simplified for brevity of the logic check, keeping current one for full support)
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -75,7 +100,6 @@ app.post('/api/notify/:type', async (req, res) => {
 app.post('/api/notify/document', async (req, res) => {
   const { title, subject, university, major } = req.body;
   try {
-    const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
     await notifyUsersByFilter(
       (user) => user.major === major || user.university === university,
       { title: "Nouveau document disponible", body: `Un nouveau document (${title}) a été ajouté dans ta filière ${major}.`, type: 'documents', data: { subject, university } }
@@ -87,7 +111,6 @@ app.post('/api/notify/document', async (req, res) => {
 app.post('/api/notify/internship', async (req, res) => {
   const { title, company, major, level } = req.body;
   try {
-    const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
     await notifyUsersByFilter(
       (user) => user.major === major && (user.level === level || !level),
       { title: "Nouvelle opportunité disponible", body: `Une nouvelle offre de stage chez ${company} correspond à ton profil.`, type: 'internships', data: { title, company } }
@@ -99,7 +122,6 @@ app.post('/api/notify/internship', async (req, res) => {
 app.post('/api/notify/contest', async (req, res) => {
   const { title } = req.body;
   try {
-    const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
     await notifyUsersByFilter(() => true, { title: "Nouveau concours CampusBF", body: `Le concours "${title}" est ouvert. Participe maintenant !`, type: 'contests' });
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: error.message }); }
@@ -108,7 +130,6 @@ app.post('/api/notify/contest', async (req, res) => {
 app.post('/api/notify/event', async (req, res) => {
   const { title, university } = req.body;
   try {
-    const { notifyUsersByFilter } = await import('./src/services/adminNotificationService.ts');
     await notifyUsersByFilter((user) => user.university === university, { title: "Nouvel événement universitaire", body: `L'événement "${title}" arrive bientôt à ${university}.`, type: 'events', data: { title, university } });
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: error.message }); }
@@ -117,7 +138,6 @@ app.post('/api/notify/event', async (req, res) => {
 app.post('/api/notify/reply', async (req, res) => {
   const { userId, discussionTitle } = req.body;
   try {
-    const { sendNotificationToUser } = await import('./src/services/adminNotificationService.ts');
     await sendNotificationToUser(userId, { title: "Quelqu'un a répondu à ta question", body: `Ta discussion "${discussionTitle}" a reçu une nouvelle réponse.`, type: 'forums' });
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: error.message }); }

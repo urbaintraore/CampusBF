@@ -94,11 +94,42 @@ export const publicServiceExamService = {
 
   async saveResult(result: Omit<PublicServiceResult, 'id' | 'date'>) {
     try {
+      // Deep sanitization to remove 'undefined' fields which Firestore doesn't support
+      const sanitize = (obj: any): any => {
+        if (Array.isArray(obj)) {
+          return obj.map(v => sanitize(v));
+        } else if (obj !== null && typeof obj === 'object') {
+          const newObj: any = {};
+          for (const key in obj) {
+            const val = obj[key];
+            if (val !== undefined) {
+              newObj[key] = sanitize(val);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
+
       const resultData = {
-        ...result,
+        ...sanitize(result),
         date: serverTimestamp()
       };
       const docRef = await addDoc(collection(db, 'public_service_results'), resultData);
+
+      // Try to increment the takenCount counter on the contest document
+      if (result.concours_id) {
+        try {
+          const { increment } = await import('firebase/firestore');
+          const contestRef = doc(db, 'public_service_contests', result.concours_id);
+          await updateDoc(contestRef, {
+            takenCount: increment(1)
+          });
+        } catch (updateErr) {
+          console.error("Failed to update contest takenCount:", updateErr);
+        }
+      }
+
       return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'public_service_results');
@@ -155,6 +186,24 @@ export const publicServiceExamService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, 'public_service_results');
       throw error;
+    }
+  },
+
+  async logCheatIncident(incident: { 
+    userId: string; 
+    contestId: string; 
+    type: 'tab_switch' | 'fullscreen_exit' | 'right_click' | 'other';
+    details?: string;
+  }) {
+    try {
+      const docRef = await addDoc(collection(db, 'cheat_incidents'), {
+        ...incident,
+        timestamp: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error("Failed to log cheat incident:", error);
+      return null;
     }
   }
 };

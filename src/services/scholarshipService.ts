@@ -131,31 +131,33 @@ export const scholarshipService = {
   syncNewScholarships: async (): Promise<number> => {
     try {
       const ai = getAiClient();
-      const currentYear = new Date().getFullYear(); // 2026
       
       const prompt = `Génère 5 offres de bourses internationales RÉELLES, MAJEURES et ACTUELLES pour les cycles académiques 2026-2027 ou 2027-2028.
       
-      FOCUS : Priorise les bourses dont l'appel à candidature est OUVERT ou va bientôt ouvrir pour la rentrée 2026 ou 2027.
-      Exemples : Fulbright, Chevening, DAAD, Bourses Eiffel, Mastercard Foundation, Bourses d'Excellence de la France, Bourses du Gouvernement Chinois/Turc/Coréen/Canadien.
+      OBJECTIF : Priorise les bourses destinées aux pays en voie de développement, particulièrement en AFRIQUE et au BURKINA FASO.
+      
+      TYPES D'OPPORTUNITÉS :
+      1. Bourses Internationales (ex: Fulbright, Chevening, DAAD, France Eiffel, Mastercard Foundation, Gouvernement Chinois/Turc).
+      2. Bourses Régionales (UEMOA, CEDEAO, UA).
+      3. Bourses Locales Nationales du Burkina Faso (ex: CIOSPB, bourses d'excellence du Président).
       
       CRITÈRES STRICTS :
-      1. Les offres doivent être TOTALEMENT ACCESSIBLES aux étudiants de l'Afrique de l'Ouest (Burkina Faso).
-      2. La date limite (date_limite) doit impérativement être FUTURE (après mai 2026).
-      3. Toutes les descriptions, titres et contenus doivent être en FRANÇAIS.
-      4. Indique clairement dans la description qu'il s'agit du cycle 2026-2027.
+      1. TOTALEMENT ACCESSIBLES aux étudiants du Burkina Faso.
+      2. Dates limites FUTURES (après mai 2026).
+      3. Contenus en FRANÇAIS uniquement.
       
       Réponds UNIQUEMENT avec un tableau JSON d'objets respectant ce schéma :
       [
         {
-          "titre": "Nom exact de la bourse (ex: Bourse Eiffel 2026-2027)",
-          "pays": "Pays d'accueil",
+          "titre": "Nom exact de la bourse",
+          "pays": "Pays d'accueil (ou Burkina Faso)",
           "niveau": "Licence/Master/PhD",
           "domaine": "Domaines d'études",
-          "description": "Résumé détaillé des avantages (frais de scolarité, billet d'avion, allocation mensuelle) et critères d'éligibilité en français.",
+          "description": "Résumé en français des avantages (frais, logement, allocation) et critères d'éligibilité pour les burkinabè.",
           "date_limite": "YYYY-MM-DD",
-          "lien_officiel": "URL directe vers l'appel à candidature",
-          "source": "Organisme source",
-          "tags": ["2026-2027", "Excellence", "Totalement financée"]
+          "lien_officiel": "URL directe",
+          "source": "Organisme",
+          "tags": ["2026-2027", "Afrique", "Burkina Faso", "Financé"]
         }
       ]`;
 

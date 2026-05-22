@@ -97,7 +97,12 @@ export default function Trainings() {
         maxParticipants: 20,
         imageUrl: ''
       });
-      alert("Votre formation a été soumise pour validation.");
+      const autoApproveRoles = ['admin', 'teacher', 'company', 'institution'];
+      if (user && autoApproveRoles.includes(user.role)) {
+        alert("Votre formation a été publiée avec succès ! Elle est maintenant visible par toute la communauté.");
+      } else {
+        alert("Votre formation a été soumise pour validation par l'administration.");
+      }
     } catch (e: any) {
       alert("Une erreur est survenue: " + e.message);
     }
@@ -242,7 +247,7 @@ export default function Trainings() {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute top-3 left-3 flex gap-2">
+              <div className="absolute top-3 left-3 flex flex-wrap gap-2 max-w-[85%]">
                 <span className={cn(
                   "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm",
                   training.type === 'online' ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
@@ -252,6 +257,16 @@ export default function Trainings() {
                 <span className="px-2 py-1 bg-white/90 backdrop-blur-sm text-emerald-700 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
                   {training.domain}
                 </span>
+                {training.trainerId === user?.id && (
+                  <span className={cn(
+                    "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm",
+                    training.status === 'approved' ? "bg-emerald-600 text-white" :
+                    training.status === 'rejected' ? "bg-red-600 text-white" : "bg-amber-500 text-white"
+                  )}>
+                    {training.status === 'approved' ? 'Validée' :
+                     training.status === 'rejected' ? 'Refusée' : 'En attente'}
+                  </span>
+                )}
               </div>
               {training.price === 0 && (
                 <div className="absolute top-3 right-3 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
@@ -364,6 +379,25 @@ export default function Trainings() {
                   <span className="text-slate-400 text-sm">({selectedTraining.trainerTrainingsCount || 0} formations)</span>
                 </div>
               </div>
+
+              {selectedTraining.status !== 'approved' && (
+                <div className={cn(
+                  "p-4 rounded-2xl border mb-6 flex items-start gap-3",
+                  selectedTraining.status === 'rejected' ? "bg-red-50 border-red-100 text-red-800" : "bg-amber-50 border-amber-100 text-amber-850"
+                )}>
+                  <AlertTriangle size={20} className={cn("shrink-0 mt-0.5", selectedTraining.status === 'rejected' ? "text-red-600" : "text-amber-600")} />
+                  <div>
+                    <p className="font-bold text-sm">
+                      {selectedTraining.status === 'rejected' ? "Formation rejetée" : "Formation en attente de validation"}
+                    </p>
+                    <p className="text-xs mt-1 leading-relaxed">
+                      {selectedTraining.status === 'rejected' 
+                        ? "Cette formation a été refusée par l'administration." 
+                        : "Cette formation est en cours de modération par l'administration et sera visible publiquement dès sa validation."}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <h2 className="text-3xl font-display font-bold text-slate-900 mb-4">{selectedTraining.title}</h2>
               

@@ -127,17 +127,33 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
     switch (questionType) {
       case 'multiple_choice':
-      case 'true_false':
         const index = answer as number;
         const validCorrectIndex = currentQuestion.correctAnswerIndex !== undefined && !isNaN(Number(currentQuestion.correctAnswerIndex)) 
           ? Number(currentQuestion.correctAnswerIndex) 
           : 0;
 
-        console.log(`[Quiz Debug] Selected Index: ${index}, Correct Index: ${validCorrectIndex}, Options:`, currentQuestion.options);
+        const hasCustomPoints = currentQuestion.pointsPerOption && 
+                                currentQuestion.pointsPerOption.length > 0 && 
+                                currentQuestion.pointsPerOption.some(p => Number(p || 0) > 0);
 
-        if (currentQuestion.pointsPerOption && currentQuestion.pointsPerOption.length > 0) {
-          points = currentQuestion.pointsPerOption[index] || 0;
+        console.log(`[Quiz Debug] Selected Index: ${index}, Correct Index: ${validCorrectIndex}, Has Custom Points: ${hasCustomPoints}, Options:`, currentQuestion.options);
+
+        if (hasCustomPoints) {
+          points = Number(currentQuestion.pointsPerOption![index] || 0);
         } else if (index === validCorrectIndex) {
+          points = 1;
+        }
+        break;
+
+      case 'true_false':
+        const tfIndex = answer as number;
+        const validTFCorrectIndex = currentQuestion.correctAnswerIndex !== undefined && !isNaN(Number(currentQuestion.correctAnswerIndex)) 
+          ? Number(currentQuestion.correctAnswerIndex) 
+          : 0;
+
+        console.log(`[Quiz Debug] Selected True/False Index: ${tfIndex}, Correct Index: ${validTFCorrectIndex}`);
+
+        if (tfIndex === validTFCorrectIndex) {
           points = 1;
         }
         break;
@@ -326,13 +342,19 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           <div className="space-y-3">
             {options.map((option, index) => {
               let buttonClass = "w-full p-4 text-left rounded-xl border-2 transition-all font-medium flex items-center justify-between ";
-              const hasPoints = currentQuestion.pointsPerOption && currentQuestion.pointsPerOption.length > 0;
-              const maxPoints = hasPoints ? Math.max(...currentQuestion.pointsPerOption!) : 1;
               const validCorrectIndex = currentQuestion.correctAnswerIndex !== undefined && !isNaN(Number(currentQuestion.correctAnswerIndex)) ? Number(currentQuestion.correctAnswerIndex) : 0;
-              const isBestAnswer = hasPoints 
-                ? currentQuestion.pointsPerOption![index] === maxPoints && maxPoints > 0
+              
+              const hasCustomPoints = questionType === 'multiple_choice' && 
+                                      currentQuestion.pointsPerOption && 
+                                      currentQuestion.pointsPerOption.length > 0 && 
+                                      currentQuestion.pointsPerOption.some(p => Number(p || 0) > 0);
+              
+              const pointsArray = hasCustomPoints ? currentQuestion.pointsPerOption!.map(p => Number(p || 0)) : [];
+              const maxPoints = hasCustomPoints ? Math.max(...pointsArray) : 1;
+              const isBestAnswer = hasCustomPoints 
+                ? pointsArray[index] === maxPoints && maxPoints > 0
                 : index === validCorrectIndex;
-              const pointsForOption = hasPoints ? currentQuestion.pointsPerOption![index] : (index === validCorrectIndex ? 1 : 0);
+              const pointsForOption = hasCustomPoints ? pointsArray[index] : (index === validCorrectIndex ? 1 : 0);
               const isSelected = index === userInput;
               
               const showCorr = quiz.settings?.showCorrections !== 'never' && (quiz.settings?.showCorrections === 'always' || typeof quiz.settings?.showCorrections === 'undefined');
@@ -364,7 +386,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                 >
                   <span>{option}</span>
                   <div className="flex items-center gap-2">
-                    {isAnswered && showCorr && hasPoints && pointsForOption > 0 && <span className="text-sm font-bold opacity-70">{pointsForOption} pts</span>}
+                    {isAnswered && showCorr && hasCustomPoints && pointsForOption > 0 && <span className="text-sm font-bold opacity-70">{pointsForOption} pts</span>}
                     {isAnswered && showCorr && isBestAnswer && <CheckCircle size={20} className="text-emerald-500" />}
                     {isAnswered && showCorr && isSelected && !isBestAnswer && <XCircle size={20} className="text-red-500" />}
                   </div>
@@ -591,13 +613,18 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         
         <div className="bg-slate-50 rounded-2xl p-6 mb-8 flex items-center justify-around">
           <div>
-            <div className="text-5xl font-bold text-emerald-600 mb-2">{percentage}%</div>
-            <p className="text-slate-700 font-medium">Score : {Math.max(0, score)} / {maxPossibleScore} points</p>
+            <div className="text-4xl font-bold text-emerald-600 mb-2">{percentage}%</div>
+            <p className="text-slate-700 font-medium text-xs sm:text-sm">Score : {Math.max(0, score)} / {maxPossibleScore} pts</p>
           </div>
           <div className="w-px h-16 bg-slate-200"></div>
           <div>
-            <div className="text-3xl font-bold text-blue-600 mb-2 flex items-center justify-center gap-2"><Clock size={28}/> {formatTime(timeSpent)}</div>
-            <p className="text-slate-700 font-medium">Temps passé</p>
+            <div className="text-3xl font-bold text-blue-600 mb-2 flex items-center justify-center gap-1"><Clock size={24}/> {formatTime(timeSpent)}</div>
+            <p className="text-slate-700 font-medium text-xs sm:text-sm">Temps passé</p>
+          </div>
+          <div className="w-px h-16 bg-slate-200"></div>
+          <div>
+            <div className="text-3xl font-bold text-indigo-600 mb-2">{(quiz.playCount || 0) + 1}</div>
+            <p className="text-slate-700 font-medium text-xs sm:text-sm">Partages / Joueurs</p>
           </div>
         </div>
 

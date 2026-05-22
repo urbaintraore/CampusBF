@@ -13,6 +13,7 @@ import { DocumentModal } from '@/components/DocumentModal';
 import { DocumentProcessor } from '@/components/admin/document-processor/DocumentProcessor';
 import { ExamProcessor } from '@/components/admin/exam-processor/ExamProcessor';
 import { ActivityLogsAdmin } from '@/components/admin/ActivityLogsAdmin';
+import { AIContestGenerator } from '@/components/admin/AIContestGenerator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { generateDevReport, generateSummaryReport, generateFullReport } from '@/services/devReportService';
 import { generatePublicServiceExam } from '@/services/geminiService';
@@ -118,6 +119,7 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [contentTab, setContentTab] = useState<'documents' | 'videos' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university' | 'doc_processor' | 'exam_processor'>('documents');
+  const [publicServiceSubTab, setPublicServiceSubTab] = useState<'list' | 'ai_generator'>('list');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
   const [userSearch, setUserSearch] = useState('');
   const [selectedTrainingForParticipants, setSelectedTrainingForParticipants] = useState<Training | null>(null);
@@ -186,7 +188,6 @@ export default function AdminDashboard() {
   const [editingContest, setEditingContest] = useState<any>(null);
   const [showAddDealModal, setShowAddDealModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<any>(null);
-  const [showAIGenModal, setShowAIGenModal] = useState(false);
   const [showManualContestModal, setShowManualContestModal] = useState(false);
   const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '', shuffle: false });
   const [parsedQuestionsCount, setParsedQuestionsCount] = useState(0);
@@ -341,8 +342,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const [aiGenData, setAiGenData] = useState({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
-  const [isGenerating, setIsGenerating] = useState(false);
   const [newDeal, setNewDeal] = useState<any>({
     title: '',
     description: '',
@@ -753,34 +752,6 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error in handleManualContestCreate:', error);
       toast.error("Erreur lors de l'ajout manuel", { id: tId });
-    }
-  };
-
-  const handleAIGenerateContest = async () => {
-    if (!aiGenData.title) {
-      toast.error('Veuillez donner un titre au concours');
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const questions = await generatePublicServiceExam(aiGenData.category, aiGenData.level, aiGenData.numQuestions);
-      const newCtx = {
-        titre: aiGenData.title,
-        categorie: aiGenData.category,
-        niveau: aiGenData.level,
-        type: 'qcm',
-        duree: aiGenData.numQuestions * 2, // 2 mins per question roughly
-        difficulte: 'moyen',
-        questions: questions
-      };
-      await addPublicServiceContest(newCtx);
-      setShowAIGenModal(false);
-      setAiGenData({ category: 'culture_generale', level: 'BAC', numQuestions: 10, title: '' });
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de la génération IA');
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -1526,22 +1497,7 @@ export default function AdminDashboard() {
                 </div>
               )}
               {contentTab === 'public_service_contests' && (
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setShowAIGenModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
-                  >
-                    <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
-                    Générer (IA)
-                  </button>
-                  <button 
-                    onClick={() => setShowManualContestModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors"
-                  >
-                    <Plus size={16} />
-                    Créer manuellement
-                  </button>
-                </div>
+                <div />
               )}
             </div>
             
@@ -2016,28 +1972,107 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {contentTab === 'public_service_contests' && publicServiceContests.map(contest => (
-                <div key={contest.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
-                      <Trophy size={20} />
-                    </div>
+              {contentTab === 'public_service_contests' && (
+                <div className="p-0 animate-in fade-in slide-in-from-bottom-4">
+                  <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/50 gap-4">
                     <div>
-                      <p className="font-bold text-gray-900 text-sm">{contest.titre}</p>
-                      <p className="text-xs text-gray-500">{contest.categorie} • {contest.niveau} • {contest.questions?.length || 0} questions</p>
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2 text-lg">
+                        <Trophy className="text-amber-600" size={22} />
+                        Concours de la Fonction Publique
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-1">Gérez les concours manuels et générez de nouveaux examens par IA.</p>
+                    </div>
+                    
+                    <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-sm self-stretch md:self-auto">
+                      <button 
+                        onClick={() => setPublicServiceSubTab('list')}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                          publicServiceSubTab === 'list' ? "bg-amber-600 text-white shadow-md" : "text-gray-500 hover:bg-gray-100"
+                        )}
+                      >
+                        <Library size={14} />
+                        Liste
+                      </button>
+                      <button 
+                        onClick={() => setPublicServiceSubTab('ai_generator')}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                          publicServiceSubTab === 'ai_generator' ? "bg-indigo-600 text-white shadow-md" : "text-gray-500 hover:bg-gray-100"
+                        )}
+                      >
+                        <Sparkles size={14} />
+                        Générateur IA
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => deletePublicServiceContest(contest.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Supprimer"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+
+                  <div className="p-6">
+                    {publicServiceSubTab === 'ai_generator' ? (
+                      <AIContestGenerator 
+                        onContestCreated={() => {
+                          setPublicServiceSubTab('list');
+                          invalidateContestsCache();
+                        }} 
+                        onCancel={() => setPublicServiceSubTab('list')}
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                          <span className="text-sm font-medium text-gray-600">
+                            {publicServiceContests?.length || 0} concours publiés
+                          </span>
+                          <button 
+                            onClick={() => setShowManualContestModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                          >
+                            <Plus size={16} />
+                            Créer manuellement
+                          </button>
+                        </div>
+
+                        <div className="grid gap-3">
+                          {loadingContests ? (
+                            <div className="p-12 text-center text-gray-400">Chargement...</div>
+                          ) : publicServiceContests?.length === 0 ? (
+                            <div className="p-12 text-center text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
+                              <Trophy size={48} className="mx-auto mb-4 opacity-10" />
+                              <p>Aucun concours disponible.</p>
+                            </div>
+                          ) : (
+                            publicServiceContests?.map((contest: any) => (
+                              <div key={contest.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between group">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <Trophy size={24} />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-gray-900 group-hover:text-amber-700 transition-colors">{contest.titre}</p>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                      <span className="text-[10px] bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full font-bold uppercase">{contest.categorie?.replace(/_/g, ' ')}</span>
+                                      <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold">{contest.niveau}</span>
+                                      <span className="text-[10px] text-gray-400 font-medium">{contest.questions?.length || 0} questions</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button 
+                                    onClick={() => deletePublicServiceContest(contest.id)}
+                                    className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                    title="Supprimer"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              )}
               
               {contentTab === 'ads' && ads.map(ad => (
                 <div key={ad.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
@@ -3368,118 +3403,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAIGenModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <RefreshCw size={20} className="text-indigo-600" />
-                Générer un concours (IA)
-              </h2>
-              <button onClick={() => setShowAIGenModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Titre du concours</label>
-                <input 
-                  type="text" 
-                  value={aiGenData.title}
-                  onChange={(e) => setAiGenData({ ...aiGenData, title: e.target.value })}
-                  placeholder="Ex: Culture Générale - session 2024"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Catégorie</label>
-                <select 
-                  value={aiGenData.category}
-                  onChange={(e) => setAiGenData({ ...aiGenData, category: e.target.value as PublicServiceCategory })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
-                >
-                  <option value="culture_generale">Culture Générale</option>
-                  <option value="maths">Mathématiques</option>
-                  <option value="droit">Droit</option>
-                  <option value="economie">Économie</option>
-                  <option value="svt">SVT</option>
-                  <option value="physique">Physique</option>
-                  <option value="chimie">Chimie</option>
-                  <option value="dissertation_redaction">Dissertation / Rédaction</option>
-                  <option value="tests_psychotechniques">Tests Psychotechniques</option>
-                  <option value="cas_pratique">Cas pratique</option>
-                  <option value="actualite_retrospective">Actualité Rétrospective</option>
-                  <option value="societes_evenements">Sociétés et Événements</option>
-                  <option value="institutions_nationales_internationales">Institutions Nationales/Internationales</option>
-                  <option value="culture_litterature_internationales">Culture et Littérature Internationales</option>
-                  <option value="culture_litteraire_artistique">Culture Littéraire et Artistique</option>
-                  <option value="histoire">Histoire</option>
-                  <option value="geographie">Géographie</option>
-                  <option value="philosophie">Philosophie</option>
-                  <option value="psychologie">Psychologie</option>
-                  <option value="sociologie">Sociologie</option>
-                  <option value="francais">Français</option>
-                  <option value="sciences_technologie">Sciences et Technologie</option>
-                  <option value="connaissances_burkina">Connaissances du Burkina</option>
-                  <option value="test_niveau">Test de Niveau</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Niveau</label>
-                <select 
-                  value={aiGenData.level}
-                  onChange={(e) => setAiGenData({ ...aiGenData, level: e.target.value as PublicServiceLevel })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
-                >
-                  <option value="BEPC">BEPC</option>
-                  <option value="BAC">BAC</option>
-                  <option value="Licence">Licence</option>
-                  <option value="Master">Master</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre de questions</label>
-                <input 
-                  type="number" 
-                  min="5"
-                  max="50"
-                  value={aiGenData.numQuestions}
-                  onChange={(e) => setAiGenData({ ...aiGenData, numQuestions: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
-                />
-              </div>
-
-              <div className="pt-4">
-                <button 
-                  onClick={handleAIGenerateContest}
-                  disabled={isGenerating || !aiGenData.title}
-                  className={cn(
-                    "w-full py-3 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center justify-center gap-2",
-                    isGenerating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-                  )}
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw size={18} className="animate-spin" />
-                      Génération en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={18} />
-                      Générer maintenant
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           </div>
         </div>

@@ -12,12 +12,17 @@ import {
   Trophy,
   Share2,
   RefreshCw,
-  Home
+  Home,
+  Camera,
+  Video,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { PublicServiceContest, PublicServiceQuestion, ResultAnswer } from '@/types';
 import { publicServiceExamService } from '@/services/publicServiceExamService';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface PublicServiceExamPlayerProps {
   contest: PublicServiceContest;
@@ -34,6 +39,41 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
   const [score, setScore] = useState(0);
   const [startTime] = useState(Date.now());
   const [currentComment, setCurrentComment] = useState("");
+  const [cheatCount, setCheatCount] = useState(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [showCamera, setShowCamera] = useState(true);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  // Camera handling
+  useEffect(() => {
+    if ((currentStep === 'instructions' || currentStep === 'exam') && !cameraStream) {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        console.warn("Camera API not available");
+        return;
+      }
+      
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          setCameraStream(stream);
+          if (videoRef.current) videoRef.current.srcObject = stream;
+        })
+        .catch(err => {
+          console.warn("Camera access denied or not available", err);
+          toast.error("L'accès à la caméra est recommandé pour cet examen sécurisé.");
+        });
+    }
+    
+    // Auto-attach stream to video element when it might have been unmounted/remounted
+    if (cameraStream && videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = cameraStream;
+    }
+
+    return () => {
+      if (isFinished) {
+        cameraStream?.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [currentStep, cameraStream, isFinished]);
 
   useEffect(() => {
     // Reset comment when question changes
@@ -71,8 +111,30 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
       
       const handleContextMenu = (e: MouseEvent) => e.preventDefault();
       
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          setCheatCount(prev => prev + 1);
+          toast.error("ALERTE : Changement d'onglet détecté ! Ce comportement frauduleux est enregistré.");
+          if (user) {
+            publicServiceExamService.logCheatIncident({
+              userId: user.id,
+              contestId: contest.id,
+              type: 'tab_switch',
+              details: `Tentative de changement d'onglet ou réduction de fenêtre.`
+            });
+          }
+        }
+      };
+
+      const handleBlur = () => {
+        setCheatCount(prev => prev + 1);
+        toast.warning("Attention : Perte de focus sur la fenêtre d'examen.");
+      };
+
       window.addEventListener('beforeunload', handleBeforeUnload);
       document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('blur', handleBlur);
       
       // Disable text selection
       document.body.style.userSelect = 'none';
@@ -80,10 +142,12 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
         document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('blur', handleBlur);
         document.body.style.userSelect = 'auto';
       };
     }
-  }, [currentStep]);
+  }, [currentStep, user, contest.id]);
 
   // Timer logic
   useEffect(() => {
@@ -116,7 +180,7 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
       return {
         questionIndex: idx,
         selectedOption: answer.selectedOption,
-        comment: answer.comment
+        comment: answer.comment || ""
       };
     });
     
@@ -156,6 +220,21 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  if (!contest.questions || contest.questions.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
+        <div className="bg-slate-900 rounded-3xl p-8 max-w-md w-full border border-white/10 text-center">
+          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Erreur de chargement</h2>
+          <p className="text-slate-400 mb-6">Ce concours ne contient aucune question ou n'a pas pu être chargé correctement.</p>
+          <button onClick={onClose} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold">
+            Retour
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentQuestion = contest.questions[currentQuestionIndex];
 
   return (
@@ -176,13 +255,21 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
         </div>
 
         {currentStep === 'exam' && (
-          <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border ${
-            timeLeft < 60 ? 'bg-rose-500/20 border-rose-500/30' : 'bg-white/5 border-white/10'
-          }`}>
-            <Clock className={`w-4 h-4 ${timeLeft < 60 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`} />
-            <span className={`text-lg font-mono font-bold ${timeLeft < 60 ? 'text-rose-400' : 'text-white'}`}>
-              {formatTime(timeLeft)}
-            </span>
+          <div className="flex items-center gap-6">
+            {cheatCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-rose-500/10 border border-rose-500/20 rounded-lg animate-pulse">
+                <AlertCircle className="w-4 h-4 text-rose-500" />
+                <span className="text-[10px] font-bold text-rose-500 uppercase">Signalements : {cheatCount}</span>
+              </div>
+            )}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border ${
+              timeLeft < 60 ? 'bg-rose-500/20 border-rose-500/30' : 'bg-white/5 border-white/10'
+            }`}>
+              <Clock className={`w-4 h-4 ${timeLeft < 60 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`} />
+              <span className={`text-lg font-mono font-bold ${timeLeft < 60 ? 'text-rose-400' : 'text-white'}`}>
+                {formatTime(timeLeft)}
+              </span>
+            </div>
           </div>
         )}
 
@@ -198,6 +285,42 @@ export default function PublicServiceExamPlayer({ contest, onClose }: PublicServ
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto bg-slate-950 p-4 sm:p-8">
+        {/* Camera Surveillance Fixed PIP */}
+        {(currentStep === 'exam' || currentStep === 'instructions') && cameraStream && (
+          <motion.div 
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            className="fixed bottom-8 right-8 w-48 h-36 bg-slate-800 rounded-2xl border-2 border-emerald-500/30 shadow-2xl overflow-hidden z-50 group"
+          >
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              muted 
+              playsInline 
+              className={cn("w-full h-full object-cover", !showCamera && "hidden")} 
+            />
+            {!showCamera && (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white/30 p-4 text-center">
+                <Camera size={32} className="mb-2" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Flux Masqué</span>
+              </div>
+            )}
+            <div className="absolute top-2 right-2 flex gap-2">
+              <button 
+                onClick={() => setShowCamera(!showCamera)}
+                className="p-1.5 bg-black/40 backdrop-blur-md rounded-lg text-white hover:bg-black/60 transition-colors"
+                title={showCamera ? "Masquer ma caméra" : "Afficher ma caméra"}
+              >
+                {showCamera ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            <div className="absolute bottom-2 left-2 flex items-center gap-2 px-2 py-1 bg-emerald-500/20 backdrop-blur-md rounded-lg border border-emerald-500/30">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[8px] font-bold text-white uppercase tracking-tighter">LIVE PROCTORING</span>
+            </div>
+          </motion.div>
+        )}
+
         <div className="max-w-3xl mx-auto">
           <AnimatePresence mode="wait">
             {currentStep === 'instructions' && (

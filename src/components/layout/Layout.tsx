@@ -38,7 +38,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Calendar, label: 'Événements', to: '/events' },
     { icon: Compass, label: 'Orientation', to: '/orientation', roles: ['admin', 'parent', 'teacher'] },
     { icon: Brain, label: 'Révisions & Quiz', to: '/quizzes', roles: ['student', 'admin', 'teacher'] },
-    { icon: Trophy, label: 'Concours Fonction Publique 🇧🇫', to: '/public-service-contests', roles: ['admin', 'teacher', 'alumni', 'parent'] },
+    { icon: Trophy, label: 'Concours Fonction Publique 🇧🇫', to: '/public-service-contests', roles: ['admin', 'teacher', 'alumni', 'parent', 'student'] },
     { icon: FileText, label: 'Générateur de CV', to: '/cv-generator', roles: ['admin', 'alumni', 'teacher', 'parent'] },
     { icon: Tag, label: 'Bons Plans', to: '/deals', roles: ['admin', 'alumni', 'teacher', 'parent'] },
     { icon: Home, label: 'Colocation', to: '/colocation', roles: ['admin', 'teacher', 'alumni', 'parent'] },

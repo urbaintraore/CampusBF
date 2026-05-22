@@ -116,7 +116,11 @@ service cloud.firestore {
     match /quizzes/{quizId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || (resource.data.authorId == request.auth.uid) || (resource.data.creatorId == request.auth.uid);
+      allow update: if isAdmin() || 
+                    (resource.data.authorId == request.auth.uid) || 
+                    (resource.data.creatorId == request.auth.uid) || 
+                    (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['playCount']));
+      allow delete: if isAdmin() || (resource.data.authorId == request.auth.uid) || (resource.data.creatorId == request.auth.uid);
     }
 
     match /quizResults/{resultId} {
@@ -207,7 +211,8 @@ service cloud.firestore {
     match /training_reports/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
     match /public_service_contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /public_service_contest_details/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
-    match /public_service_results/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /public_service_results/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
+    match /public_service_cheat_incidents/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
     match /logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
     match /activity_logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); allow update, delete: if isAdmin(); }
     match /applications/{id} { allow read, write: if isSignedIn(); }

@@ -2,5 +2,6 @@
   "name": "CampusBF",
   "description": "Plateforme super-application pour les étudiants du Burkina Faso : documents, répétiteurs, stages, marketplace et communauté.",
   "requestFramePermissions": ["geolocation", "camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
   "version": "1.0.0"
 }

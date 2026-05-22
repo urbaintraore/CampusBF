@@ -166,6 +166,17 @@ export default function Quizzes() {
                         </h3>
                         <p className="text-sm text-slate-500 mb-4 line-clamp-2 flex-1">{quiz.description}</p>
                         
+                        <div className="flex items-center gap-4 text-xs text-slate-400 mb-4 font-medium">
+                          <span className="flex items-center gap-1">
+                            <Layers size={14} className="text-slate-300" />
+                            {quiz.questions?.length || 0} {(quiz.questions?.length || 0) > 1 ? 'questions' : 'question'}
+                          </span>
+                          <span className="flex items-center gap-1" title="Nombre de fois que ce quiz a été complété">
+                            <Play size={14} className="text-slate-300" />
+                            {quiz.playCount || 0} {(quiz.playCount || 0) > 1 ? 'participations' : 'participation'}
+                          </span>
+                        </div>
+                        
                         <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-slate-100">
                           <div className="flex items-center gap-2">
                             <button

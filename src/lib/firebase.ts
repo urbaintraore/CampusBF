@@ -67,19 +67,36 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
   // Safe circular reference handler
   const safeStringify = (obj: any) => {
-    const cache = new Set();
-    return JSON.stringify(obj, (key, value) => {
-      if (typeof value === 'object' && value !== null) {
-        if (cache.has(value)) {
-          return '[Circular]';
+    try {
+      const cache = new WeakSet();
+      return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) {
+            return '[Circular]';
+          }
+          cache.add(value);
+          
+          // Basic check for common non-serializable objects that aren't circular but cause issues
+          if (value instanceof Error) {
+            return {
+              name: value.name,
+              message: value.message,
+              stack: value.stack
+            };
+          }
         }
-        cache.add(value);
-      }
-      return value;
-    });
+        return value;
+      });
+    } catch (err) {
+      return `[Serialization Error: ${err instanceof Error ? err.message : String(err)}]`;
+    }
   };
 
   const errorJson = safeStringify(errInfo);
   console.error('Firestore Error: ', errorJson);
-  throw new Error(errorJson);
+  
+  // Don't throw just the JSON, throw a proper Error object
+  const finalError = new Error(errInfo.error);
+  (finalError as any).details = errInfo;
+  throw finalError;
 }

@@ -1,5 +1,5 @@
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, serverTimestamp, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, serverTimestamp, orderBy, limit, increment } from 'firebase/firestore';
 import { Quiz, QuizResult, QuestionBankItem } from '@/types';
 
 export const quizService = {
@@ -80,6 +80,15 @@ export const quizService = {
         ...result,
         createdAt: serverTimestamp()
       });
+      
+      try {
+        await updateDoc(doc(db, 'quizzes', result.quizId), {
+          playCount: increment(1)
+        });
+      } catch (err) {
+        console.error("Error updating playCount for quiz:", result.quizId, err);
+      }
+
       return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'quizResults');

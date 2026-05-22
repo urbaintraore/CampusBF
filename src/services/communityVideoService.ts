@@ -47,14 +47,28 @@ class CommunityVideoService {
   async getCommunityVideos(category?: string, limitCount: number = 20) {
     const collectionRef = collection(db, this.collectionName);
     let q;
-    if (category && category !== 'Tous') {
-         q = query(collectionRef, where('category', '==', category), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitCount));
-    } else {
-         q = query(collectionRef, where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitCount));
-    }
     
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as CommunityVideo));
+    try {
+      // Trying the full query (requires composite index)
+      if (category && category !== 'Tous') {
+           q = query(collectionRef, where('category', '==', category), where('status', '!=', 'rejected'), orderBy('status'), orderBy('createdAt', 'desc'), limit(limitCount));
+      } else {
+           q = query(collectionRef, where('status', '!=', 'rejected'), orderBy('status'), orderBy('createdAt', 'desc'), limit(limitCount));
+      }
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as CommunityVideo));
+    } catch (error) {
+      console.warn("Query failed (likely missing index), falling back to simpler query:", error);
+      // Fallback query (no status check, just category and time)
+      if (category && category !== 'Tous') {
+        q = query(collectionRef, where('category', '==', category), orderBy('createdAt', 'desc'), limit(limitCount));
+      } else {
+        q = query(collectionRef, orderBy('createdAt', 'desc'), limit(limitCount));
+      }
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as CommunityVideo));
+    }
   }
 }
 

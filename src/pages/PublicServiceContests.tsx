@@ -25,6 +25,9 @@ import { publicServiceExamService } from '@/services/publicServiceExamService';
 import { PublicServiceContest, PublicServiceCategory, PublicServiceLevel } from '@/types';
 import PublicServiceExamPlayer from '@/components/PublicServiceExamPlayer';
 import { toast } from 'sonner';
+import { Sparkles, Library } from 'lucide-react';
+import { aiContestService } from '@/services/aiContestService';
+import { AIContestGenerator } from '@/components/admin/AIContestGenerator';
 
 import { useCachedQuery } from '@/hooks/useCachedQuery';
 import { doc, getDoc, orderBy, where } from 'firebase/firestore';
@@ -90,7 +93,7 @@ export default function PublicServiceContests() {
   // Use cached and paginated query instead of global state
   const { data: globalContests, loading: dataLoading, loadMore, hasMore, invalidateCache } = useCachedQuery(
     'public_service_contests',
-    [], // You can add orderBy('createdAt', 'desc') if such a field exists
+    [orderBy('createdAt', 'desc')],
     'public_service_contests_cache',
     20
   );
@@ -104,6 +107,7 @@ export default function PublicServiceContests() {
   const [isExamMode, setIsExamMode] = useState(false);
   const [ranking, setRanking] = useState<any[]>([]);
   const [showManualContestModal, setShowManualContestModal] = useState(false);
+  const [showAiGenModal, setShowAiGenModal] = useState(false);
   const [manualContestData, setManualContestData] = useState({ category: 'culture_generale', level: 'BAC', title: '', questionsJSON: '' });
   const [parsedQuestionsCount, setParsedQuestionsCount] = useState(0);
 
@@ -171,11 +175,12 @@ export default function PublicServiceContests() {
   };
 
   useEffect(() => {
-    if (!dataLoading && globalContests) {
+    if (globalContests) {
       setContests(globalContests as PublicServiceContest[]);
-      setLoading(false);
     }
-  }, [globalContests, dataLoading]);
+  }, [globalContests]);
+
+  const isLoading = dataLoading && contests.length === 0;
 
   useEffect(() => {
     const loadRanking = async () => {
@@ -190,34 +195,58 @@ export default function PublicServiceContests() {
   }, []);
 
   const filteredContests = contests.filter(c => {
-    if (c.status !== 'active') return false;
+    // Admins can see all contests, others only active ones
+    const isAdmin = user?.role === 'admin';
+    if (!isAdmin && c.status !== 'active') return false;
+    
     const matchesCategory = filter === 'all' || c.categorie === filter;
     const matchesLevel = levelFilter === 'all' || c.niveau === levelFilter;
-    const matchesSearch = c.titre.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = (c.titre || '').toLowerCase().includes(searchLower) || 
+                          (c.description || '').toLowerCase().includes(searchLower);
     return matchesCategory && matchesLevel && matchesSearch;
   });
 
   const handleStartExam = async (contest: PublicServiceContest) => {
+    if (!contest.id) {
+       toast.error("Identifiant du concours manquant.");
+       return;
+    }
+
+    let contestWithQuestions = { ...contest };
+    
     // If questions are not in the document (new split architecture)
     if (!contest.questions || contest.questions.length === 0) {
       const toastId = toast.loading('Chargement des questions...');
       try {
-        const detailsSnap = await getDoc(doc(db, 'public_service_contest_details', contest.id!));
+        const detailsSnap = await getDoc(doc(db, 'public_service_contest_details', contest.id));
         if (detailsSnap.exists()) {
           const detailsData = detailsSnap.data();
-          contest.questions = detailsData.questions || [];
+          contestWithQuestions.questions = detailsData.questions || [];
         } else {
-          toast.error("Questions introuvables pour ce concours", { id: toastId });
+          console.warn("No details found for contest", contest.id);
+          toast.error("Les questions de ce concours n'ont pas encore été enregistrées.", { id: toastId });
           return;
         }
         toast.dismiss(toastId);
-      } catch (err) {
-        toast.error("Erreur de chargement", { id: toastId });
+      } catch (err: any) {
+        console.error("Error loading questions for contest", contest.id, err);
+        const errorMessage = err?.message || String(err);
+        if (errorMessage.includes('offline')) {
+          toast.error("Impossible de charger les questions : Vous êtes hors ligne ou la connexion a échoué.", { id: toastId });
+        } else {
+          toast.error(`Erreur de chargement : ${errorMessage.slice(0, 50)}...`, { id: toastId });
+        }
         return;
       }
     }
-    setActiveContest(contest);
+
+    if (!contestWithQuestions.questions || contestWithQuestions.questions.length === 0) {
+      toast.error("Ce concours ne contient aucune question.");
+      return;
+    }
+
+    setActiveContest(contestWithQuestions);
     setIsExamMode(true);
   };
 
@@ -236,35 +265,35 @@ export default function PublicServiceContests() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       {/* Hero Section */}
-      <div className="bg-emerald-600 pt-12 pb-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-emerald-500 rounded-full blur-3xl opacity-50" />
+      <div className="bg-emerald-600 pt-6 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-emerald-500 rounded-full blur-3xl opacity-30" />
         <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row md:items-center justify-between gap-8"
+            className="flex flex-col md:flex-row md:items-center justify-between gap-6"
           >
             <div className="max-w-2xl">
-              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/30 backdrop-blur-sm border border-emerald-400/30 rounded-full w-fit mb-6">
-                <ShieldCheck className="w-4 h-4 text-emerald-100" />
-                <span className="text-xs font-medium text-emerald-50 text-emerald-100 tracking-wide uppercase">
+              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/30 backdrop-blur-sm border border-emerald-400/30 rounded-full w-fit mb-4">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-100" />
+                <span className="text-[10px] font-bold text-emerald-100 tracking-wider uppercase">
                   Préparation Concours 🇧🇫
                 </span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight leading-tight">
-                Deviens le prochain fonctionnaire de <span className="text-emerald-300">l'État Burkinabè</span>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight leading-tight">
+                Deviens le prochain fonctionnaire de <span className="text-emerald-300">l'État</span>
               </h1>
-              <p className="text-lg text-emerald-50/80 mb-8 max-w-xl leading-relaxed">
-                Prépare-toi efficacement avec nos anciens sujets, QCM interactifs et simulations d'examens chronométrées.
+              <p className="text-sm text-emerald-50/80 mb-4 max-w-xl leading-relaxed">
+                Prépare-toi avec nos anciens sujets et QCM interactifs.
               </p>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10">
-                  <span className="text-2xl font-bold text-white">500+</span>
-                  <span className="text-sm text-emerald-100/70">QCM disponibles</span>
+              <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-2 rounded-xl border border-white/5">
+                  <span className="text-xl font-bold text-white">500+</span>
+                  <span className="text-[10px] text-emerald-100/70">QCM</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10">
-                  <TrendingUp className="w-5 h-5 text-emerald-300" />
-                  <span className="text-sm text-emerald-100/70">Suivi de progression</span>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-2 rounded-xl border border-white/5">
+                  <TrendingUp className="w-4 h-4 text-emerald-300" />
+                  <span className="text-[10px] text-emerald-100/70">Suivi actif</span>
                 </div>
               </div>
             </div>
@@ -275,19 +304,8 @@ export default function PublicServiceContests() {
               transition={{ delay: 0.2 }}
               className="hidden lg:block relative"
             >
-              <div className="w-80 h-80 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 flex items-center justify-center p-8 rotate-3">
-                <Trophy className="w-40 h-40 text-emerald-200 opacity-60" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-16 bg-white rounded-2xl shadow-2xl flex items-center gap-3 px-4 -mt-10 -ml-10">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <Star className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">Nouveau Record !</div>
-                      <div className="text-[10px] text-slate-500">Score: 98/100</div>
-                    </div>
-                  </div>
-                </div>
+              <div className="w-48 h-48 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 flex items-center justify-center p-6 rotate-3">
+                <Trophy className="w-24 h-24 text-emerald-200 opacity-40" />
               </div>
             </motion.div>
           </motion.div>
@@ -311,12 +329,21 @@ export default function PublicServiceContests() {
             </div>
             
             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              {user?.role === 'admin' && (
+                <button 
+                  onClick={() => setShowAiGenModal(true)}
+                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
+                >
+                  <Sparkles size={16} />
+                  Générateur IA
+                </button>
+              )}
               <button 
                 onClick={() => invalidateCache && invalidateCache()}
                 className="p-2.5 bg-slate-50 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all border border-slate-100"
                 title="Rafraîchir"
               >
-                <RotateCw size={18} className={loading ? 'animate-spin' : ''} />
+                <RotateCw size={18} className={dataLoading ? 'animate-spin' : ''} />
               </button>
               <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 text-slate-600">
                 <Filter className="w-4 h-4" />
@@ -374,7 +401,7 @@ export default function PublicServiceContests() {
               </div>
             </div>
 
-            {loading ? (
+            {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[1, 2, 4, 5, 6].map(i => (
                   <div key={i} className="h-64 bg-slate-100 animate-pulse rounded-3xl" />
@@ -410,7 +437,7 @@ export default function PublicServiceContests() {
                         {contest.description}
                       </p>
 
-                      <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-4 gap-2 mb-6">
                         <div className="bg-slate-50 rounded-xl p-2 text-center">
                           <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Niveau</div>
                           <div className="text-xs font-bold text-slate-700">{contest.niveau}</div>
@@ -428,9 +455,21 @@ export default function PublicServiceContests() {
                             {contest.difficulte}
                           </div>
                         </div>
+                        <div className="bg-slate-50 rounded-xl p-2 text-center border border-emerald-50/50">
+                          <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Effectué</div>
+                          <div className="text-xs font-bold text-emerald-600">
+                            {contest.takenCount || 0} fois
+                          </div>
+                        </div>
                       </div>
 
-                      <button className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 group-hover:bg-emerald-600 transition-all shadow-xl shadow-slate-200">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartExam(contest);
+                        }}
+                        className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 group-hover:bg-emerald-600 transition-all shadow-xl shadow-slate-200"
+                      >
                         <Play className="w-4 h-4 fill-white" />
                         Lancer le test
                         <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -654,6 +693,24 @@ export default function PublicServiceContests() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {showAiGenModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-transparent relative"
+          >
+            <AIContestGenerator 
+              onContestCreated={() => {
+                setShowAiGenModal(false);
+                if (invalidateCache) invalidateCache();
+              }} 
+              onCancel={() => setShowAiGenModal(false)}
+            />
+          </motion.div>
         </div>
       )}
     </div>

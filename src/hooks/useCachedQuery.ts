@@ -33,11 +33,13 @@ export function useCachedQuery(
   const [hasMore, setHasMore] = useState(true);
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
 
+  const [refreshCount, setRefreshCount] = useState(0);
+
   useEffect(() => {
     let mounted = true;
 
     async function loadInitialData() {
-      if (queryCache.has(cacheKey)) {
+      if (queryCache.has(cacheKey) && refreshCount === 0) {
         const cached = queryCache.get(cacheKey)!;
         if (Date.now() - cached.timestamp < CACHE_DURATION_MS) {
           setData(cached.data);
@@ -95,7 +97,7 @@ export function useCachedQuery(
     loadInitialData();
 
     return () => { mounted = false; };
-  }, [cacheKey]); // Dependency on cacheKey to re-fetch if queries change
+  }, [cacheKey, refreshCount]); // Dependency on cacheKey and refreshCount to re-fetch
 
   const loadMore = async () => {
     if (loadingMore || !hasMore || !lastDocRef.current) return;
@@ -137,6 +139,7 @@ export function useCachedQuery(
 
   const invalidateCache = () => {
     queryCache.delete(cacheKey);
+    setRefreshCount(prev => prev + 1);
   };
 
   return { data, loading, loadingMore, hasMore, loadMore, invalidateCache };
