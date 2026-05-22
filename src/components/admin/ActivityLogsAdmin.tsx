@@ -42,14 +42,29 @@ export function ActivityLogsAdmin() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const logsData = snapshot.docs.map(doc => {
         const data = doc.data();
+        let formattedCreatedAt = new Date().toISOString();
+        let originalTimestamp = null;
+        
+        if (data.createdAt) {
+          if (typeof data.createdAt.toDate === 'function') {
+            formattedCreatedAt = data.createdAt.toDate().toISOString();
+            originalTimestamp = data.createdAt;
+          } else if (typeof data.createdAt === 'string') {
+            formattedCreatedAt = data.createdAt;
+          } else if (data.createdAt.seconds) {
+            formattedCreatedAt = new Date(data.createdAt.seconds * 1000).toISOString();
+            originalTimestamp = data.createdAt;
+          } else if (data.createdAt instanceof Date) {
+            formattedCreatedAt = data.createdAt.toISOString();
+          }
+        }
+        
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt ? 
-                     (data.createdAt as Timestamp).toDate().toISOString() : 
-                     new Date().toISOString(),
-          timestamp: data.createdAt as Timestamp
-        } as Log;
+          createdAt: formattedCreatedAt,
+          timestamp: originalTimestamp
+        } as unknown as Log;
       });
       setLogs(logsData);
       setLoading(false);

@@ -143,6 +143,164 @@ app.post('/api/notify/reply', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+// Initialise Firebase Admin
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
+      : null;
+
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('[Server] Firebase Admin initialisé via FIREBASE_SERVICE_ACCOUNT');
+    } else {
+      admin.initializeApp();
+      console.log('[Server] Firebase Admin initialisé via default credentials');
+    }
+  } catch (error) {
+    console.error('[Server] Erreur lors de l\'initialisation Firebase Admin:', error);
+  }
+}
+
+app.get('/api/admin/users-stats', async (req, res) => {
+  try {
+    const db = admin.firestore();
+    
+    // 1. Get total count in Firestore
+    const usersSnapshot = await db.collection('users').count().get();
+    const firestoreCount = usersSnapshot.data().count;
+    
+    // 2. Get total count in Auth
+    let authCount = 0;
+    let pageToken;
+    do {
+      const result = await admin.auth().listUsers(1000, pageToken);
+      authCount += result.users.length;
+      pageToken = result.pageToken;
+    } while (pageToken);
+
+    // 3. Get roles counts in Firestore
+    const [
+      studentSnap,
+      tutorSnap,
+      teacherSnap,
+      adminSnap,
+      companySnap,
+      institutionSnap
+    ] = await Promise.all([
+      db.collection('users').where('role', '==', 'student').count().get(),
+      db.collection('users').where('role', '==', 'tutor').count().get(),
+      db.collection('users').where('role', '==', 'teacher').count().get(),
+      db.collection('users').where('role', '==', 'admin').count().get(),
+      db.collection('users').where('role', '==', 'company').count().get(),
+      db.collection('users').where('role', '==', 'institution').count().get(),
+    ]);
+
+    const discrepancy = Math.max(0, authCount - firestoreCount);
+
+    const roles = {
+      student: studentSnap.data().count + discrepancy, // Unsynchronized users are treated as students by default
+      tutor: tutorSnap.data().count,
+      teacher: teacherSnap.data().count,
+      admin: adminSnap.data().count,
+      company: companySnap.data().count,
+      institution: institutionSnap.data().count,
+    };
+
+    res.json({
+      firestoreCount,
+      authCount,
+      discrepancy,
+      roles
+    });
+  } catch (error: any) {
+    console.error("API user stats error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/users-sync', async (req, res) => {
+  try {
+    const db = admin.firestore();
+    
+    // 1. Fetch current users in Firestore (UIDs)
+    const usersSnapshot = await db.collection('users').select().get();
+    const existingUserIds = new Set(usersSnapshot.docs.map(doc => doc.id));
+    
+    // 2. Fetch all Auth users
+    let authUsers: admin.auth.UserRecord[] = [];
+    let pageToken;
+    do {
+      const result = await admin.auth().listUsers(1000, pageToken);
+      authUsers.push(...result.users);
+      pageToken = result.pageToken;
+    } while (pageToken);
+
+    let createdCount = 0;
+    const batchSize = 400;
+    let batch = db.batch();
+    
+    for (const authUser of authUsers) {
+      if (!existingUserIds.has(authUser.uid)) {
+        const userRef = db.collection('users').doc(authUser.uid);
+        
+        // Simple name split fallback
+        let firstName = 'Étudiant';
+        let lastName = 'CampusBF';
+        if (authUser.displayName) {
+          const names = authUser.displayName.split(' ');
+          firstName = names[0] || 'Étudiant';
+          lastName = names.slice(1).join(' ') || 'CampusBF';
+        }
+
+        const newUserPayload = {
+          firstName,
+          lastName,
+          email: authUser.email || '',
+          role: 'student',
+          status: 'active',
+          avatarUrl: authUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}`,
+          createdAt: authUser.metadata.creationTime || new Date().toISOString(),
+          synchronized: true,
+          rankingScore: 1,
+          contributionCount: 0,
+          activityStats: {
+            logins: 1,
+            docsViewed: 0,
+            docsDownloaded: 0,
+            quizzesCompleted: 0
+          }
+        };
+
+        batch.set(userRef, newUserPayload);
+        createdCount++;
+        
+        if (createdCount % batchSize === 0) {
+          await batch.commit();
+          batch = db.batch();
+        }
+      }
+    }
+    
+    if (createdCount % batchSize !== 0 && createdCount > 0) {
+      await batch.commit();
+    }
+
+    res.json({
+      success: true,
+      authUsersTotal: authUsers.length,
+      firestoreBefore: existingUserIds.size,
+      synchronizedCount: createdCount,
+      firestoreAfter: existingUserIds.size + createdCount
+    });
+  } catch (error: any) {
+    console.error("API user sync error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', node_env: process.env.NODE_ENV });
 });

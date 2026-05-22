@@ -11,9 +11,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
-  const { user, isAdmin, logout, notifications, markNotificationAsRead } = useAuth();
+  const { user, isAdmin, logout, notifications, markNotificationAsRead, logActivity } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (user && logActivity) {
+      const path = location.pathname;
+      const matchingItem = allNavItems.find(item => item.to === path);
+      const pageName = matchingItem ? matchingItem.label : path;
+      
+      logActivity({
+        action: `Ouverture page: ${pageName}`,
+        module: 'Navigation',
+        details: `Navigation vers ${path}`,
+        severity: 'info'
+      }).catch(err => console.error("Error logging navigation:", err));
+    }
+  }, [location.pathname, user?.id]);
 
   const userNotifications = notifications.filter(n => n.userId === user?.id || n.userId === 'all');
   const unreadNotifications = userNotifications.filter(n => !n.read).length;

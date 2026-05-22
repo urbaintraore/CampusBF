@@ -27,7 +27,7 @@ export default function Documents() {
   const navigate = useNavigate();
   const { 
     user, isAdmin, documents: globalDocuments, logActivity, groups, community, 
-    addDocument, incrementActivity, isDocumentLocked, syncUserStats 
+    addDocument, incrementActivity, isDocumentLocked, syncUserStats, logDownload 
   } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -389,13 +389,8 @@ export default function Documents() {
         })
       ]);
 
-      if (logActivity) {
-        logActivity({
-          action: 'Téléchargement de document',
-          module: 'Documents Académiques',
-          details: `Téléchargement: ${docData.title}`,
-          metadata: { documentId: docData.id }
-        });
+      if (logDownload) {
+        await logDownload(docData);
       }
 
       // 2. Trigger actual file download

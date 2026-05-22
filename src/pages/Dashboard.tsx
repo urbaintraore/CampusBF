@@ -13,7 +13,7 @@ import { User as UserType } from '@/types';
 
 export default function Dashboard() {
   const { 
-    user, isAdmin, notifications, events: globalEvents, isDocumentLocked, incrementActivity, logAction 
+    user, isAdmin, notifications, events: globalEvents, isDocumentLocked, incrementActivity, logAction, logDownload
   } = useAuth();
 
   const [ads, setAds] = useState<any[]>([]);
@@ -160,9 +160,8 @@ export default function Dashboard() {
         })
       ]);
 
-      if (logAction) {
-        // @ts-ignore
-        logAction('Téléchargement de document (Dashboard)', `Document: ${docData.title}`);
+      if (logDownload) {
+        await logDownload(docData);
       }
 
       // 2. Trigger actual file download

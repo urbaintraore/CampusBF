@@ -175,6 +175,7 @@ interface AuthContextType {
   addColocationReview: (review: Omit<ColocationReview, 'id' | 'createdAt' | 'authorId' | 'authorName'>) => Promise<void>;
   logActivity: (data: Omit<import('@/services/logService').LogData, 'userId' | 'userName' | 'email' | 'filiere' | 'universite'>) => Promise<void>;
   logAction: (action: string, details?: string) => Promise<void>;
+  logDownload: (docData: any) => Promise<void>;
   updateAd: (id: string, data: Partial<Ad>) => Promise<void>;
   createAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
   deleteAd: (id: string) => Promise<void>;
@@ -466,6 +467,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logService.logAction(user, action, details);
   };
 
+  const logDownload = async (docData: any) => {
+    if (!user) return;
+    try {
+      const { collection: fsCollection, addDoc: fsAddDoc, serverTimestamp: fsServerTimestamp } = await import('firebase/firestore');
+      const ua = navigator.userAgent;
+      const browser = ua.includes('Firefox') ? 'Firefox' : ua.includes('Chrome') ? 'Chrome' : ua.includes('Safari') ? 'Safari' : ua.includes('Edge') ? 'Edge' : 'Unknown';
+      const device = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ? 'Mobile' : 'Desktop';
+      
+      const downloadLog = {
+        userId: user.id,
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Utilisateur',
+        email: user.email || '',
+        documentId: docData.id,
+        documentTitle: docData.title || docData.fileName || 'Sans titre',
+        filiere: user.major || '',
+        universite: user.university || '',
+        device,
+        browser,
+        createdAt: fsServerTimestamp()
+      };
+      
+      await fsAddDoc(fsCollection(db, 'downloads_logs'), downloadLog);
+      
+      await logActivity({
+        action: 'Téléchargement de document',
+        module: 'Documents Académiques',
+        details: `Téléchargement: ${downloadLog.documentTitle}`,
+        metadata: { documentId: docData.id }
+      });
+    } catch (err) {
+      console.error("Error in logDownload:", err);
+    }
+  };
+
   const incrementActivity = async (activity: keyof NonNullable<User['activityStats']>, additionalPoints?: number) => {
     if (!user) return;
     
@@ -617,6 +652,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await updateDoc(doc(db, 'users', firebaseUser.uid), {
                 lastActiveAt: serverTimestamp(),
                 'activityStats.logins': increment(1),
+              });
+              
+              await logService.logActivity({
+                userId: firebaseUser.uid,
+                userName: `${initialUserData.firstName || ''} ${initialUserData.lastName || ''}`.trim() || 'Utilisateur',
+                email: firebaseUser.email || '',
+                filiere: initialUserData.major || '',
+                universite: initialUserData.university || '',
+                action: 'Connexion de l\'utilisateur',
+                module: 'Authentification',
+                details: 'Nouvelle session de connexion',
+                severity: 'info'
               });
             } catch {}
           }
@@ -2013,6 +2060,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logs,
       logActivity,
       logAction,
+      logDownload,
       deleteAd,
       updateAd,
       createAd,
