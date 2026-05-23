@@ -188,7 +188,8 @@ app.get('/api/admin/users-stats', async (req, res) => {
       teacherSnap,
       adminSnap,
       companySnap,
-      institutionSnap
+      institutionSnap,
+      publicSnap
     ] = await Promise.all([
       db.collection('users').where('role', '==', 'student').count().get(),
       db.collection('users').where('role', '==', 'tutor').count().get(),
@@ -196,6 +197,7 @@ app.get('/api/admin/users-stats', async (req, res) => {
       db.collection('users').where('role', '==', 'admin').count().get(),
       db.collection('users').where('role', '==', 'company').count().get(),
       db.collection('users').where('role', '==', 'institution').count().get(),
+      db.collection('users').where('role', '==', 'public').count().get(),
     ]);
 
     const discrepancy = Math.max(0, authCount - firestoreCount);
@@ -207,6 +209,7 @@ app.get('/api/admin/users-stats', async (req, res) => {
       admin: adminSnap.data().count,
       company: companySnap.data().count,
       institution: institutionSnap.data().count,
+      public: publicSnap.data().count,
     };
 
     res.json({

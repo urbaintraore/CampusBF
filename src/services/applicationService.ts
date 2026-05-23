@@ -40,7 +40,7 @@ export const applicationService = {
         updatedUserData.tutorSubjects = application.subjects;
         updatedUserData.tutorHourlyRates = application.hourlyRates;
         updatedUserData.tutorDescription = application.description;
-        if (application.user.role === 'student') {
+        if (application.user.role === 'student' || application.user.role === 'public') {
           updatedUserData.role = 'tutor';
         }
       }

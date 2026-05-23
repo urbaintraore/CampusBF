@@ -439,7 +439,7 @@ export default function Dashboard() {
               count: publicServiceContests?.length.toString() || '0', 
               color: 'bg-amber-100 text-amber-700 ring-amber-200', 
               link: '/public-service-contests',
-              roles: ['admin', 'teacher', 'alumni', 'parent', 'student']
+              roles: ['admin', 'teacher', 'alumni', 'parent', 'student', 'public']
             },
             {
               label: 'Bourses & Opportunités IA', 

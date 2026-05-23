@@ -89,7 +89,7 @@ export interface User {
   city?: string;
   neighborhood?: string;
   avatarUrl?: string;
-  role: 'student' | 'admin' | 'tutor' | 'company' | 'teacher' | 'institution' | 'parent' | 'alumni';
+  role: 'student' | 'admin' | 'tutor' | 'company' | 'teacher' | 'institution' | 'parent' | 'alumni' | 'public';
   tutorStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   teacherStatus?: 'none' | 'pending_dossier' | 'pending_approval' | 'approved' | 'rejected';
   examSubscriptionStatus?: 'none' | 'pending' | 'active' | 'expired';

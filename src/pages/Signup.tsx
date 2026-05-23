@@ -8,7 +8,7 @@ import Logo from '@/components/Logo';
 export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [accountType, setAccountType] = useState<'student' | 'institution' | 'teacher' | 'parent'>('student');
+  const [accountType, setAccountType] = useState<'student' | 'institution' | 'teacher' | 'parent' | 'public'>('student');
   const [parentAuthMethod, setParentAuthMethod] = useState<'email' | 'phone'>('email');
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -81,6 +81,11 @@ export default function Signup() {
         signupData.promotion = formData.promotion;
         signupData.phone = formData.phone;
         signupData.ine = formData.ine;
+      } else if (accountType === 'public') {
+        signupData.firstName = formData.firstName;
+        signupData.lastName = formData.lastName;
+        signupData.phone = formData.phone;
+        signupData.role = 'public';
       } else if (accountType === 'parent') {
         signupData.firstName = formData.firstName;
         signupData.lastName = formData.lastName;
@@ -157,13 +162,13 @@ export default function Signup() {
               <Logo size="lg" />
             </div>
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center text-white font-display font-bold text-3xl mx-auto mb-6 shadow-lg shadow-emerald-500/30 ring-4 ring-white">
-              {accountType === 'student' ? <GraduationCap size={32} /> : accountType === 'teacher' ? <Library size={32} /> : accountType === 'parent' ? <User size={32} /> : <Building2 size={32} />}
+              {accountType === 'student' ? <GraduationCap size={32} /> : accountType === 'teacher' ? <Library size={32} /> : accountType === 'parent' ? <User size={32} /> : accountType === 'public' ? <User size={32} /> : <Building2 size={32} />}
             </div>
             <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Créer un compte</h1>
             <p className="text-slate-500 text-sm">Rejoignez la communauté CampusBF dès aujourd'hui.</p>
           </div>
 
-          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl mb-6 flex-wrap md:flex-nowrap border border-slate-200/60">
+          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl mb-6 flex-wrap border border-slate-200/60">
             <button
               type="button"
               onClick={() => setAccountType('student')}
@@ -174,7 +179,7 @@ export default function Signup() {
             <button
               type="button"
               onClick={() => setAccountType('teacher')}
-              className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'teacher' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+              className={`flex-1 min-w-[120px] py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'teacher' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Enseignant
             </button>
@@ -188,9 +193,16 @@ export default function Signup() {
             <button
               type="button"
               onClick={() => setAccountType('institution')}
-              className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'institution' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+              className={`flex-1 min-w-[120px] py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'institution' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Établissement
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountType('public')}
+              className={`flex-1 min-w-[120px] py-2.5 px-3 text-sm font-medium rounded-xl transition-all ${accountType === 'public' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            >
+              Général/Visiteur
             </button>
           </div>
 
@@ -201,7 +213,7 @@ export default function Signup() {
           )}
 
           <form onSubmit={handleSignup} className="space-y-5">
-            {accountType === 'student' || accountType === 'parent' ? (
+            {accountType === 'student' || accountType === 'parent' || accountType === 'public' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
@@ -481,7 +493,7 @@ export default function Signup() {
             ) : (
                 <>
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700 ml-1">Email {accountType === 'student' ? 'étudiant' : 'ou nom d\'utilisateur'}</label>
+                    <label className="text-sm font-medium text-slate-700 ml-1">Email {accountType === 'student' ? 'étudiant' : accountType === 'public' ? '' : 'ou nom d\'utilisateur'}</label>
                     <input 
                       type="email" 
                       name="email"

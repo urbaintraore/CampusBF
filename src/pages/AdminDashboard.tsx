@@ -1382,6 +1382,7 @@ export default function AdminDashboard() {
                       { label: 'Répétiteurs & Prof de maison', count: syncStats?.roles?.tutor || adminUsers.filter(u => u.role === 'tutor').length || 0, color: 'bg-amber-500' },
                       { label: 'Enseignants', count: syncStats?.roles?.teacher || adminUsers.filter(u => u.role === 'teacher').length || 0, color: 'bg-emerald-500' },
                       { label: 'Entreprises', count: syncStats?.roles?.company || adminUsers.filter(u => u.role === 'company').length || 0, color: 'bg-purple-500' },
+                      { label: 'Visiteurs', count: syncStats?.roles?.public || adminUsers.filter(u => u.role === 'public').length || 0, color: 'bg-indigo-500' },
                       { label: 'Admins', count: syncStats?.roles?.admin || adminUsers.filter(u => u.role === 'admin').length || 1, color: 'bg-red-500' },
                     ].map((item) => (
                       <div key={item.label} className="space-y-1">
@@ -4193,6 +4194,7 @@ export default function AdminDashboard() {
                         { name: 'Étudiants', value: syncStats?.roles?.student || totalUsersCount },
                         { name: 'Répétiteurs & Prof de maison', value: syncStats?.roles?.tutor || 0 },
                         { name: 'Enseignants', value: syncStats?.roles?.teacher || 0 },
+                        { name: 'Visiteurs', value: syncStats?.roles?.public || 0 },
                         { name: 'Admins', value: syncStats?.roles?.admin || 1 },
                       ]}
                       cx="50%"
@@ -4223,6 +4225,10 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
                   <span className="text-xs text-gray-600 font-medium font-mono">Enseignants ({syncStats?.roles?.teacher || 0})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500" />
+                  <span className="text-xs text-gray-600 font-medium font-mono">Visiteurs ({syncStats?.roles?.public || 0})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-purple-500" />

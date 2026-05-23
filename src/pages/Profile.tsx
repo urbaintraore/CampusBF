@@ -422,11 +422,15 @@ export default function Profile() {
           ) : (
             <div>
               <h2 className="text-3xl font-bold text-slate-900 tracking-tight">{user.firstName} {user.lastName}</h2>
-              <p className="text-slate-500 font-medium mt-1 text-lg">{user.major} • {user.level}</p>
-              <div className="flex items-center gap-2 text-sm text-slate-400 mt-2 font-medium">
-                <MapPin size={16} />
-                {user.university}
-              </div>
+              {user.major && user.level && (
+                <p className="text-slate-500 font-medium mt-1 text-lg">{user.major} • {user.level}</p>
+              )}
+              {user.university && (
+                <div className="flex items-center gap-2 text-sm text-slate-400 mt-2 font-medium">
+                  <MapPin size={16} />
+                  {user.university}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -502,75 +506,79 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="glass p-8 rounded-3xl border border-white/40 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '150ms' }}>
-          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-              <BookOpen size={16} />
-            </div>
-            Cursus Académique
-          </h3>
-          <div className="flex items-start gap-4 text-slate-600">
-            <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm mt-1">
-              <GraduationCap size={18} />
-            </div>
-            {isEditing ? (
-              <div className="flex-1 space-y-3">
-                <input 
-                  type="text" 
-                  name="university"
-                  value={formData.university}
-                  onChange={handleChange}
-                  placeholder="Université"
-                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                />
-                <input 
-                  type="text" 
-                  name="major"
-                  value={formData.major}
-                  onChange={handleChange}
-                  placeholder="Filière"
-                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                />
-                <select 
-                  name="level"
-                  value={formData.level}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                >
-                  <option value="Licence 1">Licence 1</option>
-                  <option value="Licence 2">Licence 2</option>
-                  <option value="Licence 3">Licence 3</option>
-                  <option value="Master 1">Master 1</option>
-                  <option value="Master 2">Master 2</option>
-                  <option value="Doctorat">Doctorat</option>
-                </select>
-                <input 
-                  type="text" 
-                  name="promotion"
-                  value={formData.promotion}
-                  onChange={handleChange}
-                  placeholder="Promotion (ex: 2024)"
-                  className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                />
+        {(user.role !== 'public' && user.role !== 'company' && user.role !== 'parent') && (
+          <div className="glass p-8 rounded-3xl border border-white/40 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '150ms' }}>
+            <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                <BookOpen size={16} />
               </div>
-            ) : (
-              <div className="bg-white/40 p-4 rounded-2xl border border-white/50 w-full">
-                <p className="text-base font-bold text-slate-900">{user.major}</p>
-                <p className="text-sm text-slate-500 font-medium mt-1">{user.university}</p>
-                <div className="flex items-center gap-2 mt-3">
-                  <div className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg uppercase tracking-wider">
-                    {user.level}
-                  </div>
-                  {user.promotion && (
-                    <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg uppercase tracking-wider">
-                      Promotion {user.promotion}
-                    </div>
-                  )}
+              Cursus Académique
+            </h3>
+            <div className="flex items-start gap-4 text-slate-600">
+              <div className="w-10 h-10 rounded-2xl bg-white/60 border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm mt-1">
+                <GraduationCap size={18} />
+              </div>
+              {isEditing ? (
+                <div className="flex-1 space-y-3">
+                  <input 
+                    type="text" 
+                    name="university"
+                    value={formData.university}
+                    onChange={handleChange}
+                    placeholder="Université"
+                    className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
+                  <input 
+                    type="text" 
+                    name="major"
+                    value={formData.major}
+                    onChange={handleChange}
+                    placeholder="Filière"
+                    className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
+                  <select 
+                    name="level"
+                    value={formData.level}
+                    onChange={handleChange}
+                    className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  >
+                    <option value="Licence 1">Licence 1</option>
+                    <option value="Licence 2">Licence 2</option>
+                    <option value="Licence 3">Licence 3</option>
+                    <option value="Master 1">Master 1</option>
+                    <option value="Master 2">Master 2</option>
+                    <option value="Doctorat">Doctorat</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    name="promotion"
+                    value={formData.promotion}
+                    onChange={handleChange}
+                    placeholder="Promotion (ex: 2024)"
+                    className="w-full p-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  />
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="bg-white/40 p-4 rounded-2xl border border-white/50 w-full">
+                  <p className="text-base font-bold text-slate-900">{user.major || 'Non spécifié'}</p>
+                  <p className="text-sm text-slate-500 font-medium mt-1">{user.university || 'Non spécifiée'}</p>
+                  <div className="flex items-center gap-2 mt-3">
+                    {user.level && (
+                      <div className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg uppercase tracking-wider">
+                        {user.level}
+                      </div>
+                    )}
+                    {user.promotion && (
+                      <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg uppercase tracking-wider">
+                        Promotion {user.promotion}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* CV Information Section */}
