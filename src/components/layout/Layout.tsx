@@ -47,7 +47,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'teacher', 'public'] },
     { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['admin', 'teacher', 'company', 'institution'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'teacher', 'public'] },
-    { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['admin', 'teacher', 'alumni', 'company', 'public'] },
+    { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'teacher', 'alumni', 'company', 'public'] },
     { icon: Users, label: 'Communauté', to: '/community', roles: ['student', 'admin', 'teacher', 'alumni'] },
     { icon: Bike, label: 'MotoRide', to: '/motoride', roles: ['admin', 'teacher', 'alumni'] },
     { icon: Calendar, label: 'Événements', to: '/events' },

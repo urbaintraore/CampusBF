@@ -166,6 +166,24 @@ if (!admin.apps.length) {
 
 app.get('/api/admin/users-stats', async (req, res) => {
   try {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.warn("Service account not provided. Returning fallback stats.");
+      return res.json({
+        firestoreCount: 0,
+        authCount: 0,
+        discrepancy: 0,
+        roles: {
+          student: 0,
+          tutor: 0,
+          teacher: 0,
+          admin: 1,
+          company: 0,
+          institution: 0,
+          public: 0,
+        }
+      });
+    }
+
     const db = admin.firestore();
     
     // 1. Get total count in Firestore
@@ -226,6 +244,11 @@ app.get('/api/admin/users-stats', async (req, res) => {
 
 app.post('/api/admin/users-sync', async (req, res) => {
   try {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.warn("Service account not provided. Ignoring sync.");
+      return res.json({ synchronizedCount: 0 });
+    }
+
     const db = admin.firestore();
     
     // 1. Fetch current users in Firestore (UIDs)
