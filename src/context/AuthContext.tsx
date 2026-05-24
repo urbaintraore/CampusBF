@@ -257,6 +257,11 @@ interface AuthContextType {
   addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  showAuthModal: boolean;
+  setShowAuthModal: (show: boolean) => void;
+  openAuthModal: (callback?: () => void) => void;
+  authModalCallback: (() => void) | null;
+  setAuthModalCallback: (callback: (() => void) | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -298,6 +303,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalCallback, setAuthModalCallback] = useState<(() => void) | null>(null);
+
+  const openAuthModal = (callback?: () => void) => {
+    if (callback) {
+      setAuthModalCallback(() => callback);
+    } else {
+      setAuthModalCallback(null);
+    }
+    setShowAuthModal(true);
+  };
+
   const [firebaseEmail, setFirebaseEmail] = useState<string | null>(null);
   const isSigningUp = React.useRef(false);
 
@@ -2166,7 +2183,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       incrementActivity,
       addTeacherReview,
       isAuthenticated: !!user, 
-      isLoading 
+      isLoading,
+      showAuthModal,
+      setShowAuthModal,
+      openAuthModal,
+      authModalCallback,
+      setAuthModalCallback
     }}>
       {children}
     </AuthContext.Provider>

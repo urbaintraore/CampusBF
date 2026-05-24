@@ -156,10 +156,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {item.label}
               </NavLink>
             ))}
-            <button onClick={logout} className="flex items-center gap-3 p-4 rounded-xl text-red-600 hover:bg-red-50 transition-all mt-4">
-              <LogOut size={20} />
-              Déconnexion
-            </button>
+            {user ? (
+              <button onClick={logout} className="flex items-center gap-3 p-4 rounded-xl text-red-600 hover:bg-red-50 transition-all mt-4 w-full">
+                <LogOut size={20} />
+                Déconnexion
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2.5 mt-6 pt-6 border-t border-slate-100">
+                <NavLink 
+                  to="/login" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 p-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all text-center text-sm"
+                >
+                  Se connecter
+                </NavLink>
+                <NavLink 
+                  to="/signup" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 p-3.5 border border-slate-200 hover:border-emerald-600 text-slate-700 font-bold rounded-xl transition-all text-center text-sm"
+                >
+                  S'inscrire (Gratuit)
+                </NavLink>
+              </div>
+            )}
           </nav>
         </div>
       )}
@@ -243,24 +262,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-slate-200/60 bg-slate-50/50 space-y-2">
-          <NavLink to="/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-slate-200 transition-all group">
-            <div className="relative">
-              <img src={user?.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full bg-slate-200 object-cover ring-2 ring-white shadow-sm" />
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+        <div className="p-4 border-t border-slate-200/60 bg-slate-50/50">
+          {user ? (
+            <div className="space-y-2">
+              <NavLink to="/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm hover:ring-1 hover:ring-slate-200 transition-all group">
+                <div className="relative">
+                  <img src={user?.avatarUrl} alt="Profile" className="w-10 h-10 rounded-full bg-slate-200 object-cover ring-2 ring-white shadow-sm" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-[11px] text-slate-500 truncate font-medium">{user?.university}</p>
+                </div>
+              </NavLink>
+              <button 
+                onClick={logout}
+                className="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all group"
+              >
+                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
+                <span className="text-sm font-semibold">Déconnexion</span>
+              </button>
             </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">{user?.firstName} {user?.lastName}</p>
-              <p className="text-[11px] text-slate-500 truncate font-medium">{user?.university}</p>
+          ) : (
+            <div className="space-y-2 p-1.5">
+              <NavLink 
+                to="/login" 
+                className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-600/10 active:scale-95 transition-all text-center"
+              >
+                Se connecter
+              </NavLink>
+              <NavLink 
+                to="/signup" 
+                className="w-full flex items-center justify-center gap-2 py-3 border-2 border-slate-200 hover:border-emerald-600 hover:text-emerald-700 text-slate-700 font-bold text-sm rounded-xl active:scale-95 transition-all text-center"
+              >
+                Créer un compte
+              </NavLink>
             </div>
-          </NavLink>
-          <button 
-            onClick={logout}
-            className="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all group"
-          >
-            <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
-            <span className="text-sm font-semibold">Déconnexion</span>
-          </button>
+          )}
         </div>
       </aside>
 
@@ -279,28 +317,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50 no-print">
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2.5 bg-white rounded-full border border-slate-200/60 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 hover:shadow-md"
-            >
-              <Bell size={20} />
-              {unreadNotifications > 0 && (
-                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
+        {user && (
+          <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50 no-print">
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2.5 bg-white rounded-full border border-slate-200/60 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 hover:shadow-md"
+              >
+                <Bell size={20} />
+                {unreadNotifications > 0 && (
+                  <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                  <NotificationsCenter onClose={() => setShowNotifications(false)} />
+                </div>
               )}
-            </button>
-
-            {/* Notification Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                <NotificationsCenter onClose={() => setShowNotifications(false)} />
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="max-w-6xl mx-auto p-4 md:p-8 md:pt-0">
+        <div className={cn("max-w-6xl mx-auto p-4 md:p-8", user ? "md:pt-0" : "md:pt-8")}>
           {children}
         </div>
       </main>

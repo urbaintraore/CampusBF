@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Loader2, GraduationCap, Building2, Library, User } from 'lucide-react';
@@ -14,6 +14,7 @@ export default function Signup() {
   const [otpCode, setOtpCode] = useState('');
   const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState('');
   const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], []);
 
@@ -125,11 +126,12 @@ export default function Signup() {
                (lowerEmail.includes('urbain') && lowerEmail.includes('traore'));
       };
 
+      const from = (location.state as any)?.from?.pathname || '/';
       await signup(signupData);
       if (isAdminEmail(formData.email)) {
         navigate('/admin');
       } else {
-        navigate('/');
+        navigate(from, { replace: true });
       }
     } catch (err: any) {
       console.error("Signup error:", err.code, err.message);

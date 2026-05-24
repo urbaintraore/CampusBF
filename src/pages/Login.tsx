@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -10,6 +10,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,10 +41,12 @@ export default function Login() {
                lowerEmail === 'admin@campusbf.bf';
       };
 
+      const from = (location.state as any)?.from?.pathname || '/';
+
       if (adminEmailCheck(email)) {
         navigate('/admin');
       } else {
-        navigate('/');
+        navigate(from, { replace: true });
       }
     } catch (err: any) {
       console.error("Login component caught error:", err);

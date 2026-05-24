@@ -195,7 +195,7 @@ export default function AdminDashboard() {
   const [printOrders, setPrintOrders] = useState<any[]>([]);
   const [loadingPrintOrders, setLoadingPrintOrders] = useState(false);
 
-  const [syncStats, setSyncStats] = useState<{ authCount: number; firestoreCount: number; discrepancy: number; roles?: { student: number; tutor: number; teacher: number; admin: number; company: number; institution: number } } | null>(null);
+  const [syncStats, setSyncStats] = useState<{ authCount: number; firestoreCount: number; discrepancy: number; roles?: { student: number; tutor: number; teacher: number; admin: number; company: number; institution: number; public?: number } } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [realtimeDownloads, setRealtimeDownloads] = useState<any[]>([]);
 

@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
 import multer from 'multer';
+import fs from 'fs';
 import { createWorker } from 'tesseract.js';
 import { aiContestService } from './src/services/aiContestService';
 import { notifyUsersByFilter, sendNotificationToUser } from './src/services/adminNotificationService';
@@ -143,6 +144,17 @@ app.post('/api/notify/reply', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+// Load config from firebase-applet-config.json
+let firebaseConfig: any = null;
+try {
+  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  }
+} catch (e) {
+  console.error('[Server] Failed to load firebase-applet-config.json:', e);
+}
+
 // Initialise Firebase Admin
 if (!admin.apps.length) {
   try {
@@ -155,6 +167,11 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(serviceAccount)
       });
       console.log('[Server] Firebase Admin initialisé via FIREBASE_SERVICE_ACCOUNT');
+    } else if (firebaseConfig && firebaseConfig.projectId) {
+      admin.initializeApp({
+        projectId: firebaseConfig.projectId
+      });
+      console.log(`[Server] Firebase Admin initialisé via default credentials pour le projet: ${firebaseConfig.projectId}`);
     } else {
       admin.initializeApp();
       console.log('[Server] Firebase Admin initialisé via default credentials');
@@ -164,10 +181,19 @@ if (!admin.apps.length) {
   }
 }
 
+// Helper to get correctly routed Firestore database
+function getFirestoreDb() {
+  if (firebaseConfig && firebaseConfig.firestoreDatabaseId) {
+    return admin.firestore(firebaseConfig.firestoreDatabaseId);
+  }
+  return admin.firestore();
+}
+
 app.get('/api/admin/users-stats', async (req, res) => {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-      console.warn("Service account not provided. Returning fallback stats.");
+    // Check either service account OR dynamic app config exists
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT && (!firebaseConfig || !firebaseConfig.projectId)) {
+      console.warn("Neither service account nor applet config provided. Returning fallback stats.");
       return res.json({
         firestoreCount: 0,
         authCount: 0,
@@ -184,7 +210,7 @@ app.get('/api/admin/users-stats', async (req, res) => {
       });
     }
 
-    const db = admin.firestore();
+    const db = getFirestoreDb();
     
     // 1. Get total count in Firestore
     const usersSnapshot = await db.collection('users').count().get();
@@ -244,12 +270,12 @@ app.get('/api/admin/users-stats', async (req, res) => {
 
 app.post('/api/admin/users-sync', async (req, res) => {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-      console.warn("Service account not provided. Ignoring sync.");
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT && (!firebaseConfig || !firebaseConfig.projectId)) {
+      console.warn("Neither service account nor applet config provided. Ignoring sync.");
       return res.json({ synchronizedCount: 0 });
     }
 
-    const db = admin.firestore();
+    const db = getFirestoreDb();
     
     // 1. Fetch current users in Firestore (UIDs)
     const usersSnapshot = await db.collection('users').select().get();

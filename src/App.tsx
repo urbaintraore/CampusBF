@@ -28,6 +28,7 @@ import AlumniMentorship from './pages/AlumniMentorship';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Chatbot from './components/Chatbot';
+import AuthModal from './components/AuthModal';
 import Features from './pages/Features';
 import Messages from './pages/Messages';
 import FindClassmates from './pages/FindClassmates';
@@ -115,6 +116,36 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
+  // Force profile completion ONLY for logged-in students (not guests)
+  if (isAuthenticated && user?.role === 'student' && !isAdmin) {
+    const isProfileComplete = 
+      !!user.firstName && 
+      !!user.lastName && 
+      !!user.phone &&
+      !!user.university && 
+      !!user.major && 
+      !!user.level;
+    
+    if (!isProfileComplete && location.pathname !== '/profile') {
+      return <Navigate to="/profile" state={{ forceComplete: true }} replace />;
+    }
+  }
+
+  return <Layout>{children}</Layout>;
+}
+
 import { Toaster as SonnerToaster } from 'sonner';
 import Rankings from './pages/Ranking';
 
@@ -128,9 +159,9 @@ export default function App() {
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           
           <Route path="/" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Dashboard />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/ranking" element={
             <ProtectedRoute>
@@ -153,9 +184,9 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/tutors" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Tutors />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/quizzes" element={
             <ProtectedRoute>
@@ -163,9 +194,9 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/guide" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <UserGuide />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/cv-generator" element={
             <ProtectedRoute>
@@ -173,24 +204,24 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/deals" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Deals />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/colocation" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Colocation />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/marketplace" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Marketplace />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/internships" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Internships />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/scholarships" element={
             <ProtectedRoute>
@@ -203,24 +234,24 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/motoride" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <MotoRide />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/events" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Events />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/orientation" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Orientation />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/teachers" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <TeachersDirectory />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/notifications" element={
             <ProtectedRoute>
@@ -233,9 +264,9 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/features" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Features />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           
           <Route path="/portfolio" element={
@@ -254,9 +285,9 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/trainings" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Trainings />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/contests" element={
             <ProtectedRoute>
@@ -270,30 +301,31 @@ export default function App() {
           } />
           
           <Route path="/enterprise-portal" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <EnterprisePortal />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/university-portal" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <UniversityPortal />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/parent-portal" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <ParentPortal />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
           <Route path="/videos" element={<Navigate to="/videos-communautaires" replace />} />
           <Route path="/shorts" element={<Navigate to="/videos-communautaires" replace />} />
           <Route path="/campus-short" element={<Navigate to="/videos-communautaires" replace />} />
           <Route path="/videos-communautaires" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <CommunityVideos />
-            </ProtectedRoute>
+            </GuestRoute>
           } />
         </Routes>
         <Chatbot />
+        <AuthModal />
         <SonnerToaster position="top-right" richColors closeButton />
       </ThemeProvider>
     </AuthProvider>

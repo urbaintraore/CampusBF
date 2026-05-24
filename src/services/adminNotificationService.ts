@@ -1,6 +1,19 @@
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import fs from 'fs';
+import path from 'path';
+
+// read config
+let firebaseConfig: any = null;
+try {
+  const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  }
+} catch (e) {
+  console.error('Failed to load firebase-applet-config.json in adminNotificationService:', e);
+}
 
 // Initialisation de Firebase Admin
 // Les secrets doivent être configurés dans les variables d'environnement
@@ -21,6 +34,11 @@ function ensureInitialized() {
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount)
         });
+      } else if (firebaseConfig && firebaseConfig.projectId) {
+        admin.initializeApp({
+          projectId: firebaseConfig.projectId
+        });
+        console.log(`Firebase Admin initialisé via default credentials pour le projet: ${firebaseConfig.projectId}`);
       } else {
         // Fallback pour le développement local ou si configuré via ADC
         // En environnement de prod sandboxed sans ADC, ceci peut échouer
@@ -38,7 +56,9 @@ function ensureInitialized() {
   
   if (isInitialized) {
     try {
-      db = getFirestore();
+      db = firebaseConfig && firebaseConfig.firestoreDatabaseId 
+        ? admin.firestore(firebaseConfig.firestoreDatabaseId)
+        : getFirestore();
       messaging = getMessaging();
     } catch (e) {
       console.error('Erreur lors de la récupération des services Firebase Admin:', e);
