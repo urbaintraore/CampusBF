@@ -6,7 +6,7 @@ import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import MotoMap from '@/components/MotoMap';
 
 export default function MotoRide() {
-  const { user, addMotoRide, motoRides, reserveMotoRide, logActivity, reportRideUser, reviewRide, updateRideStatus, users, incrementActivity } = useAuth();
+  const { user, addMotoRide, motoRides, reserveMotoRide, logActivity, reportRideUser, reviewRide, updateRideStatus, users, incrementActivity, openAuthModal } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'offer'>('search');
   
   // Form states
@@ -174,9 +174,15 @@ export default function MotoRide() {
           Chercher un trajet
         </button>
         <button
-          onClick={() => setActiveTab('offer')}
+          onClick={() => {
+            if (!user) {
+              openAuthModal();
+            } else {
+              setActiveTab('offer');
+            }
+          }}
           className={cn(
-            "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all",
+            "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer",
             activeTab === 'offer' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
           )}
         >
@@ -450,6 +456,10 @@ export default function MotoRide() {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (!user) {
+                          openAuthModal();
+                          return;
+                        }
                         if (isRideExpired(ride.date)) {
                           alert("Ce trajet a déjà expiré.");
                         } else {
@@ -463,7 +473,7 @@ export default function MotoRide() {
                           }
                         }
                       }}
-                      className="flex-1 py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors"
+                      className="flex-1 py-2.5 bg-orange-50 text-orange-700 font-bold rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors cursor-pointer"
                     >
                       Réserver
                     </button>

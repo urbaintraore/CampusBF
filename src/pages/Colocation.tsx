@@ -36,7 +36,7 @@ const GENDERS = [
 ];
 
 export default function ColocationPage() {
-  const { user, colocations, createColocation, sendColocationRequest } = useAuth();
+  const { user, colocations, createColocation, sendColocationRequest, openAuthModal } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -95,8 +95,14 @@ export default function ColocationPage() {
           <p className="text-slate-500 mt-1">Trouvez vos futurs colocataires parmi la communauté étudiante.</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+          onClick={() => {
+            if (!user) {
+              openAuthModal();
+            } else {
+              setShowAddModal(true);
+            }
+          }}
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 cursor-pointer"
         >
           <Plus size={20} />
           Publier une annonce
@@ -255,10 +261,14 @@ export default function ColocationPage() {
                 </div>
                 <button 
                   onClick={() => {
-                    setSelectedColoc(coloc);
-                    setShowRequestModal(true);
+                    if (!user) {
+                      openAuthModal();
+                    } else {
+                      setSelectedColoc(coloc);
+                      setShowRequestModal(true);
+                    }
                   }}
-                  className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   Postuler
                 </button>

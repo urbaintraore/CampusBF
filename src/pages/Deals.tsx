@@ -39,7 +39,7 @@ const CATEGORIES = [
 ];
 
 export default function Deals() {
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -295,8 +295,14 @@ export default function Deals() {
               </p>
             </div>
             <button 
-              onClick={() => setIsSuggestModalOpen(true)}
-              className="px-6 py-3.5 bg-white text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-all flex items-center gap-2 shadow-xl shrink-0 text-sm"
+              onClick={() => {
+                if (!user) {
+                  openAuthModal();
+                } else {
+                  setIsSuggestModalOpen(true);
+                }
+              }}
+              className="px-6 py-3.5 bg-white text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-all flex items-center gap-2 shadow-xl shrink-0 text-sm cursor-pointer"
             >
               Suggérer une offre
               <ChevronRight size={18} />
