@@ -67,20 +67,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   console.log("Layout Navigation State:", { isAdmin, userRole: user?.role, userId: user?.id });
   
   const navItems = allNavItems.filter(item => {
-    // If no roles required, show to everyone
-    if (!item.roles) return true;
-    
-    // Admin always sees everything that has 'admin' role or if they are super admin
+    // If user is Admin, they see everything they have permission for or portals
     if (isAdmin) {
+      if (!item.roles) return true;
       if (item.roles.includes('admin')) return true;
-      // Also show company/institution/parent portals to admins for management
       if (item.to === '/admin' || item.to === '/enterprise-portal' || item.to === '/university-portal' || item.to === '/parent-portal') return true;
     }
     
-    // Check if user has the required role
-    if (user && item.roles.includes(user.role)) return true;
+    // If user is a visitor (guest / non-connected)
+    if (!user) {
+      // Exclude admin dashboard and partner portals
+      if (
+        item.to === '/admin' || 
+        item.to === '/enterprise-portal' || 
+        item.to === '/university-portal' || 
+        item.to === '/parent-portal' || 
+        item.to === '/teachers' || 
+        item.to === '/portfolio'
+      ) {
+        return false;
+      }
+      return true;
+    }
     
-    return false;
+    // If logged in, check normal roles filter
+    if (!item.roles) return true;
+    return item.roles.includes(user.role);
   });
   console.log("Computed NavItems length:", navItems.length);
 

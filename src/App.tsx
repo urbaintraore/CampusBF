@@ -40,6 +40,7 @@ import EnterprisePortal from './pages/EnterprisePortal';
 import UniversityPortal from './pages/UniversityPortal';
 import ParentPortal from './pages/ParentPortal';
 import CommunityVideos from './pages/CommunityVideos';
+import LockedSection from './components/LockedSection';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
@@ -54,7 +55,27 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    let title = "Fonctionnalité Membre";
+    if (location.pathname === '/ranking') title = "Classement des Universités";
+    else if (location.pathname === '/documents') title = "Partage de Documents";
+    else if (location.pathname === '/community') title = "Communauté Étudiante";
+    else if (location.pathname === '/quizzes') title = "Révisions & Quiz";
+    else if (location.pathname === '/public-service-contests') title = "Concours Fonction Publique 🇧🇫";
+    else if (location.pathname === '/scholarships') title = "Bourses d'Études & Opportunités";
+    else if (location.pathname === '/contests') title = "Challenges & Concours";
+    else if (location.pathname === '/messages') title = "Messagerie & Conversations";
+    else if (location.pathname === '/profile') title = "Mon Profil";
+    else if (location.pathname === '/cv-generator') title = "Générateur de CV";
+    else if (location.pathname === '/portfolio') title = "Portfolio Professionnel";
+    else if (location.pathname === '/mentorship') title = "Mentorat de Carrière";
+    else if (location.pathname === '/find-classmates') title = "Recherche de Camarades de Classe";
+    else if (location.pathname === '/notifications') title = "Centre de Notifications";
+    
+    return (
+      <Layout>
+        <LockedSection title={title} />
+      </Layout>
+    );
   }
 
   // Force profile completion for students (who are not admins)

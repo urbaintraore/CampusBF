@@ -13,7 +13,7 @@ import { analyzeComment } from '@/services/geminiService';
 import { useAuth } from '@/context/AuthContext';
 
 export const CommunityVideoPlayer = ({ video: initialVideo }: { video: CommunityVideo }) => {
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const [video, setVideo] = useState<CommunityVideo>(initialVideo);
   const [liked, setLiked] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -82,6 +82,7 @@ export const CommunityVideoPlayer = ({ video: initialVideo }: { video: Community
   const handleLike = async () => {
     if (!user) {
       toast.error('Connectez-vous pour aimer cette vidéo');
+      openAuthModal();
       return;
     }
     // Optimistic update
@@ -98,6 +99,7 @@ export const CommunityVideoPlayer = ({ video: initialVideo }: { video: Community
     e.preventDefault();
     if (!user) {
       toast.error('Connectez-vous pour commenter');
+      openAuthModal();
       return;
     }
     const cleanComment = newComment.trim();
