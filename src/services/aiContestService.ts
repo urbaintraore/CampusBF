@@ -249,7 +249,35 @@ Renvoie un JSON conforme au schema exigé.`;
   /**
    * Processes raw text (such as file OCR or PDF parse output) with Gemini to structure a complete contest
    */
-  async processTextWithAi(text: string): Promise<PSContest> {
+  async processTextWithAi(text: string, category?: string, level?: string): Promise<PSContest> {
+    const isPsychotechnique = category === 'tests_psychotechniques';
+    
+    let psychotechInstruction = '';
+    if (isPsychotechnique) {
+      psychotechInstruction = `
+--- CONSIGNES SPÉCIFIQUES POUR LES TESTS PSYCHOTECHNIQUES ---
+Tu structures un véritable examen de Tests Psychotechniques (raisonnement logique, numérique, verbal, spatial).
+Ce genre de test s'appuie TOUJOURS sur des grilles de codage globales (substitution) ou des consignes d'opérateurs.
+
+1. INTÈGRES TOUJOURS LA GRILLE DE CODAGE OU LA CONSIGNE DANS L'ÉNONCÉ DE CHAQUE QUESTION !
+   Chaque question générée dans le tableau 'questions' doit être ENTIÈREMENT AUTONOME ET SOLUBLE ! 
+   Pour cela, son texte 'question' doit impérativement contenir :
+   - La consigne globale (ex: "Trouvez le mot codé sachant que B1Q1V2S2C1B2 correspond à FLEURS d'après la grille ci-dessous :" ou "Remplacez les points d'interrogation par des opérateurs (+ ; - ; / ; *), sachant que chaque signe doit être utilisé une seule fois :")
+   - La matrice ou grille de décodage dessinée sous forme de tableau Markdown (par exemple avec la ligne d'en-tête [A | B | C...] et les lignes d'indices [1 | V | H...] comme trouvé dans le texte brut). N'oublie aucune colonne !
+   - L'item précis de la question à décoder ou résoudre en gras (ex: "Décodez le mot : **V1T2J1K2C2W1V2**", ou "Résolvez l'équation : **32 ? 28 ? 10 ? 2 ? 40 = 1000**").
+   SANS CETTE GRILLE ET CETTE CONSIGNE INTÉGRÉES DANS CHAQUE QUESTION, L'ÉTUDIANT NE PEUT PAS LÉGITIMEMENT TROUVER LA RÉPONSE ! C'EST UNE RÈGLE CRUCIALE DE CONCEPTION !
+
+2. RÉSOUDRE LES QUESTIONS DE MANIÈRE RIGOUREUSE :
+   - Fais le travail de décodage ou de calcul mathématique minutieux pour tester chaque option.
+   - Par exemple, pour les décodages comme B1Q1V2S2C1B2 ou V1T2J1K2C2W1V2, localise l'intersection de chaque lettre-numéro (ex: V1 -> 'A', T2 -> 'N', etc.) et reconstitue le mot exact.
+   - Pour les opérateurs mathématiques (ex: 92 ? 42 ? 10 ? 3 ? 50 = 1000), teste si une des combinaisons d'opérateurs proposées (ex: "- + / *") permet, en respectant la priorité des opérations ou le sens de lecture de gauche à droite, de parvenir à 1000.
+   - Assure-toi que la 'bonne_reponse' pointe exactement vers l'index à base 0 de l'option de QCM qui donne le bon mot ou les bons opérateurs.
+
+3. EXPLIQUE LE CHEMINEMENT DU CALCUL :
+   Le champ 'explication' doit détailler pas à pas la solution de façon très abrégée, claire et didactique (ex: "V1=A, T2=N, J1=E, K2=M, C2=O, W1=N, V2=E correspond à ANÉMONE" ou "(92 - 42) * 10 = 500").
+`;
+    }
+
     const prompt = `Tu es un expert en conception de concours d'intégration à la fonction publique du Burkina Faso.
 Prends le texte brut suivant, issu d'un traitement OCR ou d'une extraction de sujet de concours (PDF ou Image).
 Analyse-le pour en extraire l'épreuve de QCM de manière structurée.
@@ -259,13 +287,14 @@ CONSIGNES DE RIGUEUR ET DE FIDÉLITÉ ABSOLUE :
 2. Il est STRICTEMENT INTERDIT d'inventer des questions imagées ou d'ajouter de nouvelles questions qui ne figurent pas dans le texte brut.
 3. Si le texte brut contient des questions, extrait-les exactement telles qu'elles sont formulées (tu peux corriger l'orthographe ou assembler les mots coupés par l'OCR, mais n'en invente aucune).
 4. Si aucune question claire n'est détectée dans le texte brut, renvoie une liste de questions vide dans le JSON plutôt que d'en inventer.
+${psychotechInstruction}
 
 Directives de structuration :
 - Détecte le titre de l'épreuve ou génères-en un représentatif d'après les mots clés du sujet d'origine.
 - Détecte la description ou l'introduction (cadre législatif, ministère concerné, ou synthèse adaptée au contexte burkinabè).
 - EXTRAIS 100% DES QUESTIONS DÉTECTÉES (QCM ou Vrai/Faux) sans en omettre une seule.
 - Identifie la bonne réponse pour chaque question (index à base 0 de l'option correcte). Si le sujet d'origine n'indique pas la bonne réponse, utilise ton expertise burkinabè en droit, histoire, géo, administration et culture générale pour répondre de façon 100% correcte.
-- Rédige une explication pédagogique ULTRA-BRÈVE ET CONCISE (1 seule phrase simple, maximum 15 mots) pour chaque question. C'est CRUCIAL de respecter cette brièveté pour éviter de dépasser la limite de jetons (token limit) et permettre d'inclure la TOTALITÉ de l'épreuve.
+- Rédige une explication pédagogique ULTRA-BRÈVE ET CONCISE (1 seule phrase simple, maximum 25 mots) pour chaque question. C'est CRUCIAL de respecter cette brièveté pour éviter de dépasser la limite de jetons (token limit) et permettre d'inclure la TOTALITÉ de l'épreuve.
 
 Texte brut extrait :
 """
@@ -275,7 +304,7 @@ ${text}
 
     const systemInstruction = `Tu es l'éminent concepteur de concours d'intégration de l'École Nationale d'Administration et de la Magistrature (ENAM) du Burkina Faso.
 Ta priorité absolue est d'extraire fidèlement la TOTALITÉ (100%) des questions présentes dans l'épreuve brute sous format JSON, sans jamais en omettre et sans JAMAIS en inventer de nouvelles de toutes pièces.
-Pour que toutes les questions puissent rentrer dans l'objet réponse sans troncature, écris obligatoirement des explications ultra-courtes de maximum 15 mots par question.`;
+Pour que toutes les questions puissent rentrer dans l'objet réponse sans troncature, écris obligatoirement des explications ultra-courtes de maximum 25 mots par question.`;
 
     try {
       const ai = getAiClient();

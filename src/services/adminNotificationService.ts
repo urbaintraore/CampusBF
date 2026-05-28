@@ -57,7 +57,7 @@ function ensureInitialized() {
   if (isInitialized) {
     try {
       db = firebaseConfig && firebaseConfig.firestoreDatabaseId 
-        ? admin.firestore(firebaseConfig.firestoreDatabaseId)
+        ? getFirestore(firebaseConfig.firestoreDatabaseId)
         : getFirestore();
       messaging = getMessaging();
     } catch (e) {

@@ -87,7 +87,7 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && (
         // Action: Profile Update (Immutable role/status for user)
-        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups', 'forceUnlocked', 'forceUnlockReason', 'phone', 'city', 'neighborhood', 'ine', 'skills', 'notificationPreferences', 'bio', 'experiences'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'recentDownloads', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups', 'forceUnlocked', 'forceUnlockReason', 'phone', 'city', 'neighborhood', 'ine', 'skills', 'notificationPreferences', 'bio', 'experiences'])
       ) || isAdmin();
       allow delete: if isAdmin();
     }

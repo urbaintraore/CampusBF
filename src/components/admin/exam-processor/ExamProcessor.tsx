@@ -89,6 +89,8 @@ export function ExamProcessor() {
       
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('category', category);
+      formData.append('level', level);
       
       setProcessingStep('ocr');
       setProgress(40);
@@ -118,7 +120,11 @@ export function ExamProcessor() {
       const aiResp = await fetch('/api/public-service/process-contest-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: extractedText }),
+        body: JSON.stringify({ 
+          text: extractedText,
+          category,
+          level
+        }),
       });
 
       if (!aiResp.ok) {

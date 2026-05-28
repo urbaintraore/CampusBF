@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 import multer from 'multer';
 import fs from 'fs';
 import { createWorker } from 'tesseract.js';
@@ -58,13 +59,13 @@ app.post('/api/public-service/verify-contest', async (req, res) => {
   }
 });
 
-async function extractTextFromFile(buffer: Buffer, originalname: string, mimetype: string): Promise<string> {
+async function extractTextFromFile(buffer: Buffer, originalname: string, mimetype: string, category?: string): Promise<string> {
   const fileExt = originalname.split('.').pop()?.toLowerCase();
   
   // 1. Try Gemini High-Fidelity OCR first if API key is configured
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey !== 'undefined') {
-    console.log(`[OCR] Using Gemini 3.5 Flash for high-precision extraction: "${originalname}" (${mimetype})`);
+    console.log(`[OCR] Using Gemini 3.5 Flash for high-precision extraction: "${originalname}" (${mimetype}), Category: "${category || 'none'}"`);
     try {
       const ai = new GoogleGenAI({
         apiKey: apiKey,
@@ -94,11 +95,24 @@ async function extractTextFromFile(buffer: Buffer, originalname: string, mimetyp
         }
       };
 
+      let promptText = "Copie et extrais l'INTEGRALITE TEXTUELLE de ce sujet de concours burkinabè. Tu dois transcrire toutes les questions de l'épreuve (QCM, Vrai/Faux), les propositions de réponses possibles, ainsi que les introductions de l'épreuve. Ne résume rien, ne commente rien, et n'invente aucune question.";
+      
+      if (category === 'tests_psychotechniques') {
+        promptText = `Tu extrais le contenu d'un sujet de concours de la catégorie "Tests Psychotechniques".
+Ce genre d'épreuve est éminemment visuel et spatial. Il contient des consignes spéciales, des grilles de substitution de lettres/chiffres (matrices de décodage), des tableaux d'association, ou des équations mathématiques avec des opérateurs ou signes à remplacer.
+
+RÈGLES CRUCIALES POUR LES GRILLES ET LES MATHS :
+1. Repère TRÈS CLAIREMENT les tableaux ou grilles de substitution (par exemple, une ligne d'en-tête [A, B, C...] associée à des lignes d'indices [1, 2...]). Transcris-les TRÈS PRÉCISÉMENT sous forme de tableau Markdown aligné (avec les en-têtes et les lignes correspondantes bien alignées par colonne) ou décris exhaustivement les correspondances (ex: 'Grille de décodage complète : A1=V, A2=I, B1=H, B2=R, ...').
+2. Transcris intégralement les consignes (comme 'Consigne 1: Trouvez les mots codés...', 'Consigne 2: Remplacez les points d'interrogation par des opérateurs...').
+3. Conserve intacte la formulation des équations avec points d'interrogation (ex: '32 ? 28 ? 10 ? 2 ? 40 = 1000' ou '92 ? 42 ? 10 ? 3 ? 50 = 1000') et l'ensemble de leurs options d'opérateurs proposées (ex: 'a) - + * /').
+4. Ne résume aucun texte, n'ajoute pas de commentaires, garde une fidélité absolue aux caractères de l'image.`;
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-3.5-flash',
         contents: [
           filePart,
-          { text: "Copie et extrais l'INTEGRALITE TEXTUELLE de ce sujet de concours burkinabè. Tu dois transcrire toutes les questions de l'épreuve (QCM, Vrai/Faux), les propositions de réponses possibles, ainsi que les introductions de l'épreuve. Ne résume rien, ne commente rien, et n'invente aucune question." }
+          { text: promptText }
         ]
       });
 
@@ -171,10 +185,11 @@ const handleOcrRequest = async (req: express.Request, res: express.Response) => 
   }
 
   const { originalname, size, mimetype } = req.file;
-  console.log(`[OCR] Received file: "${originalname}" (Size: ${size} bytes, Type: "${mimetype}")`);
+  const { category } = req.body;
+  console.log(`[OCR] Received file: "${originalname}" (Size: ${size} bytes, Type: "${mimetype}"), Category: "${category || 'none'}"`);
 
   try {
-    const text = await extractTextFromFile(req.file.buffer, originalname, mimetype);
+    const text = await extractTextFromFile(req.file.buffer, originalname, mimetype, category);
     
     if (!text || text.trim().length === 0) {
       console.warn('[OCR] Extraction returned empty text.');
@@ -193,14 +208,14 @@ app.post('/api/ocr', upload.single('file'), handleOcrRequest);
 app.post('/backend/ocr', upload.single('file'), handleOcrRequest);
 
 app.post('/api/public-service/process-contest-text', async (req, res) => {
-  const { text } = req.body;
-  console.log(`[API] Start structured contest text processing. Text length: ${text?.length || 0}`);
+  const { text, category, level } = req.body;
+  console.log(`[API] Start structured contest text processing. Text length: ${text?.length || 0}, Category: "${category || 'none'}", Level: "${level || 'none'}"`);
   if (!text || text.trim().length === 0) {
     return res.status(400).json({ error: 'No text provided for processing' });
   }
 
   try {
-    const contestResult = await aiContestService.processTextWithAi(text);
+    const contestResult = await aiContestService.processTextWithAi(text, category, level);
     console.log(`[API] Structured contest successfully generated by Gemini: "${contestResult.titre}"`);
     res.json(contestResult);
   } catch (err: any) {
@@ -318,9 +333,9 @@ if (!admin.apps.length) {
 // Helper to get correctly routed Firestore database
 function getFirestoreDb() {
   if (firebaseConfig && firebaseConfig.firestoreDatabaseId) {
-    return admin.firestore(firebaseConfig.firestoreDatabaseId);
+    return getFirestore(firebaseConfig.firestoreDatabaseId);
   }
-  return admin.firestore();
+  return getFirestore();
 }
 
 app.get('/api/admin/users-stats', async (req, res) => {
