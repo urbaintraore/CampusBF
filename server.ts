@@ -8,6 +8,10 @@ import admin from 'firebase-admin';
 import multer from 'multer';
 import fs from 'fs';
 import { createWorker } from 'tesseract.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
+import { GoogleGenAI } from '@google/genai';
 import { aiContestService } from './src/services/aiContestService';
 import { notifyUsersByFilter, sendNotificationToUser } from './src/services/adminNotificationService';
 
@@ -54,24 +58,154 @@ app.post('/api/public-service/verify-contest', async (req, res) => {
   }
 });
 
-app.post('/backend/ocr', upload.single('file'), async (req, res) => {
-  console.log('Received /backend/ocr request');
-  if (!req.file) {
-      console.log('No file in request');
-      return res.status(400).json({ error: 'No file uploaded' });
+async function extractTextFromFile(buffer: Buffer, originalname: string, mimetype: string): Promise<string> {
+  const fileExt = originalname.split('.').pop()?.toLowerCase();
+  
+  // 1. Try Gemini High-Fidelity OCR first if API key is configured
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey !== 'undefined') {
+    console.log(`[OCR] Using Gemini 3.5 Flash for high-precision extraction: "${originalname}" (${mimetype})`);
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      // Map common image types and pdf
+      let geminiMimetype = mimetype;
+      if (mimetype === 'application/pdf' || fileExt === 'pdf') {
+        geminiMimetype = 'application/pdf';
+      } else if (fileExt === 'png') {
+        geminiMimetype = 'image/png';
+      } else if (['jpg', 'jpeg'].includes(fileExt || '')) {
+        geminiMimetype = 'image/jpeg';
+      } else if (fileExt === 'webp') {
+        geminiMimetype = 'image/webp';
+      }
+
+      const filePart = {
+        inlineData: {
+          mimeType: geminiMimetype,
+          data: buffer.toString('base64')
+        }
+      };
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: [
+          filePart,
+          { text: "Copie et extrais l'INTEGRALITE TEXTUELLE de ce sujet de concours burkinabè. Tu dois transcrire toutes les questions de l'épreuve (QCM, Vrai/Faux), les propositions de réponses possibles, ainsi que les introductions de l'épreuve. Ne résume rien, ne commente rien, et n'invente aucune question." }
+        ]
+      });
+
+      const extractedText = response.text || '';
+      console.log(`[OCR] Gemini extraction completed. Character length: ${extractedText.length}`);
+      if (extractedText.trim().length > 0) {
+        return extractedText;
+      }
+      console.warn('[OCR] Gemini returned empty text, falling back to local processing.');
+    } catch (geminiErr: any) {
+      console.error('[OCR] Gemini extraction failed. Falling back to local library:', geminiErr);
+    }
   }
-  try {
-      console.log('Processing file:', req.file.originalname);
-      const worker = await createWorker('fra', 1, {
+
+  // 2. Fallbacks for local processing if Gemini is not set up or fails
+  if (mimetype === 'application/pdf' || fileExt === 'pdf') {
+    console.log(`[OCR] Local fallback: Launching pdf-parse extraction for "${originalname}"...`);
+    try {
+      let PDFParseClass = pdfParse?.PDFParse || pdfParse;
+      if (!PDFParseClass && typeof pdfParse === 'object' && pdfParse !== null) {
+        if (typeof pdfParse.default === 'object' && pdfParse.default !== null) {
+          PDFParseClass = pdfParse.default.PDFParse || pdfParse.default;
+        } else if (typeof pdfParse.default === 'function') {
+          PDFParseClass = pdfParse.default;
+        }
+      }
+      
+      if (!PDFParseClass || (typeof PDFParseClass !== 'function')) {
+        throw new Error(`Could not find PDFParse constructor class on imported pdf-parse module.`);
+      }
+      
+      const parser = new PDFParseClass({ data: buffer });
+      const textResult = await parser.getText();
+      console.log(`[OCR] pdf-parse extraction complete. Character length: ${textResult?.text?.length || 0}`);
+      return textResult?.text || '';
+    } catch (err: any) {
+      console.error('[OCR] pdf-parse failed:', err);
+      throw new Error(`Failed to extract text from PDF: ${err.message || String(err)}`);
+    }
+  } else if (mimetype.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp'].includes(fileExt || '')) {
+    console.log(`[OCR] Local fallback: Launching Tesseract OCR for "${originalname}"...`);
+    let worker: any = null;
+    try {
+      worker = await createWorker('fra', 1, {
         workerPath: path.resolve(process.cwd(), 'node_modules/tesseract.js/dist/worker.min.js'),
         corePath: path.resolve(process.cwd(), 'node_modules/tesseract.js-core/tesseract-core.wasm.js'),
       });
-    const { data: { text } } = await worker.recognize(req.file.buffer);
-    await worker.terminate();
-    res.json({ text });
-  } catch (error) {
-    console.error('OCR Error detailed:', error);
-    res.status(500).json({ error: 'OCR failed', details: error instanceof Error ? error.message : String(error) });
+      const { data: { text } } = await worker.recognize(buffer);
+      await worker.terminate();
+      worker = null;
+      console.log(`[OCR] Tesseract OCR extraction complete. Character length: ${text?.length || 0}`);
+      return text || '';
+    } catch (err: any) {
+      console.error('[OCR] Tesseract OCR failed:', err);
+      if (worker) {
+        try { await worker.terminate(); } catch (e) {}
+      }
+      throw new Error(`Failed to perform OCR on image: ${err.message || String(err)}`);
+    }
+  } else {
+    throw new Error(`Unsupported file type: mimetype "${mimetype}" with extension "${fileExt}". Only PDF and Image files are supported.`);
+  }
+}
+
+const handleOcrRequest = async (req: express.Request, res: express.Response) => {
+  console.log(`[OCR] Route triggered. Is file attached? ${!!req.file}`);
+  if (!req.file) {
+    console.error('[OCR] Missing file in request');
+    return res.status(400).json({ error: 'No file uploaded. Please attach a PDF or an Image file.' });
+  }
+
+  const { originalname, size, mimetype } = req.file;
+  console.log(`[OCR] Received file: "${originalname}" (Size: ${size} bytes, Type: "${mimetype}")`);
+
+  try {
+    const text = await extractTextFromFile(req.file.buffer, originalname, mimetype);
+    
+    if (!text || text.trim().length === 0) {
+      console.warn('[OCR] Extraction returned empty text.');
+      return res.json({ text: '', warning: 'No readable text could be extracted from this document.' });
+    }
+
+    console.log(`[OCR] Text extraction success! Extracted ${text.length} characters.`);
+    return res.json({ text });
+  } catch (error: any) {
+    console.error('[OCR] Route processing error:', error);
+    return res.status(500).json({ error: 'OCR processing failed', details: error.message || String(error) });
+  }
+};
+
+app.post('/api/ocr', upload.single('file'), handleOcrRequest);
+app.post('/backend/ocr', upload.single('file'), handleOcrRequest);
+
+app.post('/api/public-service/process-contest-text', async (req, res) => {
+  const { text } = req.body;
+  console.log(`[API] Start structured contest text processing. Text length: ${text?.length || 0}`);
+  if (!text || text.trim().length === 0) {
+    return res.status(400).json({ error: 'No text provided for processing' });
+  }
+
+  try {
+    const contestResult = await aiContestService.processTextWithAi(text);
+    console.log(`[API] Structured contest successfully generated by Gemini: "${contestResult.titre}"`);
+    res.json(contestResult);
+  } catch (err: any) {
+    console.error('[API] Gemini structured contest creation failed:', err);
+    res.status(500).json({ error: err.message || 'Structured contest generation failed' });
   }
 });
 app.post('/api/notify/:type', async (req, res) => {

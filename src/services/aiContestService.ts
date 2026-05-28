@@ -244,5 +244,81 @@ Renvoie un JSON conforme au schema exigé.`;
       console.error('[AI Service] Error verifying contest:', error);
       throw error;
     }
+  },
+
+  /**
+   * Processes raw text (such as file OCR or PDF parse output) with Gemini to structure a complete contest
+   */
+  async processTextWithAi(text: string): Promise<PSContest> {
+    const prompt = `Tu es un expert en conception de concours d'intégration à la fonction publique du Burkina Faso.
+Prends le texte brut suivant, issu d'un traitement OCR ou d'une extraction de sujet de concours (PDF ou Image).
+Analyse-le pour en extraire l'épreuve de QCM de manière structurée.
+
+CONSIGNES DE RIGUEUR ET DE FIDÉLITÉ ABSOLUE :
+1. Tu dois UNIQUEMENT extraire les questions réelles présentes dans le texte brut fourni ci-dessous.
+2. Il est STRICTEMENT INTERDIT d'inventer des questions imagées ou d'ajouter de nouvelles questions qui ne figurent pas dans le texte brut.
+3. Si le texte brut contient des questions, extrait-les exactement telles qu'elles sont formulées (tu peux corriger l'orthographe ou assembler les mots coupés par l'OCR, mais n'en invente aucune).
+4. Si aucune question claire n'est détectée dans le texte brut, renvoie une liste de questions vide dans le JSON plutôt que d'en inventer.
+
+Directives de structuration :
+- Détecte le titre de l'épreuve ou génères-en un représentatif d'après les mots clés du sujet d'origine.
+- Détecte la description ou l'introduction (cadre législatif, ministère concerné, ou synthèse adaptée au contexte burkinabè).
+- EXTRAIS 100% DES QUESTIONS DÉTECTÉES (QCM ou Vrai/Faux) sans en omettre une seule.
+- Identifie la bonne réponse pour chaque question (index à base 0 de l'option correcte). Si le sujet d'origine n'indique pas la bonne réponse, utilise ton expertise burkinabè en droit, histoire, géo, administration et culture générale pour répondre de façon 100% correcte.
+- Rédige une explication pédagogique ULTRA-BRÈVE ET CONCISE (1 seule phrase simple, maximum 15 mots) pour chaque question. C'est CRUCIAL de respecter cette brièveté pour éviter de dépasser la limite de jetons (token limit) et permettre d'inclure la TOTALITÉ de l'épreuve.
+
+Texte brut extrait :
+"""
+${text}
+"""
+`;
+
+    const systemInstruction = `Tu es l'éminent concepteur de concours d'intégration de l'École Nationale d'Administration et de la Magistrature (ENAM) du Burkina Faso.
+Ta priorité absolue est d'extraire fidèlement la TOTALITÉ (100%) des questions présentes dans l'épreuve brute sous format JSON, sans jamais en omettre et sans JAMAIS en inventer de nouvelles de toutes pièces.
+Pour que toutes les questions puissent rentrer dans l'objet réponse sans troncature, écris obligatoirement des explications ultra-courtes de maximum 15 mots par question.`;
+
+    try {
+      const ai = getAiClient();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              titre: { type: Type.STRING, description: 'Titre de l\'examen (ex: Concours ENA - Économie générale 1999)' },
+              description: { type: Type.STRING, description: 'Description du concours et son contexte' },
+              questions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    question: { type: Type.STRING },
+                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    bonne_reponse: { type: Type.INTEGER, description: 'Index à base 0 de la réponse exacte.' },
+                    explication: { type: Type.STRING }
+                  },
+                  required: ['question', 'options', 'bonne_reponse', 'explication']
+                }
+              }
+            },
+            required: ['titre', 'description', 'questions']
+          }
+        }
+      });
+
+      const resultText = response.text;
+      if (!resultText) {
+        throw new Error("L'IA n'a pas renvoyé de texte.");
+      }
+
+      return JSON.parse(resultText) as PSContest;
+    } catch (error) {
+      console.error('[AI Service] Error processing text with AI:', error);
+      throw error;
+    }
   }
 };

@@ -78,20 +78,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Force profile completion for students (who are not admins)
-  if (user?.role === 'student' && !isAdmin) {
-    const isProfileComplete = 
-      !!user.firstName && 
-      !!user.lastName && 
-      !!user.phone &&
-      !!user.university && 
-      !!user.major && 
-      !!user.level;
-    
-    if (!isProfileComplete && location.pathname !== '/profile') {
-      return <Navigate to="/profile" state={{ forceComplete: true }} replace />;
-    }
-  }
+  // Force profile completion for students disabled to allow free access and downloads
+
 
   return <Layout>{children}</Layout>;
 }
@@ -149,20 +137,8 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Force profile completion ONLY for logged-in students (not guests)
-  if (isAuthenticated && user?.role === 'student' && !isAdmin) {
-    const isProfileComplete = 
-      !!user.firstName && 
-      !!user.lastName && 
-      !!user.phone &&
-      !!user.university && 
-      !!user.major && 
-      !!user.level;
-    
-    if (!isProfileComplete && location.pathname !== '/profile') {
-      return <Navigate to="/profile" state={{ forceComplete: true }} replace />;
-    }
-  }
+  // Force profile completion ONLY for logged-in students (not guests) disabled to allow free access and downloads
+
 
   return <Layout>{children}</Layout>;
 }

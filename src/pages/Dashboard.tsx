@@ -13,7 +13,7 @@ import { User as UserType } from '@/types';
 
 export default function Dashboard() {
   const { 
-    user, isAdmin, notifications, events: globalEvents, isDocumentLocked, incrementActivity, logAction, logDownload
+    user, isAdmin, notifications, events: globalEvents, isDocumentLocked, incrementActivity, logAction, logDownload, isLoading
   } = useAuth();
 
   const [ads, setAds] = useState<any[]>([]);
@@ -21,59 +21,82 @@ export default function Dashboard() {
   const [internships, setInternships] = useState<any[]>([]);
   const [tutors, setTutors] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
-    const [marketplace, setMarketplace] = useState<any[]>([]);
-    const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
-    const [groupsCount, setGroupsCount] = useState(0);
-    const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-  
-    const navigate = useNavigate();
-  
-    const loadDashboardData = async (force = false) => {
-      const cacheKey = 'dashboard_cache';
-      const cached = sessionStorage.getItem(cacheKey);
-      const cacheTime = sessionStorage.getItem(cacheKey + '_time');
-      const now = Date.now();
-  
-      if (!force && cached && cacheTime && now - parseInt(cacheTime) < 1800000) { // 30 min cache instead of 1 hour
-        const data = JSON.parse(cached);
-        setAds(data.ads || []);
-        setDocuments(data.documents || []);
-        setInternships(data.internships || []);
-        setTutors(data.tutors || []);
-        setTeachers(data.teachers || []);
-        setMarketplace(data.marketplace || []);
-        setPublicServiceContests(data.publicServiceContests || []);
-        setGroupsCount(data.groupsCount || 0);
-        setTotalDocumentsCount(data.totalDocumentsCount || 0);
-        setLoading(false);
-        return;
-      }
-  
-      if (force) setRefreshing(true);
-      else setLoading(true);
-  
-      try {
-        // Run fetches in parallel but limited
-        const [adsSnap, docsSnap, internSnap, tutorSnap, teacherSnap, contestSnap, marketSnap] = await Promise.all([
-          getDocs(query(collection(db, 'ads'), where('active', '==', true), limit(5))),
-          getDocs(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3))),
-          getDocs(query(collection(db, 'internships'), limit(3))),
-          getDocs(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3))),
-          getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3))),
-          getDocs(query(collection(db, 'public_service_contests'), limit(5))),
-          getDocs(query(collection(db, 'marketplace'), limit(2)))
-        ]);
+  const [marketplace, setMarketplace] = useState<any[]>([]);
+  const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
+  const [groupsCount, setGroupsCount] = useState(0);
+  const [totalDocumentsCount, setTotalDocumentsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const navigate = useNavigate();
+
+  const loadDashboardData = async (force = false) => {
+    const cacheKey = 'dashboard_cache';
+    const cached = sessionStorage.getItem(cacheKey);
+    const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+    const now = Date.now();
+
+    if (!force && cached && cacheTime && now - parseInt(cacheTime) < 1800000) { // 30 min cache instead of 1 hour
+      const data = JSON.parse(cached);
+      setAds(data.ads || []);
+      setDocuments(data.documents || []);
+      setInternships(data.internships || []);
+      setTutors(data.tutors || []);
+      setTeachers(data.teachers || []);
+      setMarketplace(data.marketplace || []);
+      setPublicServiceContests(data.publicServiceContests || []);
+      setGroupsCount(data.groupsCount || 0);
+      setTotalDocumentsCount(data.totalDocumentsCount || 0);
+      setLoading(false);
+      return;
+    }
+
+    if (force) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const safeQuery = async (queryRef: any, label: string) => {
+        try {
+          const snap = await getDocs(queryRef);
+          return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        } catch (err) {
+          console.warn(`[Dashboard] Non-critical fetch failed for ${label}:`, err);
+          return [];
+        }
+      };
+
+      const isUserSignedIn = !!user;
+
+      const [adsList, docsList, internList, tutorList, teacherList, contestList, marketList] = await Promise.all([
+        safeQuery(query(collection(db, 'ads'), where('active', '==', true), limit(5)), 'ads'),
+        isUserSignedIn 
+          ? safeQuery(query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(3)), 'documents')
+          : Promise.resolve([]),
+        isUserSignedIn
+          ? safeQuery(query(collection(db, 'internships'), limit(3)), 'internships')
+          : Promise.resolve([]),
+          isUserSignedIn
+          ? safeQuery(query(collection(db, 'users'), where('tutorStatus', '==', 'approved'), limit(3)), 'tutors')
+          : Promise.resolve([]),
+        isUserSignedIn
+          ? safeQuery(query(collection(db, 'users'), where('role', '==', 'teacher'), limit(3)), 'teachers')
+          : Promise.resolve([]),
+        isUserSignedIn
+          ? safeQuery(query(collection(db, 'public_service_contests'), limit(5)), 'public_service_contests')
+          : Promise.resolve([]),
+        isUserSignedIn
+          ? safeQuery(query(collection(db, 'marketplace'), limit(2)), 'marketplace')
+          : Promise.resolve([])
+      ]);
 
       const dashboardData = {
-        ads: adsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        documents: docsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        internships: internSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        tutors: tutorSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        teachers: teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        marketplace: marketSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        publicServiceContests: contestSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        ads: adsList,
+        documents: docsList,
+        internships: internList,
+        tutors: tutorList,
+        teachers: teacherList,
+        marketplace: marketList,
+        publicServiceContests: contestList,
         groupsCount: 15, // Fixed estimation to save quota
         totalDocumentsCount: 480 // Fixed estimation to save quota
       };
@@ -92,11 +115,6 @@ export default function Dashboard() {
       sessionStorage.setItem(cacheKey + '_time', now.toString());
     } catch (error: any) {
       console.error("Dashboard data load error:", error);
-      // Fallback for missing Index
-      if (error?.message?.includes('index')) {
-        const docsSnap = await getDocs(query(collection(db, 'documents'), limit(3)));
-        setDocuments(docsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -104,8 +122,9 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (isLoading) return;
     loadDashboardData();
-  }, []);
+  }, [user?.id, isLoading]);
 
   const activeAds = ads.filter(ad => ad.active);
   const [currentAd, setCurrentAd] = useState(0);
@@ -151,10 +170,24 @@ export default function Dashboard() {
       const dRef = doc(db, 'documents', docData.id);
       const uRef = doc(db, 'users', user.id);
 
+      const nowStr = new Date().toISOString();
+      const currentRecent = Array.isArray(user.recentDownloads) ? user.recentDownloads : [];
+      // Purge downloads older than 24h
+      const updatedRecent = currentRecent.filter(timestamp => {
+        try {
+          const downloadTime = new Date(timestamp);
+          return !isNaN(downloadTime.getTime()) && (Date.now() - downloadTime.getTime() < 24 * 60 * 60 * 1000);
+        } catch {
+          return false;
+        }
+      });
+      updatedRecent.push(nowStr);
+
       await Promise.all([
         updateDoc(dRef, { downloads: increment(1) }),
         updateDoc(uRef, {
-          lastDownloadAt: new Date().toISOString(),
+          lastDownloadAt: nowStr,
+          recentDownloads: updatedRecent,
           'activityStats.docsDownloaded': increment(1),
           lastActiveAt: serverTimestamp()
         })

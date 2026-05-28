@@ -207,6 +207,18 @@ export default function PublicServiceContests() {
     return matchesCategory && matchesLevel && matchesSearch;
   });
 
+  const groupedContests = React.useMemo(() => {
+    const groups: Record<string, PublicServiceContest[]> = {};
+    filteredContests.forEach(contest => {
+      const cat = contest.categorie || 'culture_generale';
+      if (!groups[cat]) {
+        groups[cat] = [];
+      }
+      groups[cat].push(contest);
+    });
+    return groups;
+  }, [filteredContests]);
+
   const handleStartExam = async (contest: PublicServiceContest) => {
     if (!contest.id) {
        toast.error("Identifiant du concours manquant.");
@@ -408,75 +420,99 @@ export default function PublicServiceContests() {
                 ))}
               </div>
             ) : filteredContests.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <AnimatePresence>
-                  {filteredContests.map((contest, index) => (
-                    <motion.div
-                      key={contest.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="group bg-white rounded-3xl border border-slate-100 p-6 hover:shadow-2xl hover:shadow-slate-200/50 hover:border-emerald-100 transition-all cursor-pointer relative overflow-hidden"
-                      onClick={() => handleStartExam(contest)}
-                    >
-                      <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${categoryColors[contest.categorie] || 'from-slate-500 to-slate-600'} opacity-[0.03] group-hover:opacity-[0.08] transition-opacity`} />
-                      
-                      <div className="flex items-start justify-between mb-4">
-                        <div className={`p-3 rounded-2xl bg-gradient-to-br ${categoryColors[contest.categorie] || 'from-slate-500 to-slate-600'} text-white shadow-lg shadow-slate-200`}>
-                          <BookOpen className="w-6 h-6" />
+              <div className="space-y-12">
+                {Object.keys(categoryLabels)
+                  .concat(Object.keys(groupedContests).filter(cat => !categoryLabels[cat]))
+                  .filter(cat => groupedContests[cat] && groupedContests[cat].length > 0)
+                  .map((cat) => {
+                    const groupContests = groupedContests[cat];
+                    const label = categoryLabels[cat] || cat;
+                    const gradient = categoryColors[cat] || 'from-slate-500 to-slate-600';
+                    return (
+                      <div key={cat} className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-200/60 pb-3">
+                          <div className={`w-1.5 h-6 rounded-full bg-gradient-to-b ${gradient}`} />
+                          <h3 className="text-lg font-bold text-slate-800">
+                            {label}
+                          </h3>
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-55 font-mono text-emerald-700 bg-emerald-50">
+                            {groupContests.length} {groupContests.length > 1 ? 'sujets' : 'sujet'}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          {contest.type}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <AnimatePresence>
+                            {groupContests.map((contest, index) => (
+                              <motion.div
+                                key={contest.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="group bg-white rounded-3xl border border-slate-100 p-6 hover:shadow-2xl hover:shadow-slate-200/50 hover:border-emerald-100 transition-all cursor-pointer relative overflow-hidden"
+                                onClick={() => handleStartExam(contest)}
+                              >
+                                <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${categoryColors[contest.categorie] || 'from-slate-500 to-slate-600'} opacity-[0.03] group-hover:opacity-[0.08] transition-opacity`} />
+                                
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className={`p-3 rounded-2xl bg-gradient-to-br ${categoryColors[contest.categorie] || 'from-slate-500 to-slate-600'} text-white shadow-lg shadow-slate-200`}>
+                                    <BookOpen className="w-6 h-6" />
+                                  </div>
+                                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    {contest.type}
+                                  </div>
+                                </div>
+
+                                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-1">
+                                  {contest.titre}
+                                </h3>
+                                <p className="text-sm text-slate-500 mb-6 line-clamp-2 min-h-[2.5rem]">
+                                  {contest.description}
+                                </p>
+
+                                <div className="grid grid-cols-4 gap-2 mb-6">
+                                  <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                    <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Niveau</div>
+                                    <div className="text-xs font-bold text-slate-700">{contest.niveau}</div>
+                                  </div>
+                                  <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                    <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Durée</div>
+                                    <div className="text-xs font-bold text-slate-700">{contest.duree} min</div>
+                                  </div>
+                                  <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                    <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Difficulté</div>
+                                    <div className={`text-xs font-bold ${
+                                      contest.difficulte === 'facile' ? 'text-emerald-600' : 
+                                      contest.difficulte === 'moyen' ? 'text-amber-600' : 'text-rose-600'
+                                    }`}>
+                                      {contest.difficulte}
+                                    </div>
+                                  </div>
+                                  <div className="bg-slate-50 rounded-xl p-2 text-center border border-emerald-50/50">
+                                    <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Effectué</div>
+                                    <div className="text-xs font-bold text-emerald-600">
+                                      {contest.takenCount || 0} fois
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartExam(contest);
+                                  }}
+                                  className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 group-hover:bg-emerald-600 transition-all shadow-xl shadow-slate-200"
+                                >
+                                  <Play className="w-4 h-4 fill-white" />
+                                  Lancer le test
+                                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                </button>
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
                         </div>
                       </div>
-
-                      <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-1">
-                        {contest.titre}
-                      </h3>
-                      <p className="text-sm text-slate-500 mb-6 line-clamp-2 min-h-[2.5rem]">
-                        {contest.description}
-                      </p>
-
-                      <div className="grid grid-cols-4 gap-2 mb-6">
-                        <div className="bg-slate-50 rounded-xl p-2 text-center">
-                          <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Niveau</div>
-                          <div className="text-xs font-bold text-slate-700">{contest.niveau}</div>
-                        </div>
-                        <div className="bg-slate-50 rounded-xl p-2 text-center">
-                          <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Durée</div>
-                          <div className="text-xs font-bold text-slate-700">{contest.duree} min</div>
-                        </div>
-                        <div className="bg-slate-50 rounded-xl p-2 text-center">
-                          <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Difficulté</div>
-                          <div className={`text-xs font-bold ${
-                            contest.difficulte === 'facile' ? 'text-emerald-600' : 
-                            contest.difficulte === 'moyen' ? 'text-amber-600' : 'text-rose-600'
-                          }`}>
-                            {contest.difficulte}
-                          </div>
-                        </div>
-                        <div className="bg-slate-50 rounded-xl p-2 text-center border border-emerald-50/50">
-                          <div className="text-[10px] text-slate-400 font-medium uppercase mb-0.5">Effectué</div>
-                          <div className="text-xs font-bold text-emerald-600">
-                            {contest.takenCount || 0} fois
-                          </div>
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartExam(contest);
-                        }}
-                        className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 group-hover:bg-emerald-600 transition-all shadow-xl shadow-slate-200"
-                      >
-                        <Play className="w-4 h-4 fill-white" />
-                        Lancer le test
-                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                    );
+                  })}
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-12 text-center">

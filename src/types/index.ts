@@ -163,6 +163,7 @@ export interface User {
   };
   lastActiveAt?: any;
   lastDownloadAt?: any;
+  recentDownloads?: string[];
   hasPostedPresentation?: boolean;
   joinedGroups?: string[];
   activityStats?: {

@@ -391,60 +391,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isAdmin) return false;
     if (!user) return { locked: true, reason: 'Vous devez être connecté.' };
     
-    // 1. 24h timeout restriction for all non-admins (only for DOWNLOAD)
-    if (mode === 'download' && user.lastDownloadAt) {
-      try {
-        const lastDownload = new Date(user.lastDownloadAt);
-        if (!isNaN(lastDownload.getTime())) {
-          const now = new Date();
-          const msSinceLast = now.getTime() - lastDownload.getTime();
-          const hoursSinceLast = msSinceLast / (1000 * 60 * 60);
-          
-          if (hoursSinceLast < 24) {
-            const h = Math.floor(24 - hoursSinceLast);
-            const m = Math.floor((24 - hoursSinceLast - h) * 60);
-            return { 
-              locked: true, 
-              reason: `Délai de 24h : Vous devez attendre encore ${h}h ${m}m avant votre prochain téléchargement.` 
-            };
-          }
-        }
-      } catch (err) {
-        console.error("Error evaluating 24h rule:", err);
-      }
-    }
-
-    // 2. Student special restrictions (Onboarding)
-    const normalizedRole = (user?.role || 'student').toLowerCase();
-    const isStudent = normalizedRole === 'student';
-
     // Emergency bypass
     if (user?.forceUnlocked) return false;
-    
-    if (isStudent && !isAdmin && mode === 'download') {
-      // Robust member check: 1. Check user's profile joinedGroups 2. Check global groups state
-      const userJoinedGroups = user.joinedGroups || [];
-      const isInGroup = userJoinedGroups.length > 0 || (Array.isArray(groups) && groups.some(g => Array.isArray(g.members) && g.members.includes(user?.id)));
-      
-      const hasPresentation = user.hasPostedPresentation === true;
 
-      // Special case: if user says they did it, maybe we should double check if stats are 0
-      if (isStudent && !isAdmin && (!isInGroup || !hasPresentation)) {
-        let missing = [];
-        if (!isInGroup) missing.push("Rejoindre un groupe");
-        if (!hasPresentation) missing.push("Se présenter dans la Communauté (min. 15 car.)");
-        
+    // 1. 24h limit restriction: maximum 3 downloads per 24 hours
+    if (mode === 'download') {
+      const now = new Date();
+      const lastDownloads: string[] = Array.isArray(user.recentDownloads) ? user.recentDownloads : [];
+      
+      const recentDownloads = lastDownloads.filter(timestamp => {
+        try {
+          const downloadTime = new Date(timestamp);
+          if (isNaN(downloadTime.getTime())) return false;
+          const msSinceDownload = now.getTime() - downloadTime.getTime();
+          return msSinceDownload < 24 * 60 * 60 * 1000; // 24 hours
+        } catch {
+          return false;
+        }
+      });
+
+      if (recentDownloads.length >= 3) {
+        // Find oldest active download in the rolling window
+        const downloadDates = recentDownloads.map(t => new Date(t).getTime()).sort((a, b) => a - b);
+        const oldestDownloadInWindow = downloadDates[0];
+        const msToWait = (24 * 60 * 60 * 1000) - (now.getTime() - oldestDownloadInWindow);
+        const h = Math.floor(msToWait / (1000 * 60 * 60));
+        const m = Math.floor((msToWait - h * 1000 * 60 * 60) / (1000 * 60));
         return { 
           locked: true, 
-          reason: `Accès étudiant : Pour débloquer les téléchargements, vous devez : ${missing.join(', ')}.` 
+          reason: `Limite de téléchargement atteint : Maximum de 3 téléchargements par 24h. Veuillez attendre ${h}h et ${m}min.` 
         };
       }
     }
-
-    // 3. For Sale / Premium check removed to make platform free
     
     return false;
-  }, [user, isAdmin, groups]);
+  }, [user, isAdmin]);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {

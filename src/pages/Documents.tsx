@@ -380,10 +380,24 @@ export default function Documents() {
       const docRef = doc(db, 'documents', docData.id);
       const userRef = doc(db, 'users', user.id);
 
+      const nowStr = new Date().toISOString();
+      const currentRecent = Array.isArray(user.recentDownloads) ? user.recentDownloads : [];
+      // Purge downloads that are older than 24h
+      const updatedRecent = currentRecent.filter(timestamp => {
+        try {
+          const downloadTime = new Date(timestamp);
+          return !isNaN(downloadTime.getTime()) && (Date.now() - downloadTime.getTime() < 24 * 60 * 60 * 1000);
+        } catch {
+          return false;
+        }
+      });
+      updatedRecent.push(nowStr);
+
       await Promise.all([
         updateDoc(docRef, { downloads: increment(1) }),
         updateDoc(userRef, {
-          lastDownloadAt: new Date().toISOString(),
+          lastDownloadAt: nowStr,
+          recentDownloads: updatedRecent,
           'activityStats.docsDownloaded': increment(1),
           lastActiveAt: serverTimestamp()
         })
@@ -821,16 +835,14 @@ export default function Documents() {
                 Statut de téléchargement
               </h2>
               <p className="text-slate-400 text-sm max-w-xl">
-                {isDocumentLocked({}, 'download') 
-                  ? "Votre profil est restreint. Plusieurs étapes académiques sont nécessaires pour débloquer les téléchargements."
-                  : "Votre profil est complet. Vous pouvez télécharger un document toutes les 24h."}
+                Vous disposez d'une limite de 3 téléchargements de documents toutes les 24 heures.
               </p>
             </div>
             <button 
               onClick={() => window.location.href = '/profile'}
               className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center gap-2"
             >
-              Voir ma checklist
+              Voir mon profil
               <ArrowRight size={16} />
             </button>
           </div>
