@@ -134,7 +134,20 @@ export default function AdminDashboard() {
         setLoadingTrainingParticipants(true);
         try {
           const { userService } = await import('@/services/userService');
-          // Fetch users in chunks of 30 due to Firestore 'in' query limits (max 30)
+          const { collection, query, where, getDocs } = await import('firebase/firestore');
+
+          // 1. Fetch user enrollment records in parallel to get full/correct names if they exist there
+          let enrollmentsList: any[] = [];
+          try {
+            const enrollmentsRef = collection(db, 'training_enrollments');
+            const enrollmentsQuery = query(enrollmentsRef, where('trainingId', '==', selectedTrainingForParticipants.id));
+            const enrollmentsSnap = await getDocs(enrollmentsQuery);
+            enrollmentsList = enrollmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+          } catch (err) {
+            console.warn("Failed to load training enrollments:", err);
+          }
+
+          // 2. Fetch users in chunks of 30 due to Firestore 'in' query limits (max 30)
           const ids = selectedTrainingForParticipants.participants!;
           let finalUsers: any[] = [];
           for (let i = 0; i < ids.length; i += 30) {
@@ -145,14 +158,28 @@ export default function AdminDashboard() {
           
           const formattedData = ids.map((participantId: string) => {
             const u = finalUsers.find((fu: any) => fu.id === participantId);
+            const enrollObj = enrollmentsList.find((e: any) => e.userId === participantId);
+            
+            // Reconstruct name from enrollment record if not available in users list
+            let firstName = u?.firstName || '';
+            let lastName = u?.lastName || '';
+            if (!firstName && !lastName && enrollObj?.userName) {
+              const names = enrollObj.userName.trim().split(' ');
+              firstName = names[0];
+              lastName = names.slice(1).join(' ');
+            }
+            if (!firstName) {
+              firstName = 'Inconnu';
+            }
+
             return {
               id: participantId,
-              firstName: u?.firstName || 'Inconnu',
-              lastName: u?.lastName || '',
-              email: u?.email || 'N/A',
-              phone: u?.phone || (u?.parentPhone) || 'N/A',
+              firstName: firstName,
+              lastName: lastName,
+              email: u?.email || enrollObj?.userEmail || 'N/A',
+              phone: u?.phone || (u?.parentPhone) || enrollObj?.userPhone || 'N/A',
               role: u?.role || 'student',
-              joinedAt: u?.createdAt || null
+              joinedAt: u?.createdAt || enrollObj?.enrolledAt || null
             };
           });
           setTrainingParticipantsData(formattedData);
@@ -3015,7 +3042,9 @@ export default function AdminDashboard() {
                                   </button>
                                   <button 
                                     onClick={() => {
-                                      if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
+                                      if(confirm('Supprimer définitivement cette formation ?')) {
+                                        deleteTraining(training.id).catch(e => alert(e.message));
+                                      }
                                     }}
                                     className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
                                   >
@@ -3082,7 +3111,9 @@ export default function AdminDashboard() {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if(confirm('Supprimer définitivement cette formation ?')) deleteTraining(training.id);
+                                  if(confirm('Supprimer définitivement cette formation ?')) {
+                                    deleteTraining(training.id).catch(err => alert(err.message));
+                                  }
                                 }}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center"
                               >

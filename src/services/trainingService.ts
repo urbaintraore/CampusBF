@@ -51,8 +51,10 @@ export const trainingService = {
       await addDoc(collection(db, 'training_enrollments'), {
         trainingId: training.id,
         userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-        userAvatar: user.avatarUrl,
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Utilisateur',
+        userEmail: user.email || '',
+        userPhone: user.phone || 'N/A',
+        userAvatar: user.avatarUrl || '',
         enrolledAt: new Date().toISOString()
       });
 
@@ -146,7 +148,7 @@ export const trainingService = {
     try {
       await deleteDoc(doc(db, 'trainings', training.id));
       
-      for (const participantId of training.participants) {
+      for (const participantId of (training.participants || [])) {
         await notificationService.addNotification(participantId, {
           type: 'alert',
           title: 'Formation annulée',

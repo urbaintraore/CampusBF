@@ -1897,11 +1897,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTraining = async (trainingId: string) => {
-    if (!user) return;
+    console.log("AuthContext: deleteTraining called for id:", trainingId);
+    if (!user) { console.log("Aborted: no user"); return; }
     const training = trainings.find(t => t.id === trainingId);
-    if (!training) return;
-    if (user.role !== 'admin' && training.trainerId !== user.id) return;
+    if (!training) { console.log("Aborted: no training found"); return; }
+    if (user.role !== 'admin' && training.trainerId !== user.id) { console.log("Aborted: insufficient permissions"); return; }
+    console.log("Calling trainingService.deleteTraining...");
     await trainingService.deleteTraining(user, training);
+    console.log("trainingService.deleteTraining completed.");
   };
 
   const createContest = async (contest: Omit<Contest, 'id' | 'createdAt'>) => {

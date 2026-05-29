@@ -52,7 +52,7 @@ export const userService = {
   async getUsersByIds(userIds: string[]) {
     try {
       if (!userIds || userIds.length === 0) return [];
-      const q = query(collection(db, 'users'), where(documentId(), 'in', userIds));
+      const q = query(collection(db, 'users'), where(documentId(), 'in', userIds), limit(50));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
     } catch (error) {
