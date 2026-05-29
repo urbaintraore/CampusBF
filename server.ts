@@ -65,7 +65,7 @@ async function extractTextFromFile(buffer: Buffer, originalname: string, mimetyp
   // 1. Try Gemini High-Fidelity OCR first if API key is configured
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey !== 'undefined') {
-    console.log(`[OCR] Using Gemini 3.5 Flash for high-precision extraction: "${originalname}" (${mimetype}), Category: "${category || 'none'}"`);
+    console.log(`[OCR] Using Gemini for high-precision extraction: "${originalname}" (${mimetype}), Category: "${category || 'none'}"`);
     try {
       const ai = new GoogleGenAI({
         apiKey: apiKey,
@@ -99,31 +99,70 @@ async function extractTextFromFile(buffer: Buffer, originalname: string, mimetyp
       
       if (category === 'tests_psychotechniques') {
         promptText = `Tu extrais le contenu d'un sujet de concours de la catégorie "Tests Psychotechniques".
-Ce genre d'épreuve est éminemment visuel et spatial. Il contient des consignes spéciales, des grilles de substitution de lettres/chiffres (matrices de décodage), des tableaux d'association, ou des équations mathématiques avec des opérateurs ou signes à remplacer.
+Ce genre d'épreuve est éminemment visuel (logique spatiale, matrices, suites, analogies, dominos).
 
-RÈGLES CRUCIALES POUR LES GRILLES ET LES MATHS :
-1. Repère TRÈS CLAIREMENT les tableaux ou grilles de substitution (par exemple, une ligne d'en-tête [A, B, C...] associée à des lignes d'indices [1, 2...]). Transcris-les TRÈS PRÉCISÉMENT sous forme de tableau Markdown aligné (avec les en-têtes et les lignes correspondantes bien alignées par colonne) ou décris exhaustivement les correspondances (ex: 'Grille de décodage complète : A1=V, A2=I, B1=H, B2=R, ...').
-2. Transcris intégralement les consignes (comme 'Consigne 1: Trouvez les mots codés...', 'Consigne 2: Remplacez les points d'interrogation par des opérateurs...').
-3. Conserve intacte la formulation des équations avec points d'interrogation (ex: '32 ? 28 ? 10 ? 2 ? 40 = 1000' ou '92 ? 42 ? 10 ? 3 ? 50 = 1000') et l'ensemble de leurs options d'opérateurs proposées (ex: 'a) - + * /').
-4. Ne résume aucun texte, n'ajoute pas de commentaires, garde une fidélité absolue aux caractères de l'image.`;
+RÈGLES CRUCIALES POUR L'EXTRACTION OCR PSYCHOTECHNIQUE :
+1. TABLEAUX & GRILLES : Repère TRÈS CLAIREMENT les matrices de substitution, grilles de décodage ou tableaux (ex: correspondances lettres/chiffres). Transcris-les TRÈS PRÉCISÉMENT sous forme de tableau Markdown (avec colonnes et lignes alignées).
+2. SUITES LOGIQUES : Transcris minutieusement les suites numériques ou lettrées (ex: "2, 4, 8, 16, ?"). N'oublie aucune valeur.
+3. FIGURES & FORMES : S'il y a des formes géométriques, dominos, matrices 3x3 ou symboles asociaux, DÉCRIS formellement l'organisation visuelle (ex: "Tableau 3x3 : Ligne 1 contient triangle, carré, cercle", ou "Le domino est divisé en [haut: 4, bas: 2]").
+4. ANALOGIES & ÉQUATIONS : Transcris les analogies verbales ("X est à Y... ") ou expressions mathématiques ("32 ? 28 = 55").
+5. FIDÉLITÉ ABSOLUE : Transcris l'intégralité des propositions (A, B, C, D...). Ne résume aucun texte, garde l'ordre original de lecture de gauche à droite, de haut en bas.`;
       }
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: [
-          filePart,
-          { text: promptText }
-        ]
-      });
+      // We implement a robust retry loop with model fallback (switching to gemini-flash-latest if needed)
+      let extractedText = '';
+      const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest'];
+      const maxRetriesPerModel = 2;
+      let modelIndex = 0;
+      let attempt = 0;
 
-      const extractedText = response.text || '';
-      console.log(`[OCR] Gemini extraction completed. Character length: ${extractedText.length}`);
+      while (modelIndex < modelsToTry.length && !extractedText) {
+        const currentModel = modelsToTry[modelIndex];
+        attempt = 0;
+        
+        while (attempt < maxRetriesPerModel) {
+          try {
+            console.log(`[OCR] Querying Gemini model "${currentModel}" (Attempt ${attempt + 1}/${maxRetriesPerModel})...`);
+            const response = await ai.models.generateContent({
+              model: currentModel,
+              contents: [
+                filePart,
+                { text: promptText }
+              ],
+              config: {
+                maxOutputTokens: 8192
+              }
+            });
+            extractedText = response.text || '';
+            if (extractedText.trim().length > 0) {
+              console.log(`[OCR] Gemini extraction completed using "${currentModel}". Character length: ${extractedText.length}`);
+              return extractedText;
+            }
+          } catch (err: any) {
+            attempt++;
+            const errStr = String(err.message || err);
+            console.warn(`[OCR] Gemini run for model "${currentModel}" attempt ${attempt} failed: ${errStr}`);
+            
+            // For transient errors, wait and retry. For unsupported model/media files, break immediately to fallback.
+            const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504');
+            if (isTransient && attempt < maxRetriesPerModel) {
+              const delay = 1000 * Math.pow(2, attempt);
+              console.log(`[OCR] Waiting ${delay}ms before retrying "${currentModel}"...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+              break; // Try next model or fallback to local
+            }
+          }
+        }
+        modelIndex++;
+      }
+
       if (extractedText.trim().length > 0) {
         return extractedText;
       }
-      console.warn('[OCR] Gemini returned empty text, falling back to local processing.');
+      console.warn('[OCR] All Gemini visual extractions returned empty text, falling back to local processing.');
     } catch (geminiErr: any) {
-      console.error('[OCR] Gemini extraction failed. Falling back to local library:', geminiErr);
+      console.error('[OCR] Gemini extraction failed globally. Falling back to local library:', geminiErr);
     }
   }
 
@@ -307,23 +346,14 @@ try {
 // Initialise Firebase Admin
 if (!admin.apps.length) {
   try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-      : null;
-
-    if (serviceAccount) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
       console.log('[Server] Firebase Admin initialisé via FIREBASE_SERVICE_ACCOUNT');
-    } else if (firebaseConfig && firebaseConfig.projectId) {
-      admin.initializeApp({
-        projectId: firebaseConfig.projectId
-      });
-      console.log(`[Server] Firebase Admin initialisé via default credentials pour le projet: ${firebaseConfig.projectId}`);
     } else {
-      admin.initializeApp();
-      console.log('[Server] Firebase Admin initialisé via default credentials');
+      console.warn('[Server] FIREBASE_SERVICE_ACCOUNT not found. Admin SDK will not be initialized.');
     }
   } catch (error) {
     console.error('[Server] Erreur lors de l\'initialisation Firebase Admin:', error);
@@ -332,17 +362,21 @@ if (!admin.apps.length) {
 
 // Helper to get correctly routed Firestore database
 function getFirestoreDb() {
+  if (!admin.apps.length) {
+    throw new Error('Firebase Admin SDK is not initialized. Check FIREBASE_SERVICE_ACCOUNT.');
+  }
   if (firebaseConfig && firebaseConfig.firestoreDatabaseId) {
-    return getFirestore(firebaseConfig.firestoreDatabaseId);
+    const app = admin.app();
+    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
   }
   return getFirestore();
 }
 
 app.get('/api/admin/users-stats', async (req, res) => {
   try {
-    // Check either service account OR dynamic app config exists
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT && (!firebaseConfig || !firebaseConfig.projectId)) {
-      console.warn("Neither service account nor applet config provided. Returning fallback stats.");
+    // Check if service account exists since ADC does not have permissions in AI Studio
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.warn("No service account provided. Returning fallback stats.");
       return res.json({
         firestoreCount: 0,
         authCount: 0,
@@ -419,8 +453,8 @@ app.get('/api/admin/users-stats', async (req, res) => {
 
 app.post('/api/admin/users-sync', async (req, res) => {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT && (!firebaseConfig || !firebaseConfig.projectId)) {
-      console.warn("Neither service account nor applet config provided. Ignoring sync.");
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.warn("No service account provided. Ignoring sync.");
       return res.json({ synchronizedCount: 0 });
     }
 

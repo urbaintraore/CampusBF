@@ -511,7 +511,7 @@ export default function Trainings() {
                       Laisser un avis
                     </button>
                   )}
-                  {user?.role === 'admin' && (
+                  {(user?.role === 'admin' || user?.id === selectedTraining.trainerId) && (
                     <>
                       <button 
                         onClick={() => {

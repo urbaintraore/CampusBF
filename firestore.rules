@@ -211,6 +211,7 @@ service cloud.firestore {
     match /training_reports/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
     match /public_service_contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
     match /public_service_contest_details/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
+    match /exam_processing_logs/{id} { allow read, write: if isAdmin() || isTeacher(); }
     match /public_service_results/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
     match /public_service_cheat_incidents/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
     match /logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }

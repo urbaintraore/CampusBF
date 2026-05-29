@@ -24,26 +24,17 @@ let isInitialized = false;
 function ensureInitialized() {
   if (isInitialized) return true;
 
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.warn('Firebase Admin requires FIREBASE_SERVICE_ACCOUNT for permissions. Service omitted.');
+    return false;
+  }
+
   if (!admin.apps.length) {
     try {
-      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-        : null;
-
-      if (serviceAccount) {
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount)
-        });
-      } else if (firebaseConfig && firebaseConfig.projectId) {
-        admin.initializeApp({
-          projectId: firebaseConfig.projectId
-        });
-        console.log(`Firebase Admin initialisé via default credentials pour le projet: ${firebaseConfig.projectId}`);
-      } else {
-        // Fallback pour le développement local ou si configuré via ADC
-        // En environnement de prod sandboxed sans ADC, ceci peut échouer
-        admin.initializeApp();
-      }
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
       console.log('Firebase Admin initialisé avec succès');
       isInitialized = true;
     } catch (error) {
@@ -57,7 +48,7 @@ function ensureInitialized() {
   if (isInitialized) {
     try {
       db = firebaseConfig && firebaseConfig.firestoreDatabaseId 
-        ? getFirestore(firebaseConfig.firestoreDatabaseId)
+        ? getFirestore(admin.app(), firebaseConfig.firestoreDatabaseId)
         : getFirestore();
       messaging = getMessaging();
     } catch (e) {

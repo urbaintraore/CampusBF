@@ -256,25 +256,23 @@ Renvoie un JSON conforme au schema exigé.`;
     if (isPsychotechnique) {
       psychotechInstruction = `
 --- CONSIGNES SPÉCIFIQUES POUR LES TESTS PSYCHOTECHNIQUES ---
-Tu structures un véritable examen de Tests Psychotechniques (raisonnement logique, numérique, verbal, spatial).
-Ce genre de test s'appuie TOUJOURS sur des grilles de codage globales (substitution) ou des consignes d'opérateurs.
+Tu structures un véritable examen de Tests Psychotechniques (raisonnement logique, numérique, verbal, spatial, suites, analogies, matrices, dominos).
+Ce genre de test s'appuie TOUJOURS sur des grilles, des règles logiques ou des consignes d'opérateurs.
 
-1. INTÈGRES TOUJOURS LA GRILLE DE CODAGE OU LA CONSIGNE DANS L'ÉNONCÉ DE CHAQUE QUESTION !
-   Chaque question générée dans le tableau 'questions' doit être ENTIÈREMENT AUTONOME ET SOLUBLE ! 
-   Pour cela, son texte 'question' doit impérativement contenir :
-   - La consigne globale (ex: "Trouvez le mot codé sachant que B1Q1V2S2C1B2 correspond à FLEURS d'après la grille ci-dessous :" ou "Remplacez les points d'interrogation par des opérateurs (+ ; - ; / ; *), sachant que chaque signe doit être utilisé une seule fois :")
-   - La matrice ou grille de décodage dessinée sous forme de tableau Markdown (par exemple avec la ligne d'en-tête [A | B | C...] et les lignes d'indices [1 | V | H...] comme trouvé dans le texte brut). N'oublie aucune colonne !
-   - L'item précis de la question à décoder ou résoudre en gras (ex: "Décodez le mot : **V1T2J1K2C2W1V2**", ou "Résolvez l'équation : **32 ? 28 ? 10 ? 2 ? 40 = 1000**").
-   SANS CETTE GRILLE ET CETTE CONSIGNE INTÉGRÉES DANS CHAQUE QUESTION, L'ÉTUDIANT NE PEUT PAS LÉGITIMEMENT TROUVER LA RÉPONSE ! C'EST UNE RÈGLE CRUCIALE DE CONCEPTION !
+1. INTÈGRES TOUJOURS LE CONTEXTE ET LA RÈGLE (GRILLE/MATRICE/IMAGE DÉCRITE) DANS L'ÉNONCÉ DE CHAQUE QUESTION !
+   Chaque question générée dans 'questions' doit être ENTIÈREMENT AUTONOME ET SOLUBLE :
+   - Inclus la consigne globale et la série.
+   - S'il y a un tableau (vrai/faux, valeurs logiques, matrice carrée), retranscris-le formellement en texte ou en Markdown (ex: matrice 3x3) dans le champ 'question'.
+   - S'il s'agit d'une suite logique (ex: Suites numériques ou de lettres "2, 4, 8, 16, ?"), donne la série complète dans la 'question'.
+   - S'il s'agit d'analogies (ex: "Chien est à poil ce que Oiseau est à ?"), formule clairement l'analogie.
+   SANS CE CONTEXTE, L'ÉTUDIANT NE PEUT PAS LÉGITIMEMENT TROUVER LA RÉPONSE !
 
 2. RÉSOUDRE LES QUESTIONS DE MANIÈRE RIGOUREUSE :
-   - Fais le travail de décodage ou de calcul mathématique minutieux pour tester chaque option.
-   - Par exemple, pour les décodages comme B1Q1V2S2C1B2 ou V1T2J1K2C2W1V2, localise l'intersection de chaque lettre-numéro (ex: V1 -> 'A', T2 -> 'N', etc.) et reconstitue le mot exact.
-   - Pour les opérateurs mathématiques (ex: 92 ? 42 ? 10 ? 3 ? 50 = 1000), teste si une des combinaisons d'opérateurs proposées (ex: "- + / *") permet, en respectant la priorité des opérations ou le sens de lecture de gauche à droite, de parvenir à 1000.
-   - Assure-toi que la 'bonne_reponse' pointe exactement vers l'index à base 0 de l'option de QCM qui donne le bon mot ou les bons opérateurs.
+   - Fais le travail de logique silencieusement (matrices, suites arithmétiques/géométriques, règles de substitution).
+   - Localise la réponse absolue. S'assure que la 'bonne_reponse' pointe exactement vers l'index de l'option correcte.
 
-3. EXPLIQUE LE CHEMINEMENT DU CALCUL :
-   Le champ 'explication' doit détailler pas à pas la solution de façon très abrégée, claire et didactique (ex: "V1=A, T2=N, J1=E, K2=M, C2=O, W1=N, V2=E correspond à ANÉMONE" ou "(92 - 42) * 10 = 500").
+3. EXPLIQUE LE CHEMINEMENT DU CALCUL/RAISONNEMENT :
+   - L' 'explication' doit détailler pas à pas la solution de façon très abrégée (ex: "La suite est +2, +4, +6... donc 16+8 = 24", ou "Chaque figure pivote de 90°", ou "(92 - 42) * 10 = 500").
 `;
     }
 
@@ -306,48 +304,89 @@ ${text}
 Ta priorité absolue est d'extraire fidèlement la TOTALITÉ (100%) des questions présentes dans l'épreuve brute sous format JSON, sans jamais en omettre et sans JAMAIS en inventer de nouvelles de toutes pièces.
 Pour que toutes les questions puissent rentrer dans l'objet réponse sans troncature, écris obligatoirement des explications ultra-courtes de maximum 25 mots par question.`;
 
-    try {
-      const ai = getAiClient();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.3,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              titre: { type: Type.STRING, description: 'Titre de l\'examen (ex: Concours ENA - Économie générale 1999)' },
-              description: { type: Type.STRING, description: 'Description du concours et son contexte' },
-              questions: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    question: { type: Type.STRING },
-                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    bonne_reponse: { type: Type.INTEGER, description: 'Index à base 0 de la réponse exacte.' },
-                    explication: { type: Type.STRING }
-                  },
-                  required: ['question', 'options', 'bonne_reponse', 'explication']
-                }
+    let extractedResponseText = '';
+    
+    // Add 3.1-pro-preview as a fallback or if psychotech
+    const modelsToTry = isPsychotechnique 
+      ? ['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-flash-latest'] 
+      : ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest'];
+      
+    const maxRetriesPerModel = 2;
+    let modelIndex = 0;
+    let lastError: any = null;
+
+    while (modelIndex < modelsToTry.length && !extractedResponseText) {
+      const currentModel = modelsToTry[modelIndex];
+      let attempt = 0;
+
+      while (attempt < maxRetriesPerModel) {
+        try {
+          console.log(`[AI Service] Querying Gemini model "${currentModel}" for structuring (Attempt ${attempt + 1}/${maxRetriesPerModel})...`);
+          const ai = getAiClient();
+          const response = await ai.models.generateContent({
+            model: currentModel,
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: 0.3,
+              maxOutputTokens: 8192,
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  titre: { type: Type.STRING, description: 'Titre de l\'examen (ex: Concours ENA - Économie générale 1999)' },
+                  description: { type: Type.STRING, description: 'Description du concours et son contexte' },
+                  questions: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        question: { type: Type.STRING },
+                        options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        bonne_reponse: { type: Type.INTEGER, description: 'Index à base 0 de la réponse exacte.' },
+                        explication: { type: Type.STRING }
+                      },
+                      required: ['question', 'options', 'bonne_reponse', 'explication']
+                    }
+                  }
+                },
+                required: ['titre', 'description', 'questions']
               }
-            },
-            required: ['titre', 'description', 'questions']
+            }
+          });
+
+          extractedResponseText = response.text || '';
+          if (extractedResponseText.trim().length > 0) {
+            console.log(`[AI Service] Structuring success using model "${currentModel}". Text length: ${extractedResponseText.length}`);
+            
+            let jsonText = extractedResponseText.trim();
+            if (jsonText.startsWith('```json')) {
+              jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '').trim();
+            } else if (jsonText.startsWith('```')) {
+              jsonText = jsonText.replace(/^```/, '').replace(/```$/, '').trim();
+            }
+            
+            return JSON.parse(jsonText) as PSContest;
+          }
+        } catch (error: any) {
+          attempt++;
+          lastError = error;
+          const errStr = String(error.message || error) + (error.stack || '');
+          console.warn(`[AI Service] Structuring try ${attempt} with configuration "${currentModel}" failed: ${errStr}`);
+          
+          const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json');
+          if (isTransient && attempt < maxRetriesPerModel) {
+            const delay = 1000 * Math.pow(2, attempt);
+            console.log(`[AI Service] Waiting ${delay}ms before retrying "${currentModel}"...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            break; // Move to fallback model
           }
         }
-      });
-
-      const resultText = response.text;
-      if (!resultText) {
-        throw new Error("L'IA n'a pas renvoyé de texte.");
       }
-
-      return JSON.parse(resultText) as PSContest;
-    } catch (error) {
-      console.error('[AI Service] Error processing text with AI:', error);
-      throw error;
+      modelIndex++;
     }
+
+    throw lastError || new Error("Failed to structure the contest after trying all available models and retries.");
   }
 };

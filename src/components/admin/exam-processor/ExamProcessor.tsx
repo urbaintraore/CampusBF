@@ -44,8 +44,9 @@ export function ExamProcessor() {
 
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStep, setProcessingStep] = useState<'idle' | 'upload' | 'ocr' | 'ai_structuring'>('idle');
+  const [processingStep, setProcessingStep] = useState<'idle' | 'upload' | 'ocr' | 'ocr_review' | 'ai_structuring'>('idle');
   const [progress, setProgress] = useState(0);
+  const [extractedOcrText, setExtractedOcrText] = useState('');
   const [generatedQuiz, setGeneratedQuiz] = useState<any>(null);
   const [showQuestions, setShowQuestions] = useState(true);
 
@@ -55,11 +56,13 @@ export function ExamProcessor() {
     if (acceptedFiles.length > 0) {
       setFile(acceptedFiles[0]);
       setGeneratedQuiz(null);
+      setExtractedOcrText('');
       setCustomTitle('');
       setCustomDescription('');
-      toast.success(`Fichier "${acceptedFiles[0].name}" chargé d'un clic !`);
+      setProcessingStep('idle');
+      toast.success(`Fichier "${acceptedFiles[0].name}" chargé !`);
     } else if (fileRejections.length > 0) {
-      toast.error("Format non supporté (seuls PDF, PNG, JPG, JPEG et WEBP sont acceptés)");
+      toast.error("Format non supporté (seuls PDF, PNG, JPG, JPEG et WEBP)");
     }
   };
 
@@ -73,20 +76,16 @@ export function ExamProcessor() {
     multiple: false
   });
 
-  const handleProcessExam = async () => {
+  const handleExtractOCR = async () => {
     if (!file) {
-      toast.error("Veuillez sélectionner un sujet d'épreuve (PDF ou Image) d'abord.");
+      toast.error("Veuillez sélectionner un sujet d'épreuve d'abord.");
       return;
     }
-
     setIsProcessing(true);
     setProgress(15);
-    setGeneratedQuiz(null);
     setProcessingStep('upload');
 
     try {
-      console.log("[Pipeline] Extraction text for", file.name, "size =", file.size);
-      
       const formData = new FormData();
       formData.append('file', file);
       formData.append('category', category);
@@ -101,53 +100,95 @@ export function ExamProcessor() {
       });
 
       if (!ocrResp.ok) {
-        const errorText = await ocrResp.text();
-        throw new Error(`Erreur lors de l'OCR : ${ocrResp.statusText} - ${errorText}`);
+        throw new Error(`Erreur lors de l'OCR : ${await ocrResp.text()}`);
       }
-
       const ocrData = await ocrResp.json();
-      const extractedText = ocrData.text || '';
-      console.log("[Pipeline] Extracted text character count:", extractedText.length);
-
-      if (!extractedText.trim()) {
-        throw new Error("Aucun texte lisible n'a pu être extrait de ce document.");
+      const text = ocrData.text || '';
+      
+      if (!text.trim()) {
+        throw new Error("Aucun texte lisible n'a pu être extrait.");
       }
+      
+      setExtractedOcrText(text);
+      setProcessingStep('ocr_review');
+      setProgress(60);
+      toast.success("OCR terminé. Veuillez réviser le texte extrait.");
+    } catch (err: any) {
+      console.error("[Pipeline] OCR failed:", err);
+      toast.error(err.message || 'La numérisation a échoué');
+      setProcessingStep('idle');
+      setProgress(0);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-      setProcessingStep('ai_structuring');
-      setProgress(75);
+  const handleGenerateAI = async () => {
+    if (!extractedOcrText.trim()) return;
+    setIsProcessing(true);
+    setProcessingStep('ai_structuring');
+    setProgress(75);
 
-      // Call the server-side structured text-processing endpoint
+    try {
       const aiResp = await fetch('/api/public-service/process-contest-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          text: extractedText,
+          text: extractedOcrText,
           category,
           level
         }),
       });
 
       if (!aiResp.ok) {
-        const errorText = await aiResp.text();
-        throw new Error(`L'IA s'est arrêtée : ${errorText}`);
+        throw new Error(`Erreur structuration IA : ${await aiResp.text()}`);
       }
 
       const structuredQuiz = await aiResp.json();
-      console.log("[Pipeline] Quiz structured from text:", structuredQuiz);
-
       setGeneratedQuiz(structuredQuiz);
       setCustomTitle(structuredQuiz.titre || `Sujet de concours - ${categoryLabels[category]}`);
-      setCustomDescription(structuredQuiz.description || `Session officielle d'examen corrigée par l'IA.`);
+      setCustomDescription(structuredQuiz.description || `Session officielle corrigée par l'IA.`);
       
       setProgress(100);
-      toast.success("Analyse et structuration IA terminées !");
+      setProcessingStep('idle');
+      
+      // Log success to Firestore
+      try {
+        await addDoc(collection(db, 'exam_processing_logs'), {
+          fileName: file?.name || 'unknown',
+          examType: category,
+          processingStatus: 'success',
+          detectedQuestions: structuredQuiz.questions?.length || 0,
+          aiConfidence: 'high',
+          processingTime: new Date().toISOString(),
+          createdAt: serverTimestamp()
+        });
+      } catch (logErr) {
+        console.warn("Could not save processing log", logErr);
+      }
+      
+      toast.success("Structuration IA terminée !");
     } catch (err: any) {
       console.error("[Pipeline] Generation failed:", err);
-      toast.error(err.message || 'La numérisation ou la structuration a échoué');
+      toast.error(err.message || 'La structuration a échoué');
+      setProgress(60);
+      setProcessingStep('ocr_review');
+      
+      // Log error to Firestore
+      try {
+        await addDoc(collection(db, 'exam_processing_logs'), {
+          fileName: file?.name || 'unknown',
+          examType: category,
+          processingStatus: 'failed',
+          detectedErrors: err.message || 'Unknown AI error',
+          processingTime: new Date().toISOString(),
+          createdAt: serverTimestamp()
+        });
+      } catch (logErr) {
+        console.warn("Could not save processing log", logErr);
+      }
     } finally {
       setIsProcessing(false);
-      setProcessingStep('idle');
-      setProgress(0);
     }
   };
 
@@ -392,9 +433,9 @@ export function ExamProcessor() {
                   </div>
                 </div>
 
-                {!isProcessing && (
+                {!isProcessing && processingStep !== 'ocr_review' && (
                   <button 
-                    onClick={handleProcessExam}
+                    onClick={handleExtractOCR}
                     className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-wider"
                   >
                     Découper et Structurer <ArrowRight size={14} />
@@ -402,6 +443,43 @@ export function ExamProcessor() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* OCR Review Step */}
+        {processingStep === 'ocr_review' && !isProcessing && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+             <div className="p-5 bg-slate-50 border border-slate-200 rounded-3xl relative overflow-hidden shadow-sm">
+              <h4 className="text-sm font-black tracking-tight text-slate-800 mb-2 flex items-center gap-2">
+                <FileText size={18} className="text-emerald-500" />
+                Étape 1 : Révision de l'Extraction (OCR)
+              </h4>
+              <p className="text-[11px] text-slate-500 leading-relaxed mb-4">
+                Si nécessaire, corrigez les erreurs de numérisation avant d'envoyer à l'IA pour la génération du QCM. Les tests psychotechniques et les tableaux complexes peuvent nécessiter des ajustements (ex: espaces manquants, symboles erronés).
+              </p>
+              
+              <textarea
+                value={extractedOcrText}
+                onChange={(e) => setExtractedOcrText(e.target.value)}
+                className="w-full h-64 p-4 text-xs font-mono bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-700"
+                placeholder="Le texte extrait apparaîtra ici..."
+              />
+              
+              <div className="flex justify-end gap-3 mt-4">
+                <button 
+                  onClick={() => { setProcessingStep('idle'); setExtractedOcrText(''); }}
+                  className="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button 
+                  onClick={handleGenerateAI}
+                  className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                >
+                  <Sparkles size={14} /> Continuer vers l'IA
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -541,34 +619,75 @@ export function ExamProcessor() {
                       <div key={i} className="p-5 border border-slate-100 rounded-2xl bg-white shadow-sm space-y-4 transition-colors hover:border-slate-200">
                         <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider">
                           <span className="text-slate-400">Question {i + 1}</span>
-                          <span className="bg-emerald-50 px-2 py-0.5 rounded text-emerald-700 border border-emerald-100">
-                            Index correct : {corIdx} ({String.fromCharCode(65 + corIdx)})
-                          </span>
+                          <select 
+                            value={corIdx} 
+                            onChange={(e) => {
+                              const newQuiz = { ...generatedQuiz };
+                              newQuiz.questions[i].bonne_reponse = parseInt(e.target.value);
+                              setGeneratedQuiz(newQuiz);
+                            }}
+                            className="bg-emerald-50 px-2 py-1 rounded text-emerald-700 border border-emerald-100 outline-none"
+                          >
+                            {rawOpts.map((_, idx) => (
+                              <option key={idx} value={idx}>Correct : {String.fromCharCode(65 + idx)}</option>
+                            ))}
+                          </select>
                         </div>
 
-                        <p className="text-slate-800 text-xs font-bold leading-relaxed">{q.question || "Libellé vide"}</p>
+                        <textarea 
+                          value={q.question || ""}
+                          onChange={(e) => {
+                            const newQuiz = { ...generatedQuiz };
+                            newQuiz.questions[i].question = e.target.value;
+                            setGeneratedQuiz(newQuiz);
+                          }}
+                          className="w-full text-slate-800 text-xs font-bold leading-relaxed p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                          rows={3}
+                        />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                           {rawOpts.map((opt: string, optIdx: number) => (
                             <div 
                               key={optIdx} 
-                              className={`p-3 rounded-xl border transition-all text-xs font-medium flex items-center gap-2 
+                              className={`p-1.5 rounded-xl border transition-all text-xs font-medium flex items-center gap-2 
                                 ${optIdx === corIdx 
                                   ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800 font-bold' 
                                   : 'bg-slate-50 border-slate-100 text-slate-500'}`}
                             >
-                              <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-mono border ${optIdx === corIdx ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-400 border-slate-200'}`}>
+                              <span className={`w-6 h-6 shrink-0 rounded-lg flex items-center justify-center text-[10px] font-mono border ${optIdx === corIdx ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-400 border-slate-200'}`}>
                                 {String.fromCharCode(65 + optIdx)}
                               </span>
-                              <span>{opt}</span>
+                              <input 
+                                type="text"
+                                value={opt}
+                                onChange={(e) => {
+                                  const newQuiz = { ...generatedQuiz };
+                                  if (newQuiz.questions[i].options) {
+                                    newQuiz.questions[i].options[optIdx] = e.target.value;
+                                  } else if (newQuiz.questions[i].choices) {
+                                    newQuiz.questions[i].choices[optIdx] = e.target.value;
+                                  }
+                                  setGeneratedQuiz(newQuiz);
+                                }}
+                                className="w-full bg-transparent outline-none p-1"
+                              />
                             </div>
                           ))}
                         </div>
 
                         {/* Explanation block */}
-                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 text-xs text-slate-500 italic leading-relaxed">
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-500 italic leading-relaxed">
                           <span className="font-bold text-slate-700 not-italic block uppercase text-[8px] tracking-wider mb-1">Justification du Jury :</span>
-                          {q.explication || q.explanation || "Aucune justification fournie."}
+                          <textarea 
+                            value={q.explication || q.explanation || ""}
+                            onChange={(e) => {
+                              const newQuiz = { ...generatedQuiz };
+                              newQuiz.questions[i].explication = e.target.value;
+                              setGeneratedQuiz(newQuiz);
+                            }}
+                            className="w-full bg-transparent outline-none resize-none"
+                            rows={2}
+                          />
                         </div>
                       </div>
                     );
