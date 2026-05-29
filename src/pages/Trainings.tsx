@@ -755,6 +755,17 @@ export default function Trainings() {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Domaine</label>
+                  <select
+                    value={editTrainingData.domain || ''}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, domain: e.target.value})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Type</label>
                   <select
                     value={editTrainingData.type || 'online'}
@@ -775,6 +786,18 @@ export default function Trainings() {
                     step="500"
                     value={editTrainingData.price || 0}
                     onChange={(e) => setEditTrainingData({...editTrainingData, price: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Nombre max de participants</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    value={editTrainingData.maxParticipants || 1}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, maxParticipants: parseInt(e.target.value) || 1})}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
@@ -824,6 +847,32 @@ export default function Trainings() {
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700">URL de l'image (optionnel)</label>
+                  <input
+                    type="url"
+                    value={editTrainingData.imageUrl || ''}
+                    onChange={(e) => setEditTrainingData({...editTrainingData, imageUrl: e.target.value})}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="https://..."
+                  />
+                </div>
+                
+                {user?.role === 'admin' && (
+                  <div className="space-y-2 md:col-span-2">
+                     <label className="text-sm font-bold text-slate-700">Statut (Admin)</label>
+                     <select
+                       value={editTrainingData.status || 'pending'}
+                       onChange={(e) => setEditTrainingData({...editTrainingData, status: e.target.value as any})}
+                       className="w-full px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 text-amber-900"
+                     >
+                       <option value="pending">En attente</option>
+                       <option value="approved">Approuvé</option>
+                       <option value="rejected">Refusé</option>
+                     </select>
+                  </div>
+                )}
               </div>
 
               <button

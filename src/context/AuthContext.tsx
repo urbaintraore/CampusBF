@@ -1850,7 +1850,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTraining = async (trainingId: string, data: Partial<Training>) => {
-    if (!user || user.role !== 'admin') return;
+    if (!user) return;
+    const training = trainings.find(t => t.id === trainingId);
+    if (!training) return;
+    
+    // Check if the user is an admin or the owner of the training
+    if (user.role !== 'admin' && training.trainerId !== user.id) return;
+    
     await trainingService.updateTraining(user, trainingId, data);
   };
 
