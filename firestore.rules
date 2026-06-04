@@ -62,6 +62,13 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidReport(data) {
+      return data.reporterId == request.auth.uid &&
+             data.reportedItemId is string && data.reportedItemId.size() <= 128 &&
+             data.reportedItemType in ['post', 'comment', 'document', 'internship', 'marketplace', 'event', 'lostAndFound', 'news', 'colocation', 'message'] &&
+             data.reason is string && data.reason.size() <= 2000;
+    }
+
     // -------------------------------------------------------------------------
     // PILLAR 0: Global Safety Net
     // -------------------------------------------------------------------------
@@ -255,6 +262,11 @@ service cloud.firestore {
     match /video_reports/{reportId} {
       allow create: if isSignedIn() && isValidVideoReport(incoming());
       allow read: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && isValidId(reportId) && isValidReport(incoming());
+      allow read, delete: if isAdmin();
     }
 
     match /users/{userId}/reviews/{reviewId} {

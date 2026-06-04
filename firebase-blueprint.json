@@ -220,9 +220,28 @@
         "duration": { "type": "number" }
       },
       "required": ["title", "concours", "annee", "questions", "createdAt"]
+    },
+    "UserReport": {
+      "title": "User Report",
+      "description": "Signalement pour contenu inapproprié ou abusif",
+      "type": "object",
+      "properties": {
+        "reportedItemId": { "type": "string" },
+        "reportedItemType": { "type": "string" },
+        "reason": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportedItemId", "reportedItemType", "reason", "reporterId", "createdAt"]
     }
   },
   "firestore": {
+    "/reports/{reportId}": {
+      "schema": "UserReport",
+      "description": "Signalements de contenu abusif"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "Profils utilisateurs"

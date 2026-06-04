@@ -38,6 +38,7 @@ import PublicServiceContests from './pages/PublicServiceContests';
 import UserGuide from './pages/UserGuide';
 import EnterprisePortal from './pages/EnterprisePortal';
 import UniversityPortal from './pages/UniversityPortal';
+import Departments from './pages/Departments';
 import ParentPortal from './pages/ParentPortal';
 import CommunityVideos from './pages/CommunityVideos';
 import LockedSection from './components/LockedSection';
@@ -306,6 +307,11 @@ export default function App() {
             <GuestRoute>
               <UniversityPortal />
             </GuestRoute>
+          } />
+          <Route path="/departments" element={
+            <ProtectedRoute>
+              <Departments />
+            </ProtectedRoute>
           } />
           <Route path="/parent-portal" element={
             <GuestRoute>

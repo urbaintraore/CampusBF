@@ -50,9 +50,38 @@ export default defineConfig(({mode}) => {
           ]
         },
         workbox: {
-          maximumFileSizeToCacheInBytes: 5000000,
+          maximumFileSizeToCacheInBytes: 10000000, // 10MB to accommodate robust caching
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api/],
           runtimeCaching: [
+            {
+              // Cache document navigation to allow viewing previously visited pages offline
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'pages-cache',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 * 24 * 7 // Cache for 7 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            },
+            {
+              // Cache static assets securely using StaleWhileRevalidate strategy
+              urlPattern: /\.(?:js|css|woff2?|png|jpg|jpeg|svg|gif|json)$/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'static-assets-cache',
+                expiration: {
+                  maxEntries: 150,
+                  maxAgeSeconds: 60 * 60 * 24 * 30 // Cache for 30 days
+                }
+              }
+            },
             {
               urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
               handler: 'CacheFirst',

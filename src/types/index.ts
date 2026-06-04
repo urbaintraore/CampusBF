@@ -554,7 +554,7 @@ export interface LostAndFound {
 export interface Report {
   id: string;
   reportedItemId: string;
-  reportedItemType: 'post' | 'comment' | 'document' | 'internship' | 'marketplace' | 'event' | 'lostAndFound' | 'news' | 'colocation';
+  reportedItemType: 'post' | 'comment' | 'document' | 'internship' | 'marketplace' | 'event' | 'lostAndFound' | 'news' | 'colocation' | 'message';
   reason: string;
   reporterId: string;
   reporterName: string;

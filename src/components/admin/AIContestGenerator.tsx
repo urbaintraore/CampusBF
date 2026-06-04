@@ -57,8 +57,11 @@ export function AIContestGenerator({ onContestCreated, onCancel }: { onContestCr
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Erreur lors de la génération IA');
+        let errorData: any = {};
+        try {
+           errorData = await response.json();
+        } catch(e) {}
+        throw new Error(errorData.error || `Erreur serveur ${response.status}`);
       }
       
       const contest = await response.json();
@@ -96,8 +99,11 @@ export function AIContestGenerator({ onContestCreated, onCancel }: { onContestCr
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Erreur lors de la vérification IA');
+        let errorData: any = {};
+        try {
+           errorData = await response.json();
+        } catch(e) {}
+        throw new Error(errorData.error || `Erreur serveur ${response.status}`);
       }
       
       const result = await response.json();

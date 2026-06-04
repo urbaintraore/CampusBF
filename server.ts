@@ -42,7 +42,7 @@ app.post('/api/public-service/generate-contest', async (req, res) => {
     res.json(contest);
   } catch (err: any) {
     console.error(`[API] Generation failed for ${category}:`, err);
-    res.status(500).json({ error: err.message || 'Generation failed' });
+    res.status(500).json({ error: err.message || 'Generation failed', details: err.stack, raw: err });
   }
 });
 
@@ -557,6 +557,42 @@ async function createServer() {
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
   }
+
+  app.post('/api/orientation/analyze', async (req, res) => {
+    const { prompt } = req.body;
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        }
+      });
+      res.json({ text: response.text });
+    } catch (err: any) {
+      console.error("[API] Orientation Analyze failed:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/orientation/chat', async (req, res) => {
+    const { prompt } = req.body;
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }]
+        }
+      });
+      res.json({ text: response.text });
+    } catch (err: any) {
+      console.error("[API] Orientation Chat failed:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Serveur démarré sur http://localhost:${PORT}`);

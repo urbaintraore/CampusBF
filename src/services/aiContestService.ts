@@ -95,66 +95,100 @@ Titre suggéré et description doivent faire référence au Burkina Faso ou aux 
 Sois extrêmement précis et factuel sur les dates historiques du Burkina Faso, l'administration, la géo burkinabè, la constitution et les ministères.
 Génère un contenu irréprochable et renvoie le résultat dans le format JSON demandé.`;
 
-    try {
-      const ai = getAiClient();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              titre: {
-                type: Type.STRING,
-                description: 'Titre professionnel du concours (ex: Concours Blanc - Greffe et Magistrature - Niveau Licence)'
-              },
-              description: {
-                type: Type.STRING,
-                description: 'Description introductive rappelant le cadre officiel et les coefficients applicables d\'après les usages au BF.'
-              },
-              questions: {
-                type: Type.ARRAY,
-                description: 'Tableau des questions générées.',
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    question: { type: Type.STRING, description: 'L\'énoncé complet et précis de la question.' },
-                    options: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING },
-                      description: 'Réponses proposées. Si Vrai/Faux, doit être exactement ["Vrai", "Faux"]. Sinon, 4 propositions élégantes.'
-                    },
-                    bonne_reponse: {
-                      type: Type.INTEGER,
-                      description: 'L\'index de la bonne réponse dans le tableau options (index comence à 0).'
-                    },
-                    explication: {
-                      type: Type.STRING,
-                      description: 'Une explication justificative et sourcée basée sur l\'histoire ou l\'administration du pays.'
-                    }
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+    const maxRetriesPerModel = 3;
+    let modelIndex = 0;
+    let lastError: any = null;
+    let extractedText = '';
+
+    while (modelIndex < modelsToTry.length && !extractedText) {
+      const currentModel = modelsToTry[modelIndex];
+      let attempt = 0;
+
+      while (attempt < maxRetriesPerModel) {
+        try {
+          console.log(`[AI Service] Querying Gemini model "${currentModel}" for contest generation (Attempt ${attempt + 1}/${maxRetriesPerModel})...`);
+          const ai = getAiClient();
+          const response = await ai.models.generateContent({
+            model: currentModel,
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: 0.7,
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  titre: {
+                    type: Type.STRING,
+                    description: 'Titre professionnel du concours (ex: Concours Blanc - Greffe et Magistrature - Niveau Licence)'
                   },
-                  required: ['question', 'options', 'bonne_reponse', 'explication']
-                }
+                  description: {
+                    type: Type.STRING,
+                    description: 'Description introductive rappelant le cadre officiel et les coefficients applicables d\'après les usages au BF.'
+                  },
+                  questions: {
+                    type: Type.ARRAY,
+                    description: 'Tableau des questions générées.',
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        question: { type: Type.STRING, description: 'L\'énoncé complet et précis de la question.' },
+                        options: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING },
+                          description: 'Réponses proposées. Si Vrai/Faux, doit être exactement ["Vrai", "Faux"]. Sinon, 4 propositions élégantes.'
+                        },
+                        bonne_reponse: {
+                          type: Type.INTEGER,
+                          description: 'L\'index de la bonne réponse dans le tableau options (index comence à 0).'
+                        },
+                        explication: {
+                          type: Type.STRING,
+                          description: 'Une explication justificative et sourcée basée sur l\'histoire ou l\'administration du pays.'
+                        }
+                      },
+                      required: ['question', 'options', 'bonne_reponse', 'explication']
+                    }
+                  }
+                },
+                required: ['titre', 'description', 'questions']
               }
-            },
-            required: ['titre', 'description', 'questions']
+            }
+          });
+
+          extractedText = response.text || '';
+          if (extractedText.trim().length > 0) {
+            console.log(`[AI Service] Contest generation success using model "${currentModel}". Text length: ${extractedText.length}`);
+            
+            let jsonText = extractedText.trim();
+            if (jsonText.startsWith('```json')) {
+              jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '').trim();
+            } else if (jsonText.startsWith('```')) {
+              jsonText = jsonText.replace(/^```/, '').replace(/```$/, '').trim();
+            }
+            return JSON.parse(jsonText) as PSContest;
+          }
+        } catch (err: any) {
+          attempt++;
+          lastError = err;
+          const errStr = String(err.message || err);
+          console.warn(`[AI Service] Contest generation try ${attempt} with model "${currentModel}" failed: ${errStr}`);
+          
+          const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json');
+          if (isTransient && attempt < maxRetriesPerModel) {
+            const delay = 1000 * Math.pow(2, attempt);
+            console.log(`[AI Service] Waiting ${delay}ms before retrying "${currentModel}"...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            break; // Try next model list
           }
         }
-      });
-
-      const text = response.text;
-      if (!text) {
-        throw new Error("L'IA n'a pas renvoyé de texte.");
       }
-
-      return JSON.parse(text) as PSContest;
-    } catch (error) {
-      console.error('[AI Service] Error generating contest:', error);
-      throw error;
+      modelIndex++;
     }
+
+    throw lastError || new Error("Failed to generate the contest after trying all available models and retries.");
   },
 
   /**
@@ -190,60 +224,94 @@ Tu as une tolérance zéro pour les approximations, les dates floues ou les erre
 Tu analyzes et modifies si nécessaire le JSON d'entrée afin de garantir des questions d'un standing irréprochable et d'une rigueur absolue.
 Renvoie un JSON conforme au schema exigé.`;
 
-    try {
-      const ai = getAiClient();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.2, // Low temperature for maximum factual reliability
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              hasErrors: {
-                type: Type.BOOLEAN,
-                description: 'True si une anomalie, erreur factuelle ou dérive de clé a été identifiée et corrigée.'
-              },
-              logs: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: 'Liste étape par étape des remarques critiques de vérification (ex: "Question 2 corrigée : L\'Insurrection Populaire a eu lieu en Octobre 2014 et non en 2015.").'
-              },
-              questionsChecked: {
-                type: Type.INTEGER,
-                description: 'Le nombre total de questions passées au crible.'
-              },
-              correctedQuestions: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    question: { type: Type.STRING },
-                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    bonne_reponse: { type: Type.INTEGER },
-                    explication: { type: Type.STRING }
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+    const maxRetriesPerModel = 3;
+    let modelIndex = 0;
+    let lastError: any = null;
+    let extractedText = '';
+
+    while (modelIndex < modelsToTry.length && !extractedText) {
+      const currentModel = modelsToTry[modelIndex];
+      let attempt = 0;
+
+      while (attempt < maxRetriesPerModel) {
+        try {
+          console.log(`[AI Service] Querying Gemini model "${currentModel}" for contest verification (Attempt ${attempt + 1}/${maxRetriesPerModel})...`);
+          const ai = getAiClient();
+          const response = await ai.models.generateContent({
+            model: currentModel,
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: 0.2, // Low temperature for maximum factual reliability
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  hasErrors: {
+                    type: Type.BOOLEAN,
+                    description: 'True si une anomalie, erreur factuelle ou dérive de clé a été identifiée et corrigée.'
                   },
-                  required: ['question', 'options', 'bonne_reponse', 'explication']
-                }
+                  logs: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: 'Liste étape par étape des remarques critiques de vérification (ex: "Question 2 corrigée : L\'Insurrection Populaire a eu lieu en Octobre 2014 et non en 2015.").'
+                  },
+                  questionsChecked: {
+                    type: Type.INTEGER,
+                    description: 'Le nombre total de questions passées au crible.'
+                  },
+                  correctedQuestions: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        question: { type: Type.STRING },
+                        options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        bonne_reponse: { type: Type.INTEGER },
+                        explication: { type: Type.STRING }
+                      },
+                      required: ['question', 'options', 'bonne_reponse', 'explication']
+                    }
+                  }
+                },
+                required: ['hasErrors', 'logs', 'questionsChecked', 'correctedQuestions']
               }
-            },
-            required: ['hasErrors', 'logs', 'questionsChecked', 'correctedQuestions']
+            }
+          });
+
+          extractedText = response.text || '';
+          if (extractedText.trim().length > 0) {
+            console.log(`[AI Service] Contest verification success using model "${currentModel}". Text length: ${extractedText.length}`);
+            
+            let jsonText = extractedText.trim();
+            if (jsonText.startsWith('```json')) {
+              jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '').trim();
+            } else if (jsonText.startsWith('```')) {
+              jsonText = jsonText.replace(/^```/, '').replace(/```$/, '').trim();
+            }
+            return JSON.parse(jsonText) as PSVerificationResult;
+          }
+        } catch (err: any) {
+          attempt++;
+          lastError = err;
+          const errStr = String(err.message || err);
+          console.warn(`[AI Service] Contest verification try ${attempt} with model "${currentModel}" failed: ${errStr}`);
+          
+          const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json');
+          if (isTransient && attempt < maxRetriesPerModel) {
+            const delay = 1000 * Math.pow(2, attempt);
+            console.log(`[AI Service] Waiting ${delay}ms before retrying "${currentModel}"...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            break; // Try next model list
           }
         }
-      });
-
-      const text = response.text;
-      if (!text) {
-        throw new Error("L'IA n'a pas renvoyé de rapport d'audit.");
       }
-
-      return JSON.parse(text) as PSVerificationResult;
-    } catch (error) {
-      console.error('[AI Service] Error verifying contest:', error);
-      throw error;
+      modelIndex++;
     }
+
+    throw lastError || new Error("Failed to verify the contest after trying all available models and retries.");
   },
 
   /**
@@ -306,12 +374,10 @@ Pour que toutes les questions puissent rentrer dans l'objet réponse sans tronca
 
     let extractedResponseText = '';
     
-    // Add 3.1-pro-preview as a fallback or if psychotech
-    const modelsToTry = isPsychotechnique 
-      ? ['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-flash-latest'] 
-      : ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest'];
+    // Use highly resilient and high-quota stable models
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
       
-    const maxRetriesPerModel = 2;
+    const maxRetriesPerModel = 3;
     let modelIndex = 0;
     let lastError: any = null;
 

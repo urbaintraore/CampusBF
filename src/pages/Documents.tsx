@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight, Brain, RotateCw } from 'lucide-react';
+import { Search, Filter, Download, ThumbsUp, FileText, SlidersHorizontal, BookOpen, Calendar, ChevronDown, X, Plus, Shield, UploadCloud, AlertCircle, Loader2, CheckCircle, Eye, Sparkles, ShieldCheck, Lock, Printer, ArrowRight, Brain, RotateCw, AlertTriangle } from 'lucide-react';
 import PrintOrderModal from '../components/PrintOrderModal';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { summarizeDocument } from '@/services/geminiService';
 import toast from 'react-hot-toast';
+import { ReportModal } from '@/components/ReportModal';
 import { db, storage } from '@/lib/firebase';
 import { 
   collection, 
@@ -63,6 +64,8 @@ export default function Documents() {
   
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [selectedDocForPrint, setSelectedDocForPrint] = useState<{url?: string, name?: string} | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedDocForReport, setSelectedDocForReport] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchDocs = async () => {
@@ -1018,16 +1021,28 @@ export default function Documents() {
                         if (isLocked && !isAdmin) return null;
                         
                         return (
-                          <button
-                          onClick={() => {
-                            setSelectedDocForPrint({ url: doc.downloadUrl, name: doc.title || doc.fileName });
-                            setShowPrintModal(true);
-                          }}
-                          className="w-full md:w-auto p-3 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl transition-all shadow-sm flex items-center justify-center active:scale-95"
-                          title="Imprimer ce document"
-                        >
-                          <Printer size={18} className="text-emerald-600" />
-                        </button>
+                          <div className="flex items-center gap-2 w-full md:w-auto">
+                            <button
+                              onClick={() => {
+                                setSelectedDocForReport(doc);
+                                setShowReportModal(true);
+                              }}
+                              className="p-3 bg-red-50/50 hover:bg-red-50 border border-red-200 text-red-600 rounded-xl transition-all shadow-sm flex items-center justify-center active:scale-95"
+                              title="Signaler ce document comme inapproprié"
+                            >
+                              <AlertTriangle size={18} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedDocForPrint({ url: doc.downloadUrl, name: doc.title || doc.fileName });
+                                setShowPrintModal(true);
+                              }}
+                              className="p-3 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl transition-all shadow-sm flex items-center justify-center active:scale-95"
+                              title="Imprimer ce document"
+                            >
+                              <Printer size={18} className="text-emerald-600" />
+                            </button>
+                          </div>
                         );
                       })()}
                       {(isAdmin || user?.role !== 'student') && (
@@ -1093,6 +1108,17 @@ export default function Documents() {
           }}
           initialFileUrl={selectedDocForPrint?.url}
           initialFileName={selectedDocForPrint?.name}
+        />
+      )}
+      {showReportModal && selectedDocForReport && (
+        <ReportModal 
+          isOpen={showReportModal}
+          onClose={() => {
+            setShowReportModal(false);
+            setSelectedDocForReport(null);
+          }}
+          reportedItemId={selectedDocForReport.id}
+          reportedItemType="document"
         />
       )}
     </div>

@@ -3,7 +3,7 @@ import { db, auth } from '@/lib/firebase';
 import { Scholarship, User } from '@/types';
 import { GoogleGenAI, Type } from "@google/genai";
 
-const DEFAULT_MODEL = "gemini-3-flash-preview";
+const DEFAULT_MODEL = "gemini-3.5-flash";
 
 const getAiClient = (): GoogleGenAI => {
   const apiKey = (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') 

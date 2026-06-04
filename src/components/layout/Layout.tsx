@@ -11,6 +11,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { user, isAdmin, logout, notifications, markNotificationAsRead, logActivity } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,6 +40,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] },
     { icon: Briefcase, label: 'Portail Entreprise', to: '/enterprise-portal', roles: ['company', 'admin'] },
     { icon: Building2, label: 'Portail Université', to: '/university-portal', roles: ['institution', 'admin'] },
+    { icon: School, label: 'Départements', to: '/departments', roles: ['institution', 'admin', 'teacher', 'student'] },
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
     { icon: School, label: 'Classement Universités', to: '/ranking', roles: ['student', 'teacher', 'alumni', 'admin'] },
     { icon: Trophy, label: 'Challenge & Concours', to: '/contests', roles: ['admin', 'teacher', 'alumni', 'parent'] },
@@ -96,6 +98,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   });
   console.log("Computed NavItems length:", navItems.length);
 
+  const filteredNavItems = navItems.filter(item =>
+    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (isAdmin) {
     console.log("Admin detecté - Accès Administration autorisé");
   } else {
@@ -151,12 +157,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           "md:hidden fixed inset-0 z-40 bg-white px-4 animate-in slide-in-from-top-10 duration-200 overflow-y-auto pb-10",
           isAdmin ? "pt-[80px]" : "pt-20"
         )}>
+          {/* Mobile Search input */}
+          <div className="mb-4 mt-2">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+              <input 
+                type="text" 
+                placeholder="Recherche de pages..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all shadow-inner"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
           <nav className="flex flex-col gap-2">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setSearchQuery('');
+                }}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 p-4 rounded-xl transition-all",
@@ -168,8 +199,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {item.label}
               </NavLink>
             ))}
+
+            {filteredNavItems.length === 0 && (
+              <div className="px-4 py-8 text-sm text-slate-400 text-center">
+                Aucune page trouvée
+              </div>
+            )}
+
             {user ? (
-              <button onClick={logout} className="flex items-center gap-3 p-4 rounded-xl text-red-600 hover:bg-red-50 transition-all mt-4 w-full">
+              <button 
+                onClick={() => {
+                  logout();
+                  setIsMobileMenuOpen(false);
+                }} 
+                className="flex items-center gap-3 p-4 rounded-xl text-red-600 hover:bg-red-50 transition-all mt-4 w-full"
+              >
                 <LogOut size={20} />
                 Déconnexion
               </button>
@@ -209,18 +253,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
             <input 
               type="text" 
-              placeholder="Recherche rapide..." 
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-100/50 border border-slate-200/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all shadow-inner"
+              placeholder="Recherche de pages..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 bg-slate-100/50 border border-slate-200/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all shadow-inner"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-2">Menu Principal</p>
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={() => setSearchQuery('')}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
@@ -234,6 +289,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span className="z-10">{item.label}</span>
             </NavLink>
           ))}
+
+          {filteredNavItems.length === 0 && (
+            <div className="px-4 py-8 text-sm text-slate-400 text-center">
+              Aucune page trouvée
+            </div>
+          )}
           
           <div className="pt-4 px-4">
             <button 

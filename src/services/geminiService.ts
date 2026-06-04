@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizQuestion, PublicServiceQuestion } from "@/types";
 
-const DEFAULT_MODEL = "gemini-flash-latest";
+const DEFAULT_MODEL = "gemini-3.5-flash";
 
 /**
  * Restructure un document académique avec IA.

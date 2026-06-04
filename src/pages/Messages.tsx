@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon, Download, ChevronLeft, MessageCircle, Plus } from 'lucide-react';
+import { Search, Send, MoreVertical, Phone, Video, Paperclip, X, FileText, Image as ImageIcon, Download, ChevronLeft, MessageCircle, Plus, AlertTriangle } from 'lucide-react';
+import { ReportModal } from '@/components/ReportModal';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { User, Message } from '@/types';
@@ -34,6 +35,8 @@ export default function Messages() {
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedMessageForReport, setSelectedMessageForReport] = useState<Message | null>(null);
 
   // Helper to generate conversation ID
   const getConversationId = (uid1: string, uid2: string) => {
@@ -446,7 +449,7 @@ export default function Messages() {
               currentChatMessages.map((msg) => {
                 const isMe = msg.senderId === currentUser?.id;
                 return (
-                  <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
+                  <div key={msg.id} className={cn("flex items-end gap-2 group", isMe ? "justify-end" : "justify-start")}>
                     <div className={cn(
                       "max-w-[70%] rounded-2xl px-5 py-3 shadow-sm",
                       isMe 
@@ -470,6 +473,18 @@ export default function Messages() {
                         {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>
                     </div>
+                    {!isMe && (
+                      <button
+                        onClick={() => {
+                          setSelectedMessageForReport(msg);
+                          setShowReportModal(true);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all self-center"
+                        title="Signaler ce message"
+                      >
+                        <AlertTriangle size={14} />
+                      </button>
+                    )}
                   </div>
                 );
               })
@@ -615,6 +630,17 @@ export default function Messages() {
           </div>
         </div>
       </div>
+    )}
+    {showReportModal && selectedMessageForReport && (
+      <ReportModal 
+        isOpen={showReportModal}
+        onClose={() => {
+          setShowReportModal(false);
+          setSelectedMessageForReport(null);
+        }}
+        reportedItemId={selectedMessageForReport.id}
+        reportedItemType="message"
+      />
     )}
   </>
 );
