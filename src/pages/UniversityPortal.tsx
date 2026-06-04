@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { School, Users, FileText, Calendar, Plus, Trophy, Award, MessageCircle, Briefcase, X } from 'lucide-react';
+import { School, Users, FileText, Calendar, Plus, Trophy, Award, MessageCircle, Briefcase, X, Network } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
+import Departments from './Departments';
 
 export default function UniversityPortal() {
   const { user, events, users, internships, addInternship, addEvent } = useAuth();
   
+  const [activePortalTab, setActivePortalTab] = useState<'dashboard' | 'departments'>('dashboard');
+
   const universityEvents = events.filter(e => e.organizerId === user?.id);
   const universityOffers = internships.filter(i => i.authorId === user?.id);
   const registeredStudents = users.filter((u: any) => u.university === user?.institutionProfile?.type); // Assuming matching name or logic
@@ -115,6 +118,31 @@ export default function UniversityPortal() {
           </div>
         </div>
         <div className="flex gap-4 border-l border-slate-200 pl-6 ml-6">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button 
+              onClick={() => setActivePortalTab('dashboard')}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activePortalTab === 'dashboard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Vue d'ensemble
+            </button>
+            <button 
+              onClick={() => setActivePortalTab('departments')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activePortalTab === 'departments' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Network size={16} />
+              Départements
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {activePortalTab === 'departments' ? (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <Departments />
+        </div>
+      ) : (
+      <>
+        <div className="flex gap-4 mb-6">
           <button 
             onClick={handlePostOffer}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors shadow-sm font-medium"
@@ -130,9 +158,8 @@ export default function UniversityPortal() {
             <span className="text-sm">Créer un événement</span>
           </button>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
             <Users size={24} />
@@ -219,6 +246,8 @@ export default function UniversityPortal() {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {showOfferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
