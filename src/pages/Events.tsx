@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, MapPin, Clock, Users, Plus, Search, Filter, Shield, AlertCircle, Lock, GraduationCap, Trophy, Music, Info, X, Edit, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Plus, Search, Filter, Shield, AlertCircle, Lock, GraduationCap, Trophy, Music, Info, X, Edit, Trash2, Paperclip, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { CampusEvent } from '@/types';
@@ -25,17 +25,53 @@ export default function Events() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
-  const [newEvent, setNewEvent] = useState({
+  const [newEvent, setNewEvent] = useState<{
+    title: string;
+    description: string;
+    type: CampusEvent['type'];
+    location: string;
+    date: string;
+    time: string;
+    attachments?: { fileName: string; fileUrl: string; fileType: string }[];
+  }>({
     title: '',
     description: '',
-    type: 'Soutenance' as CampusEvent['type'],
+    type: 'Soutenance',
     location: '',
     date: '',
-    time: ''
+    time: '',
+    attachments: []
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const list = Array.from(files);
+    const newAttach = list.map(f => {
+      return {
+        fileName: f.name,
+        fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        fileType: f.name.split('.').pop() || 'pdf'
+      };
+    });
+
+    setNewEvent(prev => ({
+      ...prev,
+      attachments: [...(prev.attachments || []), ...newAttach]
+    }));
+    toast.success(`${list.length} pièce(s) jointe(s) ajoutée(s) !`);
+  };
+
+  const removeAttachment = (index: number) => {
+    setNewEvent(prev => ({
+      ...prev,
+      attachments: (prev.attachments || []).filter((_, i) => i !== index)
+    }));
+  };
 
   const filteredEvents = events.filter(event => {
     const title = event.title || '';
@@ -53,6 +89,10 @@ export default function Events() {
     }
     
     return matchesSearch && matchesType;
+  }).sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date || 0).getTime();
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date || 0).getTime();
+    return dateB - dateA; // Descending order (most recent to oldest)
   });
 
   const getContestForEvent = (eventTitle: string) => {
@@ -195,7 +235,8 @@ export default function Events() {
       type: event.type,
       location: event.location,
       date: event.date,
-      time: event.time
+      time: event.time,
+      attachments: event.attachments || []
     });
     setEditingEventId(event.id);
     setIsEditing(true);
@@ -226,7 +267,8 @@ export default function Events() {
       type: 'Soutenance',
       location: '',
       date: '',
-      time: ''
+      time: '',
+      attachments: []
     });
     setIsEditing(false);
     setEditingEventId(null);
@@ -404,6 +446,30 @@ export default function Events() {
                         <span>{getEventParticipantCount(event)} inscrits</span>
                       </div>
                     </div>
+
+                    {/* Event Attachments list inside card */}
+                    {event.attachments && event.attachments.length > 0 && (
+                      <div className="mb-4 pt-3 border-t border-slate-100/60">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                          <Paperclip size={10} /> Document(s) joint(s) ({event.attachments.length})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {event.attachments.map((attach, idx) => (
+                            <a
+                              key={idx}
+                              href={attach.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 font-medium text-slate-700 text-xs rounded-xl transition-all"
+                            >
+                              <Paperclip size={11} className="text-slate-400 font-bold" />
+                              <span className="truncate max-w-[150px]">{attach.fileName}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                       <div className="flex items-center gap-2">
@@ -600,6 +666,35 @@ export default function Events() {
                 </div>
               </div>
 
+              {/* Event attachments inside details modal */}
+              {selectedEvent.attachments && selectedEvent.attachments.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+                    <Paperclip className="w-4 h-4 text-slate-500" />
+                    Documents joints ({selectedEvent.attachments.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {selectedEvent.attachments.map((attach, idx) => (
+                      <a
+                        key={idx}
+                        href={attach.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 hover:border-indigo-300 hover:bg-slate-100/50 rounded-xl font-medium text-slate-705 text-xs transition-all group"
+                      >
+                        <span className="truncate max-w-[200px] flex items-center gap-2 font-semibold">
+                          <Paperclip size={13} className="text-indigo-500" />
+                          {attach.fileName}
+                        </span>
+                        <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-all">
+                          <Download size={12} />
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
                   {(() => {
@@ -751,6 +846,50 @@ export default function Events() {
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   placeholder="Ex: Amphi A600, UJKZ"
                 />
+              </div>
+
+              {/* Event Attachments Interface */}
+              <div className="border-t border-slate-100 pt-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-slate-400" />
+                  Pièces Jointes de l'Événement
+                </label>
+                
+                {/* Drag n drop box */}
+                <div className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-4 text-center cursor-pointer relative bg-slate-50 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center justify-center">
+                    <Paperclip className="w-8 h-8 text-indigo-500 mb-2" />
+                    <p className="text-xs font-semibold text-slate-700">Cliquez ou glissez-déposez des fichiers ici</p>
+                    <p className="text-[10px] text-slate-400 mt-1">PDF, ZIP, Images acceptés (Simulé)</p>
+                  </div>
+                </div>
+
+                {/* Display attachments list */}
+                {newEvent.attachments && newEvent.attachments.length > 0 && (
+                  <div className="mt-3 space-y-1.5 max-h-32 overflow-y-auto">
+                    {newEvent.attachments.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-100/50 rounded-xl border border-slate-100 text-xs">
+                        <span className="font-semibold text-slate-700 truncate max-w-[200px] flex items-center gap-1.5">
+                          <Paperclip size={12} className="text-slate-400" />
+                          {file.fileName}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(idx)}
+                          className="p-1 hover:bg-slate-200 text-slate-500 hover:text-rose-600 rounded-full transition-all"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button 

@@ -486,6 +486,7 @@ export interface CampusEvent {
   attendees: string[]; // User IDs
   imageUrl?: string;
   createdAt: string;
+  attachments?: { fileName: string; fileUrl: string; fileType?: string }[];
 }
 
 export interface Notification {

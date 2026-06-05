@@ -3,9 +3,19 @@ import { useAuth } from '@/context/AuthContext';
 import { School, Users, FileText, Calendar, Plus, Trophy, Award, MessageCircle, Briefcase, X, Network } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
 import Departments from './Departments';
+import { usePermission } from '@/hooks/usePermission';
+import UniversityStats from '@/components/UniversityStats';
+import MultiCriteriaSearch from '@/components/MultiCriteriaSearch';
+import { academicService } from '@/services/academicService';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Download } from 'lucide-react';
+
+import toast from 'react-hot-toast';
 
 export default function UniversityPortal() {
   const { user, events, users, internships, addInternship, addEvent } = useAuth();
+  const { hasPermission } = usePermission();
   
   const [activePortalTab, setActivePortalTab] = useState<'dashboard' | 'departments'>('dashboard');
 
@@ -16,6 +26,149 @@ export default function UniversityPortal() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const exportStudentListPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const studentsList = academicService.getStudents();
+      const depts = academicService.getDepartments('UJKZ');
+      const classesList = academicService.getClasses();
+
+      // Header style
+      doc.setFontSize(20);
+      doc.setTextColor(30, 41, 59); // slate-800
+      doc.text("L'UNIVERSITE JOSEPH KI-ZERBO (UJKZ)", 14, 15);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text("Liste Officielle des Etudiants Inscrits", 14, 23);
+      
+      doc.setFontSize(9);
+      doc.text(`Genere le : ${new Date().toLocaleDateString('fr-FR')} • Annee Academique : 2025-2026`, 14, 29);
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, 32, 196, 32);
+
+      const tableData = studentsList.map((s, idx) => {
+        const dept = depts.find(d => d.id === s.departmentId)?.code || 'N/A';
+        const cls = classesList.find(c => c.id === s.classeId)?.code || 'N/A';
+        return [
+          s.ine || 'N/A',
+          `${s.lastName.toUpperCase()} ${s.firstName}`,
+          s.email,
+          dept,
+          cls,
+          s.status === 'active' ? 'Inscrit(e)' : 'Inactif'
+        ];
+      });
+
+      autoTable(doc, {
+        head: [['INE', 'Nom & Prenom', 'Email', 'Dept.', 'Classe', 'Statut']],
+        body: tableData,
+        startY: 38,
+        theme: 'striped',
+        headStyles: { fillStyle: 'F', fillColor: [79, 70, 229], textColor: [255, 255, 255] }, // indigo-600
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: {
+          0: { cellWidth: 32 },
+          1: { cellWidth: 42 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 25 }
+        }
+      });
+
+      doc.save(`UJKZ_Liste_Etudiants_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Liste des etudiants exportee en PDF !');
+    } catch (error: any) {
+      console.error('Error exporting student list PDF:', error);
+      toast.error('Une erreur est survenue lors de l\'exportation.');
+    }
+  };
+
+  const exportDepartmentActivityReportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const depts = academicService.getDepartments('UJKZ');
+      const studentsList = academicService.getStudents();
+      const classesList = academicService.getClasses();
+      const filieresList = academicService.getFilieres(undefined, 'UJKZ');
+      const docsList = academicService.getDocuments(undefined, 'UJKZ');
+
+      // Header style
+      doc.setFontSize(20);
+      doc.setTextColor(30, 41, 59); // slate-800
+      doc.text("L'UNIVERSITE JOSEPH KI-ZERBO (UJKZ)", 14, 15);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(13, 148, 136); // teal-600
+      doc.text("Rapport d'Activite Consolide des Departements", 14, 23);
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text(`Genere le : ${new Date().toLocaleDateString('fr-FR')} • Direction Academique`, 14, 29);
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, 32, 196, 32);
+
+      const tableData = depts.map(dept => {
+        const dFilCount = filieresList.filter(f => f.departmentId === dept.id).length;
+        const dClsCount = classesList.filter(c => c.departmentId === dept.id).length;
+        const dStdCount = studentsList.filter(s => s.departmentId === dept.id).length;
+        const dDocCount = docsList.filter(d => d.departmentId === dept.id).length;
+        return [
+          dept.code,
+          dept.name,
+          dept.responsible,
+          String(dFilCount),
+          String(dClsCount),
+          String(dStdCount),
+          String(dDocCount)
+        ];
+      });
+
+      autoTable(doc, {
+        head: [['Code', 'Nom Departement', 'Responsable', 'Filieres', 'Classes', 'Etudiants', 'Documents']],
+        body: tableData,
+        startY: 38,
+        theme: 'striped',
+        headStyles: { fillStyle: 'F', fillColor: [13, 148, 136], textColor: [255, 255, 255] }, // teal-600
+        styles: { fontSize: 9, cellPadding: 3.5 }
+      });
+
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      const totalStudents = studentsList.length;
+      const totalDocs = docsList.length;
+      const totalClasses = classesList.length;
+
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.text(`Resume Statistique Institutionnel :`, 14, finalY);
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`- Nombre total d'etudiants inscrits : ${totalStudents}`, 16, finalY + 7);
+      doc.text(`- Nombre total de classes d'apprentissage : ${totalClasses}`, 16, finalY + 13);
+      doc.text(`- Volume des ressources pedagogiques partagees : ${totalDocs} cours/fichiers`, 16, finalY + 19);
+
+      doc.save(`UJKZ_Rapport_Activite_Departements_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Rapport d\'activite exporte en PDF !');
+    } catch (error: any) {
+      console.error('Error exporting activity report PDF:', error);
+      toast.error('Une erreur est survenue lors de l\'exportation.');
+    }
+  };
+
+  // If the user lacks basic permission to view the portal at all:
+  if (!hasPermission('view_university_portal')) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl shadow-sm border border-slate-200">
+        <School size={48} className="text-slate-300 mb-4" />
+        <h2 className="text-xl font-bold text-slate-800">Accès Refusé</h2>
+        <p className="text-slate-500 mt-2 text-center max-w-md">
+          Vous n'avez pas les permissions nécessaires pour accéder au portail de l'université.
+        </p>
+      </div>
+    );
+  }
 
   // Form state for offer
   const [newOffer, setNewOffer] = useState({
@@ -75,10 +228,10 @@ export default function UniversityPortal() {
         authorId: user.id,
         postedAt: serverTimestamp(),
       } as any);
-      alert('Offre publiée avec succès !');
+      toast.success('Offre publiée avec succès !');
       setShowOfferModal(false);
     } catch (error) {
-      alert('Une erreur est survenue lors de la publication.');
+      toast.error('Une erreur est survenue lors de la publication.');
     } finally {
       setIsSubmitting(false);
     }
@@ -96,10 +249,10 @@ export default function UniversityPortal() {
         attendees: [],
         createdAt: new Date().toISOString(),
       } as any);
-      alert('Événement publié avec succès !');
+      toast.success('Événement publié avec succès !');
       setShowEventModal(false);
     } catch (error) {
-      alert('Une erreur est survenue lors de la publication.');
+      toast.error('Une erreur est survenue lors de la publication.');
     } finally {
       setIsSubmitting(false);
     }
@@ -125,18 +278,20 @@ export default function UniversityPortal() {
             >
               Vue d'ensemble
             </button>
-            <button 
-              onClick={() => setActivePortalTab('departments')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activePortalTab === 'departments' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Network size={16} />
-              Départements
-            </button>
+            {(hasPermission('manage_departments') || hasPermission('manage_filieres') || hasPermission('manage_classes')) && (
+              <button 
+                onClick={() => setActivePortalTab('departments')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activePortalTab === 'departments' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Network size={16} />
+                Départements
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {activePortalTab === 'departments' ? (
+      {activePortalTab === 'departments' && (hasPermission('manage_departments') || hasPermission('manage_filieres') || hasPermission('manage_classes')) ? (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <Departments />
         </div>
@@ -188,6 +343,49 @@ export default function UniversityPortal() {
             <p className="text-sm font-medium text-slate-500">Offres publiées</p>
             <p className="text-xl font-bold text-slate-900">{universityOffers.length}</p>
           </div>
+        </div>
+      </div>
+
+      <MultiCriteriaSearch />
+
+      <UniversityStats />
+
+      {/* Centre d'Exports PDF & Rapports pour Administrateurs */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mt-6">
+        <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+          <FileText className="w-5 h-5 text-indigo-600" />
+          Centre de Rapports PDF & Exports Officiels
+        </h3>
+        <p className="text-slate-500 text-sm mb-4">
+          Générez des documents PDF officiels et certifiés basés sur les données d'inscription réelles de l'institution.
+        </p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button 
+            onClick={exportStudentListPDF}
+            className="flex items-center justify-between p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100/90 hover:border-slate-300 transition-all text-left group"
+          >
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Liste Globale des Étudiants</p>
+              <p className="text-xs text-slate-500 mt-1">Exporte tous les étudiants inscrits avec INE, filière et classe.</p>
+            </div>
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-100 transition-colors">
+              <Download size={18} />
+            </div>
+          </button>
+
+          <button 
+            onClick={exportDepartmentActivityReportPDF}
+            className="flex items-center justify-between p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100/90 hover:border-slate-300 transition-all text-left group"
+          >
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Rapport d'Activité des Départements</p>
+              <p className="text-xs text-slate-500 mt-1">Nombre d'étudiants, filières, classes et volume documentaire par département.</p>
+            </div>
+            <div className="p-3 bg-teal-50 text-teal-600 rounded-xl group-hover:bg-teal-100 transition-colors">
+              <Download size={18} />
+            </div>
+          </button>
         </div>
       </div>
 

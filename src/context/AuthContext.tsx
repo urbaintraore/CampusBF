@@ -259,7 +259,12 @@ interface AuthContextType {
   isLoading: boolean;
   showAuthModal: boolean;
   setShowAuthModal: (show: boolean) => void;
+  academicNotifications: any[];
+  addAcademicNotification: (notification: any) => Promise<void>;
+  markAcademicNotificationRead: (id: string) => Promise<void>;
+  
   openAuthModal: (callback?: () => void) => void;
+
   authModalCallback: (() => void) | null;
   setAuthModalCallback: (callback: (() => void) | null) => void;
 }
@@ -298,6 +303,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [dealSuggestions, setDealSuggestions] = useState<DealSuggestion[]>([]);
   const [colocations, setColocations] = useState<Colocation[]>([]);
+  const [academicNotifications, setAcademicNotifications] = useState<any[]>([]);
+
+  // Implement the functions:
+  const addAcademicNotification = async (notification: any) => {
+    try {
+      const docRef = doc(collection(db, 'academic_notifications'));
+      await setDoc(docRef, { ...notification, id: docRef.id, createdAt: serverTimestamp() });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'academic_notifications');
+    }
+  };
+
+  const markAcademicNotificationRead = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'academic_notifications', id), { read: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'academic_notifications');
+    }
+  };
   const [colocationRequests, setColocationRequests] = useState<ColocationRequest[]>([]);
   const [colocationReviews, setColocationReviews] = useState<ColocationReview[]>([]);
   const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
@@ -950,6 +974,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("onSnapshot Notifications Error:", error);
     });
     unsubscribes.push(unsubNotifs);
+
+    // ACADEMIC NOTIFICATIONS (Real-time listener for messages / timetables logic in user's class)
+    const qAcademicNotifs = query(
+      collection(db, 'academic_notifications'),
+      where('userId', 'in', [user.id, 'all']),
+      limit(20)
+    );
+    const unsubAcademicNotifs = onSnapshot(qAcademicNotifs, (snapshot) => {
+      setAcademicNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      
+      // Dispatch toast for new incoming items
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const isRecent = data.createdAt?.seconds ? data.createdAt.seconds * 1000 > Date.now() - 10000 : false;
+          if (isRecent || (data.createdAt && typeof data.createdAt === 'string' && new Date(data.createdAt).getTime() > Date.now() - 10000)) {
+            toast.info(`🔔 Academic: ${data.title}\n${data.content}`);
+          }
+        }
+      });
+    }, (error) => {
+      console.error("onSnapshot Academic Notifications Error:", error);
+    });
+    unsubscribes.push(unsubAcademicNotifs);
 
     // Events are used in Dashboard and Events page
     const qEvents = query(collection(db, 'events'), limit(50));
@@ -2161,6 +2209,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       addGroupMember,
       removeGroupMember,
       reportMarketplaceItem,
+      academicNotifications,
+      addAcademicNotification,
+      markAcademicNotificationRead,
       applications,
       teacherApplications,
       subscriptionRequests,

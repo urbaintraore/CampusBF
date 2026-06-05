@@ -1,3 +1,16 @@
+export interface University {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  location: string;
+  type: 'public' | 'private' | 'institute';
+  contactEmail: string;
+  founderId?: string; // If 'user' role is institution, this can map directly
+  createdAt: string;
+  status: 'active' | 'archived';
+}
+
 export interface Department {
   id: string;
   universityId: string; // Linked to parent institution profile
@@ -48,6 +61,14 @@ export interface AcademicStudent {
   createdAt: string;
 }
 
+export interface TimetableCell {
+  day: string; // e.g. 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'
+  timeSlot: string; // e.g. '08:00 - 10:00', '10:15 - 12:15', '14:00 - 16:00', '16:15 - 18:15'
+  subject: string;
+  teacher: string;
+  room: string;
+}
+
 export interface TimetableVersion {
   id: string;
   version: number;
@@ -57,6 +78,7 @@ export interface TimetableVersion {
   uploadedAt: string;
   uploadedBy: string;
   description?: string;
+  gridData?: TimetableCell[];
 }
 
 export interface Timetable {
@@ -69,6 +91,7 @@ export interface Timetable {
   lastUpdated: string;
   updatedBy: string;
   versions: TimetableVersion[];
+  gridData?: TimetableCell[];
 }
 
 export interface AcademicDocument {

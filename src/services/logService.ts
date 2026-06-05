@@ -71,5 +71,25 @@ export const logService = {
       module: 'General',
       details
     });
+  },
+
+  async logAudit(userId: string, userName: string, email: string, action: string, details: string, metadata?: any) {
+    try {
+      const { browser, device } = getBrowserInfo();
+      const auditEntry = {
+        userId: userId || 'sys_admin',
+        userName: userName || 'Administrateur',
+        email: email || '',
+        action,
+        details,
+        metadata: metadata || {},
+        device,
+        browser,
+        createdAt: new Date().toISOString(),
+      };
+      await addDoc(collection(db, 'audit_logs'), auditEntry);
+    } catch (error) {
+      console.error('Error logging audit:', error);
+    }
   }
 };

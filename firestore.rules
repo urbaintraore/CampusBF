@@ -274,5 +274,45 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || isOwner(resource.data.authorId);
     }
+    
+    // -------------------------------------------------------------------------
+    // ACADEMIC INSTITUTION COLLECTIONS
+    // -------------------------------------------------------------------------
+    match /universities/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /departments/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /filieres/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /classes/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /academic_students/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /timetables/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /academic_documents/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /class_messages/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /academic_notifications/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
   }
 }

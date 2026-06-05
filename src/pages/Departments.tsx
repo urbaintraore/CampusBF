@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { academicService } from '@/services/academicService';
+import { logService } from '@/services/logService';
+import ClassDashboard from '@/components/ClassDashboard';
 import { 
   School, 
   Users, 
@@ -131,6 +133,33 @@ export default function Departments() {
   // Student CSV/Bulk Import
   const [bulkInput, setBulkInput] = useState('');
   const [isBulkMode, setIsBulkMode] = useState(false);
+
+  const parsedBulkRows = useMemo(() => {
+    if (!bulkInput.trim()) return [];
+    return bulkInput.split('\n').filter(l => l.trim()).map((line, idx) => {
+      const parts = line.split(/[;,]/);
+      const lastName = parts[0]?.trim() || '';
+      const firstName = parts[1]?.trim() || '';
+      const email = parts[2]?.trim() || '';
+      const phone = parts[3]?.trim() || '';
+
+      const errors: string[] = [];
+      if (!lastName) errors.push('Nom de famille requis');
+      if (!firstName) errors.push('Prénom requis');
+      if (email && !email.includes('@')) errors.push('Format email non valide (doit contenir @)');
+
+      return {
+        lineNum: idx + 1,
+        rawText: line,
+        lastName,
+        firstName,
+        email,
+        phone,
+        errors,
+        isValid: errors.length === 0 && lastName && firstName
+      };
+    });
+  }, [bulkInput]);
 
   // Emploi du Temps Replacement
   const [showTimetableModal, setShowTimetableModal] = useState(false);
@@ -275,12 +304,27 @@ export default function Departments() {
       universityId: 'UJKZ'
     };
 
+    const uName = user?.firstName ? `${user.firstName} ${user.lastName}` : 'Administrateur';
     if (deptForm.id) {
       academicService.saveDepartment({ ...payload, id: deptForm.id });
       toast.success('Département modifié avec succès !');
+      logService.logAudit(
+        user?.id || 'admin',
+        uName,
+        user?.email || '',
+        'Modification de département',
+        `Le département ${payload.name} (${payload.code}) a été édité par l'administrateur.`
+      ).catch(console.error);
     } else {
       academicService.saveDepartment(payload);
       toast.success('Département créé avec succès !');
+      logService.logAudit(
+        user?.id || 'admin',
+        uName,
+        user?.email || '',
+        'Création de département',
+        `Le département ${payload.name} (${payload.code}) a été créé par l'administrateur.`
+      ).catch(console.error);
     }
 
     setShowDeptModal(false);
@@ -335,14 +379,36 @@ export default function Departments() {
     const targetStatus = dept.status === 'active' ? 'archived' : 'active';
     academicService.saveDepartment({ ...dept, status: targetStatus });
     toast.info(`Département ${targetStatus === 'archived' ? 'archivé' : 'désarchivé'} !`);
+    
+    const uName = user?.firstName ? `${user.firstName} ${user.lastName}` : 'Administrateur';
+    logService.logAudit(
+      user?.id || 'admin',
+      uName,
+      user?.email || '',
+      'Modification de département',
+      `Le département ${dept.name} (${dept.code}) a été ${targetStatus === 'archived' ? 'archivé' : 'désarchivé'} par l'administrateur.`
+    ).catch(console.error);
+
     loadData();
   };
 
   // Delete Department
   const deleteDept = (id: string) => {
+    const dept = departments.find(d => d.id === id);
+    const deptName = dept ? `${dept.name} (${dept.code})` : id;
     if (confirm('Êtes-vous sûr de vouloir supprimer définitivement ce département ? Cela supprimera toutes les filières et classes associées.')) {
       academicService.deleteDepartment(id);
       toast.success('Département supprimé !');
+      
+      const uName = user?.firstName ? `${user.firstName} ${user.lastName}` : 'Administrateur';
+      logService.logAudit(
+        user?.id || 'admin',
+        uName,
+        user?.email || '',
+        'Suppression de département',
+        `Le département ${deptName} a été supprimé ainsi que ses filières et classes par l'administrateur.`
+      ).catch(console.error);
+
       loadData();
     }
   };
@@ -1334,8 +1400,9 @@ export default function Departments() {
 
           {/* COLUMN 2 & 3: CORE WORKSPACE TAB CONTENT - MESSAGES, DOCUMENTS, SCHEDULING */}
           <div className="xl:col-span-3 space-y-6">
-            
-            {/* IN-APP TIMETABLE PREVIEW & VERSION HISTORY */}
+            <ClassDashboard classeId={selectedClasseId} selectedRole={selectedRole} />
+            <div className="hidden">
+              {/* IN-APP TIMETABLE PREVIEW & VERSION HISTORY */}
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/90">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
@@ -1652,6 +1719,7 @@ export default function Departments() {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -2122,6 +2190,7 @@ export default function Departments() {
                     <code>NOM ; Prénom ; Email ; Téléphone</code>
                   </p>
                   <button 
+                    type="button"
                     onClick={seedBulkImporterTemplate}
                     className="mt-1 text-[10px] underline hover:no-underline font-extrabold flex items-center gap-1 text-emerald-800"
                   >
@@ -2133,14 +2202,50 @@ export default function Departments() {
                 <textarea
                   value={bulkInput}
                   onChange={(e) => setBulkInput(e.target.value)}
-                  placeholder="ZONGO;Inoussa;inoussa.z@ujkz.bf;+2267100\nSAWADOGO;Rihanata;rihana.s@ujkz.bf;+2266655"
+                  placeholder="ZONGO;Inoussa;inoussa.z@ujkz.bf;+2267100&#10;SAWADOGO;Rihanata;rihana.s@ujkz.bf;+2266655"
                   rows={8}
                   className="w-full p-4 text-xs font-mono bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
 
+                {/* LIVE CSV VALIDATION REVISION REPORT */}
+                {parsedBulkRows.length > 0 && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] space-y-2 max-h-[160px] overflow-y-auto">
+                    <div className="flex justify-between items-center font-bold text-slate-800">
+                      <span>Rapport de pré-validation :</span>
+                      <span>{parsedBulkRows.length} ligne(s) détectée(s)</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {parsedBulkRows.map((row) => (
+                        <div key={row.lineNum} className={`p-1.5 rounded flex justify-between items-center ${row.isValid ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>
+                          <div className="font-mono">
+                            Ligne {row.lineNum}: {row.lastName || '???'} {row.firstName || '???'}
+                          </div>
+                          <div>
+                            {row.isValid ? (
+                              <span className="text-[9px] font-bold px-1 py-0.5 bg-emerald-100 uppercase rounded">Valide</span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-1 py-0.5 bg-rose-100 uppercase rounded" title={row.errors.join(', ')}>
+                                Erreur ({row.errors.length})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {parsedBulkRows.every(r => r.isValid) ? (
+                      <p className="text-emerald-700 text-[10px] font-bold flex items-center gap-1">✓ Toutes les lignes saisies respectent le schéma requis !</p>
+                    ) : (
+                      <p className="text-amber-700 text-[10px] font-bold">⚠ Attention : Les lignes défaillantes seront écartées lors de la transaction d'écriture.</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-4 pt-4 border-t border-slate-100">
                   <button type="button" onClick={() => setShowStudentModal(false)} className="flex-1 px-4 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-50">Annuler</button>
                   <button 
+                    type="button"
                     onClick={handleBulkStudentsImport}
                     className="flex-2 px-4 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700"
                   >
