@@ -95,8 +95,8 @@ Titre suggéré et description doivent faire référence au Burkina Faso ou aux 
 Sois extrêmement précis et factuel sur les dates historiques du Burkina Faso, l'administration, la géo burkinabè, la constitution et les ministères.
 Génère un contenu irréprochable et renvoie le résultat dans le format JSON demandé.`;
 
-    const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
-    const maxRetriesPerModel = 3;
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    const maxRetriesPerModel = 2;
     let modelIndex = 0;
     let lastError: any = null;
     let extractedText = '';
@@ -175,12 +175,15 @@ Génère un contenu irréprochable et renvoie le résultat dans le format JSON d
           const errStr = String(err.message || err);
           console.warn(`[AI Service] Contest generation try ${attempt} with model "${currentModel}" failed: ${errStr}`);
           
-          const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json');
+          const isCapacityIssue = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand');
+          const isTransient = (errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json')) && !isCapacityIssue;
+          
           if (isTransient && attempt < maxRetriesPerModel) {
             const delay = 1000 * Math.pow(2, attempt);
-            console.log(`[AI Service] Waiting ${delay}ms before retrying "${currentModel}"...`);
+            console.log(`[AI Service] Transient rate-limit error. Waiting ${delay}ms before retrying "${currentModel}"...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
+            console.log(`[AI Service] Capacity limit or non-transient error on "${currentModel}". Switching to next fallback model immediately...`);
             break; // Try next model list
           }
         }
@@ -224,8 +227,8 @@ Tu as une tolérance zéro pour les approximations, les dates floues ou les erre
 Tu analyzes et modifies si nécessaire le JSON d'entrée afin de garantir des questions d'un standing irréprochable et d'une rigueur absolue.
 Renvoie un JSON conforme au schema exigé.`;
 
-    const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
-    const maxRetriesPerModel = 3;
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    const maxRetriesPerModel = 2;
     let modelIndex = 0;
     let lastError: any = null;
     let extractedText = '';
@@ -298,12 +301,15 @@ Renvoie un JSON conforme au schema exigé.`;
           const errStr = String(err.message || err);
           console.warn(`[AI Service] Contest verification try ${attempt} with model "${currentModel}" failed: ${errStr}`);
           
-          const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json');
+          const isCapacityIssue = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand');
+          const isTransient = (errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json')) && !isCapacityIssue;
+          
           if (isTransient && attempt < maxRetriesPerModel) {
             const delay = 1000 * Math.pow(2, attempt);
-            console.log(`[AI Service] Waiting ${delay}ms before retrying "${currentModel}"...`);
+            console.log(`[AI Service] Transient rate-limit error. Waiting ${delay}ms before retrying "${currentModel}"...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
+            console.log(`[AI Service] Capacity limit or non-transient error on "${currentModel}". Switching to next fallback model immediately...`);
             break; // Try next model list
           }
         }
@@ -375,9 +381,9 @@ Pour que toutes les questions puissent rentrer dans l'objet réponse sans tronca
     let extractedResponseText = '';
     
     // Use highly resilient and high-quota stable models
-    const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
       
-    const maxRetriesPerModel = 3;
+    const maxRetriesPerModel = 2;
     let modelIndex = 0;
     let lastError: any = null;
 
@@ -440,12 +446,15 @@ Pour que toutes les questions puissent rentrer dans l'objet réponse sans tronca
           const errStr = String(error.message || error) + (error.stack || '');
           console.warn(`[AI Service] Structuring try ${attempt} with configuration "${currentModel}" failed: ${errStr}`);
           
-          const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand') || errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json');
+          const isCapacityIssue = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand');
+          const isTransient = (errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json')) && !isCapacityIssue;
+          
           if (isTransient && attempt < maxRetriesPerModel) {
             const delay = 1000 * Math.pow(2, attempt);
-            console.log(`[AI Service] Waiting ${delay}ms before retrying "${currentModel}"...`);
+            console.log(`[AI Service] Transient rate-limit error. Waiting ${delay}ms before retrying "${currentModel}"...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
+            console.log(`[AI Service] Capacity limit or non-transient error on "${currentModel}". Switching to next fallback model immediately...`);
             break; // Move to fallback model
           }
         }

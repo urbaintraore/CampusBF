@@ -32,7 +32,7 @@ export default function Events() {
     location: string;
     date: string;
     time: string;
-    attachments?: { fileName: string; fileUrl: string; fileType: string }[];
+    attachments?: { fileName: string; fileUrl: string; fileType?: string }[];
   }>({
     title: '',
     description: '',

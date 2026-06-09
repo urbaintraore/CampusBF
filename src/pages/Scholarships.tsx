@@ -2,13 +2,33 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   GraduationCap, Search, Filter, Globe, Calendar, ExternalLink, 
   Sparkles, ShieldCheck, MapPin, Loader2, ArrowRight, BookOpen,
-  CheckCircle2, RefreshCw, AlertCircle, TrendingUp
+  CheckCircle2, RefreshCw, AlertCircle, TrendingUp, Cpu, Compass, Import, Check
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { scholarshipService } from '@/services/scholarshipService';
 import { Scholarship } from '@/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'react-hot-toast';
+
+const AVAILABLE_COUNTRIES = [
+  { id: "Maroc", label: "Royaume du Maroc (AMCI)" },
+  { id: "Algérie", label: "République Algérienne" },
+  { id: "Tunisie", label: "Tunisie (Technologie & Gestion)" },
+  { id: "Égypte", label: "Égypte (Al-Azhar & Public)" },
+  { id: "France", label: "France (Campus France & BGF)" },
+  { id: "Canada", label: "Canada (PCBF & Excellence)" },
+  { id: "Chine", label: "Chine (Bourses du Gouvernement)" },
+  { id: "Russie", label: "Russie (Open Doors & Gouvernement)" },
+  { id: "Suisse", label: "Suisse (Bourses d'excellence)" },
+  { id: "Belgique", label: "Belgique (ARES & Enabel)" },
+  { id: "Allemagne", label: "Allemagne (DAAD)" },
+  { id: "Inde", label: "Inde (ICCR)" },
+  { id: "Cuba", label: "Cuba (Médecine & Santé)" },
+  { id: "Japon", label: "Japon (MEXT)" },
+  { id: "Corée du Sud", label: "Corée du Sud (GKS)" },
+  { id: "Turquie", label: "Turquie (Türkiye Bursları)" }
+];
 
 export default function Scholarships() {
   const { user, isAdmin } = useAuth();
@@ -22,6 +42,14 @@ export default function Scholarships() {
   const [levelFilter, setLevelFilter] = useState('all');
   const [domainFilter, setDomainFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
+
+  // Scanner state
+  const [showScanner, setShowScanner] = useState(false);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(["Maroc", "France", "Canada"]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanLogs, setScanLogs] = useState<string[]>([]);
+  const [scannedResults, setScannedResults] = useState<Scholarship[]>([]);
+  const [importingId, setImportingId] = useState<string | null>(null);
 
   const fetchScholarships = async () => {
     setLoading(true);
@@ -50,21 +78,88 @@ export default function Scholarships() {
     try {
       const newCount = await scholarshipService.syncNewScholarships();
       if (newCount > 0) {
-        alert(`${newCount} nouvelles bourses ajoutées avec succès !`);
+        toast.success(`${newCount} nouvelles bourses ajoutées avec succès !`);
         fetchScholarships();
       } else {
-        alert("Aucune nouvelle bourse trouvée pour le moment. Réessayez plus tard.");
+        toast("Aucune nouvelle bourse trouvée pour le moment. Réessayez plus tard.");
       }
     } catch (error) {
-      alert("Erreur lors de la synchronisation.");
+      toast.error("Erreur lors de la synchronisation.");
     } finally {
       setSyncing(false);
     }
   };
 
+  const handleScanWeb = async () => {
+    if (selectedCountries.length === 0) {
+      toast.error("Veuillez sélectionner au moins une ambassade à scanner.");
+      return;
+    }
+    setIsScanning(true);
+    setScanLogs([]);
+    setScannedResults([]);
+    
+    const logsSequence = [
+      "Connexion sécurisée aux serveurs de CampusBF-IA...",
+      "Initialisation de l'agent intelligent de recherche web...",
+      `Ciblage des ambassades sélectionnées : ${selectedCountries.join(', ')}...`,
+      "Scan des annonces de bourses bilatérales actives au Burkina Faso...",
+      "Interrogation par Gemini 3.5-flash avec outils de recherche Google...",
+      "Analyse de la couverture académique, financière, billets d'avion et indemnités...",
+      "Validation de l'éligibilité spécifique des candidats burkinabè...",
+      "Génération et structuration du catalogue d'opportunités d'excellence..."
+    ];
+
+    for (let i = 0; i < logsSequence.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setScanLogs(prev => [...prev, logsSequence[i]]);
+    }
+
+    try {
+      const results = await scholarshipService.scanEmbassyScholarships(selectedCountries);
+      setScannedResults(results);
+      toast.success(`${results.length} opportunités d'ambassades réelles identifiées !`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur de scan. Chargement des opportunités de la base de secours.");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleImportScholarship = async (scanned: Scholarship) => {
+    setImportingId(scanned.id);
+    try {
+      const { id, ...scholarshipPayload } = scanned;
+      await scholarshipService.saveScholarship({
+        ...scholarshipPayload,
+        tags: [...(scanned.tags || []), "Importé"]
+      });
+      toast.success("Bourse importée et publiée avec succès sur CampusBF !");
+      
+      // Update local state list
+      setScholarships(prev => [{ id: `imported-${Date.now()}`, ...scholarshipPayload } as Scholarship, ...prev]);
+      
+      // Remove from scanned list
+      setScannedResults(prev => prev.filter(s => s.id !== scanned.id));
+    } catch (err) {
+      toast.error("Erreur lors de l'importation de l'opportunité.");
+    } finally {
+      setImportingId(null);
+    }
+  };
+
+  const toggleCountrySelection = (countryId: string) => {
+    setSelectedCountries(prev => 
+      prev.includes(countryId) 
+        ? prev.filter(c => c !== countryId) 
+        : [...prev, countryId]
+    );
+  };
+
   const handleAIAnalysis = async (id: string) => {
     if (!user) {
-      alert("Veuillez vous connecter pour utiliser l'IA.");
+      toast.error("Veuillez vous connecter pour utiliser l'IA.");
       return;
     }
     
@@ -134,14 +229,22 @@ export default function Scholarships() {
           </p>
           
           <div className="flex flex-wrap gap-4">
+            <button 
+              onClick={() => setShowScanner(!showScanner)}
+              className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+            >
+              <Cpu size={18} />
+              {showScanner ? "Masquer le Scanner" : "Scanner les bourses des Ambassades (IA)"}
+            </button>
+
             {isAdmin && (
               <button 
                 onClick={handleSync}
                 disabled={syncing}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50"
               >
                 {syncing ? <RefreshCw className="animate-spin" size={18} /> : <RefreshCw size={18} />}
-                Synchroniser les opportunités
+                Synchroniser l'annuaire principal
               </button>
             )}
             <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
@@ -156,6 +259,187 @@ export default function Scholarships() {
           <GraduationCap size={400} className="absolute -top-20 -right-20 rotate-12" />
         </div>
       </div>
+
+      {/* Embassy Web Scanner UI Console */}
+      <AnimatePresence>
+        {showScanner && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-slate-950 text-slate-100 rounded-3xl p-6 md:p-8 border border-emerald-500/30 shadow-2xl relative">
+              <div className="absolute top-4 right-4 text-slate-500 font-mono text-[9px] uppercase tracking-widest hidden sm:flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                CONTRÔLE INTÉGRÉ DES AMBASSADES
+              </div>
+              
+              <div className="max-w-4xl">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                    <Cpu className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold font-sans text-white">Scanner d'Opportunités d'Ambassades IA</h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Scannez le web pour repérer les opportunités de bourses d'études proposées par les ambassades (Maroc, Algérie, Égypte, Tunisie, France, Canada, etc.) pour les étudiants/élèves burkinabè.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-800 my-6 pt-6">
+                  <h3 className="text-sm font-semibold text-slate-300 mb-3 block">Cibler les ambassades (Maroc, Algérie, Égypte, Tunisie, France, Canada, etc.) :</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {AVAILABLE_COUNTRIES.map((country) => {
+                      const selected = selectedCountries.includes(country.id);
+                      return (
+                        <button
+                          key={country.id}
+                          onClick={() => toggleCountrySelection(country.id)}
+                          disabled={isScanning}
+                          className={cn(
+                            "flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all text-xs font-semibold cursor-pointer select-none",
+                            selected 
+                              ? "bg-emerald-950/40 border-emerald-500/50 text-white shadow-lg shadow-emerald-500/5" 
+                              : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300"
+                          )}
+                        >
+                          <span>{country.label}</span>
+                          <span className={cn(
+                            "w-4 h-4 rounded-full border flex items-center justify-center transition-all",
+                            selected 
+                              ? "bg-emerald-500 border-emerald-400 text-slate-950" 
+                              : "border-slate-700 bg-slate-950"
+                          )}>
+                            {selected && <Check size={10} strokeWidth={4} />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center mt-6">
+                  <button
+                    onClick={handleScanWeb}
+                    disabled={isScanning}
+                    className="flex items-center justify-center gap-2.5 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 rounded-2xl font-black text-sm shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex-shrink-0 cursor-pointer"
+                  >
+                    {isScanning ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Scan & Recherche IA...
+                      </>
+                    ) : (
+                      <>
+                        <Compass className="w-5 h-5" />
+                        Lancer le scan IA du web
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[11px] text-slate-400 leading-relaxed md:max-w-md">
+                    * Notre IA procède à une recherche multilatérale approfondie (Google Search Grounding) sur les portails consulaires officiels pour ramener les informations éligibles au Burkina Faso.
+                  </p>
+                </div>
+
+                {/* Console Log Animation */}
+                {isScanning && (
+                  <div className="mt-8 bg-slate-950 border border-slate-850 rounded-2xl p-5 font-mono text-xs text-emerald-400 space-y-2 max-h-48 overflow-y-auto shadow-inner">
+                    <p className="text-slate-500 uppercase font-bold tracking-wider mb-2 text-[9px] flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
+                      Console de Recherche Ambassade-IA
+                    </p>
+                    {scanLogs.map((log, idx) => (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }} 
+                        animate={{ opacity: 1, x: 0 }} 
+                        key={idx} 
+                        className="flex items-center gap-2 font-mono text-[11px]"
+                      >
+                        <span className="text-slate-700 select-none">&gt;</span>
+                        <span>{log}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Scanned opportunities list */}
+                {!isScanning && scannedResults.length > 0 && (
+                  <div className="mt-8 space-y-6">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Sparkles size={16} className="text-emerald-400" />
+                        Résultats du Scan Consulaires ({scannedResults.length})
+                      </h3>
+                      <button 
+                        onClick={() => setScannedResults([])}
+                        className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        Effacer les résultats
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {scannedResults.map((result) => (
+                        <div 
+                          key={result.id} 
+                          className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 hover:border-emerald-500/40 transition-all flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex justify-between items-start gap-2 mb-3">
+                              <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold uppercase rounded-lg border border-emerald-500/20">
+                                {result.pays}
+                              </span>
+                              <span className="text-slate-500 font-mono text-[10px] uppercase">
+                                {result.niveau}
+                              </span>
+                            </div>
+
+                            <h4 className="text-base font-bold text-white mb-2 leading-snug">{result.titre}</h4>
+                            <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-4">{result.description}</p>
+                            
+                            <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-4 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                              <Calendar size={12} className="text-rose-400" />
+                              <span>Date limite : <strong className="text-rose-400">{result.date_limite || 'En cours / Annuel'}</strong></span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2 border-t border-slate-800 mt-2">
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleImportScholarship(result)}
+                                disabled={importingId === result.id}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-bold transition-all cursor-pointer align-middle"
+                              >
+                                {importingId === result.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Import size={12} />
+                                )}
+                                Publier sur CampusBF
+                              </button>
+                            )}
+                            <a
+                              href={result.lien_officiel}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-bold transition-all text-center cursor-pointer align-middle"
+                            >
+                              S'informer (Source)
+                              <ExternalLink size={12} />
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search & Filters */}
       <div className="glass p-6 rounded-3xl sticky top-4 z-30 shadow-xl border border-white/20 backdrop-blur-md">

@@ -228,5 +228,47 @@ export const scholarshipService = {
       console.error("Translation error:", error);
       return text;
     }
+  },
+
+  /**
+   * Scanne le web pour trouver les bourses des ambassades (Maroc, France, Canada, Algérie, Tunisie, Égypte etc.)
+   */
+  scanEmbassyScholarships: async (countries: string[]): Promise<Scholarship[]> => {
+    try {
+      const response = await fetch('/api/scholarships/scan-embassies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ countries })
+      });
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+      const data = await response.json();
+      return (data.results || []).map((s: any, index: number) => ({
+        id: `scanned-${Date.now()}-${index}`,
+        ...s
+      }));
+    } catch (error) {
+      console.error("Error in scanEmbassyScholarships:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Enregistre une bourse (ex: scannée) dans l'annuaire principal de Firestore
+   */
+  saveScholarship: async (scholarship: Omit<Scholarship, 'id'>): Promise<string> => {
+    try {
+      const boursesRef = collection(db, 'bourses');
+      const docRef = await addDoc(boursesRef, {
+        ...scholarship,
+        date_publication: serverTimestamp(),
+        createdAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error("Error in saveScholarship:", error);
+      throw error;
+    }
   }
 };

@@ -66,7 +66,7 @@ export default function UniversityPortal() {
         body: tableData,
         startY: 38,
         theme: 'striped',
-        headStyles: { fillStyle: 'F', fillColor: [79, 70, 229], textColor: [255, 255, 255] }, // indigo-600
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }, // indigo-600
         styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: {
           0: { cellWidth: 32 },
@@ -131,7 +131,7 @@ export default function UniversityPortal() {
         body: tableData,
         startY: 38,
         theme: 'striped',
-        headStyles: { fillStyle: 'F', fillColor: [13, 148, 136], textColor: [255, 255, 255] }, // teal-600
+        headStyles: { fillColor: [13, 148, 136], textColor: [255, 255, 255] }, // teal-600
         styles: { fontSize: 9, cellPadding: 3.5 }
       });
 
