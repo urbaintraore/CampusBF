@@ -332,16 +332,24 @@ export default function AdminDashboard() {
           const { userService } = await import('@/services/userService');
           // Fetch top 150 users for list and ranking view
           const data = await userService.getUsers(150);
-          setAdminUsers(data);
+          
+          if (data.length === 0 && localStorage.getItem('offline_admin_mock') === 'true' && currentUser) {
+             setAdminUsers([currentUser]);
+          } else {
+             setAdminUsers(data);
+          }
         } catch (error) {
           console.error("Error fetching admin users:", error);
+          if (localStorage.getItem('offline_admin_mock') === 'true' && currentUser) {
+             setAdminUsers([currentUser]);
+          }
         } finally {
           setLoadingUsers(false);
         }
       };
       fetchUsers();
     }
-  }, [activeTab, contentTab, adminUsers.length]);
+  }, [activeTab, contentTab, adminUsers.length, currentUser]);
 
   useEffect(() => {
     if (contentTab === 'videos') {

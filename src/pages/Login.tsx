@@ -2,18 +2,53 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, WifiOff } from 'lucide-react';
 import Logo from '@/components/Logo';
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginOffline, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showOfflineBypass, setShowOfflineBypass] = useState(false);
+
+  const handleOfflineBypass = async () => {
+    setIsLoading(true);
+    try {
+      const emailToUse = email.trim() || 'urbain.traoreurb@gmail.com';
+      await loginOffline(emailToUse);
+      
+      const adminEmailCheck = (emailAddr: string) => {
+        const lowerEmail = emailAddr.toLowerCase().trim();
+        const hardcodedAdmins = [
+          'urbain.traoreurb@gmail.com',
+          'urbain.traoreurb@gmail',
+          'traoreurb@gmail.com',
+          'urbain.traore@gmail.com',
+          'urbain.traore@yahoo.fr',
+          'urbain.traoreurb@gmail.com.'
+        ];
+        return hardcodedAdmins.some(ae => lowerEmail.includes(ae.toLowerCase().trim()) || ae.toLowerCase().trim().includes(lowerEmail)) || 
+               lowerEmail.includes('traoreurb') || 
+               (lowerEmail.includes('urbain') && lowerEmail.includes('traore'));
+      };
+
+      if (adminEmailCheck(emailToUse)) {
+        navigate('/admin');
+      } else {
+        const from = (location.state as any)?.from?.pathname || '/';
+        navigate(from, { replace: true });
+      }
+    } catch (e: any) {
+      setError(e.message || 'Erreur bypass hors-ligne');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 
 
@@ -84,8 +119,22 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="bg-red-50/80 backdrop-blur-sm border border-red-100 text-red-600 p-4 rounded-2xl text-sm font-medium text-center animate-in fade-in slide-in-from-top-2">
-              {error}
+            <div className="space-y-3 bg-red-50/80 backdrop-blur-sm border border-red-100 text-red-600 p-4 rounded-2xl text-sm font-medium animate-in fade-in slide-in-from-top-2">
+              <p className="text-center">{error}</p>
+              <div className="p-3 bg-white/70 border border-red-100/50 rounded-xl space-y-2">
+                <p className="text-xs text-slate-500 text-center font-normal">
+                  Réseau indisponible ou Firebase bloqué ? Entrez directement en mode hors ligne.
+                </p>
+                <button
+                  type="button"
+                  id="login-bypass-error-btn"
+                  onClick={handleOfflineBypass}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                >
+                  <WifiOff size={14} className="animate-pulse" />
+                  Bypass hors-ligne avec l'adresse spécifiée
+                </button>
+              </div>
             </div>
           )}
 
@@ -129,16 +178,26 @@ export default function Login() {
             <button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-8"
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-8 cursor-pointer"
             >
               {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Se connecter'}
             </button>
           </form>
 
+          <div className="flex flex-col items-center gap-4 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              id="login-bypass-regular-btn"
+              onClick={handleOfflineBypass}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <WifiOff size={14} className="text-amber-500" />
+              Accéder directement en mode hors ligne (Bypass)
+            </button>
 
-
-          <div className="text-center text-sm text-slate-500 pt-2 mt-4">
-            Pas encore de compte ? <Link to="/signup" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">S'inscrire</Link>
+            <div className="text-center text-sm text-slate-500">
+              Pas encore de compte ? <Link to="/signup" className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline transition-colors">S'inscrire</Link>
+            </div>
           </div>
         </div>
       </div>

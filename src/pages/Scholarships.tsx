@@ -57,6 +57,10 @@ export default function Scholarships() {
       const data = await scholarshipService.getScholarships();
       setScholarships(data);
       
+      if (data.length > 0 && data[0].id.startsWith('fallback-')) {
+        toast.error("Mode hors ligne : données limitées. Vérifiez votre connexion à Firebase.", { id: 'firebase-offline-toast' });
+      }
+
       // Auto-sync if empty and admin (to populate the site for everyone)
       if (data.length === 0 && isAdmin && !syncing) {
         handleSync();
@@ -204,6 +208,7 @@ export default function Scholarships() {
 
   const uniqueCountries = useMemo(() => {
     const countries = new Set(scholarships.map(s => s.pays).filter(Boolean));
+    AVAILABLE_COUNTRIES.forEach(ac => countries.add(ac.id));
     return Array.from(countries).sort();
   }, [scholarships]);
 

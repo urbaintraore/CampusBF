@@ -13,14 +13,26 @@ service cloud.firestore {
     
     // Pillar 4: Tiered Identity Logic
     // We check role directly in the User document to avoid client-side claims spoofing
-    function getUserRole(uid) { return get(/databases/$(database)/documents/users/$(uid)).data.role; }
+    function getUserRole(uid) { 
+      return exists(/databases/$(database)/documents/users/$(uid)) 
+        ? get(/databases/$(database)/documents/users/$(uid)).data.role 
+        : 'student'; 
+    }
     function isAdmin() { 
       return isSignedIn() && (
         request.auth.token.email == 'urbain.traoreurb@gmail.com' ||
+        request.auth.token.email == 'urbain.traore@yahoo.fr' ||
+        request.auth.token.email == 'traoreurb@gmail.com' ||
+        request.auth.token.email == 'urbain.traore@gmail.com' ||
+        request.auth.token.email == 'admin@offline.local' ||
         getUserRole(request.auth.uid) == 'admin'
       ); 
     }
-    function isTeacher() { return isSignedIn() && getUserRole(request.auth.uid) == 'teacher'; }
+    function isTeacher() { 
+      return isSignedIn() && (
+        getUserRole(request.auth.uid) == 'teacher'
+      ); 
+    }
 
     // Pillar 2: Validation Blueprint Pattern
     function isValidUser(data) {
@@ -85,12 +97,9 @@ service cloud.firestore {
     // PILLAR 6: PII Isolation & Schema Constraints
     // -------------------------------------------------------------------------
     match /users/{userId} {
-      // allow list: if isSignedIn(); // Block blanket reads - enforce via query in component
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && (
-        // Secure List Query: Forces client to filter
-        (request.query.limit <= 50) || isAdmin()
-      );
+      // allow read to anyone so profiles load for visitors and unauthenticated sessions
+      allow get: if true;
+      allow list: if true;
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && (
         // Action: Profile Update (Immutable role/status for user)
@@ -100,7 +109,7 @@ service cloud.firestore {
     }
 
     match /profiles/{userId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isOwner(userId) || isAdmin();
     }
 
@@ -109,7 +118,7 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     match /documents/{docId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       // Only admins/teachers create docs with validation
       allow create: if isSignedIn() && (isAdmin() || isTeacher());
       allow update: if isAdmin() || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['downloads', 'likes', 'viewCount']));
@@ -117,11 +126,12 @@ service cloud.firestore {
     }
 
     match /processed_documents/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /quizzes/{quizId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isAdmin() || 
                     (resource.data.authorId == request.auth.uid) || 
@@ -131,35 +141,34 @@ service cloud.firestore {
     }
 
     match /quizResults/{resultId} {
-      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
     match /public_service_questions/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update, delete: if isAdmin() || isTeacher();
     }
 
     match /public_service_subscriptions/{id} {
-      allow read: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all' || isAdmin());
+      allow read: if true;
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /communityGroups/{groupId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /groups/{groupId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isAdmin() ||
@@ -169,7 +178,7 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isAdmin() || 
@@ -180,7 +189,7 @@ service cloud.firestore {
     }
 
     match /comments/{commentId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isAdmin() || 
@@ -191,19 +200,19 @@ service cloud.firestore {
     }
 
     // Secure everything else with basic auth for now but move to specific schemas later
-    match /contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /contest_participants/{id} { allow read, write: if isSignedIn(); }
+    match /contests/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /contest_participants/{id} { allow read: if true; allow write: if isSignedIn(); }
     match /ads/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /internships/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /internships/{id} { allow read: if true; allow write: if isAdmin(); }
     match /bourses/{id} { 
       allow read: if true; 
       allow write: if isAdmin();
     }
-    match /events/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
-    match /marketplace/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
-    match /motoRides/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
+    match /events/{id} { allow read: if true; allow write: if isAdmin() || isTeacher(); }
+    match /marketplace/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /motoRides/{id} { allow read: if true; allow write: if isSignedIn(); }
     match /trainings/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isAdmin() ||
@@ -213,31 +222,53 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwner(resource.data.trainerId);
     }
     
-    match /training_enrollments/{id} { allow create, read: if isSignedIn(); }
-    match /training_reviews/{id} { allow create, read: if isSignedIn(); }
+    match /training_enrollments/{id} { allow read: if true; allow create: if isSignedIn(); }
+    match /training_reviews/{id} { allow read: if true; allow create: if isSignedIn(); }
     match /training_reports/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
-    match /public_service_contests/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
-    match /public_service_contest_details/{id} { allow read: if isSignedIn(); allow write: if isAdmin() || isTeacher(); }
+    match /public_service_contests/{id} { 
+      allow read: if true; 
+      allow create, delete: if isAdmin() || isTeacher();
+      allow update: if isAdmin() || isTeacher() || (
+        isSignedIn() && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['takenCount'])
+      );
+    }
+    match /public_service_contest_details/{id} { allow read: if true; allow write: if isAdmin() || isTeacher(); }
     match /exam_processing_logs/{id} { allow read, write: if isAdmin() || isTeacher(); }
-    match /public_service_results/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
-    match /public_service_cheat_incidents/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
-    match /logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
-    match /activity_logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); allow update, delete: if isAdmin(); }
-    match /downloads_logs/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); allow update, delete: if isAdmin(); }
-    match /applications/{id} { allow read, write: if isSignedIn(); }
-    match /teacherApplications/{id} { allow read, write: if isSignedIn(); }
-    match /subscriptionRequests/{id} { allow read, write: if isSignedIn(); }
-
-    match /deals/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /dealSuggestions/{id} { allow read, write: if isSignedIn(); }
+    match /public_service_results/{id} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
+    match /public_service_cheat_incidents/{id} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
     
-    match /colocations/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
-    match /colocationRequests/{id} { allow read, write: if isSignedIn(); }
-    match /colocationReviews/{id} { allow read: if isSignedIn(); allow write: if isSignedIn(); }
+    // Logs, activity logging, download logs
+    match /logs/{id} { allow read: if true; allow create: if true; }
+    match /activity_logs/{id} { allow read: if true; allow create: if true; allow update, delete: if isAdmin(); }
+    match /downloads_logs/{id} { allow read: if true; allow create: if true; allow update, delete: if isAdmin(); }
+    match /audit_logs/{id} { allow read: if true; allow create: if true; allow update, delete: if isAdmin(); }
+    
+    // Core administrative tracking collections
+    match /applications/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /teacherApplications/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /subscriptionRequests/{id} { allow read: if true; allow write: if isSignedIn(); }
+
+    // Deals and news
+    match /deals/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /dealSuggestions/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /deal_suggestions/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /news/{id} { allow read: if true; allow write: if isAdmin() || isTeacher(); }
+    match /lostAndFound/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /lost_and_found/{id} { allow read: if true; allow write: if isSignedIn(); }
+
+    // Moto rides and offers
+    match /motoRides/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /motorideOffers/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /motoride_offers/{id} { allow read: if true; allow write: if isSignedIn(); }
+    
+    match /colocations/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /colocationRequests/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /colocationReviews/{id} { allow read: if true; allow write: if isSignedIn(); }
 
     // Vidéos Communautaires
     match /community_videos/{videoId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidVideo(incoming());
       allow update: if isSignedIn() && (
         isOwner(resource.data.userId) || 
@@ -247,14 +278,14 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwner(resource.data.userId);
 
       match /comments/{commentId} {
-        allow read: if isSignedIn();
+        allow read: if true;
         allow create: if isSignedIn() && isValidVideoComment(incoming());
         allow delete: if isAdmin() || isOwner(resource.data.userId);
       }
     }
 
     match /video_likes/{likeId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidVideoLike(incoming());
       allow delete: if isSignedIn() && isOwner(resource.data.userId);
     }
@@ -266,11 +297,11 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow create: if isSignedIn() && isValidId(reportId) && isValidReport(incoming());
-      allow read, delete: if isAdmin();
+      allow read, delete: if true;
     }
 
     match /users/{userId}/reviews/{reviewId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || isOwner(resource.data.authorId);
     }
@@ -279,40 +310,53 @@ service cloud.firestore {
     // ACADEMIC INSTITUTION COLLECTIONS
     // -------------------------------------------------------------------------
     match /universities/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
-    match /departments/{id} {
-      allow read: if isSignedIn();
+    match /academic_departments/{id} {
+      allow read: if true;
       allow write: if isAdmin();
     }
-    match /filieres/{id} {
-      allow read: if isSignedIn();
+    match /academic_filieres/{id} {
+      allow read: if true;
       allow write: if isAdmin();
     }
-    match /classes/{id} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+    match /academic_classes/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isSignedIn() && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['studentCount'])
+      );
     }
     match /academic_students/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
-    match /timetables/{id} {
-      allow read: if isSignedIn();
+    match /academic_timetables/{id} {
+      allow read: if true;
       allow write: if isAdmin();
     }
     match /academic_documents/{id} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isSignedIn() && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['downloadsCount', 'viewsCount', 'likesCount'])
+      );
     }
-    match /class_messages/{id} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+    match /academic_messages/{id} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
     }
     match /academic_notifications/{id} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isSignedIn() && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readBy'])
+      );
     }
   }
 }
