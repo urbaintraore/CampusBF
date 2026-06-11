@@ -146,11 +146,13 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
 
 import { Toaster as SonnerToaster } from 'sonner';
 import Rankings from './pages/Ranking';
+import NetworkStatus from './components/NetworkStatus';
 
 export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
+        <NetworkStatus />
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />

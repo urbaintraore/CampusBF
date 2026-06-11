@@ -662,6 +662,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (err: any) {
           const isQuota = err.message?.includes('Quota') || err.code === 'resource-exhausted';
           if (isQuota) sessionStorage.setItem('firestore_quota_hit', 'true');
+          
+          const isOffline = err.message?.includes('offline') || err.code === 'unavailable';
+          if (isOffline) {
+            console.warn("User is offline or Firestore is unreachable. Using fallback profile.");
+            throw new Error('offline_fallback');
+          }
           throw err;
         }
 
@@ -794,9 +800,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Auth context error handle:", error);
         
         const isQuotaHit = error.message?.includes('Quota') || error.code === 'resource-exhausted' || sessionStorage.getItem('firestore_quota_hit');
+        const isOffline = error.message?.includes('offline') || error.code === 'unavailable' || error.message?.includes('offline_fallback');
         
-        if (isQuotaHit) {
-          console.warn("Using fallback profile due to quota exhaustion");
+        if (isQuotaHit || isOffline) {
+          console.warn("Using fallback profile due to quota exhaustion or offline state");
           const fallbackUser: User = { 
             id: firebaseUser.uid, 
             email: firebaseUser.email || '',
@@ -809,7 +816,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rankingScore: 1
           } as any;
           setUser(fallbackUser);
-          toast.error("Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.", { duration: 8000 });
+          const toastMsg = isOffline 
+            ? "Vous semblez être hors ligne ou un adblock bloque la base de données. Mode hors ligne activé." 
+            : "Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.";
+          toast.error(toastMsg, { duration: 8000 });
         } else {
           toast.error(`Erreur: ${error.message || 'Problème de connexion'}`);
           setUser(null);

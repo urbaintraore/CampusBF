@@ -9,7 +9,10 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 auth.languageCode = 'fr';
-export const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+}, firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
 
 export const messaging = async () => {
