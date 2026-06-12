@@ -22,7 +22,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const PORT = 3000;
 
 app.use(cors());
@@ -757,6 +757,8 @@ async function createServer() {
   });
 }
 
-createServer();
+if (!process.env.VERCEL) {
+  createServer();
+}
 
 
