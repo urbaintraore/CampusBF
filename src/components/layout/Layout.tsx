@@ -188,69 +188,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           <nav className="flex flex-col gap-2">
             {filteredNavItems.map((item) => {
-              const isFinancing = item.to === '/financing';
-              if (isFinancing) {
-                const startActive = location.pathname === '/financing';
-                return (
-                  <div key={item.to} className="flex flex-col gap-1 w-full">
-                    <button
-                      onClick={() => {
-                        setIsFinancingExpanded(!isFinancingExpanded);
-                        navigate('/financing');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={cn(
-                        "flex items-center justify-between w-full p-4 rounded-xl transition-all text-left cursor-pointer",
-                        startActive ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm" : "text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <GraduationCap size={20} />
-                        <span>{item.label}</span>
-                      </div>
-                      {isFinancingExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-
-                    {isFinancingExpanded && (
-                      <div className="pl-6 flex flex-col gap-1 ml-4 border-l border-slate-100">
-                        <NavLink
-                          to="/financing"
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            setSearchQuery('');
-                          }}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 p-3 text-xs rounded-xl transition-all",
-                              isActive ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50"
-                            )
-                          }
-                        >
-                          <ChevronRight size={12} />
-                          <span>Tableau de Bord</span>
-                        </NavLink>
-                        <NavLink
-                          to="/scholarships"
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            setSearchQuery('');
-                          }}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 p-3 text-xs rounded-xl transition-all",
-                              isActive ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50"
-                            )
-                          }
-                        >
-                          <ChevronRight size={12} />
-                          <span>Bourses d'Études</span>
-                        </NavLink>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
               return (
                 <NavLink
                   key={item.to}
@@ -344,68 +281,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-2">Menu Principal</p>
           {filteredNavItems.map((item) => {
-            const isFinancing = item.to === '/financing';
-            if (isFinancing) {
-              const startActive = location.pathname === '/financing';
-              return (
-                <div key={item.to} className="space-y-1 w-full">
-                  <button
-                    onClick={() => {
-                      setIsFinancingExpanded(!isFinancingExpanded);
-                      navigate('/financing');
-                    }}
-                    className={cn(
-                      "flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-300 group overflow-hidden text-left cursor-pointer",
-                      startActive
-                        ? "bg-emerald-50/80 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-500/10" 
-                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <GraduationCap size={20} className="transition-colors duration-300 z-10" />
-                      <span className="z-10 font-bold">{item.label}</span>
-                    </div>
-                    {isFinancingExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-
-                  {isFinancingExpanded && (
-                    <div className="pl-6 flex flex-col gap-1 ml-4 border-l border-slate-100">
-                      <NavLink
-                        to="/financing"
-                        onClick={() => setSearchQuery('')}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors",
-                            isActive 
-                              ? "bg-indigo-50 text-indigo-700 font-semibold" 
-                              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                          )
-                        }
-                      >
-                        <ChevronRight size={12} />
-                        <span>Tableau de Bord</span>
-                      </NavLink>
-                      <NavLink
-                        to="/scholarships"
-                        onClick={() => setSearchQuery('')}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors",
-                            isActive 
-                              ? "bg-indigo-50 text-indigo-700 font-semibold" 
-                              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                          )
-                        }
-                      >
-                        <ChevronRight size={12} />
-                        <span>Bourses d'Études</span>
-                      </NavLink>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
             return (
               <NavLink
                 key={item.to}

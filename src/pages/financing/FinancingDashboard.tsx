@@ -338,7 +338,7 @@ export default function FinancingDashboard() {
         <div className="z-10 space-y-3">
           <div className="inline-flex items-center space-x-2 bg-indigo-500/20 text-indigo-300 font-medium px-3 py-1 rounded-full text-xs">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Eligibilité & Bourses d'Études v1</span>
+            <span>Éligibilité & Opportunités v1</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-sans">Financement d'Étude et Opportunité</h1>
           <p className="text-slate-300 max-w-2xl text-sm md:text-base leading-relaxed">
