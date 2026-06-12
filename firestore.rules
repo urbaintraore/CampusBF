@@ -81,6 +81,20 @@ service cloud.firestore {
              data.reason is string && data.reason.size() <= 2000;
     }
 
+    function isValidFinancingProfile(data) {
+      return data.userId == request.auth.uid &&
+             data.userEmail is string &&
+             data.totalEligibilityScore is number &&
+             data.totalEligibilityScore >= 0 && data.totalEligibilityScore <= 100;
+    }
+
+    function isValidAidApplication(data) {
+      return data.userId == request.auth.uid &&
+             data.type in ["bourse_nationale", "aide_logement", "aide_transport", "aide_scolarite", "aide_alimentaire", "aide_manuels"] &&
+             data.amount is number && data.amount > 0 &&
+             data.status in ["pending", "approved", "rejected"];
+    }
+
     // -------------------------------------------------------------------------
     // PILLAR 0: Global Safety Net
     // -------------------------------------------------------------------------
@@ -207,6 +221,23 @@ service cloud.firestore {
     match /bourses/{id} { 
       allow read: if true; 
       allow write: if isAdmin();
+    }
+    match /scholarships/{id} { 
+      allow read: if true; 
+      allow write: if isAdmin() || (isSignedIn() && (getUserRole(request.auth.uid) == 'tutor' || getUserRole(request.auth.uid) == 'alumni'));
+    }
+    match /financing_profiles/{profileId} {
+      allow read: if isSignedIn() && (isOwner(profileId) || isAdmin());
+      allow write: if isSignedIn() && isOwner(profileId) && isValidFinancingProfile(incoming());
+    }
+    match /aid_applications/{applicationId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() && isValidAidApplication(incoming());
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (isOwner(resource.data.userId) && existing().status == "pending" && incoming().status == "pending" && isValidAidApplication(incoming()))
+      );
+      allow delete: if isSignedIn() && (isAdmin() || (isOwner(resource.data.userId) && existing().status == "pending"));
     }
     match /events/{id} { allow read: if true; allow write: if isAdmin() || isTeacher(); }
     match /marketplace/{id} { allow read: if true; allow write: if isSignedIn(); }

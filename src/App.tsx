@@ -21,6 +21,7 @@ import MotoRide from './pages/MotoRide';
 import Events from './pages/Events';
 import Scholarships from './pages/Scholarships';
 import Orientation from './pages/Orientation';
+import FinancingDashboard from './pages/financing/FinancingDashboard';
 import TeachersDirectory from './pages/TeachersDirectory';
 import Notifications from './pages/Notifications';
 import Portfolio from './pages/Portfolio';
@@ -224,9 +225,14 @@ export default function App() {
             </GuestRoute>
           } />
           <Route path="/scholarships" element={
-            <ProtectedRoute>
+            <GuestRoute>
               <Scholarships />
-            </ProtectedRoute>
+            </GuestRoute>
+          } />
+          <Route path="/financing" element={
+            <GuestRoute>
+              <FinancingDashboard />
+            </GuestRoute>
           } />
           <Route path="/community" element={
             <ProtectedRoute>

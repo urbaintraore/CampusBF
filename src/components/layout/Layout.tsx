@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy, Brain, Tag, Home, School, Building2, Video } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Briefcase, ShoppingBag, Users, User, Menu, X, Shield, MessageCircle, Bell, Search, LogOut, Bike, Calendar, Compass, Library, Sparkles, Share, CheckCircle2, BookOpen, Trophy, Brain, Tag, Home, School, Building2, Video, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
@@ -15,6 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, logout, notifications, markNotificationAsRead, logActivity } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isFinancingExpanded, setIsFinancingExpanded] = useState(location.pathname.startsWith('/financing'));
 
   React.useEffect(() => {
     if (user && logActivity) {
@@ -31,12 +32,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [location.pathname, user?.id]);
 
+  React.useEffect(() => {
+    if (location.pathname.startsWith('/financing')) {
+      setIsFinancingExpanded(true);
+    }
+  }, [location.pathname]);
+
   const userNotifications = notifications.filter(n => n.userId === user?.id || n.userId === 'all');
   const unreadNotifications = userNotifications.filter(n => !n.read).length;
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
     { icon: Sparkles, label: 'Bourses & Opportunités IA', to: '/scholarships', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'public'] },
+    { icon: GraduationCap, label: '🎓 Financement', to: '/financing', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'company', 'institution', 'public'] },
     { icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] },
     { icon: Briefcase, label: 'Portail Entreprise', to: '/enterprise-portal', roles: ['company', 'admin'] },
     { icon: Building2, label: 'Portail Université', to: '/university-portal', roles: ['institution', 'admin', 'teacher', 'student'] },
@@ -179,25 +187,90 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex flex-col gap-2">
-            {filteredNavItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setSearchQuery('');
-                }}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 p-4 rounded-xl transition-all",
-                    isActive ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm" : "text-slate-600 hover:bg-slate-50"
-                  )
-                }
-              >
-                <item.icon size={20} />
-                {item.label}
-              </NavLink>
-            ))}
+            {filteredNavItems.map((item) => {
+              const isFinancing = item.to === '/financing';
+              if (isFinancing) {
+                const startActive = location.pathname === '/financing';
+                return (
+                  <div key={item.to} className="flex flex-col gap-1 w-full">
+                    <button
+                      onClick={() => {
+                        setIsFinancingExpanded(!isFinancingExpanded);
+                        navigate('/financing');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={cn(
+                        "flex items-center justify-between w-full p-4 rounded-xl transition-all text-left cursor-pointer",
+                        startActive ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <GraduationCap size={20} />
+                        <span>{item.label}</span>
+                      </div>
+                      {isFinancingExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+
+                    {isFinancingExpanded && (
+                      <div className="pl-6 flex flex-col gap-1 ml-4 border-l border-slate-100">
+                        <NavLink
+                          to="/financing"
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setSearchQuery('');
+                          }}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 p-3 text-xs rounded-xl transition-all",
+                              isActive ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50"
+                            )
+                          }
+                        >
+                          <ChevronRight size={12} />
+                          <span>Tableau de Bord</span>
+                        </NavLink>
+                        <NavLink
+                          to="/scholarships"
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setSearchQuery('');
+                          }}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 p-3 text-xs rounded-xl transition-all",
+                              isActive ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50"
+                            )
+                          }
+                        >
+                          <ChevronRight size={12} />
+                          <span>Bourses d'Études</span>
+                        </NavLink>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 p-4 rounded-xl transition-all",
+                      isActive ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                    )
+                  }
+                >
+                  <item.icon size={20} />
+                  {item.label}
+                </NavLink>
+              );
+            })}
 
             {filteredNavItems.length === 0 && (
               <div className="px-4 py-8 text-sm text-slate-400 text-center">
@@ -270,24 +343,88 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-2">Menu Principal</p>
-          {filteredNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setSearchQuery('')}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
-                  isActive 
-                    ? "bg-emerald-50/80 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-500/10" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                )
-              }
-            >
-              <item.icon size={20} className="transition-colors duration-300 z-10" />
-              <span className="z-10">{item.label}</span>
-            </NavLink>
-          ))}
+          {filteredNavItems.map((item) => {
+            const isFinancing = item.to === '/financing';
+            if (isFinancing) {
+              const startActive = location.pathname === '/financing';
+              return (
+                <div key={item.to} className="space-y-1 w-full">
+                  <button
+                    onClick={() => {
+                      setIsFinancingExpanded(!isFinancingExpanded);
+                      navigate('/financing');
+                    }}
+                    className={cn(
+                      "flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-300 group overflow-hidden text-left cursor-pointer",
+                      startActive
+                        ? "bg-emerald-50/80 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-500/10" 
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <GraduationCap size={20} className="transition-colors duration-300 z-10" />
+                      <span className="z-10 font-bold">{item.label}</span>
+                    </div>
+                    {isFinancingExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+
+                  {isFinancingExpanded && (
+                    <div className="pl-6 flex flex-col gap-1 ml-4 border-l border-slate-100">
+                      <NavLink
+                        to="/financing"
+                        onClick={() => setSearchQuery('')}
+                        className={({ isActive }) =>
+                          cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors",
+                            isActive 
+                              ? "bg-indigo-50 text-indigo-700 font-semibold" 
+                              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                          )
+                        }
+                      >
+                        <ChevronRight size={12} />
+                        <span>Tableau de Bord</span>
+                      </NavLink>
+                      <NavLink
+                        to="/scholarships"
+                        onClick={() => setSearchQuery('')}
+                        className={({ isActive }) =>
+                          cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors",
+                            isActive 
+                              ? "bg-indigo-50 text-indigo-700 font-semibold" 
+                              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                          )
+                        }
+                      >
+                        <ChevronRight size={12} />
+                        <span>Bourses d'Études</span>
+                      </NavLink>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setSearchQuery('')}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+                    isActive 
+                      ? "bg-emerald-50/80 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-500/10" 
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  )
+                }
+              >
+                <item.icon size={20} className="transition-colors duration-300 z-10" />
+                <span className="z-10">{item.label}</span>
+              </NavLink>
+            );
+          })}
 
           {filteredNavItems.length === 0 && (
             <div className="px-4 py-8 text-sm text-slate-400 text-center">

@@ -235,9 +235,55 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["reportedItemId", "reportedItemType", "reason", "reporterId", "createdAt"]
+    },
+    "FinancingProfile": {
+      "title": "Profil de Financement",
+      "description": "Profil d'éligibilité financière d'un étudiant",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "academicLevel": { "type": "string" },
+        "academicLevelScore": { "type": "number" },
+        "profileCompletionScore": { "type": "number" },
+        "activityScore": { "type": "number" },
+        "documentsScore": { "type": "number" },
+        "totalEligibilityScore": { "type": "number" },
+        "eligibilityBadge": { "type": "string", "enum": ["Peu Éligible", "Moyennement Éligible", "Très Éligible", "Excellent"] },
+        "documents": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "totalEligibilityScore", "createdAt"]
+    },
+    "AidApplication": {
+      "title": "Demande d'Aide Financière",
+      "description": "Demande d'aide ponctuelle soumise par un étudiant",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "type": { "type": "string", "enum": ["bourse_nationale", "aide_logement", "aide_transport", "aide_scolarite", "aide_alimentaire", "aide_manuels"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "amount", "status", "createdAt"]
     }
   },
   "firestore": {
+    "/financing_profiles/{profileId}": {
+      "schema": "FinancingProfile",
+      "description": "Profils de financement et de scoring d'éligibilité des étudiants"
+    },
+    "/aid_applications/{applicationId}": {
+      "schema": "AidApplication",
+      "description": "Fiches de demande d'aide financière étudiante"
+    },
     "/reports/{reportId}": {
       "schema": "UserReport",
       "description": "Signalements de contenu abusif"

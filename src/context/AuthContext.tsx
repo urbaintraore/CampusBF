@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, TutorApplication, SubscriptionRequest, Ad, TeacherApplication, Notification, Internship, Group, CampusEvent, Report, News, LostAndFound, MarketplaceItem, Post, MotoRide, Log, Training, TrainingEnrollment, TrainingReview, TrainingReport, Contest, ContestParticipant, ContestWinner, Quiz, Deal, DealSuggestion, Colocation, ColocationRequest, ColocationReview } from '@/types';
 import { ADMIN_USER, MOCK_APPLICATIONS, MOCK_USERS, MOCK_ADS, MOCK_NOTIFICATIONS } from '@/data/mock';
-import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { auth, db, handleFirestoreError, OperationType, handleAuthError } from '@/lib/firebase';
 import { documentService } from '@/services/documentService';
 import { motoRideService } from '@/services/motoRideService';
 import { logService } from '@/services/logService';
@@ -119,6 +119,14 @@ async function fetchCountWithSessionCache(cacheKey: string, ref: any) {
   } catch (e) {
     return cached ? parseInt(cached) : 0;
   }
+}
+
+export interface ConnectionHealthStatus {
+  isOnline: boolean;
+  latencyMs: number | null;
+  lastChecked: Date | null;
+  status: 'excellent' | 'good' | 'poor' | 'offline';
+  error: string | null;
 }
 
 interface AuthContextType {
@@ -261,6 +269,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isOfflineMode: boolean;
+  connectionHealth: ConnectionHealthStatus;
   showAuthModal: boolean;
   setShowAuthModal: (show: boolean) => void;
   academicNotifications: any[];
@@ -332,6 +341,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOfflineMode, setIsOfflineMode] = useState(!navigator.onLine);
+  const [connectionHealth, setConnectionHealth] = useState<ConnectionHealthStatus>({
+    isOnline: navigator.onLine,
+    latencyMs: null,
+    lastChecked: new Date(),
+    status: navigator.onLine ? 'good' : 'offline',
+    error: null
+  });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalCallback, setAuthModalCallback] = useState<(() => void) | null>(null);
 
@@ -613,11 +629,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Offline mode window observers
     const handleOnline = () => {
       console.log("[Network Status] Browser online event triggered. Checking Firestore connection...");
+      setConnectionHealth(prev => ({
+        ...prev,
+        isOnline: true,
+        status: 'good',
+        lastChecked: new Date(),
+        error: null
+      }));
       checkFirestoreConnectionAndHeartbeat();
     };
     const handleOffline = () => {
       console.log("[Network Status] Browser offline event triggered. Setting isOfflineMode to true.");
       setIsOfflineMode(true);
+      setConnectionHealth({
+        isOnline: false,
+        latencyMs: null,
+        lastChecked: new Date(),
+        status: 'offline',
+        error: 'Browser offline event triggered'
+      });
     };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -635,13 +665,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log(`[Firebase Diagnostic] Starting connection attempt #${connectionAttempts}/${maxConnectionAttempts}...`);
       console.log(`[Firebase Diagnostic] Navigator Online State: ${navigator.onLine ? "ONLINE" : "OFFLINE"}`);
 
+      const startTime = performance.now();
+
       try {
         // Step 1: Validate Firestore connection via on-server document read
         console.log(`[Firebase Diagnostic] Attempting to read test document from Firestore...`);
         const testDocRef = doc(db, 'test', 'connection');
         await getDocFromServer(testDocRef);
-        console.log(`[Firebase Diagnostic] SUCCESS: Connected to Firestore backend on attempt #${connectionAttempts}.`);
+        
+        const latency = Math.round(performance.now() - startTime);
+        console.log(`[Firebase Diagnostic] SUCCESS: Connected to Firestore backend on attempt #${connectionAttempts}. Latency: ${latency}ms`);
         setIsOfflineMode(false);
+
+        let computedStatus: 'excellent' | 'good' | 'poor' | 'offline' = 'good';
+        if (latency < 150) computedStatus = 'excellent';
+        else if (latency < 300) computedStatus = 'good';
+        else computedStatus = 'poor';
+
+        setConnectionHealth({
+          isOnline: true,
+          latencyMs: latency,
+          lastChecked: new Date(),
+          status: computedStatus,
+          error: null
+        });
       } catch (error: any) {
         console.group(`[Firebase Diagnostic] FAILURE DETAILS on attempt #${connectionAttempts}`);
         console.error("Raw Error Object:", error);
@@ -665,7 +712,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsOfflineMode(true);
         } 
         // Category B: Firebase Auth network request failed specific to SDK
-        else if (errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed') || errorMessage.includes('request-failed')) {
+        else if (errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed') || errorMessage.includes('request-failed') || errorMessage.includes('Failed to fetch')) {
           console.warn("[Diagnostic Analysis] Category: AUTHENTICATION NETWORK FAULT");
           console.error("Authentication server request failed. Google Secure Token or Identity Toolkit APIs are blocked or failing to connect.");
           console.info("Suggested Fix: Verify if securetoken.googleapis.com is reachable in your browser tab context.");
@@ -700,6 +747,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.groupEnd();
 
+        setConnectionHealth({
+          isOnline: !isOfflineError && navigator.onLine,
+          latencyMs: null,
+          lastChecked: new Date(),
+          status: isOfflineError ? 'offline' : 'poor',
+          error: `${errorCode || 'UNKNOWN'}: ${errorMessage}`
+        });
+
         // Auto-retry with exponential backoff unless max attempts reached
         if (connectionAttempts < maxConnectionAttempts) {
           // Exponential backoff formulation: 1000 * 2^(attempt - 1) milliseconds (e.g. 1s, 2s, 4s, 8s delay)
@@ -717,22 +772,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("[Firebase Heartbeat] Checking Firestore reachability...");
       if (!navigator.onLine) {
         setIsOfflineMode(true);
+        setConnectionHealth({
+          isOnline: false,
+          latencyMs: null,
+          lastChecked: new Date(),
+          status: 'offline',
+          error: 'Offline via navigator.onLine'
+        });
         return;
       }
+
+      const startTime = performance.now();
+
       try {
         const testDocRef = doc(db, 'test', 'connection');
         await getDocFromServer(testDocRef);
-        console.log("[Firebase Heartbeat] SUCCESS: Reachable! Setting isOfflineMode to false.");
+        const latency = Math.round(performance.now() - startTime);
+        console.log(`[Firebase Heartbeat] SUCCESS: Reachable! Setting isOfflineMode to false. Latency: ${latency}ms`);
         setIsOfflineMode(false);
+
+        let computedStatus: 'excellent' | 'good' | 'poor' | 'offline' = 'good';
+        if (latency < 150) computedStatus = 'excellent';
+        else if (latency < 300) computedStatus = 'good';
+        else computedStatus = 'poor';
+
+        setConnectionHealth({
+          isOnline: true,
+          latencyMs: latency,
+          lastChecked: new Date(),
+          status: computedStatus,
+          error: null
+        });
       } catch (error: any) {
         const errorCode = error.code || null;
         const errorMessage = error.message || String(error);
+        const isOfflineError = errorMessage.includes('the client is offline') || 
+                               errorCode === 'unavailable' || 
+                               errorMessage.includes('Failed to fetch') ||
+                               errorMessage.includes('Could not reach Cloud Firestore backend');
+
         if (errorCode === 'permission-denied' || errorMessage.includes('insufficient permissions')) {
           console.log("[Firebase Heartbeat] Connected but permission denied. This counts as reached/online!");
           setIsOfflineMode(false);
+          setConnectionHealth({
+            isOnline: true,
+            latencyMs: null,
+            lastChecked: new Date(),
+            status: 'good',
+            error: null
+          });
         } else {
           console.warn("[Firebase Heartbeat] FAILS: Reachability check failed. Offline mode active:", errorMessage);
           setIsOfflineMode(true);
+          setConnectionHealth({
+            isOnline: !isOfflineError,
+            latencyMs: null,
+            lastChecked: new Date(),
+            status: isOfflineError ? 'offline' : 'poor',
+            error: `${errorCode || 'HEARTBEAT_FAULT'}: ${errorMessage}`
+          });
         }
       }
     };
@@ -750,27 +848,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     let active = true;
-    let unsubscribeAuth: (() => void) | null = null;
 
-    const initializeAuth = async () => {
-      try {
-        console.log("Setting Auth Persistence to browserLocalPersistence...");
-        await setPersistence(auth, browserLocalPersistence);
-      } catch (persistenceError) {
-        console.error("Error setting firebase auth persistence:", persistenceError);
-      }
+    // Set persistence (asynchronous non-blocking registration to avoid delays in registering onAuthStateChanged)
+    console.log("[Auth Init] Triggering browserLocalPersistence initialization...");
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        console.log("[Auth Init] Success: browserLocalPersistence configured successfully.");
+      })
+      .catch((persistenceError) => {
+        console.error("[Auth Init] Persistence setup failed:", persistenceError);
+      });
 
+    // Register onAuthStateChanged synchronously on app mount to avoid race conditions
+    console.log("[Auth Init] Registering onAuthStateChanged synchronously on startup.");
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!active) return;
-
-      unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (!active) return;
-        console.log("Auth state changed:", firebaseUser?.email);
-        setFirebaseEmail(firebaseUser?.email || null);
-        clearTimeout(loadingTimeout);
-        
-        if (!firebaseUser) {
-          if (localStorage.getItem('offline_admin_mock') === 'true') {
-            console.log("Restoring mock offline admin session");
+      console.log("[Auth State] Changed state callback received. Email:", firebaseUser?.email, "UID:", firebaseUser?.uid);
+      setFirebaseEmail(firebaseUser?.email || null);
+      clearTimeout(loadingTimeout);
+      
+      if (!firebaseUser) {
+        if (localStorage.getItem('offline_admin_mock') === 'true') {
+          if (navigator.onLine && !isOfflineMode) {
+            console.log("[Auth State] Browser is online and connection health is fine, clearing stale offline mock session.");
+            localStorage.removeItem('offline_admin_mock');
+            localStorage.removeItem('offline_user_email');
+          } else {
+            console.log("[Auth State] Restoring mock offline admin session from localStorage cache.");
             const storedEmail = localStorage.getItem('offline_user_email') || 'admin@offline.local';
             const isSpecialAdmin = isAdminEmail(storedEmail);
             const mockUser: User = {
@@ -788,228 +892,238 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return;
           }
-
-          console.log("No firebase user");
-          if (active) {
-            setUser(null);
-            setIsLoading(false);
-          }
-          return;
         }
 
-        // If signup is in progress, let it handle the doc creation
-        if (isSigningUp.current) {
-          console.log("Signup in progress, skipping auto-doc creation in onAuthStateChanged");
-          return;
+        console.log("[Auth State] No authenticated firebase user present.");
+        if (active) {
+          setUser(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // If signup is in progress, let it handle the doc creation
+      if (isSigningUp.current) {
+        console.log("[Auth State] Signup in progress, delaying automatic document fetch/creation in listener.");
+        return;
+      }
+
+      // Clear offline admin mock on successful real firebase auth state detection
+      if (localStorage.getItem('offline_admin_mock') === 'true') {
+        console.log("[Auth State] Real authenticated Firebase user detected, clearing any stale offline admin mock.");
+        localStorage.removeItem('offline_admin_mock');
+        localStorage.removeItem('offline_user_email');
+        setIsOfflineMode(false);
+      }
+
+      // Logic for session login marking - avoid repeated writes
+      const checkSessionLogin = () => {
+        const key = `active_session_${firebaseUser.uid}`;
+        const lastLogin = localStorage.getItem(key);
+        const day = new Date().toDateString();
+        if (lastLogin === day) return true;
+        localStorage.setItem(key, day);
+        return false;
+      };
+
+      try {
+        console.log("[Auth State] Querying Firestore database for profile linked to UID:", firebaseUser.uid);
+        let initialUserData: User;
+        
+        // Quota safety check
+        const quotaHit = sessionStorage.getItem('firestore_quota_hit');
+        if (quotaHit) {
+          console.warn("[Auth State] Firestore Quota already hit, skipping retrieval and using fallback.");
+          throw new Error('Quota exceeded');
         }
 
-        // Logic for session login marking - avoid repeated writes
-        const checkSessionLogin = () => {
-          const key = `active_session_${firebaseUser.uid}`;
-          const lastLogin = localStorage.getItem(key);
-          const day = new Date().toDateString();
-          if (lastLogin === day) return true;
-          localStorage.setItem(key, day);
-          return false;
-        };
-
+        let userDoc;
         try {
-          console.log("Auth State Changed for user:", firebaseUser.uid);
-          let initialUserData: User;
+          userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        } catch (err: any) {
+          const isQuota = err.message?.includes('Quota') || err.code === 'resource-exhausted';
+          if (isQuota) sessionStorage.setItem('firestore_quota_hit', 'true');
           
-          // Quota safety check
-          const quotaHit = sessionStorage.getItem('firestore_quota_hit');
-          if (quotaHit) {
-            console.warn("Firestore Quota already hit, using fallback");
-            throw new Error('Quota exceeded');
+          const isOffline = err.message?.includes('offline') || err.code === 'unavailable';
+          if (isOffline) {
+            console.warn("[Auth State] Connection unreachable. Using fallback offline cache profile.");
+            throw new Error('offline_fallback');
           }
+          throw err;
+        }
 
-          let userDoc;
-          try {
-            // Use getDocFromServer to bypass local cache if needed, but here we want to be lean
-            userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          } catch (err: any) {
-            const isQuota = err.message?.includes('Quota') || err.code === 'resource-exhausted';
-            if (isQuota) sessionStorage.setItem('firestore_quota_hit', 'true');
-            
-            const isOffline = err.message?.includes('offline') || err.code === 'unavailable';
-            if (isOffline) {
-              console.warn("User is offline or Firestore is unreachable. Using fallback profile.");
-              throw new Error('offline_fallback');
-            }
-            throw err;
-          }
+        if (!active) return;
 
-          if (!active) return;
-
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            initialUserData = { id: firebaseUser.uid, ...data } as User;
-            
-            if (!checkSessionLogin()) {
-              try {
-                await updateDoc(doc(db, 'users', firebaseUser.uid), {
-                  lastActiveAt: serverTimestamp(),
-                  'activityStats.logins': increment(1),
-                });
-                
-                await logService.logActivity({
-                  userId: firebaseUser.uid,
-                  userName: `${initialUserData.firstName || ''} ${initialUserData.lastName || ''}`.trim() || 'Utilisateur',
-                  email: firebaseUser.email || '',
-                  filiere: initialUserData.major || '',
-                  universite: initialUserData.university || '',
-                  action: 'Connexion de l\'utilisateur',
-                  module: 'Authentification',
-                  details: 'Nouvelle session de connexion',
-                  severity: 'info'
-                });
-              } catch {}
-            }
-
-            // Demande de permission pour les notifications
-            setTimeout(() => {
-              if (active) {
-                requestNotificationPermission(firebaseUser.uid);
-              }
-            }, 3000);
-            
-            console.log("Firebase User:", firebaseUser.email, "UID:", firebaseUser.uid);
-            
-            if (isAdminEmail(firebaseUser.email) && (initialUserData as any).role !== 'admin') {
-              console.log("CRITICAL: User email is in admin list but role is not admin in Firestore. Forcing upgrade.");
-              (initialUserData as any).role = 'admin';
-              try {
-                await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
-                console.log("Firestore role updated to admin for", firebaseUser.email);
-              } catch (err: any) {
-                 console.error("Firestore updateDoc error for role upgrade:", err);
-              }
-            } else {
-              console.log("Admin check for", firebaseUser.email, ": isAdminEmail:", isAdminEmail(firebaseUser.email), "Current Role:", (initialUserData as any).role);
-            }
-          } else {
-            console.log("User doc does not exist, creating new user...");
-            const newUser: Partial<User> = {
-              firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
-              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
-              email: firebaseUser.email || '',
-              university: '',
-              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-              avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
-              status: 'active',
-              createdAt: new Date().toISOString(),
-              referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-              referralsCount: 0,
-              inviteCount: 0,
-              invitedUsers: [],
-              activityStats: {
-                logins: 1,
-                docsViewed: 0,
-                docsDownloaded: 0,
-                eventsViewed: 0,
-                eventParticipations: 0,
-                contestParticipations: 0,
-                marketplacePosts: 0,
-                marketplaceContacts: 0,
-                quizzesCompleted: 0,
-                cvGenerated: 0,
-                motoRideOffers: 0,
-                motoRideContacts: 0,
-                groupMessages: 0,
-                invitations: 0
-              },
-              rankingScore: 1
-            };
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          initialUserData = { id: firebaseUser.uid, ...data } as User;
+          console.log("[Auth State] Profile document found in database:", initialUserData.email);
+          
+          if (!checkSessionLogin()) {
             try {
-              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-              initialUserData = { id: firebaseUser.uid, ...newUser } as User;
-              // Join everyone to the community group by default to enable basic platform access
-              await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+              await updateDoc(doc(db, 'users', firebaseUser.uid), {
+                lastActiveAt: serverTimestamp(),
+                'activityStats.logins': increment(1),
+              });
+              
+              await logService.logActivity({
+                userId: firebaseUser.uid,
+                userName: `${initialUserData.firstName || ''} ${initialUserData.lastName || ''}`.trim() || 'Utilisateur',
+                email: firebaseUser.email || '',
+                filiere: initialUserData.major || '',
+                universite: initialUserData.university || '',
+                action: 'Connexion de l\'utilisateur',
+                module: 'Authentification',
+                details: 'Nouvelle session de connexion',
+                severity: 'info'
+              });
+            } catch (statsErr) {
+              console.warn("[Auth State] Non-blocking profile stats updates warning:", statsErr);
+            }
+          }
+
+          // Demande de permission pour les notifications
+          setTimeout(() => {
+            if (active) {
+              console.log("[Auth State] Prompting notification permission for", firebaseUser.uid);
+              requestNotificationPermission(firebaseUser.uid);
+            }
+          }, 3000);
+          
+          if (isAdminEmail(firebaseUser.email) && (initialUserData as any).role !== 'admin') {
+            console.warn("[Auth State] CRITICAL: User email is registered in admin lists but database role is not admin. Forcing database upgrade.");
+            (initialUserData as any).role = 'admin';
+            try {
+              await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+              console.log("[Auth State] Firestore role updated cleanly to admin for:", firebaseUser.email);
             } catch (err: any) {
-               console.error("Firestore setDoc error for new user creation:", err);
-               handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
-               return;
+               console.error("[Auth State] Failed to automatically upgrade role in Firestore:", err);
             }
-          }
-
-          if (!active) return;
-
-          console.log("Setting user state:", initialUserData.id);
-          setUser(initialUserData);
-          
-          // Listen to user profile changes in real-time
-          const userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
-            if (!active) return;
-            if (doc.exists()) {
-              const newData = doc.data() as User;
-              const normalizedData = { id: firebaseUser.uid, ...newData };
-              setUser(normalizedData);
-            }
-          }, (error) => {
-            console.error("userSnapshot Error:", error);
-          });
-          unsubscribes.push(userUnsubscribe);
-          
-          // Ensure user is in the community group (except for students who must join manually)
-          if (firebaseUser.uid && initialUserData && initialUserData.role !== 'student') {
-            communityService.ensureUserInCommunityGroup(firebaseUser.uid).catch(console.error);
-          }
-          
-          // Log login
-          try {
-            await logService.logActivity({
-              userId: initialUserData.id,
-              userName: `${initialUserData.firstName} ${initialUserData.lastName}`,
-              email: initialUserData.email,
-              universite: initialUserData.university,
-              filiere: initialUserData.major || '',
-              action: 'Connexion',
-              module: 'Authentification',
-              details: 'Session ouverte',
-              severity: 'info'
-            });
-          } catch (err: any) {
-            console.error("Error logging login action:", err);
-          }
-        } catch (error: any) {
-          if (!active) return;
-          console.error("Auth context error handle:", error);
-          
-          const isQuotaHit = error.message?.includes('Quota') || error.code === 'resource-exhausted' || sessionStorage.getItem('firestore_quota_hit');
-          const isOffline = error.message?.includes('offline') || error.code === 'unavailable' || error.message?.includes('offline_fallback');
-          
-          if (isQuotaHit || isOffline) {
-            console.warn("Using fallback profile due to quota exhaustion or offline state");
-            const fallbackUser: User = { 
-              id: firebaseUser.uid, 
-              email: firebaseUser.email || '',
-              role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
-              firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
-              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
-              status: 'active',
-              createdAt: new Date().toISOString(),
-              activityStats: { logins: 1 } as any,
-              rankingScore: 1
-            } as any;
-            setUser(fallbackUser);
-            const toastMsg = isOffline 
-              ? "Vous semblez être hors ligne ou un adblock bloque la base de données. Mode hors ligne activé." 
-              : "Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.";
-            toast.error(toastMsg, { duration: 8000 });
           } else {
-            toast.error(`Erreur: ${error.message || 'Problème de connexion'}`);
-            setUser(null);
+            console.log("[Auth State] Admin status check:", firebaseUser.email, "IsAdmin:", isAdminEmail(firebaseUser.email), "Current database role:", (initialUserData as any).role);
           }
-        } finally {
-          if (active) {
-            setIsLoading(false);
+        } else {
+          console.log("[Auth State] Profile document does not exist yet. Creating profile inside Firestore.");
+          const newUser: Partial<User> = {
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            email: firebaseUser.email || '',
+            university: '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            avatarUrl: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+            referralsCount: 0,
+            inviteCount: 0,
+            invitedUsers: [],
+            activityStats: {
+              logins: 1,
+              docsViewed: 0,
+              docsDownloaded: 0,
+              eventsViewed: 0,
+              eventParticipations: 0,
+              contestParticipations: 0,
+              marketplacePosts: 0,
+              marketplaceContacts: 0,
+              quizzesCompleted: 0,
+              cvGenerated: 0,
+              motoRideOffers: 0,
+              motoRideContacts: 0,
+              groupMessages: 0,
+              invitations: 0
+            },
+            rankingScore: 1
+          };
+          try {
+            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+            initialUserData = { id: firebaseUser.uid, ...newUser } as User;
+            // Join everyone to the community group by default to enable basic platform access
+            await communityService.ensureUserInCommunityGroup(firebaseUser.uid);
+            console.log("[Auth State] Profile database record generated successfully.");
+          } catch (err: any) {
+             console.error("[Auth State] Firestore setDoc error during default user creation:", err);
+             handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
+             return;
           }
         }
-      });
-    };
 
-    initializeAuth();
+        if (!active) return;
+
+        console.log("[Auth State] Dispatching fully populated user context into state:", initialUserData.id);
+        setUser(initialUserData);
+        
+        // Listen to user profile changes in real-time
+        const userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
+          if (!active) return;
+          if (doc.exists()) {
+            const newData = doc.data() as User;
+            const normalizedData = { id: firebaseUser.uid, ...newData };
+            setUser(normalizedData);
+          }
+        }, (error) => {
+          console.error("[Auth State Snapshot Error]:", error);
+        });
+        unsubscribes.push(userUnsubscribe);
+        
+        // Ensure user is in the community group (except for students who must join manually)
+        if (firebaseUser.uid && initialUserData && initialUserData.role !== 'student') {
+          communityService.ensureUserInCommunityGroup(firebaseUser.uid).catch(err => {
+            console.warn("[Auth State Group Registry Warning]:", err);
+          });
+        }
+        
+        // Log login
+        try {
+          await logService.logActivity({
+            userId: initialUserData.id,
+            userName: `${initialUserData.firstName} ${initialUserData.lastName}`,
+            email: initialUserData.email,
+            universite: initialUserData.university,
+            filiere: initialUserData.major || '',
+            action: 'Connexion',
+            module: 'Authentification',
+            details: 'Session ouverte',
+            severity: 'info'
+          });
+        } catch (err: any) {
+          console.error("[Auth State Activity Logging Warning]:", err);
+        }
+      } catch (error: any) {
+        if (!active) return;
+        console.error("[Auth State Global Exception]:", error);
+        
+        const isQuotaHit = error.message?.includes('Quota') || error.code === 'resource-exhausted' || sessionStorage.getItem('firestore_quota_hit');
+        const isOffline = error.message?.includes('offline') || error.code === 'unavailable' || error.message?.includes('offline_fallback');
+        
+        if (isQuotaHit || isOffline) {
+          console.warn("[Auth State] Engaging local offline fallback user data profile due to network failure or quota.");
+          const fallbackUser: User = { 
+            id: firebaseUser.uid, 
+            email: firebaseUser.email || '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            activityStats: { logins: 1 } as any,
+            rankingScore: 1
+          } as any;
+          setUser(fallbackUser);
+          const toastMsg = isOffline 
+            ? "Vous semblez être hors ligne ou un adblock bloque la base de données. Mode hors ligne activé." 
+            : "Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.";
+          toast.error(toastMsg, { duration: 8000 });
+        } else {
+          toast.error(`Erreur: ${error.message || 'Problème de connexion'}`);
+          setUser(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    });
 
     return () => {
       active = false;
@@ -1451,11 +1565,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Removed authStateReady() as it can sometimes hang in specific environments
       await signInWithEmailAndPassword(auth, normalizedEmail, password);
       console.log("Firebase login successful");
-    } catch (error: any) {
-      console.error("Firebase login error:", error);
+      localStorage.removeItem('offline_admin_mock');
+      localStorage.removeItem('offline_user_email');
+      setIsOfflineMode(false);
+    } catch (rawError: any) {
+      console.error("Firebase login error:", rawError);
       
       // Auto-create admin account if it apparently doesn't exist
-      if (error.code === 'auth/invalid-credential' && isAdminEmail(normalizedEmail)) {
+      if (rawError.code === 'auth/invalid-credential' && isAdminEmail(normalizedEmail)) {
         console.log("Attempting to auto-create missing admin account...");
         try {
           await signup({ email: normalizedEmail, password, firstName: 'Admin', lastName: 'System', role: 'admin' });
@@ -1468,7 +1585,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (error.code === 'auth/network-request-failed' && isAdminEmail(normalizedEmail)) {
+      if (rawError.code === 'auth/network-request-failed' && isAdminEmail(normalizedEmail)) {
         console.warn("Network request failed, but email is admin. Falling back to offline admin mode.");
         const mockAdmin: User = {
           id: 'offline-admin-mock-id',
@@ -1486,17 +1603,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return; // Success!
       }
 
-      let errorMessage = 'Erreur de connexion';
-      
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, veuillez vous inscrire.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Trop de tentatives infructueuses. Veuillez réessayer plus tard.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Problème de connexion réseau. Veuillez vérifier votre accès internet.';
-      }
-      
-      throw new Error(errorMessage);
+      // Route through handleAuthError to translate codes like auth/network-request-failed to friendly user explanations
+      const error = handleAuthError(rawError, 'Login operation');
+      throw error;
     }
   };
 
@@ -2537,6 +2646,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user, 
       isLoading,
       isOfflineMode,
+      connectionHealth,
       showAuthModal,
       setShowAuthModal,
       openAuthModal,

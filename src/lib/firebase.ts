@@ -103,3 +103,50 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   (finalError as any).details = errInfo;
   throw finalError;
 }
+
+export interface AuthErrorInfo {
+  error: string;
+  code: string | null;
+  context: string | null;
+  online: boolean;
+  timestamp: string;
+  message: string;
+}
+
+export function handleAuthError(error: unknown, context: string | null = null): Error {
+  const code = (error as any)?.code || null;
+  const message = (error as any)?.message || String(error);
+  
+  const authErrInfo: AuthErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    code,
+    context,
+    online: navigator.onLine,
+    timestamp: new Date().toISOString(),
+    message
+  };
+
+  console.group(`[Firebase Auth Error Interceptor] Occurred in: ${context || 'Unknown Context'}`);
+  console.error("Firebase Raw Auth Error:", error);
+  console.log("Details:", authErrInfo);
+
+  if (code === 'auth/network-request-failed' || message.includes('network-request-failed') || message.includes('Failed to fetch')) {
+    console.warn("CRITICAL [auth/network-request-failed]: Network Request Failed detected. Auth server is unreachable, or Google Secure Token/Identity Toolkit APIs are blocked.");
+  }
+  console.groupEnd();
+
+  let friendlyMessage = message;
+  if (code === 'auth/network-request-failed' || message.includes('network-request-failed') || message.includes('Failed to fetch')) {
+    friendlyMessage = "Impossible de se connecter aux serveurs d'authentification. Veuillez vérifier votre connexion réseau et vos bloqueurs de publicité.";
+  } else if (code === 'auth/invalid-credential') {
+    friendlyMessage = "Identifiants de connexion invalides ou incorrects.";
+  } else if (code === 'auth/too-many-requests') {
+    friendlyMessage = "Trop de tentatives de connexion échouées. Veuillez réessayer plus tard.";
+  }
+
+  const enhancedError = new Error(friendlyMessage);
+  (enhancedError as any).code = code;
+  (enhancedError as any).details = authErrInfo;
+  return enhancedError;
+}
+
