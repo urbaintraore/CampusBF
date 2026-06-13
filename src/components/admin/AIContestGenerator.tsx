@@ -130,28 +130,28 @@ export function AIContestGenerator({ onContestCreated, onCancel }: { onContestCr
     
     const tId = toast.loading('Enregistrement du concours...');
     try {
-      // Create main document
-      const contestRef = await addDoc(collection(db, 'public_service_contests'), {
-        titre: generatedContest.titre,
-        description: generatedContest.description,
-        categorie: config.category,
-        niveau: config.level,
-        type: 'qcm',
-        duree: generatedContest.questions.length * 1.5, // 1.5m per question
-        difficulte: 'moyen',
-        status: status === 'published' ? 'active' : 'draft',
-        validationStatus: status === 'published' ? 'published' : 'pending_admin',
-        createdAt: serverTimestamp(),
-        aiGenerated: true,
-        aiVerified: verificationResult?.hasErrors === false
+      // Call the server-side API endpoint for high reliability (especially when in offline/restricted iframe mode)
+      const response = await fetch('/api/public-service/save-contest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          generatedContest,
+          config,
+          verificationResult,
+          status
+        })
       });
 
-      // Create details (questions) document
-      await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
-        contestId: contestRef.id,
-        questions: generatedContest.questions,
-        verificationLogs: verificationResult?.logs || []
-      });
+      if (!response.ok) {
+        let errorData: any = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {}
+        throw new Error(errorData.error || `Erreur serveur ${response.status}`);
+      }
+
+      const resData = await response.json();
+      console.log("[AI Generator] Contest saved successfully via backend API, ID:", resData.id);
 
       toast.success(status === 'published' ? 'Concours publié !' : 'Enregistré en brouillon', { id: tId });
       
@@ -159,8 +159,9 @@ export function AIContestGenerator({ onContestCreated, onCancel }: { onContestCr
       setVerificationResult(null);
       setActiveStep('config');
       if (onContestCreated) onContestCreated();
-    } catch (err) {
-      toast.error('Erreur lors de l\'enregistrement', { id: tId });
+    } catch (err: any) {
+      console.error("[AI Generator] Save error:", err);
+      toast.error(`Erreur d'enregistrement: ${err.message || err}`, { id: tId });
     }
   };
 

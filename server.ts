@@ -59,6 +59,43 @@ app.post('/api/public-service/verify-contest', async (req, res) => {
   }
 });
 
+app.post('/api/public-service/save-contest', async (req, res) => {
+  const { generatedContest, config, verificationResult, status } = req.body;
+  console.log(`[API] Start Saving contest: ${generatedContest?.titre}, Status: ${status}`);
+  try {
+    const db = getFirestoreDb();
+    
+    // Create main document
+    const contestRef = await db.collection('public_service_contests').add({
+      titre: generatedContest.titre,
+      description: generatedContest.description,
+      categorie: config.category,
+      niveau: config.level,
+      type: 'qcm',
+      duree: generatedContest.questions.length * 1.5, // 1.5m per question
+      difficulte: 'moyen',
+      status: status === 'published' ? 'active' : 'draft',
+      validationStatus: status === 'published' ? 'published' : 'pending_admin',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      aiGenerated: true,
+      aiVerified: verificationResult?.hasErrors === false
+    });
+
+    // Create details (questions) document
+    await db.collection('public_service_contest_details').doc(contestRef.id).set({
+      contestId: contestRef.id,
+      questions: generatedContest.questions,
+      verificationLogs: verificationResult?.logs || []
+    });
+
+    console.log(`[API] Contest saved successfully on server with ID: ${contestRef.id}`);
+    res.json({ success: true, id: contestRef.id });
+  } catch (err: any) {
+    console.error(`[API] Save contest failed:`, err);
+    res.status(500).json({ error: err.message || 'Save failed' });
+  }
+});
+
 async function extractTextFromFile(buffer: Buffer, originalname: string, mimetype: string, category?: string): Promise<string> {
   const fileExt = originalname.split('.').pop()?.toLowerCase();
   
