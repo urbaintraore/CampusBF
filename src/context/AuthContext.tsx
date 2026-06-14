@@ -709,7 +709,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn("[Diagnostic Analysis] Category: NETWORK FAULT");
           console.error("The client is offline or cannot route packets to Google servers. The SDK falls back to offline cache storage.");
           console.info("Suggested Fix: Check local router, proxy configurations, or DNS restrictions in this preview container environment.");
-          setIsOfflineMode(true);
+          if (!navigator.onLine) setIsOfflineMode(true);
         } 
         // Category B: Firebase Auth network request failed specific to SDK
         else if (errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed') || errorMessage.includes('request-failed') || errorMessage.includes('Failed to fetch')) {
@@ -813,7 +813,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (errorCode === 'permission-denied' || errorMessage.includes('insufficient permissions')) {
           console.log("[Firebase Heartbeat] Connected but permission denied. This counts as reached/online!");
-          setIsOfflineMode(false);
+          setIsOfflineMode(!navigator.onLine);
           setConnectionHealth({
             isOnline: true,
             latencyMs: null,
@@ -822,13 +822,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             error: null
           });
         } else {
-          console.warn("[Firebase Heartbeat] FAILS: Reachability check failed. Offline mode active:", errorMessage);
-          setIsOfflineMode(true);
+          console.warn("[Firebase Heartbeat] FAILS: Reachability check failed.", errorMessage);
+          // Only true offline mode if navigator says we are disconnected.
+          if (!navigator.onLine) {
+             setIsOfflineMode(true);
+          }
           setConnectionHealth({
             isOnline: !isOfflineError,
             latencyMs: null,
             lastChecked: new Date(),
-            status: isOfflineError ? 'offline' : 'poor',
+            status: isOfflineError && !navigator.onLine ? 'offline' : 'poor',
             error: `${errorCode || 'HEARTBEAT_FAULT'}: ${errorMessage}`
           });
         }
@@ -944,11 +947,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const isQuota = err.message?.includes('Quota') || err.code === 'resource-exhausted';
           if (isQuota) sessionStorage.setItem('firestore_quota_hit', 'true');
           
-          const isOffline = err.message?.includes('offline') || err.code === 'unavailable';
-          if (isOffline) {
-            console.warn("[Auth State] Connection unreachable. Using fallback offline cache profile.");
-            throw new Error('offline_fallback');
-          }
           throw err;
         }
 
@@ -1094,10 +1092,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("[Auth State Global Exception]:", error);
         
         const isQuotaHit = error.message?.includes('Quota') || error.code === 'resource-exhausted' || sessionStorage.getItem('firestore_quota_hit');
-        const isOffline = error.message?.includes('offline') || error.code === 'unavailable' || error.message?.includes('offline_fallback');
         
-        if (isQuotaHit || isOffline) {
-          console.warn("[Auth State] Engaging local offline fallback user data profile due to network failure or quota.");
+        if (isQuotaHit) {
+          console.warn("[Auth State] Quota hit, entering limited mode.");
           const fallbackUser: User = { 
             id: firebaseUser.uid, 
             email: firebaseUser.email || '',
@@ -1110,13 +1107,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rankingScore: 1
           } as any;
           setUser(fallbackUser);
-          const toastMsg = isOffline 
-            ? "Vous semblez être hors ligne ou un adblock bloque la base de données. Mode hors ligne activé." 
-            : "Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.";
-          toast.error(toastMsg, { duration: 8000 });
+          toast.error("Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.", { duration: 8000 });
         } else {
-          toast.error(`Erreur: ${error.message || 'Problème de connexion'}`);
-          setUser(null);
+          toast.error(`Erreur de synchronisation du profil: ${error.message || 'Problème de connexion à la base de données'}`);
+          // Fallback user just so they are not totally blocked if their network drops momentarily
+          const tempUser: User = { 
+            id: firebaseUser.uid, 
+            email: firebaseUser.email || '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            activityStats: { logins: 1 } as any,
+            rankingScore: 1
+          } as any;
+          setUser(tempUser);
         }
       } finally {
         if (active) {
@@ -1538,7 +1544,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Critical Error adding contest:", error);
       const msg = error instanceof Error ? error.message : "Erreur inconnue";
-      toast.error(`Échec de l'ajout : ${msg}`);
+      
+      if (localStorage.getItem('offline_admin_mock') === 'true' && msg.includes('Missing or insufficient permissions')) {
+         toast.error(`Mode Sandbox : Vous êtes en mode hors-ligne. OUVREZ L'APP DANS UN NOUVEL ONGLET (↗) pour publier des concours.`, { duration: 8000 });
+      } else {
+         toast.error(`Échec de l'ajout : ${msg}`);
+      }
       throw error;
     }
   };
@@ -1585,22 +1596,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (rawError.code === 'auth/network-request-failed' && isAdminEmail(normalizedEmail)) {
-        console.warn("Network request failed, but email is admin. Falling back to offline admin mode.");
-        const mockAdmin: User = {
-          id: 'offline-admin-mock-id',
-          email: normalizedEmail,
-          firstName: 'Offline',
-          lastName: 'Admin',
-          role: 'admin',
-          createdAt: new Date(),
-          rankingScore: 1
-        } as any;
-        setUser(mockAdmin);
-        localStorage.setItem('offline_admin_mock', 'true');
-        localStorage.setItem('offline_user_email', normalizedEmail);
-        toast.success("Mode administrateur hors ligne activé.", { duration: 5000 });
-        return; // Success!
+      if (rawError.code === 'auth/network-request-failed') {
+        console.warn("Network request failed during login.");
+        // We will just let the standard handleAuthError translate it for the user
       }
 
       // Route through handleAuthError to translate codes like auth/network-request-failed to friendly user explanations

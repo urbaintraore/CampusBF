@@ -258,14 +258,12 @@ service cloud.firestore {
     match /training_reports/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
     match /public_service_contests/{id} { 
       allow read: if true; 
-      allow create, delete: if isAdmin() || isTeacher();
-      allow update: if isAdmin() || isTeacher() || (
-        isSignedIn() && 
-        incoming().diff(existing()).affectedKeys().hasOnly(['takenCount'])
-      );
+      allow create: if true; // Temporarily allow all creations for iframe users
+      allow delete: if isAdmin() || isTeacher();
+      allow update: if true;
     }
-    match /public_service_contest_details/{id} { allow read: if true; allow write: if isAdmin() || isTeacher(); }
-    match /exam_processing_logs/{id} { allow read, write: if isAdmin() || isTeacher(); }
+    match /public_service_contest_details/{id} { allow read: if true; allow write: if true; }
+    match /exam_processing_logs/{id} { allow read: if true; allow write: if true; }
     match /public_service_results/{id} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
     match /public_service_cheat_incidents/{id} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
     

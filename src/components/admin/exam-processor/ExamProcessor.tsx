@@ -276,24 +276,25 @@ export function ExamProcessor() {
       const contestRef = await addDoc(collection(db, 'public_service_contests'), {
         titre: customTitle || generatedQuiz.titre || "Concours d'État",
         description: customDescription || generatedQuiz.description || "Épreuve officielle corrigée.",
-        categorie: category,
-        niveau: level,
+        categorie: category || 'culture_generale',
+        niveau: level || 'BAC',
         annee: parseInt(year) || new Date().getFullYear(),
         type: 'qcm',
         duree: questionsListMapped.length * 1.5, // 1.5 minutes per objective question
         difficulte: 'moyen',
         status: 'active',
         validationStatus: 'published',
+        questionCount: questionsListMapped.length,
         createdAt: serverTimestamp(),
         aiGenerated: true,
         aiVerified: true,
-        subjectFileUrl: publicUrl
+        subjectFileUrl: publicUrl || null
       });
 
       // Save structural detail payload containing questions
       await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
         contestId: contestRef.id,
-        questions: questionsListMapped,
+        questions: questionsListMapped || [],
         verificationLogs: ["Importé souverainement avec succès depuis le pipeline de traitement IA."]
       });
 
@@ -308,7 +309,13 @@ export function ExamProcessor() {
       setCustomDescription('');
     } catch (err: any) {
       console.error("[Publish] Publication process failed:", err);
-      toast.error(`La publication a échoué: ${err.message || String(err)}`, { id: loadId });
+      
+      const isOfflineMock = localStorage.getItem('offline_admin_mock') === 'true';
+      if (isOfflineMock && err.message?.includes('Missing or insufficient permissions')) {
+         toast.error(`Mode Sandbox : Vous êtes en mode administrateur hors-ligne. Veuillez OUVRIZ L'APP DANS UN NOUVEL ONGLET (↗) pour enregistrer sur les serveurs réels.`, { id: loadId, duration: 8000 });
+      } else {
+         toast.error(`La publication a échoué: ${err.message || String(err)}`, { id: loadId });
+      }
     } finally {
       setIsPublishing(false);
     }

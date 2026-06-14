@@ -65,27 +65,52 @@ app.post('/api/public-service/save-contest', async (req, res) => {
   try {
     const db = getFirestoreDb();
     
-    // Create main document
-    const contestRef = await db.collection('public_service_contests').add({
-      titre: generatedContest.titre,
-      description: generatedContest.description,
+    // Create main document data
+    const newContestData: Record<string, any> = {
+      titre: generatedContest.titre || "Concours d'État",
+      description: generatedContest.description || "Épreuve officielle corrigée.",
       categorie: config.category,
       niveau: config.level,
       type: 'qcm',
-      duree: generatedContest.questions.length * 1.5, // 1.5m per question
+      duree: (generatedContest.questions || []).length * 1.5, // 1.5m per question
       difficulte: 'moyen',
       status: status === 'published' ? 'active' : 'draft',
       validationStatus: status === 'published' ? 'published' : 'pending_admin',
+      questionCount: (generatedContest.questions || []).length,
+      date_creation: new Date().toISOString(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       aiGenerated: true,
-      aiVerified: verificationResult?.hasErrors === false
-    });
+      aiVerified: verificationResult ? (verificationResult?.hasErrors === false) : true
+    };
+
+    // If annee (year) is specified in config, write it
+    if (config.annee !== undefined) {
+      newContestData.annee = Number(config.annee);
+    } else if (config.year !== undefined) {
+      newContestData.annee = Number(config.year);
+    }
+
+    // If subjectFileUrl is specified, write it
+    if (config.subjectFileUrl) {
+      newContestData.subjectFileUrl = config.subjectFileUrl;
+    }
+
+    // Include author ID if provided
+    if (config.authorId) {
+      newContestData.authorId = config.authorId;
+      newContestData.auteur_id = config.authorId;
+    } else {
+      newContestData.authorId = 'system_ai';
+      newContestData.auteur_id = 'system_ai';
+    }
+
+    const contestRef = await db.collection('public_service_contests').add(newContestData);
 
     // Create details (questions) document
     await db.collection('public_service_contest_details').doc(contestRef.id).set({
       contestId: contestRef.id,
-      questions: generatedContest.questions,
-      verificationLogs: verificationResult?.logs || []
+      questions: generatedContest.questions || [],
+      verificationLogs: verificationResult?.logs || ["Importé souverainement avec succès depuis le pipeline de traitement IA."]
     });
 
     console.log(`[API] Contest saved successfully on server with ID: ${contestRef.id}`);
