@@ -716,7 +716,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn("[Diagnostic Analysis] Category: AUTHENTICATION NETWORK FAULT");
           console.error("Authentication server request failed. Google Secure Token or Identity Toolkit APIs are blocked or failing to connect.");
           console.info("Suggested Fix: Verify if securetoken.googleapis.com is reachable in your browser tab context.");
-          setIsOfflineMode(true);
+          setIsOfflineMode(!navigator.onLine);
         }
         // Category C: Firestore Rules Permission denied issues
         else if (errorCode === 'permission-denied' || errorMessage.includes('insufficient permissions') || errorMessage.includes('permission-denied')) {
@@ -730,7 +730,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn("[Diagnostic Analysis] Category: FIREBASE CONFIGURATION MISMATCH / CORRUPTION");
           console.error("The API key, project ID, or app identifier in your configuration structure does not exist or has expired.");
           console.info("Suggested Fix: Check the content of firebase-applet-config.json and re-apply set_up_firebase.");
-          setIsOfflineMode(true);
+          setIsOfflineMode(!navigator.onLine);
         }
         // Category E: Quota exceeded
         else if (errorMessage.includes('Quota exceeded') || errorCode === 'resource-exhausted') {
@@ -742,7 +742,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         else {
           console.warn("[Diagnostic Analysis] Category: UNKNOWN DATABASE ISSUE");
           console.error("No distinctive failure signpost identified. Investigate client error properties directly.");
-          setIsOfflineMode(true);
+          setIsOfflineMode(!navigator.onLine);
         }
 
         console.groupEnd();
@@ -872,29 +872,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (!firebaseUser) {
         if (localStorage.getItem('offline_admin_mock') === 'true') {
-          if (navigator.onLine && !isOfflineMode) {
-            console.log("[Auth State] Browser is online and connection health is fine, clearing stale offline mock session.");
-            localStorage.removeItem('offline_admin_mock');
-            localStorage.removeItem('offline_user_email');
-          } else {
-            console.log("[Auth State] Restoring mock offline admin session from localStorage cache.");
-            const storedEmail = localStorage.getItem('offline_user_email') || 'admin@offline.local';
-            const isSpecialAdmin = isAdminEmail(storedEmail);
-            const mockUser: User = {
-              id: 'offline-admin-mock-id',
-              email: storedEmail,
-              firstName: isSpecialAdmin ? 'Admin (Hors-ligne)' : 'Étudiant (Hors-ligne)',
-              lastName: 'CampusBF',
-              role: isSpecialAdmin ? 'admin' : 'student',
-              createdAt: new Date(),
-              rankingScore: 1
-            } as any;
-            if (active) {
-              setUser(mockUser);
-              setIsLoading(false);
-            }
-            return;
+          console.log("[Auth State] Restoring mock offline admin session from localStorage cache.");
+          const storedEmail = localStorage.getItem('offline_user_email') || 'admin@offline.local';
+          const isSpecialAdmin = isAdminEmail(storedEmail);
+          const mockUser: User = {
+            id: 'offline-admin-mock-id',
+            email: storedEmail,
+            firstName: isSpecialAdmin ? 'Admin (Hors-ligne)' : 'Étudiant (Hors-ligne)',
+            lastName: 'CampusBF',
+            role: isSpecialAdmin ? 'admin' : 'student',
+            createdAt: new Date(),
+            rankingScore: 1
+          } as any;
+          if (active) {
+            setUser(mockUser);
+            setIsLoading(false);
           }
+          return;
         }
 
         console.log("[Auth State] No authenticated firebase user present.");
@@ -1649,8 +1643,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(mockUser);
     localStorage.setItem('offline_admin_mock', 'true');
     localStorage.setItem('offline_user_email', normalizedEmail);
-    setIsOfflineMode(true);
-    toast.success(`Mode hors ligne activé pour : ${normalizedEmail}`, { duration: 5000 });
+    setIsOfflineMode(!navigator.onLine);
+    toast.success(`Authentification Sandbox active : ${normalizedEmail}`, { duration: 6000 });
   };
 
   const loginWithGoogle = async () => {
