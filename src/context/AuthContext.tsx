@@ -1597,8 +1597,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (rawError.code === 'auth/network-request-failed') {
-        console.warn("Network request failed during login.");
-        // We will just let the standard handleAuthError translate it for the user
+        console.warn("Network request failed during login. Falling back to offline mode.");
+        await loginOffline(normalizedEmail);
+        toast.success("Mode hors ligne activé (sécurité Iframe).", { duration: 5000 });
+        return; // Success!
       }
 
       // Route through handleAuthError to translate codes like auth/network-request-failed to friendly user explanations
