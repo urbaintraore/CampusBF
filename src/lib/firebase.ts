@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, persistentSingleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -9,9 +9,31 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 auth.languageCode = 'fr';
+setPersistence(auth, browserLocalPersistence).catch(e => console.error("Persistence setup failed", e));
+let localCacheOption: any = undefined;
+try {
+  // Always try single-tab persistent manager with forced ownership first.
+  // This is the ideal and recommended configuration for sandboxed iframe environments (like the AI Studio Preview),
+  // as it avoids "Failed to obtain primary lease" errors and locks contention.
+  localCacheOption = persistentLocalCache({ tabManager: persistentSingleTabManager({ forceOwnership: true }) });
+  console.log("[Firebase init] Persistent cache initialized with forced single-tab lease.");
+} catch (e1) {
+  console.warn("[Firebase init] Forced single-tab persistence setup failed, trying standard multi-tab management...", e1);
+  try {
+    localCacheOption = persistentLocalCache({ tabManager: persistentMultipleTabManager() });
+  } catch (e2) {
+    console.warn("[Firebase init] Multi-tab persistence failed, trying simple local cache...", e2);
+    try {
+      localCacheOption = persistentLocalCache();
+    } catch (e3) {
+      console.warn("[Firebase init] Persistent cache not supported or blocked in this browser context. Falling back to memory cache.", e3);
+    }
+  }
+}
+
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  ...(localCacheOption ? { localCache: localCacheOption } : {})
 }, firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
 

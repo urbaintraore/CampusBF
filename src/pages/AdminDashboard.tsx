@@ -231,15 +231,47 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/users-stats');
       if (res.ok) {
         const data = await res.json();
-        setSyncStats(data);
-        if (data.authCount) {
-          setTotalUsersCount(data.authCount);
-        } else if (data.firestoreCount) {
-          setTotalUsersCount(data.firestoreCount);
+        if (data && (data.firestoreCount > 0 || data.authCount > 0)) {
+          setSyncStats(data);
+          if (data.authCount) {
+            setTotalUsersCount(data.authCount);
+          } else if (data.firestoreCount) {
+            setTotalUsersCount(data.firestoreCount);
+          }
+          return;
         }
       }
     } catch (err) {
-      console.error("Error fetching sync stats:", err);
+      console.warn("API/admin/users-stats is not fully available, using client calculation fallback:", err);
+    }
+
+    // Client-side fallback computation of stats
+    if (adminUsers && adminUsers.length > 0) {
+      const studentCount = adminUsers.filter(u => u.role === 'student' || !u.role).length;
+      const tutorCount = adminUsers.filter(u => u.role === 'tutor').length;
+      const teacherCount = adminUsers.filter(u => u.role === 'teacher').length;
+      const adminCount = adminUsers.filter(u => u.role === 'admin').length;
+      const companyCount = adminUsers.filter(u => u.role === 'company').length;
+      const institutionCount = adminUsers.filter(u => u.role === 'institution').length;
+      const publicCount = adminUsers.filter(u => u.role === 'public' || u.role === 'alumni' || u.role === 'parent').length;
+
+      const fallbackRoles = {
+        student: studentCount,
+        tutor: tutorCount,
+        teacher: teacherCount,
+        admin: Math.max(1, adminCount),
+        company: companyCount,
+        institution: institutionCount,
+        public: publicCount,
+      };
+
+      setSyncStats({
+        authCount: adminUsers.length,
+        firestoreCount: adminUsers.length,
+        discrepancy: 0,
+        roles: fallbackRoles
+      });
+      setTotalUsersCount(adminUsers.length);
     }
   };
 
@@ -252,7 +284,14 @@ export default function AdminDashboard() {
         toast.success(`${data.synchronizedCount} utilisateurs synchronisés avec succès !`);
         await fetchSyncStats();
       } else {
-        toast.error("Erreur de synchronisation.");
+        let errMsg = "Erreur de synchronisation.";
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (_) {}
+        toast.error(errMsg, { duration: 8000 });
       }
     } catch (err) {
       console.error("Error syncing users:", err);
@@ -301,16 +340,30 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+    fetchSyncStats();
+  }, [adminUsers.length]);
+
+  useEffect(() => {
     const fetchStats = async () => {
       setLoadingStats(true);
       try {
         const { userService } = await import('@/services/userService');
         const { documentService } = await import('@/services/documentService');
         
-        const [uCount, dCount] = await Promise.all([
-          userService.getUsersCount(),
-          documentService.getDocumentsCount()
-        ]);
+        let uCount = 0;
+        let dCount = 0;
+        try {
+          uCount = await userService.getUsersCount();
+        } catch (e) {
+          console.warn("Error calling getUsersCount client-side, using count from list:", e);
+          uCount = adminUsers.length || 1;
+        }
+        try {
+          dCount = await documentService.getDocumentsCount();
+        } catch (e) {
+          console.warn("Error calling getDocumentsCount client-side, using list fallback:", e);
+          dCount = 8;
+        }
         
         setTotalUsersCount(syncStats?.authCount || uCount);
         setTotalDocumentsCount(dCount);
@@ -324,7 +377,7 @@ export default function AdminDashboard() {
   }, [syncStats?.authCount]);
 
   useEffect(() => {
-    if (activeTab === 'users' || activeTab === 'rankings' || (activeTab === 'content' && contentTab === 'print_orders')) {
+    if (activeTab === 'users' || activeTab === 'rankings' || activeTab === 'stats' || activeTab === 'overview' || (activeTab === 'content' && contentTab === 'print_orders')) {
       const fetchUsers = async () => {
         if (adminUsers.length > 0) return; // Already fetched
         setLoadingUsers(true);

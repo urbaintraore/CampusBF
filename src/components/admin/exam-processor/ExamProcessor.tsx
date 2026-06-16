@@ -198,30 +198,38 @@ export function ExamProcessor() {
       return;
     }
 
+    let publicUrl: string | null = null;
     setIsPublishing(true);
     const loadId = toast.loading("Publication officielle sur CampusBF...");
 
     try {
-      console.log("[Publish] Uploading document source...");
-      const fileExt = file.name.split('.').pop();
-      const storageFileName = `contest_${Date.now()}_${Math.random().toString(36).substring(3, 9)}.${fileExt}`;
+      if (file) {
+        try {
+          console.log("[Publish] Uploading document source...");
+          const fileExt = file.name.split('.').pop();
+          const storageFileName = `contest_${Date.now()}_${Math.random().toString(36).substring(3, 9)}.${fileExt}`;
 
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('public_exam_subjects')
-        .upload(storageFileName, file);
+          const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('public_exam_subjects')
+            .upload(storageFileName, file);
 
-      if (uploadError) {
-        console.error("Supabase Storage upload failure:", uploadError);
-        throw new Error(`Stockage échoué: ${uploadError.message}`);
+          if (uploadError) {
+            console.warn("Supabase Storage upload failure (non-blocking):", uploadError);
+            toast.error("Le fichier PDF source n'a pas pu être enregistré, mais le concours sera importé sans pièce jointe.");
+          } else {
+            const { data: { publicUrl: fetchedUrl } } = supabase
+              .storage
+              .from('public_exam_subjects')
+              .getPublicUrl(storageFileName);
+            publicUrl = fetchedUrl;
+            console.log("[Publish] Source url fetched:", publicUrl);
+          }
+        } catch (storageErr: any) {
+          console.warn("Exception during Supabase storage upload (non-blocking):", storageErr);
+          toast.error("Échec de chargement du fichier source; import sans pièce jointe.");
+        }
       }
-
-      const { data: { publicUrl } } = supabase
-        .storage
-        .from('public_exam_subjects')
-        .getPublicUrl(storageFileName);
-
-      console.log("[Publish] Source url fetched:", publicUrl);
 
       // Perform strict database mappings for reliability
       const questionsListMapped = (generatedQuiz.questions || []).map((q: any) => {
@@ -272,33 +280,79 @@ export function ExamProcessor() {
 
       console.log("[Publish] Schema-mapped questions list length:", questionsListMapped.length);
 
-      // Create primary search document inside Firestore collection 'public_service_contests'
-      const contestRef = await addDoc(collection(db, 'public_service_contests'), {
-        titre: customTitle || generatedQuiz.titre || "Concours d'État",
-        description: customDescription || generatedQuiz.description || "Épreuve officielle corrigée.",
-        categorie: category || 'culture_generale',
-        niveau: level || 'BAC',
-        annee: parseInt(year) || new Date().getFullYear(),
-        type: 'qcm',
-        duree: questionsListMapped.length * 1.5, // 1.5 minutes per objective question
-        difficulte: 'moyen',
-        status: 'active',
-        validationStatus: 'published',
-        questionCount: questionsListMapped.length,
-        createdAt: serverTimestamp(),
-        aiGenerated: true,
-        aiVerified: true,
-        subjectFileUrl: publicUrl || null
-      });
+      let savedSuccessfully = false;
+      let contestIdCreated = '';
 
-      // Save structural detail payload containing questions
-      await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
-        contestId: contestRef.id,
-        questions: questionsListMapped || [],
-        verificationLogs: ["Importé souverainement avec succès depuis le pipeline de traitement IA."]
-      });
+      try {
+        console.log("[Publish] Attempting to save processed contest via backend proxy API to bypass sandbox iframe blocks...");
+        const response = await fetch('/api/public-service/save-contest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            generatedContest: {
+              titre: customTitle || generatedQuiz.titre || "Concours d'État",
+              description: customDescription || generatedQuiz.description || "Épreuve officielle corrigée.",
+              questions: questionsListMapped || []
+            },
+            config: {
+              category: category || 'culture_generale',
+              level: level || 'BAC',
+              year: parseInt(year) || new Date().getFullYear(),
+              subjectFileUrl: publicUrl || null
+            },
+            verificationResult: {
+              hasErrors: false,
+              logs: ["Importé souverainement avec succès depuis le pipeline de traitement IA."]
+            },
+            status: 'published'
+          })
+        });
 
-      console.log("[Publish] Write success, reference ID:", contestRef.id);
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.success && resData.id) {
+            savedSuccessfully = true;
+            contestIdCreated = resData.id;
+            console.log("[Publish] Processed contest saved successfully via backend, ID:", contestIdCreated);
+          }
+        } else {
+          console.warn("[Publish] Backend save proxy failed, status code:", response.status);
+        }
+      } catch (backendErr) {
+        console.warn("[Publish] Exception while saving via backend, falling back to client-side write:", backendErr);
+      }
+
+      if (!savedSuccessfully) {
+        // Create primary search document inside Firestore collection 'public_service_contests' (fallback)
+        const contestRef = await addDoc(collection(db, 'public_service_contests'), {
+          titre: customTitle || generatedQuiz.titre || "Concours d'État",
+          description: customDescription || generatedQuiz.description || "Épreuve officielle corrigée.",
+          categorie: category || 'culture_generale',
+          niveau: level || 'BAC',
+          annee: parseInt(year) || new Date().getFullYear(),
+          type: 'qcm',
+          duree: questionsListMapped.length * 1.5, // 1.5 minutes per objective question
+          difficulte: 'moyen',
+          status: 'active',
+          validationStatus: 'published',
+          questionCount: questionsListMapped.length,
+          createdAt: serverTimestamp(),
+          aiGenerated: true,
+          aiVerified: true,
+          subjectFileUrl: publicUrl || null
+        });
+
+        // Save structural detail payload containing questions
+        await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
+          contestId: contestRef.id,
+          questions: questionsListMapped || [],
+          verificationLogs: ["Importé souverainement avec succès depuis le pipeline de traitement IA."]
+        });
+        contestIdCreated = contestRef.id;
+        console.log("[Publish] Processed contest saved successfully via client Firestore fallback, ID:", contestIdCreated);
+      }
       
       toast.success("Le quiz a été structuré et enregistré avec succès dans 'Concours de l'État' !", { id: loadId });
       

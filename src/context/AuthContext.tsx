@@ -31,9 +31,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup,
-  setPersistence,
-  browserLocalPersistence
+  signInWithPopup
 } from 'firebase/auth';
 import { 
   doc, 
@@ -284,8 +282,64 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to check if the browser has a working network path to our dev container, bypassing iframe navigator.onLine limitations
+async function checkActualNetworkOnline(): Promise<boolean> {
+  console.log("[Network Status Check] Verifying actual network connectivity (navigator.onLine:", navigator.onLine, ")");
+  if (navigator.onLine) {
+    return true; // Fast path, browser says online
+  }
+  // navigator.onLine is false, which can be an iframe false-positive. Let's do a fast ping check.
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch('/api/health', { signal: controller.signal });
+    clearTimeout(id);
+    console.log("[Network Status Check] Iframe navigator.onLine was offline but backend ping succeeded:", response.ok);
+    return response.ok;
+  } catch (err) {
+    console.warn("[Network Status Check] Actual network online validation failed (fully disconnected):", err);
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    console.log("[Auth State] Pre-loading user state from local storage persistence caches...");
+    const isMock = localStorage.getItem('offline_admin_mock') === 'true';
+    if (isMock) {
+      const storedEmail = localStorage.getItem('offline_user_email') || 'admin@offline.local';
+      const isSpecialAdmin = storedEmail.toLowerCase().includes('traore') || storedEmail.toLowerCase().includes('urbain') || storedEmail.toLowerCase().includes('admin');
+      console.log("[Auth State] Restoring offline sandbox admin mock session, email:", storedEmail);
+      return {
+        id: 'offline-admin-mock-id',
+        email: storedEmail,
+        firstName: isSpecialAdmin ? 'Admin (Hors-ligne)' : 'Étudiant (Hors-ligne)',
+        lastName: 'CampusBF',
+        role: isSpecialAdmin ? 'admin' : 'student',
+        createdAt: new Date().toISOString(),
+        rankingScore: 1,
+        university: 'Université Virtuelle du Burkina Faso',
+        major: 'Informatique',
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${storedEmail}`,
+        status: 'active',
+        activityStats: { logins: 1 } as any,
+      } as any;
+    }
+    const savedSession = localStorage.getItem('saved_user_session');
+    if (savedSession) {
+      try {
+        const parsed = JSON.parse(savedSession);
+        console.log("[Auth State] Restored raw database session from local cache backup: Email:", parsed.email, "UID/ID:", parsed.id);
+        return parsed;
+      } catch (e) {
+        console.warn("[Auth State] Failed to parse local cached session payload", e);
+        localStorage.removeItem('saved_user_session');
+        return null;
+      }
+    }
+    console.log("[Auth State] No previous cached session found in localStorage.");
+    return null;
+  });
   const [users, setUsers] = useState<User[]>([]);
   const [tutors, setTutors] = useState<User[]>([]);
   const [teachers, setTeachers] = useState<User[]>([]);
@@ -339,8 +393,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [colocationReviews, setColocationReviews] = useState<ColocationReview[]>([]);
   const [publicServiceContests, setPublicServiceContests] = useState<any[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOfflineMode, setIsOfflineMode] = useState(!navigator.onLine);
+  const [isLoading, setIsLoading] = useState(() => {
+    const hasMock = localStorage.getItem('offline_admin_mock') === 'true';
+    const hasBackup = localStorage.getItem('saved_user_session') !== null;
+    const skipLoading = hasMock || hasBackup;
+    console.log("[Auth State] Custom state loader initialization. Has mock:", hasMock, "Has backup:", hasBackup, "Skipping direct fullscreen loading:", skipLoading);
+    return !skipLoading;
+  });
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [connectionHealth, setConnectionHealth] = useState<ConnectionHealthStatus>({
     isOnline: navigator.onLine,
     latencyMs: null,
@@ -627,26 +687,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 8000);
 
     // Offline mode window observers
-    const handleOnline = () => {
-      console.log("[Network Status] Browser online event triggered. Checking Firestore connection...");
+    const handleOnline = async () => {
+      console.log("[Network Status] Browser online event triggered. Validating with real ping...");
+      const isActuallyOnline = await checkActualNetworkOnline();
       setConnectionHealth(prev => ({
         ...prev,
-        isOnline: true,
-        status: 'good',
+        isOnline: isActuallyOnline,
+        status: isActuallyOnline ? 'good' : 'offline',
         lastChecked: new Date(),
-        error: null
+        error: isActuallyOnline ? null : 'Online event was a false positive'
       }));
-      checkFirestoreConnectionAndHeartbeat();
+      if (isActuallyOnline) {
+        setIsOfflineMode(false);
+        checkFirestoreConnectionAndHeartbeat();
+      } else {
+        setIsOfflineMode(true);
+      }
     };
-    const handleOffline = () => {
-      console.log("[Network Status] Browser offline event triggered. Setting isOfflineMode to true.");
-      setIsOfflineMode(true);
+    const handleOffline = async () => {
+      console.log("[Network Status] Browser offline event triggered. Confirming with trace check...");
+      const isReallyOnline = await checkActualNetworkOnline();
+      setIsOfflineMode(!isReallyOnline);
       setConnectionHealth({
-        isOnline: false,
+        isOnline: isReallyOnline,
         latencyMs: null,
         lastChecked: new Date(),
-        status: 'offline',
-        error: 'Browser offline event triggered'
+        status: isReallyOnline ? 'good' : 'offline',
+        error: isReallyOnline ? null : 'Browser offline event triggered'
       });
     };
     window.addEventListener('online', handleOnline);
@@ -663,7 +730,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const runConnectionDiagnostics = async () => {
       connectionAttempts++;
       console.log(`[Firebase Diagnostic] Starting connection attempt #${connectionAttempts}/${maxConnectionAttempts}...`);
-      console.log(`[Firebase Diagnostic] Navigator Online State: ${navigator.onLine ? "ONLINE" : "OFFLINE"}`);
+      const isOnlineNow = await checkActualNetworkOnline();
+      console.log(`[Firebase Diagnostic] Active internet connectivity path alive:`, isOnlineNow, `(navigator.onLine: ${navigator.onLine ? "ONLINE" : "OFFLINE"})`);
 
       const startTime = performance.now();
 
@@ -690,8 +758,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error: null
         });
       } catch (error: any) {
-        console.group(`[Firebase Diagnostic] FAILURE DETAILS on attempt #${connectionAttempts}`);
-        console.error("Raw Error Object:", error);
+        console.group(`[Firebase Diagnostic] INFO DETAILS on attempt #${connectionAttempts}`);
+        console.warn("Raw Error/Offline Object:", error);
          
         const errorCode = error.code || null;
         const errorMessage = error.message || String(error);
@@ -705,53 +773,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                errorMessage.includes('Failed to fetch') ||
                                errorMessage.includes('Could not reach Cloud Firestore backend');
                                
-        if (isOfflineError || !navigator.onLine) {
+        if (isOfflineError || !isOnlineNow) {
           console.warn("[Diagnostic Analysis] Category: NETWORK FAULT");
-          console.error("The client is offline or cannot route packets to Google servers. The SDK falls back to offline cache storage.");
+          console.warn("The client is offline or cannot route packets to Google servers. The SDK falls back to offline cache storage.");
           console.info("Suggested Fix: Check local router, proxy configurations, or DNS restrictions in this preview container environment.");
-          if (!navigator.onLine) setIsOfflineMode(true);
+          
+          const isReallyOnline = await checkActualNetworkOnline();
+          setIsOfflineMode(!isReallyOnline);
         } 
         // Category B: Firebase Auth network request failed specific to SDK
         else if (errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed') || errorMessage.includes('request-failed') || errorMessage.includes('Failed to fetch')) {
           console.warn("[Diagnostic Analysis] Category: AUTHENTICATION NETWORK FAULT");
-          console.error("Authentication server request failed. Google Secure Token or Identity Toolkit APIs are blocked or failing to connect.");
+          console.warn("Authentication server request failed. Google Secure Token or Identity Toolkit APIs are blocked or failing to connect.");
           console.info("Suggested Fix: Verify if securetoken.googleapis.com is reachable in your browser tab context.");
-          setIsOfflineMode(!navigator.onLine);
+          
+          const isReallyOnline = await checkActualNetworkOnline();
+          setIsOfflineMode(!isReallyOnline);
         }
         // Category C: Firestore Rules Permission denied issues
         else if (errorCode === 'permission-denied' || errorMessage.includes('insufficient permissions') || errorMessage.includes('permission-denied')) {
           console.warn("[Diagnostic Analysis] Category: FIRESTORE SECURITY RULES BLOCKED");
-          console.error("Connected successfully to the database, but access is permitted or denied by firestore.rules configuration.");
+          console.warn("Connected successfully to the database, but access is permitted or denied by firestore.rules configuration.");
           console.info("Suggested Fix: Review your rules security schema in firestore.rules. Adhere to systemic permissions.");
           setIsOfflineMode(false); // Connected but blocked by rules schema, not offline
         }
         // Category D: Configuration/Key validity issues
         else if (errorMessage.includes('invalid-api-key') || errorMessage.includes('API key') || errorMessage.includes('invalid-credential')) {
           console.warn("[Diagnostic Analysis] Category: FIREBASE CONFIGURATION MISMATCH / CORRUPTION");
-          console.error("The API key, project ID, or app identifier in your configuration structure does not exist or has expired.");
+          console.warn("The API key, project ID, or app identifier in your configuration structure does not exist or has expired.");
           console.info("Suggested Fix: Check the content of firebase-applet-config.json and re-apply set_up_firebase.");
-          setIsOfflineMode(!navigator.onLine);
+          
+          const isReallyOnline = await checkActualNetworkOnline();
+          setIsOfflineMode(!isReallyOnline);
         }
         // Category E: Quota exceeded
         else if (errorMessage.includes('Quota exceeded') || errorCode === 'resource-exhausted') {
           console.warn("[Diagnostic Analysis] Category: SPARK PLAN LIMITATIONS (QUOTA EXCEEDED)");
-          console.error("You have reached maximum read/write request quotas allowed daily under the Spark plan.");
+          console.warn("You have reached maximum read/write request quotas allowed daily under the Spark plan.");
           setIsOfflineMode(false);
         }
         // Category F: Unknown error
         else {
           console.warn("[Diagnostic Analysis] Category: UNKNOWN DATABASE ISSUE");
-          console.error("No distinctive failure signpost identified. Investigate client error properties directly.");
-          setIsOfflineMode(!navigator.onLine);
+          console.warn("No distinctive failure signpost identified. Investigate client error properties directly.");
+          
+          const isReallyOnline = await checkActualNetworkOnline();
+          setIsOfflineMode(!isReallyOnline);
         }
 
         console.groupEnd();
 
         setConnectionHealth({
-          isOnline: !isOfflineError && navigator.onLine,
+          isOnline: isOnlineNow,
           latencyMs: null,
           lastChecked: new Date(),
-          status: isOfflineError ? 'offline' : 'poor',
+          status: isOnlineNow ? 'poor' : 'offline',
           error: `${errorCode || 'UNKNOWN'}: ${errorMessage}`
         });
 
@@ -762,7 +838,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log(`[Firebase Diagnostic] Retrying connection diagnostic with exponential backoff in ${backoffDelay}ms...`);
           setTimeout(runConnectionDiagnostics, backoffDelay);
         } else {
-          console.error(`[Firebase Diagnostic] Max connection diagnostic attempts reached (${maxConnectionAttempts}). Diagnostics suspended.`);
+          console.info(`[Firebase Diagnostic] Max connection diagnostic attempts reached (${maxConnectionAttempts}). Diagnostics suspended.`);
         }
       }
     };
@@ -770,14 +846,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Periodic Heartbeat check ensuring reachable connection to Firestore in real-time
     const checkFirestoreConnectionAndHeartbeat = async () => {
       console.log("[Firebase Heartbeat] Checking Firestore reachability...");
-      if (!navigator.onLine) {
+      const isOnlineNow = await checkActualNetworkOnline();
+      if (!isOnlineNow) {
         setIsOfflineMode(true);
         setConnectionHealth({
           isOnline: false,
           latencyMs: null,
           lastChecked: new Date(),
           status: 'offline',
-          error: 'Offline via navigator.onLine'
+          error: 'Offline via actual network check'
         });
         return;
       }
@@ -813,7 +890,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (errorCode === 'permission-denied' || errorMessage.includes('insufficient permissions')) {
           console.log("[Firebase Heartbeat] Connected but permission denied. This counts as reached/online!");
-          setIsOfflineMode(!navigator.onLine);
+          const isReallyOnline = await checkActualNetworkOnline();
+          setIsOfflineMode(!isReallyOnline);
           setConnectionHealth({
             isOnline: true,
             latencyMs: null,
@@ -823,15 +901,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         } else {
           console.warn("[Firebase Heartbeat] FAILS: Reachability check failed.", errorMessage);
-          // Only true offline mode if navigator says we are disconnected.
-          if (!navigator.onLine) {
+          // Only true offline mode if actual network says we are disconnected.
+          const isReallyOnline = await checkActualNetworkOnline();
+          if (!isReallyOnline) {
              setIsOfflineMode(true);
+          } else {
+             setIsOfflineMode(false);
           }
           setConnectionHealth({
-            isOnline: !isOfflineError,
+            isOnline: isReallyOnline,
             latencyMs: null,
             lastChecked: new Date(),
-            status: isOfflineError && !navigator.onLine ? 'offline' : 'poor',
+            status: isReallyOnline ? 'poor' : 'offline',
             error: `${errorCode || 'HEARTBEAT_FAULT'}: ${errorMessage}`
           });
         }
@@ -851,16 +932,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     let active = true;
-
-    // Set persistence (asynchronous non-blocking registration to avoid delays in registering onAuthStateChanged)
-    console.log("[Auth Init] Triggering browserLocalPersistence initialization...");
-    setPersistence(auth, browserLocalPersistence)
-      .then(() => {
-        console.log("[Auth Init] Success: browserLocalPersistence configured successfully.");
-      })
-      .catch((persistenceError) => {
-        console.error("[Auth Init] Persistence setup failed:", persistenceError);
-      });
 
     // Register onAuthStateChanged synchronously on app mount to avoid race conditions
     console.log("[Auth Init] Registering onAuthStateChanged synchronously on startup.");
@@ -891,7 +962,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        console.log("[Auth State] No authenticated firebase user present.");
+        // Falling back to local storage backup session if it exists to withstand iframe third-party auth storage wipes
+        const savedSession = localStorage.getItem('saved_user_session');
+        if (savedSession) {
+          console.log("[Auth State] Firebase Auth is null, but restoring persistent session from saved_user_session backup.");
+          try {
+            const parsed = JSON.parse(savedSession);
+            if (active) {
+              setUser(parsed);
+              setIsLoading(false);
+            }
+            return;
+          } catch (e) {
+            console.warn("[Auth State] Failed to parse cached user backup payload, clearing", e);
+            localStorage.removeItem('saved_user_session');
+          }
+        }
+
+        console.log("[Auth State] No authenticated firebase user present and no active backup sessions.");
+        if (active) {
+          setUser(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      console.log("[Auth State] Changed state callback received. Email:", firebaseUser?.email, "UID:", firebaseUser?.uid);
+      setFirebaseEmail(firebaseUser?.email || null);
+      clearTimeout(loadingTimeout);
+      
+      if (!firebaseUser) {
+        if (localStorage.getItem('offline_admin_mock') === 'true') {
+          console.log("[Auth State] Restoring mock offline admin session from localStorage cache.");
+          const storedEmail = localStorage.getItem('offline_user_email') || 'admin@offline.local';
+          const isSpecialAdmin = isAdminEmail(storedEmail);
+          const mockUser: User = {
+            id: 'offline-admin-mock-id',
+            email: storedEmail,
+            firstName: isSpecialAdmin ? 'Admin (Hors-ligne)' : 'Étudiant (Hors-ligne)',
+            lastName: 'CampusBF',
+            role: isSpecialAdmin ? 'admin' : 'student',
+            createdAt: new Date(),
+            rankingScore: 1
+          } as any;
+          if (active) {
+            setUser(mockUser);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // Falling back to local storage backup session if it exists to withstand iframe third-party auth storage wipes
+        const savedSession = localStorage.getItem('saved_user_session');
+        if (savedSession) {
+          console.log("[Auth State] Firebase Auth is null, but restoring persistent session from saved_user_session backup.");
+          try {
+            const parsed = JSON.parse(savedSession);
+            if (active) {
+              setUser(parsed);
+              setIsLoading(false);
+            }
+            return;
+          } catch (e) {
+            console.warn("[Auth State] Failed to parse cached user backup payload, clearing", e);
+            localStorage.removeItem('saved_user_session');
+          }
+        }
+
+        console.log("[Auth State] No authenticated firebase user present and no active backup sessions.");
         if (active) {
           setUser(null);
           setIsLoading(false);
@@ -1044,6 +1182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log("[Auth State] Dispatching fully populated user context into state:", initialUserData.id);
         setUser(initialUserData);
+        localStorage.setItem('saved_user_session', JSON.stringify(initialUserData));
         
         // Listen to user profile changes in real-time
         const userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
@@ -1052,6 +1191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const newData = doc.data() as User;
             const normalizedData = { id: firebaseUser.uid, ...newData };
             setUser(normalizedData);
+            localStorage.setItem('saved_user_session', JSON.stringify(normalizedData));
           }
         }, (error) => {
           console.error("[Auth State Snapshot Error]:", error);
@@ -1087,6 +1227,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const isQuotaHit = error.message?.includes('Quota') || error.code === 'resource-exhausted' || sessionStorage.getItem('firestore_quota_hit');
         
+        const isNetworkError = error.message?.includes('network-request-failed') || 
+                               error.message?.includes('Could not reach Cloud Firestore backend') ||
+                               error.message?.includes('offline') ||
+                               error.message?.includes('Failed to fetch') ||
+                               error.code === 'unavailable';
+
         if (isQuotaHit) {
           console.warn("[Auth State] Quota hit, entering limited mode.");
           const fallbackUser: User = { 
@@ -1101,7 +1247,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rankingScore: 1
           } as any;
           setUser(fallbackUser);
+          localStorage.setItem('saved_user_session', JSON.stringify(fallbackUser));
           toast.error("Limite de service atteinte. CampusBF fonctionne en mode limité jusqu'à demain matin.", { duration: 8000 });
+        } else if (isNetworkError) {
+          console.warn("[Auth State] Network/connection issue detected, fallback to offline state.");
+          const tempUser: User = { 
+            id: firebaseUser.uid, 
+            email: firebaseUser.email || '',
+            role: isAdminEmail(firebaseUser.email) ? 'admin' : 'student',
+            firstName: firebaseUser.displayName?.split(' ')[0] || 'Utilisateur',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'CampusBF',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            activityStats: { logins: 1 } as any,
+            rankingScore: 1
+          } as any;
+          setUser(tempUser);
+          localStorage.setItem('saved_user_session', JSON.stringify(tempUser));
+          setIsOfflineMode(true);
+          toast.info("CampusBF fonctionne en mode hors-ligne. Tes données locales et cours sauvegardés restent accessibles !", { duration: 6000 });
         } else {
           toast.error(`Erreur de synchronisation du profil: ${error.message || 'Problème de connexion à la base de données'}`);
           // Fallback user just so they are not totally blocked if their network drops momentarily
@@ -1117,6 +1281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rankingScore: 1
           } as any;
           setUser(tempUser);
+          localStorage.setItem('saved_user_session', JSON.stringify(tempUser));
         }
       } finally {
         if (active) {
@@ -1771,6 +1936,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       localStorage.removeItem('offline_admin_mock');
+      localStorage.removeItem('offline_user_email');
+      localStorage.removeItem('saved_user_session');
       await signOut(auth);
       setUser(null);
     } catch (error) {

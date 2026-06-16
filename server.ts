@@ -107,17 +107,26 @@ app.post('/api/public-service/save-contest', async (req, res) => {
     const contestRef = await db.collection('public_service_contests').add(newContestData);
 
     // Create details (questions) document
-    await db.collection('public_service_contest_details').doc(contestRef.id).set({
+    const contestDetails = {
       contestId: contestRef.id,
       questions: generatedContest.questions || [],
       verificationLogs: verificationResult?.logs || ["Importé souverainement avec succès depuis le pipeline de traitement IA."]
-    });
+    };
+    const detailsSize = JSON.stringify(contestDetails).length;
+    console.log(`[API] Details document size approximation: ${detailsSize} bytes`);
+
+    await db.collection('public_service_contest_details').doc(contestRef.id).set(contestDetails);
 
     console.log(`[API] Contest saved successfully on server with ID: ${contestRef.id}`);
     res.json({ success: true, id: contestRef.id });
   } catch (err: any) {
     console.error(`[API] Save contest failed:`, err);
-    res.status(500).json({ error: err.message || 'Save failed' });
+    console.error(`[API] Request info:`, {
+      contestTitle: generatedContest?.titre,
+      category: config?.category,
+      hasQuestions: !!generatedContest?.questions
+    });
+    res.status(500).json({ error: err.message || 'Save failed', details: 'Check server logs for details' });
   }
 });
 
@@ -415,7 +424,14 @@ if (!admin.apps.length) {
       });
       console.log('[Server] Firebase Admin initialisé via FIREBASE_SERVICE_ACCOUNT');
     } else {
-      console.warn('[Server] FIREBASE_SERVICE_ACCOUNT not found. Admin SDK will not be initialized.');
+      console.warn('[Server] FIREBASE_SERVICE_ACCOUNT not found. Initializing Admin SDK with Application Default Credentials (ADC)...');
+      const initOptions: any = {};
+      if (firebaseConfig && firebaseConfig.projectId) {
+        initOptions.projectId = firebaseConfig.projectId;
+        console.log(`[Server] Configuring Admin SDK to target projectId: ${firebaseConfig.projectId}`);
+      }
+      admin.initializeApp(initOptions);
+      console.log('[Server] Firebase Admin initialisé via Application Default Credentials (ADC)');
     }
   } catch (error) {
     console.error('[Server] Erreur lors de l\'initialisation Firebase Admin:', error);
@@ -436,69 +452,84 @@ function getFirestoreDb() {
 
 app.get('/api/admin/users-stats', async (req, res) => {
   try {
-    // Check if service account exists since ADC does not have permissions in AI Studio
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-      console.warn("No service account provided. Returning fallback stats.");
-      return res.json({
-        firestoreCount: 0,
-        authCount: 0,
-        discrepancy: 0,
-        roles: {
-          student: 0,
-          tutor: 0,
-          teacher: 0,
-          admin: 1,
-          company: 0,
-          institution: 0,
-          public: 0,
-        }
-      });
-    }
-
     const db = getFirestoreDb();
     
     // 1. Get total count in Firestore
-    const usersSnapshot = await db.collection('users').count().get();
-    const firestoreCount = usersSnapshot.data().count;
+    let firestoreCount = 0;
+    try {
+      const usersSnapshot = await db.collection('users').count().get();
+      firestoreCount = usersSnapshot.data().count;
+    } catch (e: any) {
+      console.warn("Failed to get firestore user count:", e);
+    }
     
     // 2. Get total count in Auth
     let authCount = 0;
-    let pageToken;
-    do {
-      const result = await admin.auth().listUsers(1000, pageToken);
-      authCount += result.users.length;
-      pageToken = result.pageToken;
-    } while (pageToken);
+    try {
+      let pageToken;
+      do {
+        const result = await admin.auth().listUsers(1000, pageToken);
+        authCount += result.users.length;
+        pageToken = result.pageToken;
+      } while (pageToken);
+    } catch (e: any) {
+      console.warn("Failed to list auth users, using firestoreCount as fallback:", e);
+      authCount = firestoreCount;
+    }
 
     // 3. Get roles counts in Firestore
-    const [
-      studentSnap,
-      tutorSnap,
-      teacherSnap,
-      adminSnap,
-      companySnap,
-      institutionSnap,
-      publicSnap
-    ] = await Promise.all([
-      db.collection('users').where('role', '==', 'student').count().get(),
-      db.collection('users').where('role', '==', 'tutor').count().get(),
-      db.collection('users').where('role', '==', 'teacher').count().get(),
-      db.collection('users').where('role', '==', 'admin').count().get(),
-      db.collection('users').where('role', '==', 'company').count().get(),
-      db.collection('users').where('role', '==', 'institution').count().get(),
-      db.collection('users').where('role', '==', 'public').count().get(),
-    ]);
+    let studentCount = 0;
+    let tutorCount = 0;
+    let teacherCount = 0;
+    let adminCount = 0;
+    let companyCount = 0;
+    let institutionCount = 0;
+    let publicCount = 0;
+
+    try {
+      const [
+        studentSnap,
+        tutorSnap,
+        teacherSnap,
+        adminSnap,
+        companySnap,
+        institutionSnap,
+        publicSnap
+      ] = await Promise.all([
+        db.collection('users').where('role', '==', 'student').count().get(),
+        db.collection('users').where('role', '==', 'tutor').count().get(),
+        db.collection('users').where('role', '==', 'teacher').count().get(),
+        db.collection('users').where('role', '==', 'admin').count().get(),
+        db.collection('users').where('role', '==', 'company').count().get(),
+        db.collection('users').where('role', '==', 'institution').count().get(),
+        db.collection('users').where('role', '==', 'public').count().get(),
+      ]);
+
+      studentCount = studentSnap.data().count;
+      tutorCount = tutorSnap.data().count;
+      teacherCount = teacherSnap.data().count;
+      adminCount = adminSnap.data().count;
+      companyCount = companySnap.data().count;
+      institutionCount = institutionSnap.data().count;
+      publicCount = publicSnap.data().count;
+    } catch (e: any) {
+      console.warn("Failed to query roles counts in Firestore:", e);
+      // Let's set some default/fallback values based on firestoreCount if it completely failed
+      if (firestoreCount > 0 && studentCount === 0) {
+        studentCount = firestoreCount;
+      }
+    }
 
     const discrepancy = Math.max(0, authCount - firestoreCount);
 
     const roles = {
-      student: studentSnap.data().count + discrepancy, // Unsynchronized users are treated as students by default
-      tutor: tutorSnap.data().count,
-      teacher: teacherSnap.data().count,
-      admin: adminSnap.data().count,
-      company: companySnap.data().count,
-      institution: institutionSnap.data().count,
-      public: publicSnap.data().count,
+      student: studentCount + discrepancy, // Unsynchronized users are treated as students by default
+      tutor: tutorCount,
+      teacher: teacherCount,
+      admin: Math.max(1, adminCount),
+      company: companyCount,
+      institution: institutionCount,
+      public: publicCount,
     };
 
     res.json({
@@ -515,25 +546,36 @@ app.get('/api/admin/users-stats', async (req, res) => {
 
 app.post('/api/admin/users-sync', async (req, res) => {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-      console.warn("No service account provided. Ignoring sync.");
-      return res.json({ synchronizedCount: 0 });
-    }
-
     const db = getFirestoreDb();
     
     // 1. Fetch current users in Firestore (UIDs)
-    const usersSnapshot = await db.collection('users').select().get();
-    const existingUserIds = new Set(usersSnapshot.docs.map(doc => doc.id));
+    let existingUserIds = new Set<string>();
+    try {
+      const usersSnapshot = await db.collection('users').select().get();
+      existingUserIds = new Set(usersSnapshot.docs.map(doc => doc.id));
+    } catch (e: any) {
+      console.error("Failed to read firestore users for sync:", e);
+      return res.status(500).json({ error: "Impossible de lire la collection 'users' dans Firestore : " + e.message });
+    }
     
     // 2. Fetch all Auth users
     let authUsers: admin.auth.UserRecord[] = [];
-    let pageToken;
-    do {
-      const result = await admin.auth().listUsers(1000, pageToken);
-      authUsers.push(...result.users);
-      pageToken = result.pageToken;
-    } while (pageToken);
+    try {
+      let pageToken;
+      do {
+        const result = await admin.auth().listUsers(1000, pageToken);
+        authUsers.push(...result.users);
+        pageToken = result.pageToken;
+      } while (pageToken);
+    } catch (e: any) {
+      console.warn("Failed to list auth users in sync endpoint:", e);
+      return res.status(403).json({ 
+        error: "Impossible d'accéder aux comptes Firebase Auth pour la synchronisation. " + 
+               "Si vous utilisez un compte de service externe, vérifiez la configuration de la variable FIREBASE_SERVICE_ACCOUNT. " +
+               "Détails de l'erreur : " + e.message,
+        synchronizedCount: 0 
+      });
+    }
 
     let createdCount = 0;
     const batchSize = 400;

@@ -291,17 +291,17 @@ export default function ColocationPage() {
       {/* Add Modal */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl w-full max-w-2xl max-height-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl w-full max-w-xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto shadow-2xl relative"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-                <h2 className="text-xl font-bold text-slate-900">Publier une annonce</h2>
-                <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                  <X size={20} />
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                <h2 className="text-lg font-bold text-slate-900">Publier une annonce</h2>
+                <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={18} />
                 </button>
               </div>
 
@@ -332,78 +332,78 @@ export default function ColocationPage() {
                 } catch (error: any) {
                   alert(error.message);
                 }
-              }} className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              }} className="p-4 sm:p-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="col-span-full">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Titre de l'annonce</label>
-                    <input name="title" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: Chambre spacieuse près de l'UJKZ" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Titre de l'annonce</label>
+                    <input name="title" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: Chambre spacieuse près de l'UJKZ" />
                   </div>
                   <div className="col-span-full">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
-                    <textarea name="description" required rows={3} className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Décrivez le logement et l'ambiance..." />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Description</label>
+                    <textarea name="description" required rows={2} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Décrivez le logement et l'ambiance..." />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Ville</label>
-                    <input name="city" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: Ouagadougou" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Ville</label>
+                    <input name="city" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: Ouagadougou" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Quartier</label>
-                    <input name="neighborhood" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: Zogona" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Quartier</label>
+                    <input name="neighborhood" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: Zogona" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Université proche</label>
-                    <input name="university" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: Université Joseph Ki-Zerbo" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Université proche</label>
+                    <input name="university" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: Université Joseph Ki-Zerbo" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Distance de l'université (km)</label>
-                    <input name="distanceFromUni" type="number" step="0.1" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: 0.5" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Distance de l'université (km)</label>
+                    <input name="distanceFromUni" type="number" step="0.1" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: 0.5" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Prix mensuel (CFA)</label>
-                    <input name="price" type="number" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: 35000" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Prix mensuel (CFA)</label>
+                    <input name="price" type="number" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: 35000" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Colocataires recherchés</label>
-                    <input name="roommatesNeeded" type="number" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Ex: 1" />
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Colocataires recherchés</label>
+                    <input name="roommatesNeeded" type="number" required className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white transition-all outline-none" placeholder="Ex: 1" />
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
-                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                    <Users size={18} className="text-emerald-600" />
+                <div className="bg-slate-50 p-4 rounded-xl space-y-3">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Users size={16} className="text-emerald-600" />
                     Profil recherché
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Sexe préféré</label>
-                      <select name="preferredGender" className="w-full px-4 py-2 bg-white border-none rounded-lg focus:ring-2 focus:ring-emerald-500">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Sexe préféré</label>
+                      <select name="preferredGender" className="w-full px-3 py-1.5 bg-white border border-slate-200/60 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                         {GENDERS.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Niveau d'étude</label>
-                      <select name="studyLevel" className="w-full px-4 py-2 bg-white border-none rounded-lg focus:ring-2 focus:ring-emerald-500">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Niveau d'étude</label>
+                      <select name="studyLevel" className="w-full px-3 py-1.5 bg-white border border-slate-200/60 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                         {STUDY_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tranche d'âge</label>
-                      <select name="ageRange" className="w-full px-4 py-2 bg-white border-none rounded-lg focus:ring-2 focus:ring-emerald-500">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tranche d'âge</label>
+                      <select name="ageRange" className="w-full px-3 py-1.5 bg-white border border-slate-200/60 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                         {AGE_RANGES.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Habitudes (séparées par virgule)</label>
-                      <input name="lifestyleHabits" className="w-full px-4 py-2 bg-white border-none rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="Ex: calme, non-fumeur" />
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Habitudes</label>
+                      <input name="lifestyleHabits" className="w-full px-3 py-1.5 bg-white border border-slate-200/60 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: calme, non-fumeur" />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors text-sm">
                     Annuler
                   </button>
-                  <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors">
+                  <button type="submit" className="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm shadow-sm shadow-emerald-600/10">
                     Publier l'annonce
                   </button>
                 </div>

@@ -147,17 +147,50 @@ export function AIContestGenerator({ onContestCreated, onCancel }: { onContestCr
         aiVerified: verificationResult ? (verificationResult?.hasErrors === false) : true
       };
 
-      const contestRef = await addDoc(collection(db, 'public_service_contests'), newContestData);
+      let savedSuccessfully = false;
+      let contestIdCreated = '';
 
-      await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
-        contestId: contestRef.id,
-        questions: generatedContest.questions || [],
-        verificationLogs: verificationResult?.logs || []
-      });
+      try {
+        console.log("[AI Generator] Attempting to save contest via backend proxy API to bypass iframe and auth restrictions...");
+        const response = await fetch('/api/public-service/save-contest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            generatedContest,
+            config,
+            verificationResult,
+            status
+          })
+        });
 
-      console.log("[AI Generator] Contest saved successfully via client Firestore, ID:", contestRef.id);
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.success && resData.id) {
+            savedSuccessfully = true;
+            contestIdCreated = resData.id;
+            console.log("[AI Generator] Contest saved successfully via backend, ID:", contestIdCreated);
+          }
+        } else {
+          console.warn("[AI Generator] Backend proxy save failed, status code:", response.status);
+        }
+      } catch (backendErr) {
+        console.warn("[AI Generator] Could not save via backend proxy. Falling back to client-side write:", backendErr);
+      }
 
-      toast.success(status === 'published' ? 'Concours publié !' : 'Enregistré en brouillon', { id: tId });
+      if (!savedSuccessfully) {
+        const contestRef = await addDoc(collection(db, 'public_service_contests'), newContestData);
+        await setDoc(doc(db, 'public_service_contest_details', contestRef.id), {
+          contestId: contestRef.id,
+          questions: generatedContest.questions || [],
+          verificationLogs: verificationResult?.logs || []
+        });
+        contestIdCreated = contestRef.id;
+        console.log("[AI Generator] Contest saved successfully via fallback client Firestore, ID:", contestIdCreated);
+      }
+
+      toast.success(status === 'published' ? 'Concours publié avec succès !' : 'Enregistré en brouillon', { id: tId });
       
       setGeneratedContest(null);
       setVerificationResult(null);

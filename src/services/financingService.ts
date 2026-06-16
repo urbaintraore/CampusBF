@@ -430,10 +430,49 @@ export function useFinancingProfile(user: User | null) {
         }
       }
 
+      if (storedProfile) {
+        try {
+          localStorage.setItem(`campusbf_financing_profile_${user.id}`, JSON.stringify(storedProfile));
+        } catch (e) {}
+      }
       setProfile(storedProfile);
     } catch (err: any) {
-      console.error("[Financing Hook] Error:", err);
-      setErrorString(err.message || String(err));
+      console.warn("[Financing Hook] Could not read profile from Firestore, attempting local storage recovery:", err);
+      
+      const cacheKey = `campusbf_financing_profile_${user.id}`;
+      let cachedData: FinancingProfile | null = null;
+      try {
+        const localVal = localStorage.getItem(cacheKey);
+        if (localVal) {
+          cachedData = JSON.parse(localVal);
+        }
+      } catch (localErr) {
+        console.warn("localStorage read failed:", localErr);
+      }
+
+      if (cachedData) {
+        console.log("[Financing Hook] Successfully recovered profile from local cache.");
+        setProfile(cachedData);
+      } else {
+        // Build a beautiful default profile if no cache exists yet
+        const defaultProfile: FinancingProfile = {
+          id: user.id,
+          userId: user.id,
+          userEmail: user.email || 'student@campusbf.org',
+          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Étudiant',
+          academicLevel: user.level || 'Non défini',
+          documents: [],
+          academicLevelScore: 10,
+          profileCompletionScore: 10,
+          activityScore: 5,
+          documentsScore: 0,
+          totalEligibilityScore: 25,
+          eligibilityBadge: 'Peu Éligible',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setProfile(defaultProfile);
+      }
     } finally {
       setLoading(false);
     }

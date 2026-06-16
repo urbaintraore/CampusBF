@@ -383,23 +383,23 @@ export default function Dashboard() {
 
       {/* Parent Hero Section */}
       {user?.role === 'parent' && (
-        <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 md:p-12 text-white shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center flex-shrink-0 shadow-inner ring-1 ring-white/30">
-              <User size={48} />
+            <div className="w-24 h-24 bg-slate-800 backdrop-blur-md rounded-3xl flex items-center justify-center flex-shrink-0 shadow-inner ring-1 ring-white/10">
+              <User size={48} className="text-emerald-400" />
             </div>
             <div className="flex-1 text-center md:text-left space-y-4">
               <h2 className="text-3xl font-display font-bold">Portail Parents CampusBF</h2>
-              <p className="text-orange-50 text-lg leading-relaxed max-w-2xl">
+              <p className="text-slate-350 text-base md:text-lg leading-relaxed max-w-2xl">
                 Trouvez des répétiteurs qualifiés, connectez-vous avec des mentors pour orienter vos enfants et consultez l'annuaire des experts universitaires.
               </p>
               <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
                 <button 
                   onClick={() => navigate('/parent-portal')}
-                  className="px-8 py-3.5 bg-white text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                  className="px-8 py-3.5 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95 flex items-center gap-2 text-sm"
                 >
-                  <Compass size={20} />
+                  <Compass size={18} />
                   Accéder au Portail Parents
                 </button>
               </div>
@@ -442,63 +442,55 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {headerSection}
-
       {/* Quick Stats / Highlights */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {user?.role === 'parent' ? (
           [
-            { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', color: 'bg-amber-100 text-amber-700 ring-amber-200', link: '/public-service-contests' },
+            { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', link: '/public-service-contests' },
             { 
               label: 'Vidéos Communautaires', 
-              count: 'NEW', 
-              color: 'bg-black text-white ring-black', 
+              count: 'Nouveau', 
               link: '/videos-communautaires' 
             },
-            { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
-            { label: 'Enseignants', count: teachers.length.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/teachers' },
-            { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50/80 text-purple-700 ring-purple-100', link: '/events' },
+            { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), link: '/tutors' },
+            { label: 'Enseignants', count: teachers.length.toString(), link: '/teachers' },
+            { label: 'Événements', count: globalEvents?.length.toString() || '0', link: '/events' },
           ].map((stat) => (
-            <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
-              <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
+            <Link key={stat.label} to={stat.link} className="p-4 bg-white hover:bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm hover:border-emerald-500 hover:shadow-md transition-all active:scale-95 group">
+              <span className="text-2xl font-display font-black text-slate-900 group-hover:text-emerald-600 transition-colors mb-1">{stat.count}</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 leading-tight">{stat.label}</span>
             </Link>
           ))
         ) : (
           [
-            { label: 'Documentation', count: totalDocumentsCount.toString(), color: 'bg-blue-50/80 text-blue-700 ring-blue-100', link: '/documents' },
+            { label: 'Documentation', count: totalDocumentsCount.toString(), link: '/documents' },
             { 
               label: 'Concours FP', 
               count: publicServiceContests?.length.toString() || '0', 
-              color: 'bg-amber-100 text-amber-700 ring-amber-200', 
               link: '/public-service-contests',
               roles: ['admin', 'teacher', 'alumni', 'parent', 'student', 'public']
             },
             {
               label: 'Bourses & Opportunités IA', 
-              count: 'NEW', 
-              color: 'bg-indigo-600 text-white ring-indigo-600', 
+              count: 'Nouveau', 
               link: '/scholarships' 
             },
             { label: 'Offres Stages', 
               count: internships.length.toString(), 
-              color: 'bg-emerald-600 text-white ring-emerald-600', 
               link: '/internships' 
             },
             {
               label: 'Vidéos Communautaires', 
-              count: 'POPULAR', 
-              color: 'bg-black text-white ring-black', 
-              shadow: 'shadow-lg shadow-black/20',
+              count: 'Populaire', 
               link: '/videos-communautaires' 
             },
-            { label: 'Événements', count: globalEvents?.length.toString() || '0', color: 'bg-purple-50 text-purple-700 ring-purple-100', link: '/events' },
-            { label: 'Tuteurs', count: tutors.length.toString(), color: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100', link: '/tutors' },
-            { label: 'Formations', count: '12', color: 'bg-amber-50/80 text-amber-700 ring-amber-100', link: '/trainings' },
+            { label: 'Événements', count: globalEvents?.length.toString() || '0', link: '/events' },
+            { label: 'Tuteurs', count: tutors.length.toString(), link: '/tutors' },
+            { label: 'Formations', count: '12', link: '/trainings' },
           ].filter(stat => !stat.roles || stat.roles.includes(user?.role || '')).map((stat: any) => (
-            <Link key={stat.label} to={stat.link} className={`p-5 rounded-3xl ${stat.color} ${stat.shadow || ''} flex flex-col items-center justify-center text-center ring-1 shadow-sm hover:shadow-md transition-shadow`}>
-              <span className="text-3xl font-display font-bold mb-1">{stat.count}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</span>
+            <Link key={stat.label} to={stat.link} className="p-4 bg-white hover:bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm hover:border-emerald-500 hover:shadow-md transition-all active:scale-95 group">
+              <span className="text-2xl font-display font-black text-slate-900 group-hover:text-emerald-600 transition-colors mb-1">{stat.count}</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 leading-tight">{stat.label}</span>
             </Link>
           ))
         )}
@@ -509,7 +501,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-200/60 shadow-sm relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
              <div className="flex items-center gap-4">
-               <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-inner">
+               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
                  <Target size={24} />
                </div>
                <div>
@@ -517,8 +509,8 @@ export default function Dashboard() {
                   <p className="text-sm text-slate-500">Gagne des points et débloque des badges</p>
                </div>
              </div>
-             <div className="flex items-center gap-2 bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
-               <Sparkles size={16} />
+             <div className="flex items-center gap-2 bg-slate-100 text-slate-800 border border-slate-200/60 px-4 py-2 rounded-full text-xs font-bold shadow-sm">
+               <Sparkles size={14} className="text-emerald-500" />
                <span>Score Global : {user.rankingScore || 0} pts</span>
              </div>
           </div>
@@ -531,7 +523,7 @@ export default function Dashboard() {
                        </div>
                     )}
                     <h4 className="text-sm font-bold text-slate-800 pr-8">{quest.title}</h4>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-orange-600 mt-1 mb-4">+{quest.reward} points</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mt-1 mb-4">+{quest.reward} points</p>
                     
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between text-xs font-bold text-slate-500">
@@ -540,7 +532,7 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden shadow-inner">
                          <div 
-                           className={`h-full ${quest.completed ? 'bg-emerald-500' : 'bg-gradient-to-r from-orange-400 to-amber-500'} transition-all duration-1000 ease-out`} 
+                           className={`h-full bg-emerald-500 transition-all duration-1000 ease-out`} 
                            style={{ width: `${Math.min(100, (quest.progress / quest.target) * 100)}%` }}
                          />
                       </div>
@@ -550,7 +542,7 @@ export default function Dashboard() {
           </div>
           {user.streak && (
              <div className="mt-6 flex items-center justify-center text-sm font-medium text-slate-600 bg-slate-50 py-3 rounded-2xl border border-slate-100">
-                Tu es sur une série de <strong className="mx-1 text-orange-600">{user.streak.current}</strong> jours ! 🔥 Record : <strong className="mx-1">{user.streak.longest}</strong> jours
+                Tu es sur une série de <strong className="mx-1 text-emerald-600">{user.streak.current}</strong> jours ! 🔥 Record : <strong className="mx-1">{user.streak.longest}</strong> jours
              </div>
           )}
         </div>
@@ -559,36 +551,36 @@ export default function Dashboard() {
       {/* Espace Enseignant */}
       {user?.role === 'teacher' && user.teacherStatus === 'approved' && (
         <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+           <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
            <div className="relative z-10">
               <h2 className="text-2xl font-display font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <GraduationCap className="text-blue-600" size={28} />
+                <GraduationCap className="text-emerald-600" size={28} />
                 Espace Enseignant
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <Link to="/quizzes" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-emerald-50 hover:border-emerald-200 transition-all group/item">
-                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                 <Link to="/quizzes" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 hover:border-slate-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
                       <Brain size={20} />
                     </div>
                     <h3 className="font-bold text-slate-900 text-sm mb-1">Gérer mes Quiz</h3>
                     <p className="text-[10px] text-slate-500">Créez et gérez vos quiz pour vos étudiants.</p>
                  </Link>
-                 <Link to="/public-service-contests" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-all group/item">
-                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                 <Link to="/public-service-contests" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 hover:border-slate-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
                       <Trophy size={20} />
                     </div>
                     <h3 className="font-bold text-slate-900 text-sm mb-1">Concours FP</h3>
                     <p className="text-[10px] text-slate-500">Ajouter des questions aux concours publics.</p>
                  </Link>
-                 <Link to="/documents" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-blue-50 hover:border-blue-200 transition-all group/item">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                 <Link to="/documents" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 hover:border-slate-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
                       <FileText size={20} />
                     </div>
                     <h3 className="font-bold text-slate-900 text-sm mb-1">Mes Documents</h3>
                     <p className="text-[10px] text-slate-500">Partagez vos supports de cours et TD.</p>
                  </Link>
-                 <Link to="/portfolio" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-purple-50 hover:border-purple-200 transition-all group/item">
-                    <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
+                 <Link to="/portfolio" className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 hover:border-slate-200 transition-all group/item">
+                    <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center mb-3 group-hover/item:scale-110 transition-transform">
                       <User size={20} />
                     </div>
                     <h3 className="font-bold text-slate-900 text-sm mb-1">Mon Portfolio</h3>
@@ -626,24 +618,24 @@ export default function Dashboard() {
       )}
 
       {/* AI Magic Section */}
-      <section className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-purple-200 overflow-hidden relative group">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:animate-pulse transition-all"></div>
-        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-10">
-          <div className="lg:w-2/3 space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-xs font-bold uppercase tracking-widest shadow-lg">
-              <Sparkles size={14} />
+      <section className="bg-gradient-to-br from-emerald-50/40 to-slate-50 border border-slate-200/80 rounded-3xl p-6 md:p-8 text-slate-800 shadow-sm overflow-hidden relative group">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full -mr-28 -mt-28 blur-3xl group-hover:animate-pulse transition-all"></div>
+        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
+          <div className="lg:w-3/4 space-y-4">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100/80 border border-emerald-200 rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
+              <Sparkles size={12} className="text-emerald-700" />
               Nouveau : Magie de l'IA
             </div>
-            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight">Booste tes études avec l'Assistant Intelligent 🎓</h2>
-            <p className="text-purple-50 text-lg leading-relaxed max-w-2xl opacity-90">
+            <h2 className="text-xl md:text-2xl font-display font-extrabold text-slate-900 leading-snug">Booste tes études avec l'Assistant Intelligent 🎓</h2>
+            <p className="text-slate-600 text-sm md:text-base leading-relaxed max-w-xl">
               Génère des quiz de révision sur mesure, obtiens des résumés de documents instantanés et pose toutes tes questions académiques à notre IA CampusBF.
             </p>
-            <div className="flex flex-wrap gap-4 pt-4">
+            <div className="flex flex-wrap gap-3 pt-2">
               <button 
                 onClick={() => navigate('/quizzes')}
-                className="px-8 py-3.5 bg-white text-purple-700 rounded-2xl font-bold hover:bg-purple-50 transition-all shadow-lg flex items-center gap-2 active:scale-95"
+                className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 hover:shadow-md transition-all flex items-center gap-2 active:scale-95 text-xs"
               >
-                <Brain size={20} />
+                <Brain size={16} />
                 Révisions & Quiz
               </button>
               <button 
@@ -651,43 +643,43 @@ export default function Dashboard() {
                   const chatbotTrigger = document.querySelector('.chatbot-trigger') as HTMLButtonElement;
                   if (chatbotTrigger) chatbotTrigger.click();
                 }}
-                className="px-8 py-3.5 bg-white/10 backdrop-blur-md text-white border border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
+                className="px-6 py-2.5 bg-white text-slate-700 border border-slate-200 hover:border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-2 text-xs"
               >
                 Parler à l'Assistant
               </button>
             </div>
           </div>
-          <div className="lg:w-1/3 flex justify-center">
+          <div className="lg:w-1/4 flex justify-center">
             <div className="relative">
-              <div className="w-48 h-48 bg-white/10 backdrop-blur-2xl rounded-[3rem] border border-white/20 flex items-center justify-center rotate-6 group-hover:rotate-12 transition-transform duration-700 shadow-2xl">
-                <Sparkles size={80} className="text-white drop-shadow-lg" />
+              <div className="w-28 h-28 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-center rotate-6 group-hover:rotate-12 transition-transform duration-700 shadow-sm">
+                <Sparkles size={48} className="text-emerald-500 drop-shadow-sm" />
               </div>
-              <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-purple-400/30 backdrop-blur-xl rounded-2xl border border-white/20 -rotate-12 flex items-center justify-center shadow-xl">
-                <Brain size={40} className="text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              <div className="absolute -bottom-3 -left-3 w-14 h-14 bg-white rounded-xl border border-slate-200/80 -rotate-12 flex items-center justify-center shadow-sm">
+                <Brain size={24} className="text-emerald-500" />
+               </div>
+             </div>
+           </div>
+         </div>
+       </section>
 
       {/* Public Service Contests Promo */}
-      <section className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200 overflow-hidden relative group">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+      <section className="bg-white border border-slate-200/60 rounded-[2rem] p-8 md:p-10 text-slate-850 shadow-sm overflow-hidden relative group">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-slate-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-lg border border-white/20 group-hover:rotate-6 transition-transform">
-              <Trophy size={40} className="text-white" />
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100 group-hover:rotate-6 transition-transform">
+              <Trophy size={32} />
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
-              <p className="text-orange-50 mt-2 max-w-md text-lg opacity-90 leading-relaxed">
+              <h2 className="text-xl md:text-2xl font-display font-bold text-slate-900 tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
+              <p className="text-slate-500 mt-2 max-w-md text-sm md:text-base leading-relaxed">
                 Prépare-toi aux concours de l'État avec nos QCM officiels et simulations d'examens.
               </p>
             </div>
           </div>
           <button 
             onClick={() => navigate('/public-service-contests')}
-            className="px-10 py-4 bg-white text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-xl shadow-orange-600/20 active:scale-95 whitespace-nowrap text-lg"
+            className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-sm"
           >
             S'entraîner maintenant
           </button>
@@ -698,7 +690,7 @@ export default function Dashboard() {
       <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
               <Trophy size={32} />
             </div>
             <div>
@@ -728,7 +720,7 @@ export default function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <Calendar size={20} className="text-purple-600" />
+                <Calendar size={20} className="text-slate-700" />
                 <h2 className="text-xl font-display font-bold text-slate-900">Prochains Événements</h2>
               </div>
               <Link to="/events" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
@@ -752,13 +744,7 @@ export default function Dashboard() {
                     )}
                     <div className="p-5 flex-1 flex flex-col">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider",
-                          event.type === 'conference' ? "bg-blue-50 text-blue-600" :
-                          event.type === 'defense' ? "bg-purple-50 text-purple-600" :
-                          event.type === 'competition' ? "bg-amber-50 text-amber-600" :
-                          event.type === 'cultural' ? "bg-pink-50 text-pink-600" : "bg-slate-50 text-slate-600"
-                        )}>
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/40 text-[9px] font-bold uppercase tracking-wider">
                           {event.type || 'Événement'}
                         </span>
                         {event.date && (
@@ -897,7 +883,7 @@ export default function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <Trophy size={20} className="text-amber-500" />
+                <Trophy size={20} className="text-slate-700" />
                 <h2 className="text-xl font-display font-bold text-slate-900">Challenges & Concours</h2>
               </div>
               <Link to="/public-service-contests" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
@@ -907,9 +893,9 @@ export default function Dashboard() {
                 <div 
                   key={contest.id}
                   onClick={() => navigate('/public-service-contests')}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-amber-200 transition-all flex items-center gap-4 cursor-pointer group"
+                  className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-center gap-4 cursor-pointer group"
                 >
-                  <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                     <Target size={24} />
                   </div>
                   <div className="flex-1 min-w-0">

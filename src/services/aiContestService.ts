@@ -85,15 +85,17 @@ Thème/Catégorie : ${categoryName} (Code: ${category})
 Niveau d'étude ciblé : ${level} (ex: BEPC, BAC, Licence, Master) En s'assurant que la difficulté est adaptée.
 Nombre de questions : ${questionCount}
 
-La moitié des questions (ou au moins 3) doivent être de type QCM de Culture Générale / Raisonnement / Connaissances du Burkina / Droit avec 4 options.
-L'autre moitié peut être de type Vrai / Faux (avec obligatoirement 2 options: ["Vrai", "Faux"]).
-Pour chaque question, fournis la bonne réponse (index à base 0 de l'option correcte) et une explication pédagogique détaillée en français indiquant précisément pourquoi cette réponse est la bonne (e.g. contexte historique, loi burkinabè, logique mathématique).
+Toutes les questions du concours doivent porter RIGOUREUSEMENT et EXCLUSIVEMENT sur la catégorie demandée : "${categoryName}" (Code: ${category}). Ne mélange jamais d'autres thèmes (par exemple, si la thématique demandée est "${categoryName}", toutes les questions doivent concerner cette discipline, pas de culture générale ou d'histoire si le sujet est technique ou scientifique comme Physique/Maths/SVT).
+La moitié des questions (ou au moins 3) doivent être de type QCM spécifiques à la matière "${categoryName}" avec 4 options.
+L'autre moitié peut être de type Vrai / Faux sur la matière "${categoryName}" (avec obligatoirement 2 options: ["Vrai", "Faux"]).
+Pour chaque question, fournis la bonne réponse (index à base 0 de l'option correcte) et une explication pédagogique détaillée en français indiquant précisément pourquoi cette réponse est la bonne (e.g. règles de l'art, loi burkinabè, formules mathématiques correspondantes).
 
 Titre suggéré et description doivent faire référence au Burkina Faso ou aux concours d'intégration réels (par exemple: ENA, Inspecteurs des Impôts, Enseignement, Assistants de Cabinet, Douanes).`;
 
     const systemInstruction = `Tu es une IA experte dans la modélisation et la génération de sujets de concours d'intégration à la fonction publique du Burkina Faso (exams réels d'État, ENA, Ministère de l'Économie et des Finances).
 Sois extrêmement précis et factuel sur les dates historiques du Burkina Faso, l'administration, la géo burkinabè, la constitution et les ministères.
-Génère un contenu irréprochable et renvoie le résultat dans le format JSON demandé.`;
+Génère un contenu irréprochable et renvoie le résultat dans le format JSON demandé.
+IMPORTANT: LES QUESTIONS DOIVENT EXCLUSIVEMENT CONCERNER LA CATÉGORIE '${categoryName}' DEMANDÉE. NE MÉLANGE JAMAIS AVEC D'AUTRES THÈMES.`;
 
     const modelsToTry = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
     const maxRetriesPerModel = 2;
@@ -175,15 +177,21 @@ Génère un contenu irréprochable et renvoie le résultat dans le format JSON d
           const errStr = String(err.message || err);
           console.warn(`[AI Service] Contest generation try ${attempt} with model "${currentModel}" failed: ${errStr}`);
           
-          const isCapacityIssue = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand');
-          const isTransient = (errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json')) && !isCapacityIssue;
-          
-          if (isTransient && attempt < maxRetriesPerModel) {
-            const delay = 1000 * Math.pow(2, attempt);
-            console.log(`[AI Service] Transient rate-limit error. Waiting ${delay}ms before retrying "${currentModel}"...`);
+          const isRetryable = errStr.includes('503') || 
+                              errStr.includes('429') || 
+                              errStr.includes('UNAVAILABLE') || 
+                              errStr.includes('high demand') ||
+                              errStr.includes('ResourceExhausted') || 
+                              errStr.includes('timeout') || 
+                              errStr.includes('504');
+                              
+          if (isRetryable && attempt < maxRetriesPerModel) {
+            const delay = 1500 * Math.pow(2, attempt - 1);
+            console.log(`[AI Service] Retryable error detected. Waiting ${delay}ms before retrying "${currentModel}"...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
-            console.log(`[AI Service] Capacity limit or non-transient error on "${currentModel}". Switching to next fallback model immediately...`);
+            console.log(`[AI Service] Switching to next fallback model. Waiting 1000ms...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
             break; // Try next model list
           }
         }
@@ -301,15 +309,21 @@ Renvoie un JSON conforme au schema exigé.`;
           const errStr = String(err.message || err);
           console.warn(`[AI Service] Contest verification try ${attempt} with model "${currentModel}" failed: ${errStr}`);
           
-          const isCapacityIssue = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand');
-          const isTransient = (errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json')) && !isCapacityIssue;
-          
-          if (isTransient && attempt < maxRetriesPerModel) {
-            const delay = 1000 * Math.pow(2, attempt);
-            console.log(`[AI Service] Transient rate-limit error. Waiting ${delay}ms before retrying "${currentModel}"...`);
+          const isRetryable = errStr.includes('503') || 
+                              errStr.includes('429') || 
+                              errStr.includes('UNAVAILABLE') || 
+                              errStr.includes('high demand') ||
+                              errStr.includes('ResourceExhausted') || 
+                              errStr.includes('timeout') || 
+                              errStr.includes('504');
+                              
+          if (isRetryable && attempt < maxRetriesPerModel) {
+            const delay = 1500 * Math.pow(2, attempt - 1);
+            console.log(`[AI Service] Retryable error detected. Waiting ${delay}ms before retrying "${currentModel}"...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
-            console.log(`[AI Service] Capacity limit or non-transient error on "${currentModel}". Switching to next fallback model immediately...`);
+            console.log(`[AI Service] Switching to next fallback model. Waiting 1000ms...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
             break; // Try next model list
           }
         }
@@ -446,15 +460,21 @@ Pour que toutes les questions puissent rentrer dans l'objet réponse sans tronca
           const errStr = String(error.message || error) + (error.stack || '');
           console.warn(`[AI Service] Structuring try ${attempt} with configuration "${currentModel}" failed: ${errStr}`);
           
-          const isCapacityIssue = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('high demand');
-          const isTransient = (errStr.includes('429') || errStr.includes('ResourceExhausted') || errStr.includes('timeout') || errStr.includes('504') || errStr.toLowerCase().includes('json')) && !isCapacityIssue;
-          
-          if (isTransient && attempt < maxRetriesPerModel) {
-            const delay = 1000 * Math.pow(2, attempt);
-            console.log(`[AI Service] Transient rate-limit error. Waiting ${delay}ms before retrying "${currentModel}"...`);
+          const isRetryable = errStr.includes('503') || 
+                              errStr.includes('429') || 
+                              errStr.includes('UNAVAILABLE') || 
+                              errStr.includes('high demand') ||
+                              errStr.includes('ResourceExhausted') || 
+                              errStr.includes('timeout') || 
+                              errStr.includes('504');
+                              
+          if (isRetryable && attempt < maxRetriesPerModel) {
+            const delay = 1500 * Math.pow(2, attempt - 1);
+            console.log(`[AI Service] Retryable error detected. Waiting ${delay}ms before retrying "${currentModel}"...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
-            console.log(`[AI Service] Capacity limit or non-transient error on "${currentModel}". Switching to next fallback model immediately...`);
+            console.log(`[AI Service] Switching to next fallback model. Waiting 1000ms...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
             break; // Move to fallback model
           }
         }
