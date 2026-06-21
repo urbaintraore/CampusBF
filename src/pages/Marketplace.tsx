@@ -12,15 +12,18 @@ import {
   orderBy, 
   deleteDoc, 
   doc,
-  serverTimestamp 
+  serverTimestamp,
+  limit
 } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
-  const { user, marketplace: ads, logAction, reportMarketplaceItem, incrementActivity } = useAuth();
+  const { user, logAction, reportMarketplaceItem, incrementActivity } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
+  const [marketplaceLimit, setMarketplaceLimit] = useState(15);
+  const [hasMoreMarketplace, setHasMoreMarketplace] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tout');
   const [showSellModal, setShowSellModal] = useState(false);
@@ -29,23 +32,35 @@ export default function Marketplace() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
-    const adsList = ads.map(ad => {
-      let postedAt = '';
-      if (ad.createdAt?.toDate) {
-        postedAt = ad.createdAt.toDate().toISOString().split('T')[0];
-      } else if (typeof ad.createdAt === 'string') {
-        postedAt = ad.createdAt.split('T')[0];
-      } else {
-        postedAt = new Date().toISOString().split('T')[0];
-      }
-      
-      return {
-        ...ad,
-        postedAt
-      };
+    const q = query(
+      collection(db, 'marketplace'),
+      orderBy('createdAt', 'desc'),
+      limit(marketplaceLimit)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const adsList = snapshot.docs.map(docSnapshot => {
+        const ad = { id: docSnapshot.id, ...docSnapshot.data() } as any;
+        let postedAt = '';
+        if (ad.createdAt?.toDate) {
+          postedAt = ad.createdAt.toDate().toISOString().split('T')[0];
+        } else if (typeof ad.createdAt === 'string') {
+          postedAt = ad.createdAt.split('T')[0];
+        } else {
+          postedAt = new Date().toISOString().split('T')[0];
+        }
+        return {
+          ...ad,
+          postedAt
+        };
+      });
+      setItems(adsList);
+      setHasMoreMarketplace(snapshot.docs.length >= marketplaceLimit);
+    }, (error) => {
+      console.error("[Marketplace] Firestore live update error: ", error);
     });
-    setItems(adsList);
-  }, [ads]);
+
+    return () => unsubscribe();
+  }, [marketplaceLimit]);
 
   // Form states
   const [sellTitle, setSellTitle] = useState('');
@@ -410,6 +425,17 @@ export default function Marketplace() {
               </div>
             ))}
           </div>
+
+          {filteredItems.length > 0 && hasMoreMarketplace && (
+            <div className="flex justify-center pt-8 pb-4">
+              <button
+                onClick={() => setMarketplaceLimit(prev => prev + 15)}
+                className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-6 py-3 rounded-2xl font-medium text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] flex items-center gap-2"
+              >
+                Afficher plus d'articles en vente 🛒
+              </button>
+            </div>
+          )}
 
           {filteredItems.length === 0 && (
             <div className="text-center py-24 bg-white/50 backdrop-blur-sm rounded-[2rem] border border-dashed border-slate-200/60">

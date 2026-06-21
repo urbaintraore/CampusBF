@@ -114,10 +114,16 @@ service cloud.firestore {
       // allow read to anyone so profiles load for visitors and unauthenticated sessions
       allow get: if true;
       allow list: if true;
-      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow create: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().role != 'admin' || 
+        request.auth.token.email in ['urbain.traoreurb@gmail.com', 'urbain.traore@yahoo.fr', 'traoreurb@gmail.com', 'urbain.traore@gmail.com']
+      );
       allow update: if isOwner(userId) && (
         // Action: Profile Update (Immutable role/status for user)
-        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'recentDownloads', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups', 'forceUnlocked', 'forceUnlockReason', 'phone', 'city', 'neighborhood', 'ine', 'skills', 'notificationPreferences', 'bio', 'experiences'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'avatarUrl', 'major', 'university', 'level', 'promotion', 'lastActiveAt', 'activityStats', 'rankingScore', 'lastDownloadAt', 'recentDownloads', 'hasPostedPresentation', 'dailyQuests', 'streak', 'contributionCount', 'joinedGroups', 'forceUnlocked', 'forceUnlockReason', 'phone', 'city', 'neighborhood', 'ine', 'skills', 'notificationPreferences', 'bio', 'experiences']) &&
+        (!incoming().keys().contains('role') || incoming().role == existing().role) &&
+        (!incoming().keys().contains('status') || incoming().status == existing().status) &&
+        (!incoming().keys().contains('motoRideStatus') || incoming().motoRideStatus == existing().motoRideStatus)
       ) || isAdmin();
       allow delete: if isAdmin();
     }

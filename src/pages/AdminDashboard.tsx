@@ -1,4 +1,5 @@
 import { seedContestParticipants } from '@/utils/seedData';
+import { subscribeDashboardStatistics, DashboardStatistics } from '@/services/adminStatisticsService';
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -116,8 +117,23 @@ export default function AdminDashboard() {
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [totalUsersCount, setTotalUsersCount] = useState<number>(0);
   const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
+  const [realtimeStats, setRealtimeStats] = useState<DashboardStatistics | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeDashboardStatistics(
+      (stats) => {
+        setRealtimeStats(stats);
+        setTotalUsersCount(stats.usersCount);
+        setTotalDocumentsCount(stats.resourcesCount);
+      },
+      (error) => {
+        console.warn("[AdminDashboard] Error in real-time statistics stream:", error);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
   const [contentTab, setContentTab] = useState<'documents' | 'videos' | 'print_orders' | 'stages' | 'marketplace' | 'community' | 'ads' | 'teachers' | 'events' | 'lostAndFound' | 'news' | 'tutors' | 'reports' | 'motoRide' | 'payments' | 'formations' | 'contests' | 'deals' | 'colocation' | 'public_service_contests' | 'enterprise' | 'university' | 'doc_processor' | 'exam_processor'>('documents');
   const [publicServiceSubTab, setPublicServiceSubTab] = useState<'list' | 'ai_generator'>('list');
   const [dealsSubTab, setDealsSubTab] = useState<'list' | 'suggestions'>('list');
@@ -1175,17 +1191,18 @@ export default function AdminDashboard() {
       {activeTab === 'overview' && (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: 'Utilisateurs', count: totalUsersCount.toString(), icon: Users, color: 'bg-blue-50 text-blue-700' },
-              { label: 'Documents', count: totalDocumentsCount.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Ressources / Documents', count: totalDocumentsCount.toString(), icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Publications / Offres', count: (realtimeStats?.publicationsCount ?? 0).toString(), icon: Megaphone, color: 'bg-purple-50 text-purple-700' },
               { label: 'Signalements', count: reports.length.toString(), icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
               { label: 'Demandes Répétiteur', count: pendingApplications.length.toString(), icon: GraduationCap, color: 'bg-amber-50 text-amber-700' },
               { label: 'Demandes Enseignant', count: pendingTeacherApplications.length.toString(), icon: Library, color: 'bg-emerald-50 text-emerald-700' },
               { label: 'Formations en attente', count: trainings.filter(t => t.status === 'pending').length.toString(), icon: BookOpen, color: 'bg-blue-50 text-blue-700' },
               { label: 'Paiements', count: pendingSubscriptions.length.toString(), icon: CreditCard, color: 'bg-indigo-50 text-indigo-700' },
             ].map((stat) => (
-              <div key={stat.label} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+              <div key={stat.label} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 transition-all hover:scale-[1.02] hover:shadow-md">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
                   <stat.icon size={24} />
                 </div>

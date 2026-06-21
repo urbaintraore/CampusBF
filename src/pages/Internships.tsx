@@ -12,6 +12,8 @@ export default function Internships() {
   const { user, isAdmin, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
   const [internshipsList, setInternshipsList] = useState<Internship[]>([]);
   const [loading, setLoading] = useState(true);
+  const [internshipsLimit, setInternshipsLimit] = useState(15);
+  const [hasMoreInternships, setHasMoreInternships] = useState(true);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -24,21 +26,24 @@ export default function Internships() {
 
   useEffect(() => {
     const fetchInternships = async () => {
-      const cacheKey = 'local_cache_internships_directory';
+      const cacheKey = `local_cache_internships_directory_${internshipsLimit}`;
       const cached = localStorage.getItem(cacheKey);
       const cacheTime = localStorage.getItem(cacheKey + '_time');
       const now = Date.now();
 
-      // Cache for 6 hours (21600000 ms)
-      if (cached && cacheTime && now - parseInt(cacheTime) < 21600000) {
-        setInternshipsList(JSON.parse(cached));
+      // Cache for 10 minutes when paginating (600000 ms)
+      if (cached && cacheTime && now - parseInt(cacheTime) < 600000) {
+        const parsed = JSON.parse(cached);
+        setInternshipsList(parsed);
+        setHasMoreInternships(parsed.length >= internshipsLimit);
         setLoading(false);
         return;
       }
 
       try {
-        const data = await internshipService.getInternships(100);
+        const data = await internshipService.getInternships(internshipsLimit);
         setInternshipsList(data);
+        setHasMoreInternships(data.length >= internshipsLimit);
         localStorage.setItem(cacheKey, JSON.stringify(data));
         localStorage.setItem(cacheKey + '_time', now.toString());
       } catch (error) {
@@ -48,7 +53,7 @@ export default function Internships() {
       }
     };
     fetchInternships();
-  }, []);
+  }, [internshipsLimit]);
 
   // Form state for new internship
   const [newInternship, setNewInternship] = useState({
@@ -498,6 +503,16 @@ export default function Internships() {
             </div>
           </div>
         ))}
+        {filteredInternships.length > 0 && hasMoreInternships && (
+          <div className="flex justify-center pt-8 pb-4 w-full">
+            <button
+              onClick={() => setInternshipsLimit(prev => prev + 15)}
+              className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-6 py-3 rounded-2xl font-medium text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] flex items-center gap-2"
+            >
+              Afficher d'autres opportunités de stages et d'emplois 💼
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Details Modal */}

@@ -27,6 +27,8 @@ export default function Community() {
   const [postContent, setPostContent] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLimit, setPostsLimit] = useState(15);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -57,10 +59,10 @@ export default function Community() {
       q = query(
         collection(db, 'posts'),
         where('groupId', '==', viewingGroupId),
-        limit(30)
+        limit(postsLimit)
       );
     } else {
-      q = query(collection(db, 'posts'), limit(30));
+      q = query(collection(db, 'posts'), limit(postsLimit));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -77,10 +79,11 @@ export default function Community() {
       });
       
       setPosts(postsData);
+      setHasMorePosts(snapshot.docs.length >= postsLimit);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts'));
 
     return () => unsubscribe();
-  }, [viewingGroupId, joinedGroupIds.join(',')]);
+  }, [viewingGroupId, joinedGroupIds.join(','), postsLimit]);
 
   const handleCreatePost = async () => {
     if (!user) return;
@@ -669,6 +672,16 @@ export default function Community() {
               </div>
               );
             })
+          )}
+          {posts.length > 0 && hasMorePosts && (
+            <div className="flex justify-center pt-6 pb-2">
+              <button
+                onClick={() => setPostsLimit(prev => prev + 15)}
+                className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-xl font-medium text-xs transition-all shadow-sm hover:shadow active:scale-[0.98] flex items-center gap-2"
+              >
+                Afficher plus de publications anciennes 💬
+              </button>
+            </div>
           )}
         </div>
       </div>

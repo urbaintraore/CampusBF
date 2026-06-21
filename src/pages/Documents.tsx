@@ -19,7 +19,8 @@ import {
   updateDoc, 
   doc, 
   increment,
-  serverTimestamp
+  serverTimestamp,
+  limit
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadFile } from '@/services/storageService';
@@ -32,6 +33,8 @@ export default function Documents() {
   } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentsLimit, setDocumentsLimit] = useState(15);
+  const [hasMoreDocuments, setHasMoreDocuments] = useState(true);
   const [filter, setFilter] = useState('tout');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,19 +72,25 @@ export default function Documents() {
 
   useEffect(() => {
     const fetchDocs = async () => {
-      const cacheKey = 'local_cache_docs';
+      const cacheKey = `local_cache_docs_${documentsLimit}`;
       const cached = sessionStorage.getItem(cacheKey);
       const cacheTime = sessionStorage.getItem(cacheKey + '_time');
       const now = Date.now();
 
-      if (cached && cacheTime && now - parseInt(cacheTime) < 43200000) {
-        setDocuments(JSON.parse(cached));
+      if (cached && cacheTime && now - parseInt(cacheTime) < 1800000) { // cached for 30 mins to adapt to progressive paginated load
+        const parsed = JSON.parse(cached);
+        setDocuments(parsed);
+        setHasMoreDocuments(parsed.length >= documentsLimit);
         setLoading(false);
         return;
       }
 
       try {
-        const q = query(collection(db, 'documents'), orderBy('createdAt', 'desc'));
+        const q = query(
+          collection(db, 'documents'),
+          orderBy('createdAt', 'desc'),
+          limit(documentsLimit)
+        );
         const unsubscribe = onSnapshot(q, (snapshot) => {
           const docsList = snapshot.docs.map(doc => {
             const data = doc.data();
@@ -93,17 +102,22 @@ export default function Documents() {
             };
           });
           setDocuments(docsList);
+          setHasMoreDocuments(snapshot.docs.length >= documentsLimit);
           sessionStorage.setItem(cacheKey, JSON.stringify(docsList));
           sessionStorage.setItem(cacheKey + '_time', now.toString());
+          setLoading(false);
+        }, (error) => {
+          console.error("[Documents] Firestore dynamic onSnapshot failure:", error);
           setLoading(false);
         });
         return () => unsubscribe();
       } catch (error) {
+        console.error("[Documents] Fetch setup error:", error);
         setLoading(false);
       }
     };
     fetchDocs();
-  }, []);
+  }, [documentsLimit]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -1099,6 +1113,16 @@ export default function Documents() {
           </div>
         )}
       </div>
+      {filteredDocuments.length > 0 && hasMoreDocuments && (
+        <div className="flex justify-center pt-8 pb-4">
+          <button
+            onClick={() => setDocumentsLimit(prev => prev + 15)}
+            className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-6 py-3 rounded-2xl font-medium text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] flex items-center gap-2"
+          >
+            Charger et afficher plus de documents 📚
+          </button>
+        </div>
+      )}
       {showPrintModal && (
         <PrintOrderModal 
           isOpen={showPrintModal} 
