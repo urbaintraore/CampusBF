@@ -29,6 +29,7 @@ import AlumniMentorship from './pages/AlumniMentorship';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Chatbot from './components/Chatbot';
+import { AdminRoleSwitcher } from './components/AdminRoleSwitcher';
 import AuthModal from './components/AuthModal';
 import Features from './pages/Features';
 import Messages from './pages/Messages';
@@ -43,6 +44,11 @@ import Departments from './pages/Departments';
 import ParentPortal from './pages/ParentPortal';
 import CommunityVideos from './pages/CommunityVideos';
 import LockedSection from './components/LockedSection';
+import StudentRestrictedSection from './components/StudentRestrictedSection';
+import TeacherRestrictedSection from './components/TeacherRestrictedSection';
+import ParentRestrictedSection from './components/ParentRestrictedSection';
+import CompanyRestrictedSection from './components/CompanyRestrictedSection';
+import InstitutionRestrictedSection from './components/InstitutionRestrictedSection';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, isAuthenticated, isLoading } = useAuth();
@@ -82,6 +88,143 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Force profile completion for students disabled to allow free access and downloads
 
+  if (user?.role === 'student') {
+    const allowedStudentPaths = [
+      '/',
+      '/scholarships',
+      '/financing',
+      '/university-portal',
+      '/documents',
+      '/contests',
+      '/tutors',
+      '/internships',
+      '/events',
+      '/marketplace',
+      '/trainings',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/community'
+    ];
+    const isAllowed = allowedStudentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <StudentRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'teacher') {
+    const allowedTeacherPaths = [
+      '/',
+      '/scholarships',
+      '/financing',
+      '/university-portal',
+      '/enterprise-portal',
+      '/documents',
+      '/trainings',
+      '/portfolio',
+      '/mentorship',
+      '/guide',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/events'
+    ];
+    const isAllowed = allowedTeacherPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <TeacherRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'parent') {
+    const allowedParentPaths = [
+      '/',
+      '/parent-portal',
+      '/university-portal',
+      '/enterprise-portal',
+      '/financing',
+      '/events',
+      '/orientation',
+      '/teachers',
+      '/scholarships',
+      '/internships',
+      '/tutors',
+      '/mentorship',
+      '/trainings',
+      '/guide',
+      '/profile',
+      '/notifications',
+      '/messages'
+    ];
+    const isAllowed = allowedParentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <ParentRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'company') {
+    const allowedCompanyPaths = [
+      '/',
+      '/enterprise-portal',
+      '/university-portal',
+      '/internships',
+      '/teachers',
+      '/marketplace',
+      '/events',
+      '/mentorship',
+      '/portfolio',
+      '/financing',
+      '/trainings',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/guide'
+    ];
+    const isAllowed = allowedCompanyPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <CompanyRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'institution') {
+    const allowedInstitutionPaths = [
+      '/',
+      '/enterprise-portal',
+      '/university-portal',
+      '/internships',
+      '/events',
+      '/mentorship',
+      '/portfolio',
+      '/financing',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/guide'
+    ];
+    const isAllowed = allowedInstitutionPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <InstitutionRestrictedSection />
+        </Layout>
+      );
+    }
+  }
 
   return <Layout>{children}</Layout>;
 }
@@ -141,6 +284,143 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
 
   // Force profile completion ONLY for logged-in students (not guests) disabled to allow free access and downloads
 
+  if (user?.role === 'student') {
+    const allowedStudentPaths = [
+      '/',
+      '/scholarships',
+      '/financing',
+      '/university-portal',
+      '/documents',
+      '/contests',
+      '/tutors',
+      '/internships',
+      '/events',
+      '/marketplace',
+      '/trainings',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/community'
+    ];
+    const isAllowed = allowedStudentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <StudentRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'teacher') {
+    const allowedTeacherPaths = [
+      '/',
+      '/scholarships',
+      '/financing',
+      '/university-portal',
+      '/enterprise-portal',
+      '/documents',
+      '/trainings',
+      '/portfolio',
+      '/mentorship',
+      '/guide',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/events'
+    ];
+    const isAllowed = allowedTeacherPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <TeacherRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'parent') {
+    const allowedParentPaths = [
+      '/',
+      '/parent-portal',
+      '/university-portal',
+      '/enterprise-portal',
+      '/financing',
+      '/events',
+      '/orientation',
+      '/teachers',
+      '/scholarships',
+      '/internships',
+      '/tutors',
+      '/mentorship',
+      '/trainings',
+      '/guide',
+      '/profile',
+      '/notifications',
+      '/messages'
+    ];
+    const isAllowed = allowedParentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <ParentRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'company') {
+    const allowedCompanyPaths = [
+      '/',
+      '/enterprise-portal',
+      '/university-portal',
+      '/internships',
+      '/teachers',
+      '/marketplace',
+      '/events',
+      '/mentorship',
+      '/portfolio',
+      '/financing',
+      '/trainings',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/guide'
+    ];
+    const isAllowed = allowedCompanyPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <CompanyRestrictedSection />
+        </Layout>
+      );
+    }
+  }
+
+  if (user?.role === 'institution') {
+    const allowedInstitutionPaths = [
+      '/',
+      '/enterprise-portal',
+      '/university-portal',
+      '/internships',
+      '/events',
+      '/mentorship',
+      '/portfolio',
+      '/financing',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/guide'
+    ];
+    const isAllowed = allowedInstitutionPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
+    if (!isAllowed) {
+      return (
+        <Layout>
+          <InstitutionRestrictedSection />
+        </Layout>
+      );
+    }
+  }
 
   return <Layout>{children}</Layout>;
 }
@@ -336,6 +616,7 @@ export default function App() {
           } />
         </Routes>
         <Chatbot />
+        <AdminRoleSwitcher />
         <AuthModal />
         <SonnerToaster position="top-right" richColors closeButton />
       </ThemeProvider>

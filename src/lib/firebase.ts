@@ -12,11 +12,9 @@ auth.languageCode = 'fr';
 setPersistence(auth, browserLocalPersistence).catch(e => console.error("Persistence setup failed", e));
 let localCacheOption: any = undefined;
 try {
-  // Always try single-tab persistent manager with forced ownership first.
-  // This is the ideal and recommended configuration for sandboxed iframe environments (like the AI Studio Preview),
-  // as it avoids "Failed to obtain primary lease" errors and locks contention.
-  localCacheOption = persistentLocalCache({ tabManager: persistentSingleTabManager({ forceOwnership: true }) });
-  console.log("[Firebase init] Persistent cache initialized with forced single-tab lease.");
+  // Use standard multi-tab management so new tabs can access the shared persistent cache
+  localCacheOption = persistentLocalCache({ tabManager: persistentMultipleTabManager() });
+  console.log("[Firebase init] Persistent cache initialized for multi-tab support.");
 } catch (e1) {
   console.warn("[Firebase init] Forced single-tab persistence setup failed, trying standard multi-tab management...", e1);
   try {

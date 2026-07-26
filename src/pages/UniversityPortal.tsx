@@ -19,9 +19,12 @@ export default function UniversityPortal() {
   
   const [activePortalTab, setActivePortalTab] = useState<'dashboard' | 'departments'>('dashboard');
 
-  const universityEvents = events.filter(e => e.organizerId === user?.id);
-  const universityOffers = internships.filter(i => i.authorId === user?.id);
-  const registeredStudents = users.filter((u: any) => u.university === user?.institutionProfile?.type); // Assuming matching name or logic
+  const isInstitution = user?.role !== 'student' && user?.role !== 'parent';
+  const universityEvents = isInstitution ? events.filter(e => e.organizerId === user?.id) : events;
+  const universityOffers = isInstitution ? internships.filter(i => i.authorId === user?.id) : internships;
+  const registeredStudents = isInstitution 
+    ? users.filter((u: any) => u.university === user?.institutionProfile?.type) 
+    : users.filter((u: any) => u.role === 'student');
 
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -266,8 +269,14 @@ export default function UniversityPortal() {
             <School size={32} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Portail Institution</h1>
-            <p className="text-slate-500">Gérez votre présence et interagissez avec vos étudiants</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {isInstitution ? 'Portail Institution' : 'Portail Universitaire'}
+            </h1>
+            <p className="text-slate-500">
+              {isInstitution 
+                ? 'Gérez votre présence et interagissez avec vos étudiants' 
+                : 'Découvrez les universités du Burkina Faso, leurs événements et bourses d\'études'}
+            </p>
           </div>
         </div>
         <div className="flex gap-4 border-l border-slate-200 pl-6 ml-6">
@@ -297,22 +306,24 @@ export default function UniversityPortal() {
         </div>
       ) : (
       <>
-        <div className="flex gap-4 mb-6">
-          <button 
-            onClick={handlePostOffer}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors shadow-sm font-medium"
-          >
-            <Briefcase size={18} />
-            <span className="text-sm">Créer une offre</span>
-          </button>
-          <button 
-            onClick={handlePostEvent}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors shadow-sm font-medium"
-          >
-            <Calendar size={18} />
-            <span className="text-sm">Créer un événement</span>
-          </button>
-        </div>
+        {isInstitution && (
+          <div className="flex gap-4 mb-6">
+            <button 
+              onClick={handlePostOffer}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors shadow-sm font-medium"
+            >
+              <Briefcase size={18} />
+              <span className="text-sm">Créer une offre</span>
+            </button>
+            <button 
+              onClick={handlePostEvent}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors shadow-sm font-medium"
+            >
+              <Calendar size={18} />
+              <span className="text-sm">Créer un événement</span>
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4">
@@ -394,7 +405,7 @@ export default function UniversityPortal() {
           <div className="p-6 border-b border-slate-200/60 flex justify-between items-center">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-indigo-600" />
-              Vos événements récents
+              {isInstitution ? 'Vos événements récents' : 'Événements Universitaires récents'}
             </h2>
           </div>
           <div className="p-6">
@@ -411,7 +422,11 @@ export default function UniversityPortal() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-slate-500 text-sm">Organisez des journées portes ouvertes, des séminaires, etc.</p>
+                <p className="text-slate-500 text-sm">
+                  {isInstitution 
+                    ? 'Organisez des journées portes ouvertes, des séminaires, etc.' 
+                    : 'Aucun événement universitaire programmé pour le moment.'}
+                </p>
               </div>
             )}
           </div>
@@ -421,7 +436,7 @@ export default function UniversityPortal() {
           <div className="p-6 border-b border-slate-200/60 flex justify-between items-center">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-emerald-600" />
-              Vos offres (Stages, Bourses...)
+              {isInstitution ? 'Vos offres (Stages, Bourses...)' : 'Opportunités, Bourses & Stages'}
             </h2>
           </div>
           <div className="p-6">
@@ -438,7 +453,7 @@ export default function UniversityPortal() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-slate-500 text-sm">Aucune offre publiée pour le moment.</p>
+                <p className="text-slate-500 text-sm">Aucune opportunité ou bourse publiée pour le moment.</p>
               </div>
             )}
           </div>

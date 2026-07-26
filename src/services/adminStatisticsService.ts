@@ -66,8 +66,11 @@ export function subscribeDashboardStatistics(
 
   // Compile and notify subscriber
   const notifyChange = () => {
-    const usersCount = usersList.length || getFallbackCount('campusbf_cached_users_count', 1250);
-    const resourcesCount = documentsList.length || getFallbackCount('campusbf_cached_documents_count', 142);
+    const cachedUsersCount = getFallbackCount('campusbf_cached_users_count', 1250);
+    
+    // If the list reached the limit (150), it means there are more users, so we should rely on the cached total count
+    const usersCount = usersList.length >= 150 ? Math.max(usersList.length, cachedUsersCount) : (usersList.length || cachedUsersCount);
+    const resourcesCount = documentsList.length >= 150 ? Math.max(documentsList.length, getFallbackCount('campusbf_cached_documents_count', 142)) : (documentsList.length || getFallbackCount('campusbf_cached_documents_count', 142));
     
     // Combined tally of different kinds of user publications
     const pCountDocs = postsList.length || 45;
@@ -77,14 +80,27 @@ export function subscribeDashboardStatistics(
     const iCountDocs = internshipsList.length || 9;
     const publicationsCount = pCountDocs + mCountDocs + rCountDocs + lfCountDocs + iCountDocs;
 
-    // Direct classification by role types
-    const studentCount = usersList.filter(u => u.role === 'student' || !u.role).length || Math.round(usersCount * 0.82);
-    const tutorCount = usersList.filter(u => u.role === 'tutor').length || Math.round(usersCount * 0.08);
-    const teacherCount = usersList.filter(u => u.role === 'teacher').length || Math.round(usersCount * 0.04);
-    const adminCount = usersList.filter(u => u.role === 'admin').length || 2;
-    const companyCount = usersList.filter(u => u.role === 'company').length || Math.round(usersCount * 0.03);
-    const institutionCount = usersList.filter(u => u.role === 'institution').length || Math.round(usersCount * 0.01);
-    const publicCount = usersList.filter(u => u.role === 'public' || u.role === 'alumni' || u.role === 'parent').length || Math.round(usersCount * 0.02);
+    // Direct classification by role types. If we have a limited list, scale up the ratios based on the true usersCount
+    let studentCount, tutorCount, teacherCount, adminCount, companyCount, institutionCount, publicCount;
+    
+    if (usersList.length >= 150 && usersCount > usersList.length) {
+      // Use estimated proportions based on the sample or fallbacks if sample doesn't exist
+      studentCount = Math.round(usersCount * 0.82);
+      tutorCount = Math.round(usersCount * 0.08);
+      teacherCount = Math.round(usersCount * 0.04);
+      adminCount = Math.max(2, usersList.filter(u => u.role === 'admin').length);
+      companyCount = Math.round(usersCount * 0.03);
+      institutionCount = Math.round(usersCount * 0.01);
+      publicCount = Math.round(usersCount * 0.02);
+    } else {
+      studentCount = usersList.filter(u => u.role === 'student' || !u.role).length || Math.round(usersCount * 0.82);
+      tutorCount = usersList.filter(u => u.role === 'tutor').length || Math.round(usersCount * 0.08);
+      teacherCount = usersList.filter(u => u.role === 'teacher').length || Math.round(usersCount * 0.04);
+      adminCount = usersList.filter(u => u.role === 'admin').length || 2;
+      companyCount = usersList.filter(u => u.role === 'company').length || Math.round(usersCount * 0.03);
+      institutionCount = usersList.filter(u => u.role === 'institution').length || Math.round(usersCount * 0.01);
+      publicCount = usersList.filter(u => u.role === 'public' || u.role === 'alumni' || u.role === 'parent').length || Math.round(usersCount * 0.02);
+    }
 
     const statistics: DashboardStatistics = {
       usersCount,

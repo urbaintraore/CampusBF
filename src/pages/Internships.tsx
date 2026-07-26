@@ -106,9 +106,14 @@ export default function Internships() {
     // Sort
     if (sortBy === 'date') {
       result.sort((a, b) => {
-        const dateA = a.postedAt?.toDate ? a.postedAt.toDate() : new Date(a.postedAt || 0);
-        const dateB = b.postedAt?.toDate ? b.postedAt.toDate() : new Date(b.postedAt || 0);
-        return dateB.getTime() - dateA.getTime();
+        const getDate = (item: any) => {
+           if (item.createdAt?.toDate) return item.createdAt.toDate();
+           if (item.postedAt?.toDate) return item.postedAt.toDate();
+           if (item.createdAt) return new Date(item.createdAt);
+           if (item.postedAt) return new Date(item.postedAt);
+           return new Date(0);
+        };
+        return getDate(b).getTime() - getDate(a).getTime();
       });
     } else if (sortBy === 'relevance') {
       // Simple relevance: title matches query better
@@ -143,6 +148,10 @@ export default function Internships() {
   const handlePostInternship = () => {
     if (!user) {
       alert('Veuillez vous connecter pour publier une offre (Stage, Emploi ou Bourse).');
+      return;
+    }
+    if (!isAdmin) {
+      alert('La publication des offres (Stages, Emplois, Bourses) est réservée exclusivement aux administrateurs de la plateforme.');
       return;
     }
     setEditingId(null);
@@ -215,6 +224,10 @@ export default function Internships() {
   const handleSubmitInternship = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!isAdmin) {
+      alert('Seuls les administrateurs sont autorisés à publier ou modifier des offres.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -238,6 +251,10 @@ export default function Internships() {
   };
 
   const handleDeleteInternship = async (id: string) => {
+    if (!isAdmin) {
+      alert('Seuls les administrateurs sont autorisés à supprimer des offres.');
+      return;
+    }
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette offre ?')) {
       try {
         await deleteInternship(id);
@@ -271,13 +288,15 @@ export default function Internships() {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stages & Emplois & Bourses</h1>
           <p className="text-slate-500 mt-1">Lancez votre carrière professionnelle dès maintenant.</p>
         </div>
-        <button 
-          onClick={handlePostInternship}
-          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
-        >
-          <Plus size={18} />
-          Publier une offre
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={handlePostInternship}
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
+          >
+            <Plus size={18} />
+            Publier une offre
+          </button>
+        )}
       </div>
 
       {/* Search and Filters */}

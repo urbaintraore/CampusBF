@@ -917,3 +917,33 @@ export interface VideoReport {
   createdAt: any;
 }
 
+export interface StudentTutorRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentAvatar?: string;
+  subject: string;
+  level: string;
+  description: string;
+  budget: number; // in CFA/h
+  phone: string;
+  location: string; // e.g. "Ouagadougou, Patte d'oie"
+  createdAt: any;
+  status: 'pending' | 'matched' | 'closed';
+  proposalsCount?: number;
+}
+
+export interface TutorResponse {
+  id: string;
+  requestId: string;
+  studentId: string;
+  tutorId: string;
+  tutorName: string;
+  tutorAvatar?: string;
+  tutorPhone?: string;
+  tutorHourlyRate?: number;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: any;
+}
+

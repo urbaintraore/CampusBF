@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Users, GraduationCap, Compass, BookOpen, MessageCircle, MapPin, ArrowRight, Library } from 'lucide-react';
+import { User, Users, GraduationCap, Compass, BookOpen, MessageCircle, MapPin, ArrowRight, Library, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function ParentPortal() {
@@ -90,15 +90,15 @@ export default function ParentPortal() {
                </div>
              </div>
              
-             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-4">
-               <div className="mt-1 p-2 bg-blue-100 text-blue-600 rounded-lg">
-                 <BookOpen size={20} />
+             <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-4">
+               <div className="mt-1 p-2 bg-amber-100 text-amber-600 rounded-lg">
+                 <Sparkles size={20} />
                </div>
                <div>
-                  <h4 className="font-bold text-blue-900 mb-1">Banque de Sujets</h4>
-                  <p className="text-sm text-blue-700/80 mb-3">Aidez votre enfant à réviser avec notre bibliothèque de documents.</p>
-                  <Link to="/documents" className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                    Voir les documents <ArrowRight size={14}/>
+                  <h4 className="font-bold text-amber-900 mb-1">Bourses & Opportunités IA</h4>
+                  <p className="text-sm text-amber-700/80 mb-3">Découvrez les offres de bourses d'excellence pour financer les études de votre enfant.</p>
+                  <Link to="/scholarships" className="text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1">
+                    Voir les bourses <ArrowRight size={14}/>
                   </Link>
                </div>
              </div>

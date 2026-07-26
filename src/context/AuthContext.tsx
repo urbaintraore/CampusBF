@@ -278,6 +278,10 @@ interface AuthContextType {
 
   authModalCallback: (() => void) | null;
   setAuthModalCallback: (callback: (() => void) | null) => void;
+  
+  isRealAdmin: boolean;
+  impersonatedRole: User['role'] | null;
+  setImpersonatedRole: (role: User['role'] | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -411,6 +415,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalCallback, setAuthModalCallback] = useState<(() => void) | null>(null);
 
+  const [impersonatedRole, setImpersonatedRoleState] = useState<User['role'] | null>(() => {
+    return localStorage.getItem('impersonated_role') as User['role'] | null;
+  });
+
+  const setImpersonatedRole = (role: User['role'] | null) => {
+    if (role) {
+      localStorage.setItem('impersonated_role', role);
+    } else {
+      localStorage.removeItem('impersonated_role');
+    }
+    setImpersonatedRoleState(role);
+    toast.success(role ? `Rôle changé à : ${role}` : "Rôle d'administrateur restauré");
+  };
+
   const openAuthModal = (callback?: () => void) => {
     if (callback) {
       setAuthModalCallback(() => callback);
@@ -462,47 +480,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
-  const isAdmin = React.useMemo(() => {
-    // 1. Check direct Firebase Auth email (most reliable)
+  const isRealAdmin = React.useMemo(() => {
     const firebaseUserEmail = auth.currentUser?.email?.toLowerCase().trim() || firebaseEmail?.toLowerCase().trim();
-    
-    // 2. Check profile email
     const profileEmail = user?.email?.toLowerCase().trim();
-    
-    // 3. Check hardcoded developer email fallback
     const developerEmail = 'urbain.traoreurb@gmail.com';
 
     if (firebaseUserEmail === developerEmail || profileEmail === developerEmail) {
-      console.log("Admin identified via direct developer email match");
       return true;
     }
 
     const isSpecialAdmin = isAdminEmail(firebaseUserEmail) || isAdminEmail(profileEmail);
-    const result = user?.role === 'admin' || isSpecialAdmin;
-    
-    console.log("isAdmin Memo Evaluation:", { 
-      result, 
-      userRole: user?.role, 
-      isSpecialAdmin,
-      firebaseUserEmail,
-      profileEmail
-    });
-    
-    return result;
-  }, [user, firebaseEmail, auth.currentUser?.email]);
+    const isMockAdmin = localStorage.getItem('offline_admin_mock') === 'true' && 
+                        (localStorage.getItem('offline_user_email') || '').toLowerCase().includes('admin');
+
+    const storedSession = localStorage.getItem('saved_user_session');
+    let hasSavedAdminRole = false;
+    if (storedSession) {
+      try {
+        const parsed = JSON.parse(storedSession);
+        if (parsed.email && isAdminEmail(parsed.email)) {
+          hasSavedAdminRole = true;
+        }
+      } catch (e) {}
+    }
+
+    return isSpecialAdmin || isMockAdmin || hasSavedAdminRole || (user && !impersonatedRole && user.role === 'admin');
+  }, [user, firebaseEmail, auth.currentUser?.email, impersonatedRole]);
+
+  const activeUser = React.useMemo(() => {
+    if (!user) return null;
+    if (isRealAdmin && impersonatedRole) {
+      return {
+        ...user,
+        role: impersonatedRole
+      };
+    }
+    return user;
+  }, [user, impersonatedRole, isRealAdmin]);
+
+  const activeIsAdmin = React.useMemo(() => {
+    if (isRealAdmin && impersonatedRole) {
+      return impersonatedRole === 'admin';
+    }
+    const firebaseUserEmail = auth.currentUser?.email?.toLowerCase().trim() || firebaseEmail?.toLowerCase().trim();
+    const profileEmail = user?.email?.toLowerCase().trim();
+    const developerEmail = 'urbain.traoreurb@gmail.com';
+
+    if (firebaseUserEmail === developerEmail || profileEmail === developerEmail) {
+      return true;
+    }
+
+    const isSpecialAdmin = isAdminEmail(firebaseUserEmail) || isAdminEmail(profileEmail);
+    return user?.role === 'admin' || isSpecialAdmin;
+  }, [user, firebaseEmail, auth.currentUser?.email, impersonatedRole, isRealAdmin]);
 
   const isDocumentLocked = React.useCallback((doc: any, mode: 'view' | 'download' = 'view') => {
     // Admins bypass all restrictions
-    if (isAdmin) return false;
-    if (!user) return { locked: true, reason: 'Vous devez être connecté.' };
+    if (activeIsAdmin) return false;
+    if (!activeUser) return { locked: true, reason: 'Vous devez être connecté.' };
     
     // Emergency bypass
-    if (user?.forceUnlocked) return false;
+    if (activeUser?.forceUnlocked) return false;
 
     // 1. 24h limit restriction: maximum 3 downloads per 24 hours
     if (mode === 'download') {
       const now = new Date();
-      const lastDownloads: string[] = Array.isArray(user.recentDownloads) ? user.recentDownloads : [];
+      const lastDownloads: string[] = Array.isArray(activeUser.recentDownloads) ? activeUser.recentDownloads : [];
       
       const recentDownloads = lastDownloads.filter(timestamp => {
         try {
@@ -530,7 +573,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     return false;
-  }, [user, isAdmin]);
+  }, [activeUser, activeIsAdmin]);
 
   const syncProfile = async (userId: string, userData: Partial<User>) => {
     try {
@@ -1198,8 +1241,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         unsubscribes.push(userUnsubscribe);
         
-        // Ensure user is in the community group (except for students who must join manually)
-        if (firebaseUser.uid && initialUserData && initialUserData.role !== 'student') {
+        // Ensure user is in the community group (all roles, including students, to avoid lockout from presentation post requirement)
+        if (firebaseUser.uid && initialUserData) {
           communityService.ensureUserInCommunityGroup(firebaseUser.uid).catch(err => {
             console.warn("[Auth State Group Registry Warning]:", err);
           });
@@ -1572,7 +1615,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, (error) => console.error("onSnapshot Colocations Error:", error)));
 
     // Admin only lists
-    if (isAdmin) {
+    if (activeIsAdmin) {
       const qApps = query(collection(db, 'applications'), limit(20));
       unsubscribes.push(onSnapshot(qApps, (snapshot) => {
         setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TutorApplication)));
@@ -1645,7 +1688,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [user?.id, isAdmin]);
+  }, [user?.id, activeIsAdmin]);
 
   const ensureUserInCommunityGroup = async (userId: string) => {
     await communityService.ensureUserInCommunityGroup(userId);
@@ -2188,6 +2231,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteInternship = async (id: string) => {
+    if (!activeIsAdmin) {
+      throw new Error('Désolé, seuls les administrateurs peuvent supprimer des offres.');
+    }
     await internshipService.deleteInternship(id);
   };
 
@@ -2230,10 +2276,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateInternship = async (id: string, data: Partial<Internship>) => {
+    if (!activeIsAdmin) {
+      throw new Error('Désolé, seuls les administrateurs peuvent modifier des offres.');
+    }
     await internshipService.updateInternship(id, data);
   };
 
   const addInternship = async (data: Omit<Internship, 'id' | 'createdAt'>) => {
+    if (!activeIsAdmin) {
+      throw new Error('Désolé, seuls les administrateurs peuvent ajouter des offres.');
+    }
     await internshipService.addInternship(data);
     await triggerNotification('internship', {
       title: data.title,
@@ -2675,8 +2727,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
-      isAdmin,
+      user: activeUser, 
+      isAdmin: activeIsAdmin,
+      isRealAdmin,
+      impersonatedRole,
+      setImpersonatedRole,
       users,
       tutors,
       teachers,
@@ -2804,7 +2859,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isDocumentLocked,
       incrementActivity,
       addTeacherReview,
-      isAuthenticated: !!user, 
+      isAuthenticated: !!activeUser, 
       isLoading,
       isOfflineMode,
       connectionHealth,

@@ -45,7 +45,41 @@ export default function Community() {
   const commentFileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const joinedGroupIds = user ? groups.filter(g => g.members.includes(user.id)).map(g => g.id) : [];
+  const joinedGroupIds = user ? groups.filter(g => g.members && Array.isArray(g.members) && g.members.includes(user.id)).map(g => g.id) : [];
+
+  // Auto-join user to the main 'Communauté' group if they are logged in but not in it
+  useEffect(() => {
+    if (!user || groups.length === 0) return;
+    
+    // Find the general 'Communauté' group
+    const communityGroup = groups.find(g => 
+      g.name === 'Communauté' || 
+      g.name?.toLowerCase().includes('communauté') ||
+      g.id === 'general' ||
+      g.id === 'community'
+    );
+    
+    if (communityGroup) {
+      const isMember = communityGroup.members && Array.isArray(communityGroup.members) && communityGroup.members.includes(user.id);
+      if (!isMember) {
+        console.log("[Community] Auto-joining user to main Communauté group:", user.id);
+        const joinMain = async () => {
+          try {
+            await updateDoc(doc(db, 'groups', communityGroup.id), {
+              members: arrayUnion(user.id)
+            });
+            await updateDoc(doc(db, 'users', user.id), {
+              joinedGroups: arrayUnion(communityGroup.id)
+            });
+            console.log("[Community] Auto-joined main group successfully");
+          } catch (err) {
+            console.warn("[Community] Auto-join main group failed:", err);
+          }
+        };
+        joinMain();
+      }
+    }
+  }, [user?.id, groups]);
 
   useEffect(() => {
     if (joinedGroupIds.length > 0 && !selectedGroupId) {
@@ -93,7 +127,12 @@ export default function Community() {
       return;
     }
 
-    if (!selectedGroupId) {
+    let targetGroupId = selectedGroupId;
+    if (!targetGroupId && joinedGroupIds.length > 0) {
+      targetGroupId = joinedGroupIds[0];
+    }
+
+    if (!targetGroupId) {
       alert('Veuillez sélectionner un groupe pour publier.');
       return;
     }
@@ -112,7 +151,7 @@ export default function Community() {
       }
 
       const newPost: any = {
-        groupId: selectedGroupId,
+        groupId: targetGroupId,
         authorId: user.id,
         author: {
           id: user.id,
@@ -926,7 +965,7 @@ export default function Community() {
                     {users
                       .filter(u => {
                         const group = groups.find(g => g.id === showMembersModal);
-                        const isAlreadyMember = group?.members.includes(u.id);
+                        const isAlreadyMember = group?.members && Array.isArray(group.members) && group.members.includes(u.id);
                         const matchesSearch = (u.firstName + ' ' + u.lastName + ' ' + u.email).toLowerCase().includes(userSearchTerm.toLowerCase());
                         return !isAlreadyMember && matchesSearch;
                       })
@@ -957,7 +996,7 @@ export default function Community() {
             <div className="overflow-y-auto pr-2 space-y-4 flex-1">
               {users.filter(u => {
                 const group = groups.find(g => g.id === showMembersModal);
-                return group?.members.includes(u.id);
+                return group?.members && Array.isArray(group.members) && group.members.includes(u.id);
               }).map((member) => (
                 <div key={member.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
                   <img src={member.avatarUrl} alt={member.firstName} className="w-10 h-10 rounded-full bg-gray-100" />

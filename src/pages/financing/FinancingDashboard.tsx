@@ -13,19 +13,65 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
 
 export default function FinancingDashboard() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logActivity } = useAuth();
   const navigate = useNavigate();
   // Safe hook execution. If authenticated, it returns profile; if not, it does not crash.
   const { profile, loading, error, uploadDocument, removeDocument, refresh } = useFinancingProfile(user);
   
   // Local states
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'scholarships' | 'applications' | 'admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'scholarships' | 'applications' | 'admin' | 'donations'>('dashboard');
   const [applications, setApplications] = useState<AidApplication[]>([]);
   const [adminApplications, setAdminApplications] = useState<AidApplication[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Donation Form States
+  const [donationType, setDonationType] = useState<'espece' | 'nature'>('espece');
+  const [donationAmount, setDonationAmount] = useState<string>('25000');
+  const [donationCustomAmount, setDonationCustomAmount] = useState<string>('');
+  const [donationDestination, setDonationDestination] = useState<string>('Fonds Général de Soutien');
+  const [donationMaterialType, setDonationMaterialType] = useState<string>('Ordinateur / Matériel Informatique');
+  const [donationMaterialState, setDonationMaterialState] = useState<string>('Excellent état');
+  const [donationDescription, setDonationDescription] = useState<string>('');
+  const [donationMessage, setDonationMessage] = useState<string>('');
+
+  const handleDonationWhatsAppRedirect = () => {
+    const adminPhone = "22670000000"; // Code pays 226 (Burkina Faso) + numéro
+    let detailMsg = '';
+    if (donationType === 'espece') {
+      const amt = donationAmount === 'custom' ? donationCustomAmount : donationAmount;
+      detailMsg = `*Type de don :* Don en Espèce\n*Montant :* ${amt ? formatFCFA(Number(amt)) : 'À définir'}\n*Destination des fonds :* ${donationDestination}`;
+    } else {
+      detailMsg = `*Type de don :* Don en Nature\n*Type de matériel :* ${donationMaterialType}\n*État :* ${donationMaterialState}\n*Description :* ${donationDescription}`;
+    }
+
+    const msg = `Bonjour l'administrateur de CampusBF 🇧🇫,\n\n` +
+      `Je souhaite effectuer un don pour soutenir la vie étudiante et la réussite académique au Burkina Faso !\n\n` +
+      `${detailMsg}\n\n` +
+      (donationMessage ? `*Message de soutien :* "${donationMessage}"\n\n` : '') +
+      `*Donateur :* ${user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Donateur Anonyme'} (${user?.role === 'teacher' ? 'Enseignant' : 'Partenaire'})\n` +
+      `*Email :* ${user?.email || 'Non spécifié'}\n\n` +
+      `Merci de m'indiquer la démarche pour concrétiser cette action !`;
+
+    const encoded = encodeURIComponent(msg);
+    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encoded}`;
+    
+    if (user && logActivity) {
+      logActivity({
+        action: `Initiation de don ${donationType}`,
+        module: 'Financement',
+        details: `Redirection WhatsApp pour don en ${donationType}`,
+        severity: 'info'
+      }).catch(err => console.error(err));
+    }
+
+    toast.success("Redirection vers le WhatsApp de l'administrateur...");
+    setTimeout(() => {
+      window.open(whatsappUrl, '_blank');
+    }, 1000);
+  };
 
   // Mentor / Admin Scholarships States
   const [localScholarships, setLocalScholarships] = useState<InstitutionalScholarship[]>([]);
@@ -357,7 +403,7 @@ export default function FinancingDashboard() {
             <span>Actualiser</span>
           </button>
           
-          {user && (
+          {user && user.role !== 'teacher' && user.role !== 'parent' && user.role !== 'company' && user.role !== 'institution' && (
             <button 
               id="request-aid-header-btn"
               onClick={() => setShowApplyModal(true)}
@@ -365,6 +411,17 @@ export default function FinancingDashboard() {
             >
               <Plus className="w-4.5 h-4.5" />
               <span>Demande d'aide</span>
+            </button>
+          )}
+
+          {user && (user.role === 'teacher' || user.role === 'parent' || user.role === 'company' || user.role === 'institution') && (
+            <button 
+              id="make-donation-header-btn"
+              onClick={() => setActiveTab('donations')}
+              className="flex items-center space-x-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-rose-600/30 transition border border-rose-400/20 cursor-pointer animate-fade-in"
+            >
+              <Sparkles className="w-4.5 h-4.5" />
+              <span>Faire un Don</span>
             </button>
           )}
         </div>
@@ -388,33 +445,49 @@ export default function FinancingDashboard() {
             </div>
           </button>
 
-
           <button
-            id="tab-applications-trigger"
-            onClick={() => {
-              if (!user) {
-                toast.error("Veuillez vous connecter pour voir vos demandes d'aides.");
-                navigate('/login');
-              } else {
-                setActiveTab('applications');
-              }
-            }}
+            id="tab-donations-trigger"
+            onClick={() => setActiveTab('donations')}
             className={`pb-4 text-sm font-semibold relative transition cursor-pointer ${
-              activeTab === 'applications' 
+              activeTab === 'donations' 
                 ? 'text-indigo-600 border-b-2 border-indigo-600' 
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4" />
-              <span>Mes Demandes d'Aide</span>
-              {user && applications.length > 0 && (
-                <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold ml-1.5">
-                  {applications.length}
-                </span>
-              )}
+              <Sparkles className="w-4 h-4 text-rose-500 animate-pulse" />
+              <span>Faire un Don 💝</span>
             </div>
           </button>
+
+          {user && user.role !== 'teacher' && user.role !== 'parent' && user.role !== 'company' && user.role !== 'institution' && (
+            <button
+              id="tab-applications-trigger"
+              onClick={() => {
+                if (!user) {
+                  toast.error("Veuillez vous connecter pour voir vos demandes d'aides.");
+                  navigate('/login');
+                } else {
+                  setActiveTab('applications');
+                }
+              }}
+              className={`pb-4 text-sm font-semibold relative transition cursor-pointer ${
+                activeTab === 'applications' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>Mes Demandes d'Aide</span>
+                {user && applications.length > 0 && (
+                  <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold ml-1.5">
+                    {applications.length}
+                  </span>
+                )}
+              </div>
+            </button>
+          )}
 
           {user && (user.role === 'admin' || isAdmin) && (
             <button
@@ -478,6 +551,95 @@ export default function FinancingDashboard() {
                   >
                     Créer un compte
                   </button>
+                </div>
+              </div>
+            ) : (user.role === 'teacher' || user.role === 'parent' || user.role === 'company' || user.role === 'institution') ? (
+              // Teacher, Parent, Company & Institution Dashboard View (Donors)
+              <div className="lg:col-span-3 space-y-8" id="teacher-dashboard-view">
+                {/* Stats cards for teacher/parent/donor */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex items-start space-x-4">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                      <GraduationCap className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">Étudiants Burkinabè</h4>
+                      <p className="text-2xl font-extrabold text-slate-900 mt-1 font-mono">1 500+</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Accompagnés cette année</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex items-start space-x-4">
+                    <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">Dons en Nature</h4>
+                      <p className="text-2xl font-extrabold text-slate-900 mt-1 font-mono">124</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Ordinateurs, livres & vélos</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex items-start space-x-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">Bourses d'Excellence</h4>
+                      <p className="text-2xl font-extrabold text-slate-900 mt-1 font-mono">45 000 000 FCFA</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Financés par nos partenaires</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Main Call to Action for donation */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm space-y-6">
+                  <div className="max-w-3xl">
+                    <h3 className="text-xl font-extrabold text-slate-800">💝 Devenez un acteur majeur du changement universitaire</h3>
+                    <p className="text-slate-500 text-sm mt-2 leading-relaxed font-sans">
+                      En tant qu'enseignant, parent ou donateur sur CampusBF, vous pouvez transformer la vie académique des étudiants burkinabè. Faites un don en espèce pour parrainer une scolarité, ou offrez du matériel (livres, ordinateurs, vélos) pour aider concrètement les étudiants en situation de besoin.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div className="border border-slate-100 bg-slate-50/30 rounded-xl p-6 flex flex-col justify-between space-y-4">
+                      <div>
+                        <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl w-fit mb-3">
+                          <CreditCard className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-base font-bold text-slate-800">Dons en Espèce</h4>
+                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed font-sans">
+                          Soutenez l'achat de kits alimentaires, le financement des abonnements de transport (motos/bus) ou le règlement des frais de scolarité des étudiants nécessiteux.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('donations')}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-indigo-600/10 cursor-pointer text-center"
+                      >
+                        Faire un don en Espèce
+                      </button>
+                    </div>
+
+                    <div className="border border-slate-100 bg-slate-50/30 rounded-xl p-6 flex flex-col justify-between space-y-4">
+                      <div>
+                        <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl w-fit mb-3">
+                          <UploadCloud className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-base font-bold text-slate-800">Dons en Nature</h4>
+                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed font-sans">
+                          Offrez des manuels scolaires officiels, du matériel informatique d'occasion ou neuf (PC portables), des vélos ou motos, ou proposez des solutions de logement étudiant.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('donations')}
+                        className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-rose-600/10 cursor-pointer text-center"
+                      >
+                        Faire un don en Nature
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -815,6 +977,244 @@ export default function FinancingDashboard() {
           </motion.div>
         )}
 
+        {/* DONATIONS TAB */}
+        {activeTab === 'donations' && (
+          <motion.div
+            key="donations-view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-8"
+            id="donations-tab-view"
+          >
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm space-y-8">
+              <div className="border-b border-slate-100 pb-5">
+                <h3 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-rose-500 animate-pulse" />
+                  <span>Soutenir l'Excellence & la Solidarité Étudiante</span>
+                </h3>
+                <p className="text-xs md:text-sm text-slate-500 mt-1 leading-relaxed">
+                  Remplissez ce court formulaire pour déclarer votre don. Vous serez redirigé vers le WhatsApp de l'administrateur de CampusBF pour finaliser la transaction ou la remise du matériel.
+                </p>
+              </div>
+
+              {/* Toggle Donation Type */}
+              <div className="grid grid-cols-2 gap-4 max-w-md bg-slate-50 p-1.5 rounded-2xl border border-slate-200/50">
+                <button
+                  type="button"
+                  onClick={() => setDonationType('espece')}
+                  className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    donationType === 'espece'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Don en Espèce 💰
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDonationType('nature')}
+                  className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    donationType === 'nature'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Don en Nature 📦
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-2">
+                {/* Donation Form inputs */}
+                <div className="space-y-6">
+                  {donationType === 'espece' ? (
+                    <>
+                      {/* Espèce inputs */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700">Montant du Don (FCFA)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {['10000', '25000', '50000', '100000'].map((val) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => {
+                                setDonationAmount(val);
+                                setDonationCustomAmount('');
+                              }}
+                              className={`py-3 text-xs font-bold rounded-xl border font-mono transition cursor-pointer ${
+                                donationAmount === val
+                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                                  : 'border-slate-200 bg-white hover:border-indigo-300 text-slate-700'
+                              }`}
+                            >
+                              {formatFCFA(Number(val))}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setDonationAmount('custom')}
+                            className={`w-full py-2.5 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                              donationAmount === 'custom'
+                                ? 'bg-indigo-600 border-indigo-600 text-white'
+                                : 'border-slate-200 bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            Autre montant personnalisé
+                          </button>
+                        </div>
+
+                        {donationAmount === 'custom' && (
+                          <div className="relative pt-2 animate-fade-in">
+                            <input
+                              type="number"
+                              required
+                              placeholder="Ex: 150000"
+                              value={donationCustomAmount}
+                              onChange={(e) => setDonationCustomAmount(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-16 py-3 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500 transition font-mono"
+                            />
+                            <span className="absolute right-3 top-5 text-[10px] font-bold text-slate-500">FCFA</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700">Fonds ou Attribution Ciblé</label>
+                        <select
+                          value={donationDestination}
+                          onChange={(e) => setDonationDestination(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                        >
+                          <option value="Fonds Général de Soutien">Fonds Général de Soutien (Urgence & Social)</option>
+                          <option value="Bourses d'Excellence STIM">Bourses d'Excellence STIM (Sciences & Technologies)</option>
+                          <option value="Aide Alimentaire & Logement">Aide Alimentaire & Logement étudiant (Foyer)</option>
+                          <option value="Transports & Mobilité (MotoRide)">Transports & Mobilité (Aide carburant / MotoRide)</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Nature inputs */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700">Type de Matériel ou Service proposé</label>
+                        <select
+                          value={donationMaterialType}
+                          onChange={(e) => setDonationMaterialType(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                        >
+                          <option value="Ordinateur / Matériel Informatique">Ordinateur / Matériel Informatique (PC, Tablette...)</option>
+                          <option value="Livres / Manuels de cours">Livres / Manuels d'études & Syllabus officiels</option>
+                          <option value="Moyen de transport (Vélo/Moto)">Moyen de transport (Vélo, Moto, Casque...)</option>
+                          <option value="Vêtements / Effets personnels">Vêtements, sacs à dos ou fournitures académiques</option>
+                          <option value="Logement / Chambre d'étudiant">Proposition de Colocation / Chambre à loyer modéré</option>
+                          <option value="Autre">Autre don matériel ou service de soutien</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700">État du Matériel</label>
+                        <select
+                          value={donationMaterialState}
+                          onChange={(e) => setDonationMaterialState(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                        >
+                          <option value="Neuf">Neuf (sous emballage original)</option>
+                          <option value="Excellent état">Excellent état (très peu utilisé)</option>
+                          <option value="Bon état (fonctionnel)">Bon état (parfaitement propre et fonctionnel)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700">Description détaillée du don</label>
+                        <textarea
+                          required
+                          rows={3}
+                          placeholder="Ex: PC portable HP Elitebook, 8 Go RAM, disque dur 256 Go SSD avec chargeur, parfaitement fonctionnel pour un étudiant en informatique..."
+                          value={donationDescription}
+                          onChange={(e) => setDonationDescription(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none transition leading-normal font-sans"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700">Message de soutien à l'étudiant (Optionnel)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Un mot d'encouragement ou une consigne particulière de parrainage..."
+                      value={donationMessage}
+                      onChange={(e) => setDonationMessage(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none transition leading-normal font-sans"
+                    />
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="button"
+                      onClick={handleDonationWhatsAppRedirect}
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-4 px-6 rounded-2xl shadow-lg shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-3"
+                    >
+                      <span>Confirmer et Contacter l'administrateur via WhatsApp 💬</span>
+                    </button>
+                    <p className="text-[10px] text-slate-400 mt-2 text-center font-sans">
+                      En cliquant sur ce bouton, votre proposition sera mise en forme et vous serez redirigé vers le compte officiel WhatsApp de l'administration de CampusBF.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right side banner panel describing why to donate */}
+                <div className="bg-slate-900 text-white rounded-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden border border-slate-800">
+                  <div className="absolute right-0 bottom-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-emerald-500/20 text-emerald-300 font-bold text-xs px-3 py-1 rounded-full w-fit">
+                      Impact de vos dons au Burkina Faso 🇧🇫
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="bg-white/10 p-1.5 rounded-lg text-emerald-400 flex-shrink-0 mt-0.5">
+                          <Check className="w-4 h-4" />
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          <strong>Accès équitable :</strong> 100% de vos dons matériels sont attribués directement aux étudiants burkinabè en situation de précarité vérifiée par notre commission administrative.
+                        </p>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <div className="bg-white/10 p-1.5 rounded-lg text-emerald-400 flex-shrink-0 mt-0.5">
+                          <Check className="w-4 h-4" />
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          <strong>Transparence totale :</strong> L'administration de CampusBF vous transmettra un reçu formel et vous mettra en relation (si désiré) avec l'étudiant bénéficiaire de votre parrainage académique.
+                        </p>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <div className="bg-white/10 p-1.5 rounded-lg text-emerald-400 flex-shrink-0 mt-0.5">
+                          <Check className="w-4 h-4" />
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          <strong>Mobilité accrue :</strong> Les dons de vélos et de motos permettent aux étudiants habitant en dehors des cités universitaires d'accéder quotidiennement aux amphithéâtres.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-8 border-t border-slate-800 mt-6 text-center lg:text-left">
+                    <p className="text-[11px] text-slate-400 uppercase tracking-wider font-bold">Besoin d'assistance par appel ?</p>
+                    <p className="text-sm font-extrabold text-white mt-1 font-mono">+226 70 00 00 00</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
 
         {/* DEMANDS LIST TAB */}

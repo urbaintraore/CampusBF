@@ -19,8 +19,9 @@ const rolePermissions: Record<AcademicRole | string, Permission[]> = {
   chef_departement: ['manage_filieres', 'manage_classes', 'manage_students', 'view_university_portal', 'create_event', 'create_document', 'post_message', 'manage_timetables'],
   responsable_filiere: ['manage_classes', 'view_university_portal', 'create_document', 'post_message', 'manage_timetables'],
   responsable_classe: ['post_message', 'manage_timetables'],
-  teacher: ['create_document', 'post_message'],
-  student: [],
+  teacher: ['create_document', 'post_message', 'view_university_portal'],
+  student: ['view_university_portal'],
+  parent: ['view_university_portal'],
   admin: ['manage_departments', 'manage_filieres', 'manage_classes', 'manage_students', 'view_university_portal', 'view_admin_portal', 'create_event', 'create_document', 'post_message', 'manage_timetables'], // mapping legacy generic admin
   institution: ['manage_departments', 'manage_filieres', 'manage_classes', 'manage_students', 'view_university_portal', 'create_event', 'create_document', 'post_message', 'manage_timetables'] // legacy generic institution
 };

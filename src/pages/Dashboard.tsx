@@ -446,15 +446,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {user?.role === 'parent' ? (
           [
-            { label: 'Concours FP', count: publicServiceContests?.length.toString() || '0', link: '/public-service-contests' },
-            { 
-              label: 'Vidéos Communautaires', 
-              count: 'Nouveau', 
-              link: '/videos-communautaires' 
-            },
+            { label: 'Bourses d\'études', count: 'Nouveau', link: '/scholarships' },
             { label: 'Répétiteurs & Prof de maison', count: tutors.length.toString(), link: '/tutors' },
             { label: 'Enseignants', count: teachers.length.toString(), link: '/teachers' },
             { label: 'Événements', count: globalEvents?.length.toString() || '0', link: '/events' },
+            { label: 'Orientation', count: 'Guides', link: '/orientation' },
+            { label: 'Stages & Emplois', count: internships.length.toString(), link: '/internships' },
           ].map((stat) => (
             <Link key={stat.label} to={stat.link} className="p-4 bg-white hover:bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm hover:border-emerald-500 hover:shadow-md transition-all active:scale-95 group">
               <span className="text-2xl font-display font-black text-slate-900 group-hover:text-emerald-600 transition-colors mb-1">{stat.count}</span>
@@ -463,30 +460,33 @@ export default function Dashboard() {
           ))
         ) : (
           [
-            { label: 'Documentation', count: totalDocumentsCount.toString(), link: '/documents' },
+            { label: 'Documentation', count: totalDocumentsCount.toString(), link: '/documents', roles: ['student', 'admin', 'teacher'] },
             { 
               label: 'Concours FP', 
               count: publicServiceContests?.length.toString() || '0', 
               link: '/public-service-contests',
-              roles: ['admin', 'teacher', 'alumni', 'parent', 'student', 'public']
+              roles: ['admin', 'teacher', 'alumni', 'public']
             },
             {
               label: 'Bourses & Opportunités IA', 
               count: 'Nouveau', 
-              link: '/scholarships' 
+              link: '/scholarships',
+              roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'company', 'institution', 'public']
             },
             { label: 'Offres Stages', 
               count: internships.length.toString(), 
-              link: '/internships' 
+              link: '/internships',
+              roles: ['student', 'admin', 'company', 'institution', 'public', 'parent']
             },
             {
               label: 'Vidéos Communautaires', 
               count: 'Populaire', 
-              link: '/videos-communautaires' 
+              link: '/videos-communautaires',
+              roles: ['admin', 'alumni']
             },
-            { label: 'Événements', count: globalEvents?.length.toString() || '0', link: '/events' },
-            { label: 'Tuteurs', count: tutors.length.toString(), link: '/tutors' },
-            { label: 'Formations', count: '12', link: '/trainings' },
+            { label: 'Événements', count: globalEvents?.length.toString() || '0', link: '/events', roles: ['student', 'admin', 'alumni', 'parent', 'company', 'institution', 'public', 'teacher'] },
+            { label: 'Tuteurs', count: tutors.length.toString(), link: '/tutors', roles: ['student', 'admin', 'parent', 'public'] },
+            { label: 'Formations', count: '12', link: '/trainings', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'company', 'institution', 'public'] },
           ].filter(stat => !stat.roles || stat.roles.includes(user?.role || '')).map((stat: any) => (
             <Link key={stat.label} to={stat.link} className="p-4 bg-white hover:bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm hover:border-emerald-500 hover:shadow-md transition-all active:scale-95 group">
               <span className="text-2xl font-display font-black text-slate-900 group-hover:text-emerald-600 transition-colors mb-1">{stat.count}</span>
@@ -592,7 +592,7 @@ export default function Dashboard() {
       )}
 
       {/* Find Classmates Call to Action */}
-      {(user?.role === 'student' || user?.role === 'teacher') && (
+      {user?.role === 'teacher' && (
         <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
@@ -631,13 +631,15 @@ export default function Dashboard() {
               Génère des quiz de révision sur mesure, obtiens des résumés de documents instantanés et pose toutes tes questions académiques à notre IA CampusBF.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
-              <button 
-                onClick={() => navigate('/quizzes')}
-                className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 hover:shadow-md transition-all flex items-center gap-2 active:scale-95 text-xs"
-              >
-                <Brain size={16} />
-                Révisions & Quiz
-              </button>
+              {user?.role !== 'student' && (
+                <button 
+                  onClick={() => navigate('/quizzes')}
+                  className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 hover:shadow-md transition-all flex items-center gap-2 active:scale-95 text-xs"
+                >
+                  <Brain size={16} />
+                  Révisions & Quiz
+                </button>
+              )}
               <button 
                 onClick={() => {
                   const chatbotTrigger = document.querySelector('.chatbot-trigger') as HTMLButtonElement;
@@ -663,52 +665,56 @@ export default function Dashboard() {
        </section>
 
       {/* Public Service Contests Promo */}
-      <section className="bg-white border border-slate-200/60 rounded-[2rem] p-8 md:p-10 text-slate-850 shadow-sm overflow-hidden relative group">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-slate-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100 group-hover:rotate-6 transition-transform">
-              <Trophy size={32} />
+      {user?.role !== 'student' && user?.role !== 'parent' && (
+        <section className="bg-white border border-slate-200/60 rounded-[2rem] p-8 md:p-10 text-slate-850 shadow-sm overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-slate-50 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100 group-hover:rotate-6 transition-transform">
+                <Trophy size={32} />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-display font-bold text-slate-900 tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
+                <p className="text-slate-500 mt-2 max-w-md text-sm md:text-base leading-relaxed">
+                  Prépare-toi aux concours de l'État avec nos QCM officiels et simulations d'examens.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl md:text-2xl font-display font-bold text-slate-900 tracking-tight">Concours de la Fonction Publique 🇧🇫</h2>
-              <p className="text-slate-500 mt-2 max-w-md text-sm md:text-base leading-relaxed">
-                Prépare-toi aux concours de l'État avec nos QCM officiels et simulations d'examens.
-              </p>
-            </div>
+            <button 
+              onClick={() => navigate('/public-service-contests')}
+              className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-sm"
+            >
+              S'entraîner maintenant
+            </button>
           </div>
-          <button 
-            onClick={() => navigate('/public-service-contests')}
-            className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-sm"
-          >
-            S'entraîner maintenant
-          </button>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* University Ranking Highlight */}
-      <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
-              <Trophy size={32} />
+      {user?.role !== 'student' && user?.role !== 'parent' && (
+        <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm overflow-hidden relative group">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Trophy size={32} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-display font-bold text-slate-900">Classement des Universités</h2>
+                <p className="text-slate-500 mt-1 max-w-md">
+                  Découvrez quelles institutions dominent le classement CampusBF ce mois-ci par leur activité.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-display font-bold text-slate-900">Classement des Universités</h2>
-              <p className="text-slate-500 mt-1 max-w-md">
-                Découvrez quelles institutions dominent le classement CampusBF ce mois-ci par leur activité.
-              </p>
-            </div>
+            <button 
+              onClick={() => navigate('/ranking?tab=universities')}
+              className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+            >
+              <School size={20} className="text-emerald-400" />
+              Voir le classement complet
+            </button>
           </div>
-          <button 
-            onClick={() => navigate('/ranking?tab=universities')}
-            className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center gap-2"
-          >
-            <School size={20} className="text-emerald-400" />
-            Voir le classement complet
-          </button>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Main Feed Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -828,90 +834,94 @@ export default function Dashboard() {
           </section>
           
           {/* Recent Documents - MOVED DOWN */}
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-display font-bold text-slate-900">Documents Récents</h2>
-              <Link to="/documents" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
-            </div>
-            <div className="space-y-4">
-              {documents.slice(0, 3).map((doc) => (
-                <div 
-                  key={doc.id} 
-                  onClick={() => handleDocClick(doc)}
-                  className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-start gap-5 group cursor-pointer"
-                >
-                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0 ring-1 ring-emerald-200/50 group-hover:scale-105 transition-transform relative">
-                    <span className="font-bold text-sm uppercase tracking-wider">{doc.type.slice(0, 3)}</span>
-                    {(() => {
-                      const lock = isDocumentLocked(doc);
-                      const isLocked = lock && (typeof lock === 'object' ? lock.locked : lock);
-                      if (!isLocked || isAdmin) return null;
-                      return (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm border-2 border-white">
-                          <Lock size={10} />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                       <h3 className="font-semibold text-slate-900 truncate text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
-                       {doc.isForSale && (
-                          <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded uppercase">Payant</span>
-                       )}
+          {user?.role !== 'parent' && user?.role !== 'company' && user?.role !== 'institution' && (
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-display font-bold text-slate-900">Documents Récents</h2>
+                <Link to="/documents" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
+              </div>
+              <div className="space-y-4">
+                {documents.slice(0, 3).map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    onClick={() => handleDocClick(doc)}
+                    className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-start gap-5 group cursor-pointer"
+                  >
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0 ring-1 ring-emerald-200/50 group-hover:scale-105 transition-transform relative">
+                      <span className="font-bold text-sm uppercase tracking-wider">{doc.type.slice(0, 3)}</span>
+                      {(() => {
+                        const lock = isDocumentLocked(doc);
+                        const isLocked = lock && (typeof lock === 'object' ? lock.locked : lock);
+                        if (!isLocked || isAdmin) return null;
+                        return (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                            <Lock size={10} />
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <p className="text-sm text-slate-500 mt-1 font-medium">{doc.subject} • {doc.year}</p>
-                    <div className="flex items-center gap-3 mt-3 text-xs text-slate-400 font-medium">
-                      <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-600">{doc.university}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <FileText size={12} /> {doc.downloads} téléchargements
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                         <h3 className="font-semibold text-slate-900 truncate text-lg group-hover:text-emerald-700 transition-colors">{doc.title}</h3>
+                         {doc.isForSale && (
+                            <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded uppercase">Payant</span>
+                         )}
+                      </div>
+                      <p className="text-sm text-slate-500 mt-1 font-medium">{doc.subject} • {doc.year}</p>
+                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-400 font-medium">
+                        <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-600">{doc.university}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <FileText size={12} /> {doc.downloads} téléchargements
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              {documents.length === 0 && (
-                <p className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
-                  Aucun document disponible pour le moment.
-                </p>
-              )}
-            </div>
-          </section>
+                ))}
+                {documents.length === 0 && (
+                  <p className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
+                    Aucun document disponible pour le moment.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Challenges & Concours */}
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Trophy size={20} className="text-slate-700" />
-                <h2 className="text-xl font-display font-bold text-slate-900">Challenges & Concours</h2>
+          {user?.role !== 'parent' && user?.role !== 'company' && user?.role !== 'institution' && (
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <Trophy size={20} className="text-slate-700" />
+                  <h2 className="text-xl font-display font-bold text-slate-900">Challenges & Concours</h2>
+                </div>
+                <Link to="/public-service-contests" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
               </div>
-              <Link to="/public-service-contests" className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 hover:underline transition-colors">Voir tout</Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {publicServiceContests.slice(0, 4).map((contest) => (
-                <div 
-                  key={contest.id}
-                  onClick={() => navigate('/public-service-contests')}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-center gap-4 cursor-pointer group"
-                >
-                  <div className="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <Target size={24} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {publicServiceContests.slice(0, 4).map((contest) => (
+                  <div 
+                    key={contest.id}
+                    onClick={() => navigate('/public-service-contests')}
+                    className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-center gap-4 cursor-pointer group"
+                  >
+                    <div className="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <Target size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-slate-900 text-sm truncate uppercase tracking-tight">{contest.title}</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{contest.category} • {contest.questionsCount || 0} questions</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-slate-900 text-sm truncate uppercase tracking-tight">{contest.title}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{contest.category} • {contest.questionsCount || 0} questions</p>
+                ))}
+                {publicServiceContests.length === 0 && (
+                  <div className="md:col-span-2 text-center py-8 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
+                    <Trophy className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
+                    <p className="text-sm">Bientôt de nouveaux challenges</p>
                   </div>
-                </div>
-              ))}
-              {publicServiceContests.length === 0 && (
-                <div className="md:col-span-2 text-center py-8 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
-                  <Trophy className="mx-auto text-slate-300 mb-2 opacity-50" size={24} />
-                  <p className="text-sm">Bientôt de nouveaux challenges</p>
-                </div>
-              )}
-            </div>
-          </section>
+                )}
+              </div>
+            </section>
+          )}
 
         </div>
 
