@@ -265,6 +265,12 @@ service cloud.firestore {
     match /training_enrollments/{id} { allow read: if true; allow create: if isSignedIn(); }
     match /training_reviews/{id} { allow read: if true; allow create: if isSignedIn(); }
     match /training_reports/{id} { allow create: if isSignedIn(); allow read: if isAdmin(); }
+    match /missions/{id} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin() || isOwner(resource.data.entreprise_id);
+    }
     match /public_service_contests/{id} { 
       allow read: if true; 
       allow create: if true; // Temporarily allow all creations for iframe users

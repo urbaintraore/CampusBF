@@ -10,6 +10,7 @@ export default function InstitutionRestrictedSection() {
     { icon: Building2, name: 'Portail Université', desc: 'Gérez votre présence académique et vos départements.', to: '/university-portal' },
     { icon: Briefcase, name: 'Portail Entreprise', desc: 'Collaborez avec le réseau d\'entreprises burkinabè.', to: '/enterprise-portal' },
     { icon: Briefcase, name: 'Stages & Emplois', desc: 'Publiez et suivez vos bourses et offres.', to: '/internships' },
+    { icon: Briefcase, name: 'Missions Freelance', desc: 'Publiez et suivez les missions freelance.', to: '/missions' },
     { icon: Calendar, name: 'Événements', desc: 'Organisez des salons, conférences ou JPO.', to: '/events' },
     { icon: Users, name: 'Mentorat', desc: 'Participez à l\'accompagnement de vos diplômés.', to: '/mentorship' },
     { icon: User, name: 'Portfolio', desc: 'Présentez vos réalisations et votre corps professoral.', to: '/portfolio' },

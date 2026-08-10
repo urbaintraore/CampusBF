@@ -10,6 +10,7 @@ export default function CompanyRestrictedSection() {
     { icon: Briefcase, name: 'Portail Entreprise', desc: 'Gérez vos offres et recrutez des talents.', to: '/enterprise-portal' },
     { icon: Building2, name: 'Portail Université', desc: 'Collaborez avec les universités du Burkina.', to: '/university-portal' },
     { icon: Briefcase, name: 'Stages & Emplois', desc: 'Publiez et suivez vos opportunités.', to: '/internships' },
+    { icon: Briefcase, name: 'Missions Freelance', desc: 'Publiez et gérez vos missions freelance.', to: '/missions' },
     { icon: Library, name: 'Portails Enseignants', desc: 'Consultez l\'annuaire des enseignants.', to: '/teachers' },
     { icon: ShoppingBag, name: 'Marketplace', desc: 'Achetez et vendez du matériel scolaire.', to: '/marketplace' },
     { icon: Calendar, name: 'Événements', desc: 'Participez aux événements académiques et pro.', to: '/events' },

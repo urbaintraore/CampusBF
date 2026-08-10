@@ -43,6 +43,7 @@ import UniversityPortal from './pages/UniversityPortal';
 import Departments from './pages/Departments';
 import ParentPortal from './pages/ParentPortal';
 import CommunityVideos from './pages/CommunityVideos';
+import Missions from './pages/Missions';
 import LockedSection from './components/LockedSection';
 import StudentRestrictedSection from './components/StudentRestrictedSection';
 import TeacherRestrictedSection from './components/TeacherRestrictedSection';
@@ -98,6 +99,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/contests',
       '/tutors',
       '/internships',
+      '/missions',
       '/events',
       '/marketplace',
       '/trainings',
@@ -179,6 +181,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/enterprise-portal',
       '/university-portal',
       '/internships',
+      '/missions',
       '/teachers',
       '/marketplace',
       '/events',
@@ -207,6 +210,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/enterprise-portal',
       '/university-portal',
       '/internships',
+      '/missions',
       '/events',
       '/mentorship',
       '/portfolio',
@@ -294,6 +298,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/contests',
       '/tutors',
       '/internships',
+      '/missions',
       '/events',
       '/marketplace',
       '/trainings',
@@ -375,6 +380,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/enterprise-portal',
       '/university-portal',
       '/internships',
+      '/missions',
       '/teachers',
       '/marketplace',
       '/events',
@@ -403,6 +409,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/enterprise-portal',
       '/university-portal',
       '/internships',
+      '/missions',
       '/events',
       '/mentorship',
       '/portfolio',
@@ -502,6 +509,11 @@ export default function App() {
           <Route path="/internships" element={
             <GuestRoute>
               <Internships />
+            </GuestRoute>
+          } />
+          <Route path="/missions" element={
+            <GuestRoute>
+              <Missions />
             </GuestRoute>
           } />
           <Route path="/scholarships" element={

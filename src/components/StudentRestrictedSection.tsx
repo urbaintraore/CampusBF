@@ -14,6 +14,7 @@ export default function StudentRestrictedSection() {
     { icon: Trophy, name: 'Challenge et Concours', desc: 'Participe à des concours stimulants.', to: '/contests' },
     { icon: Users, name: 'Répétiteurs', desc: 'Demande un répétiteur et reçois des notifications.', to: '/tutors' },
     { icon: Briefcase, name: 'Stages-Emplois-Bourses', desc: 'Trouve un stage ou un emploi au Burkina.', to: '/internships' },
+    { icon: Briefcase, name: 'Missions Freelance', desc: 'Trouvez ou publiez des missions ponctuelles.', to: '/missions' },
     { icon: Calendar, name: 'Événements', desc: 'Reste informé des événements culturels et académiques.', to: '/events' },
     { icon: ShoppingBag, name: 'Marketplace', desc: 'Achète et vends tes livres ou fournitures.', to: '/marketplace' },
     { icon: BookOpen, name: 'Formations', desc: 'Booste tes compétences professionnelles.', to: '/trainings' },

@@ -130,6 +130,11 @@ export interface User {
     averageRating: number;
     trainingsOrganized: number;
   };
+  missionsStats?: {
+    completed: number;
+    averageRating: number;
+    totalRatings: number;
+  };
   vehicleDetails?: {
     type: 'moto' | 'car';
     plateNumber: string;
@@ -945,5 +950,41 @@ export interface TutorResponse {
   message: string;
   status: 'pending' | 'accepted' | 'declined';
   createdAt: any;
+}
+
+export type MissionCategorie = 'redaction' | 'design' | 'saisie' | 'dev' | 'traduction' | 'autre';
+
+export type MissionStatut = 'publiee' | 'en_candidature' | 'attribuee' | 'en_cours' | 'livree' | 'validee' | 'annulee';
+
+export interface MissionCandidature {
+  etudiant_id: string;
+  etudiant_nom?: string;
+  etudiant_email?: string;
+  etudiant_telephone?: string;
+  etudiant_avatar?: string;
+  etudiant_major?: string;
+  message_motivation: string;
+  date_candidature: string | any;
+  statut: 'en_attente' | 'acceptee' | 'refusee';
+}
+
+export interface Mission {
+  id: string;
+  entreprise_id: string;
+  entreprise_nom?: string;
+  entreprise_email?: string;
+  titre: string;
+  description_brief: string;
+  categorie: MissionCategorie;
+  budget: number; // in CFA
+  delai: string; // e.g. "10 jours" or date string
+  livrable_attendu: string;
+  statut: MissionStatut;
+  date_creation: any;
+  candidatures?: MissionCandidature[];
+  attributaire_id?: string;
+  attributaire_nom?: string;
+  note_attribuee?: number;
+  commentaire_evaluation?: string;
 }
 

@@ -56,6 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'public'] },
     { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['admin', 'company', 'institution', 'parent'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'institution', 'public', 'parent'] },
+    { icon: Briefcase, label: 'Missions Freelance', to: '/missions', roles: ['student', 'admin', 'company', 'institution', 'public', 'parent'] },
     { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'alumni', 'company', 'public'] },
     { icon: Users, label: 'Communauté', to: '/community', roles: ['admin', 'alumni', 'student'] },
     { icon: Bike, label: 'MotoRide', to: '/motoride', roles: ['admin', 'alumni'] },

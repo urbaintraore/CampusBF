@@ -103,6 +103,19 @@ export default function EnterprisePortal() {
 
       </div>
 
+      <div className="bg-gradient-to-r from-teal-700 to-emerald-800 text-white p-6 rounded-3xl shadow-md flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Besoin de missions freelance ponctuelles ?</h2>
+          <p className="text-emerald-100 text-sm mt-1">Publiez des missions de rédaction, design, dev ou saisie pour nos étudiants talentueux.</p>
+        </div>
+        <a 
+          href="/missions"
+          className="px-5 py-3 bg-white text-emerald-800 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-colors shadow-sm whitespace-nowrap"
+        >
+          Gérer les missions freelance 🚀
+        </a>
+      </div>
+
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-200/60 flex justify-between items-center">
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
