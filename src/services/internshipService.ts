@@ -14,26 +14,41 @@ import {
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Internship } from '@/types';
 
+const getJobTimestamp = (item: any): number => {
+  const val = item.createdAt || item.postedAt || item.datePosted || item.publishedAt || item.date || item.timestamp;
+  if (!val) return 0;
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (typeof val === 'object' && typeof val.seconds === 'number') return val.seconds * 1000;
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const parsed = new Date(val).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
 export const internshipService = {
   async getInternships(limitCount: number = 50) {
     try {
       const q = query(collection(db, 'internships'), orderBy('createdAt', 'desc'), limit(limitCount));
       const snapshot = await getDocs(q);
-      const internships = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Internship));
+      let internships = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Internship));
       
       // Fallback if no results with ordering
       if (internships.length === 0) {
         const fallbackQ = query(collection(db, 'internships'), limit(limitCount));
         const fallbackSnapshot = await getDocs(fallbackQ);
-        return fallbackSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Internship));
+        internships = fallbackSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Internship));
       }
       
-      return internships;
+      return internships.sort((a, b) => getJobTimestamp(b) - getJobTimestamp(a));
     } catch (error: any) {
       if (error?.message?.includes('index')) {
         const fallbackQ = query(collection(db, 'internships'), limit(limitCount));
         const fallbackSnapshot = await getDocs(fallbackQ);
-        return fallbackSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Internship));
+        const list = fallbackSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Internship));
+        return list.sort((a, b) => getJobTimestamp(b) - getJobTimestamp(a));
       }
       handleFirestoreError(error, OperationType.GET, 'internships');
       throw error;

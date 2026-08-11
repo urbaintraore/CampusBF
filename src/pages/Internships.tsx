@@ -8,6 +8,34 @@ import { uploadFile } from '@/services/storageService';
 import { internshipService } from '@/services/internshipService';
 import { Internship } from '@/types';
 
+const getJobTimestamp = (item: any): number => {
+  const val = item.createdAt || item.postedAt || item.datePosted || item.publishedAt || item.date || item.timestamp;
+  if (!val) return 0;
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (typeof val === 'object' && typeof val.seconds === 'number') return val.seconds * 1000;
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const parsed = new Date(val).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+const formatJobDate = (item: any): string => {
+  const ts = getJobTimestamp(item);
+  if (!ts) return 'Récemment';
+  try {
+    return new Date(ts).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return 'Récemment';
+  }
+};
+
 export default function Internships() {
   const { user, isAdmin, addInternship, updateInternship, deleteInternship, applyInternship } = useAuth();
   const [internshipsList, setInternshipsList] = useState<Internship[]>([]);
@@ -103,27 +131,22 @@ export default function Internships() {
       result = result.filter(job => !job.deadline || job.deadline >= today);
     }
 
-    // Sort
-    if (sortBy === 'date') {
-      result.sort((a, b) => {
-        const getDate = (item: any) => {
-           if (item.createdAt?.toDate) return item.createdAt.toDate();
-           if (item.postedAt?.toDate) return item.postedAt.toDate();
-           if (item.createdAt) return new Date(item.createdAt);
-           if (item.postedAt) return new Date(item.postedAt);
-           return new Date(0);
-        };
-        return getDate(b).getTime() - getDate(a).getTime();
-      });
+    // Sort (Du plus récent au plus ancien par défaut)
+    if (sortBy === 'date' || sortBy === 'date_desc') {
+      result.sort((a, b) => getJobTimestamp(b) - getJobTimestamp(a));
+    } else if (sortBy === 'date_asc') {
+      result.sort((a, b) => getJobTimestamp(a) - getJobTimestamp(b));
     } else if (sortBy === 'relevance') {
-      // Simple relevance: title matches query better
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         result.sort((a, b) => {
           const aTitleMatch = a.title.toLowerCase().includes(query) ? 1 : 0;
           const bTitleMatch = b.title.toLowerCase().includes(query) ? 1 : 0;
-          return bTitleMatch - aTitleMatch;
+          if (bTitleMatch !== aTitleMatch) return bTitleMatch - aTitleMatch;
+          return getJobTimestamp(b) - getJobTimestamp(a);
         });
+      } else {
+        result.sort((a, b) => getJobTimestamp(b) - getJobTimestamp(a));
       }
     }
 
@@ -356,9 +379,10 @@ export default function Internships() {
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full pl-10 pr-8 py-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[160px]"
+                  className="w-full pl-10 pr-8 py-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none min-w-[180px]"
                 >
-                  <option value="date">Plus récent</option>
+                  <option value="date">Plus récent au plus ancien</option>
+                  <option value="date_asc">Plus ancien au plus récent</option>
                   <option value="relevance">Pertinence</option>
                 </select>
               </div>
@@ -458,7 +482,7 @@ export default function Internships() {
                       </span>
                       <span className="text-sm text-slate-500 flex items-center gap-1.5">
                         <Clock size={14} />
-                        {job.postedAt?.toDate ? job.postedAt.toDate().toLocaleDateString() : (job.postedAt ? new Date(job.postedAt).toLocaleDateString() : 'Date inconnue')}
+                        {formatJobDate(job)}
                       </span>
                     </div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
