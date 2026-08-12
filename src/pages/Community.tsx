@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Users, MessageSquare, Share2, Send, X, Plus, CheckCircle2, Download, Paperclip, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { WhatsAppGroupsModal } from '@/components/WhatsAppGroupsModal';
 import { 
   collection, 
   addDoc, 
@@ -32,6 +33,7 @@ export default function Community() {
   const [viewingGroupId, setViewingGroupId] = useState<string | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState<string | null>(null);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [newGroupData, setNewGroupData] = useState({ name: '', description: '', type: 'university' as const });
@@ -458,7 +460,15 @@ export default function Community() {
       <div className="lg:col-span-2 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Fil d'actualité</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={() => setShowWhatsAppModal(true)}
+              className="flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-100 transition-colors shadow-sm"
+              title="Groupes WhatsApp Promo"
+            >
+              <MessageSquare size={18} />
+              WhatsApp Promo
+            </button>
             <button 
               onClick={exportGroupToPDF}
               className="flex items-center gap-2 bg-white text-emerald-600 border border-emerald-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-emerald-50 transition-colors shadow-sm"
@@ -1026,6 +1036,12 @@ export default function Community() {
             </div>
           </div>
         </div>
+      )}
+
+      {showWhatsAppModal && (
+        <WhatsAppGroupsModal 
+          onClose={() => setShowWhatsAppModal(false)} 
+        />
       )}
     </div>
   );

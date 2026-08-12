@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useLocation } from 'react-router-dom';
-import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle, FileText, Plus, Trash2, Bell } from 'lucide-react';
+import { Mail, Phone, MapPin, BookOpen, LogOut, Edit, Save, X, GraduationCap, Calendar, CreditCard, Clock, FileUp, Shield, Star, Camera, Bike, Building2, Map, TrendingUp, CheckCircle, AlertTriangle, FileText, Plus, Trash2, Bell, QrCode, Moon, Sun, MessageSquare, Calculator, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ManualPaymentModal } from '@/components/ManualPaymentModal';
 import { uploadFile } from '@/services/storageService';
 import { CVGenerator } from '@/components/CVGenerator';
+import { WhatsAppGroupsModal } from '@/components/WhatsAppGroupsModal';
+import { StudentProfileQRCodeModal } from '@/components/StudentProfileQRCodeModal';
+import { SemesterGpaCalculator } from '@/components/SemesterGpaCalculator';
 
 export default function Profile() {
   const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction, groups } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [forceComplete, setForceComplete] = useState(false);
@@ -19,6 +24,9 @@ export default function Profile() {
   const [showTeacherForm, setShowTeacherForm] = useState(false);
   const [isEditingTeacher, setIsEditingTeacher] = useState(false);
   const [showCVGenerator, setShowCVGenerator] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showQRCodeModal, setShowQRCodeModal] = useState(false);
+  const [showGpaCalculator, setShowGpaCalculator] = useState(false);
   const [tutorDescription, setTutorDescription] = useState('');
   const [tutorSubjects, setTutorSubjects] = useState('');
   const [tutorRates, setTutorRates] = useState({
@@ -420,21 +428,109 @@ export default function Profile() {
               </div>
             </div>
           ) : (
-            <div>
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">{user.firstName} {user.lastName}</h2>
-              {user.major && user.level && (
-                <p className="text-slate-500 font-medium mt-1 text-lg">{user.major} • {user.level}</p>
-              )}
-              {user.university && (
-                <div className="flex items-center gap-2 text-sm text-slate-400 mt-2 font-medium">
-                  <MapPin size={16} />
-                  {user.university}
-                </div>
-              )}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{user.firstName} {user.lastName}</h2>
+                {user.major && user.level && (
+                  <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-lg">{user.major} • {user.level}</p>
+                )}
+                {user.university && (
+                  <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 mt-2 font-medium">
+                    <MapPin size={16} />
+                    {user.university}
+                  </div>
+                )}
+              </div>
+
+              {/* QR Code Quick Badge Button */}
+              <button 
+                onClick={() => setShowQRCodeModal(true)}
+                className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-2xl font-bold text-xs hover:bg-emerald-100 flex items-center gap-2 transition-all shrink-0 self-start sm:self-center shadow-sm active:scale-95"
+              >
+                <QrCode size={18} className="text-emerald-600" />
+                Mon Badge QR Réseautage
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* CampusBF Student Hub Features Bar */}
+      <div className="glass p-6 rounded-3xl border border-white/40 dark:border-slate-800 shadow-sm space-y-4">
+        <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base flex items-center gap-2">
+          <Sparkles className="text-emerald-600" size={20} />
+          Outils & Services Étudiants CampusBF
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {/* WhatsApp Groups Button */}
+          <button 
+            onClick={() => setShowWhatsAppModal(true)}
+            className="p-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="p-2.5 bg-emerald-600 text-white rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform">
+              <MessageSquare size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Groupes WhatsApp Promo</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Rejoins le groupe de ta filière</p>
+            </div>
+          </button>
+
+          {/* QR Code Networking Button */}
+          <button 
+            onClick={() => setShowQRCodeModal(true)}
+            className="p-4 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 rounded-2xl text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="p-2.5 bg-teal-600 text-white rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform">
+              <QrCode size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Badge QR Code</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Carte de visite réseau universitaire</p>
+            </div>
+          </button>
+
+          {/* GPA Calculator Button */}
+          <button 
+            onClick={() => setShowGpaCalculator(!showGpaCalculator)}
+            className="p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-2xl text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="p-2.5 bg-blue-600 text-white rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform">
+              <Calculator size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Calculateur de Moyenne</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Notes, crédits & mention LMD</p>
+            </div>
+          </button>
+
+          {/* Dark Mode Toggle Switch */}
+          <button 
+            onClick={toggleTheme}
+            className="p-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="p-2.5 bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-900 rounded-xl w-fit mb-3 group-hover:scale-110 transition-transform">
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                {theme === 'dark' ? 'Mode Sombre Activé' : 'Mode Sombre'}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {theme === 'dark' ? 'Basculer en Thème Clair' : 'Confort visuel nocturne'}
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Inline Semester GPA Calculator Panel */}
+      {showGpaCalculator && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+          <SemesterGpaCalculator onClose={() => setShowGpaCalculator(false)} />
+        </div>
+      )}
 
       {/* Info Grid */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -1292,6 +1388,19 @@ export default function Profile() {
         <CVGenerator 
           user={user} 
           onClose={() => setShowCVGenerator(false)} 
+        />
+      )}
+
+      {showWhatsAppModal && (
+        <WhatsAppGroupsModal 
+          onClose={() => setShowWhatsAppModal(false)} 
+        />
+      )}
+
+      {showQRCodeModal && (
+        <StudentProfileQRCodeModal 
+          user={user} 
+          onClose={() => setShowQRCodeModal(false)} 
         />
       )}
     </div>
