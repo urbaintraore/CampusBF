@@ -10,6 +10,7 @@ import { CVGenerator } from '@/components/CVGenerator';
 import { WhatsAppGroupsModal } from '@/components/WhatsAppGroupsModal';
 import { StudentProfileQRCodeModal } from '@/components/StudentProfileQRCodeModal';
 import { SemesterGpaCalculator } from '@/components/SemesterGpaCalculator';
+import { StudentProfileDashboard } from '@/components/StudentProfileDashboard';
 
 export default function Profile() {
   const { user, logout, updateUser, submitTutorApplication, submitTeacherApplication, logAction, groups } = useAuth();
@@ -532,6 +533,9 @@ export default function Profile() {
         </div>
       )}
 
+      {/* Visual Activity & Statistics Dashboard */}
+      <StudentProfileDashboard />
+
       {/* Info Grid */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="glass p-8 rounded-3xl border border-white/40 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: '100ms' }}>
@@ -931,112 +935,114 @@ export default function Profile() {
       </div>
       )}
 
-      {/* Teacher Status Section */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 flex items-center gap-2">
-            <Shield className="text-blue-600" size={20} />
-            Mon statut d'Enseignant
-          </h3>
-          <span className={cn(
-            "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
-            user.teacherStatus === 'approved' ? "bg-blue-50 text-blue-700" :
-            user.teacherStatus === 'pending_approval' ? "bg-amber-50 text-amber-700" :
-            user.teacherStatus === 'rejected' ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-500"
-          )}>
-            {user.teacherStatus === 'approved' ? 'Validé' : 
-             user.teacherStatus === 'pending_approval' ? 'En attente' :
-             user.teacherStatus === 'rejected' ? 'Refusé' : 'Non inscrit'}
-          </span>
+      {/* Teacher Status Section (Désactivé pour les étudiants) */}
+      {user.role !== 'student' && (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+              <Shield className="text-blue-600" size={20} />
+              Mon statut d'Enseignant
+            </h3>
+            <span className={cn(
+              "text-[10px] font-bold uppercase px-2 py-1 rounded-full",
+              user.teacherStatus === 'approved' ? "bg-blue-50 text-blue-700" :
+              user.teacherStatus === 'pending_approval' ? "bg-amber-50 text-amber-700" :
+              user.teacherStatus === 'rejected' ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-500"
+            )}>
+              {user.teacherStatus === 'approved' ? 'Validé' : 
+               user.teacherStatus === 'pending_approval' ? 'En attente' :
+               user.teacherStatus === 'rejected' ? 'Refusé' : 'Non inscrit'}
+            </span>
+          </div>
+
+          {user.teacherStatus === 'approved' && user.teacherProfile && (
+            <div className="space-y-4">
+              {isEditingTeacher ? (
+                <form onSubmit={handleUpdateTeacherProfile} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Biographie</label>
+                    <textarea 
+                      value={teacherFormData.biography}
+                      onChange={(e) => setTeacherFormData({ ...teacherFormData, biography: e.target.value })}
+                      className="w-full p-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 h-24 dark:text-slate-100"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Spécialités</label>
+                      <input 
+                        type="text"
+                        value={teacherFormData.specialties}
+                        onChange={(e) => setTeacherFormData({ ...teacherFormData, specialties: e.target.value })}
+                        className="w-full p-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg text-xs outline-none dark:text-slate-100"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Cours</label>
+                      <input 
+                        type="text"
+                        value={teacherFormData.courses}
+                        onChange={(e) => setTeacherFormData({ ...teacherFormData, courses: e.target.value })}
+                        className="w-full p-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg text-xs outline-none dark:text-slate-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setIsEditingTeacher(false)}
+                      className="flex-1 py-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-lg text-xs font-bold"
+                    >
+                      Annuler
+                    </button>
+                    <button 
+                      type="submit"
+                      className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold"
+                    >
+                      Enregistrer
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-100 dark:border-blue-900">
+                    <p className="text-xs font-bold text-blue-800 dark:text-blue-300 mb-2">Grade Académique : {user.teacherProfile.academicRank}</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-200 line-clamp-3">{user.teacherProfile.biography}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">Spécialités</p>
+                      <p className="text-xs font-medium text-gray-700 dark:text-slate-300">{user.teacherProfile.specialties.join(', ')}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">Cours</p>
+                      <p className="text-xs font-medium text-gray-700 dark:text-slate-300">{user.teacherProfile.courses.join(', ')}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={startEditingTeacher}
+                    className="w-full py-2 border border-blue-200 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
+                  >
+                    Modifier mon profil enseignant
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {(!user.teacherStatus || user.teacherStatus === 'none') && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500 mb-4">Vous n'êtes pas encore inscrit dans l'annuaire des enseignants.</p>
+              <button 
+                onClick={() => setShowTeacherForm(true)}
+                className="px-6 py-2 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
+              >
+                Soumettre mon dossier Enseignant
+              </button>
+            </div>
+          )}
         </div>
-
-        {user.teacherStatus === 'approved' && user.teacherProfile && (
-          <div className="space-y-4">
-            {isEditingTeacher ? (
-              <form onSubmit={handleUpdateTeacherProfile} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase">Biographie</label>
-                  <textarea 
-                    value={teacherFormData.biography}
-                    onChange={(e) => setTeacherFormData({ ...teacherFormData, biography: e.target.value })}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 h-24"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase">Spécialités</label>
-                    <input 
-                      type="text"
-                      value={teacherFormData.specialties}
-                      onChange={(e) => setTeacherFormData({ ...teacherFormData, specialties: e.target.value })}
-                      className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase">Cours</label>
-                    <input 
-                      type="text"
-                      value={teacherFormData.courses}
-                      onChange={(e) => setTeacherFormData({ ...teacherFormData, courses: e.target.value })}
-                      className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    type="button"
-                    onClick={() => setIsEditingTeacher(false)}
-                    className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold"
-                  >
-                    Annuler
-                  </button>
-                  <button 
-                    type="submit"
-                    className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold"
-                  >
-                    Enregistrer
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                  <p className="text-xs font-bold text-blue-800 mb-2">Grade Académique : {user.teacherProfile.academicRank}</p>
-                  <p className="text-sm text-blue-700 line-clamp-3">{user.teacherProfile.biography}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Spécialités</p>
-                    <p className="text-xs font-medium text-gray-700">{user.teacherProfile.specialties.join(', ')}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Cours</p>
-                    <p className="text-xs font-medium text-gray-700">{user.teacherProfile.courses.join(', ')}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={startEditingTeacher}
-                  className="w-full py-2 border border-blue-200 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
-                >
-                  Modifier mon profil enseignant
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {(!user.teacherStatus || user.teacherStatus === 'none') && (
-          <div className="text-center py-4">
-            <p className="text-sm text-gray-500 mb-4">Vous n'êtes pas encore inscrit dans l'annuaire des enseignants.</p>
-            <button 
-              onClick={() => setShowTeacherForm(true)}
-              className="px-6 py-2 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
-            >
-              Soumettre mon dossier Enseignant
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* MotoRide Status Section */}
       {user.role !== 'student' && (

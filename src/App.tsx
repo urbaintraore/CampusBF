@@ -44,6 +44,7 @@ import Departments from './pages/Departments';
 import ParentPortal from './pages/ParentPortal';
 import CommunityVideos from './pages/CommunityVideos';
 import Missions from './pages/Missions';
+import StudentAgenda from './pages/StudentAgenda';
 import LockedSection from './components/LockedSection';
 import StudentRestrictedSection from './components/StudentRestrictedSection';
 import TeacherRestrictedSection from './components/TeacherRestrictedSection';
@@ -106,7 +107,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/profile',
       '/notifications',
       '/messages',
-      '/community'
+      '/community',
+      '/agenda'
     ];
     const isAllowed = allowedStudentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
     if (!isAllowed) {
@@ -305,7 +307,8 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/profile',
       '/notifications',
       '/messages',
-      '/community'
+      '/community',
+      '/agenda'
     ];
     const isAllowed = allowedStudentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
     if (!isAllowed) {
@@ -554,6 +557,11 @@ export default function App() {
           <Route path="/notifications" element={
             <ProtectedRoute>
               <Notifications />
+            </ProtectedRoute>
+          } />
+          <Route path="/agenda" element={
+            <ProtectedRoute>
+              <StudentAgenda />
             </ProtectedRoute>
           } />
           <Route path="/profile" element={

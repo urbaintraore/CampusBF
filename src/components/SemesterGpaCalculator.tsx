@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Plus, Trash2, Save, Download, Sparkles, CheckCircle2, AlertCircle, RefreshCw, X, Award, GraduationCap, ChevronRight } from 'lucide-react';
+import { Calculator, Plus, Trash2, Save, Download, Sparkles, CheckCircle2, AlertCircle, RefreshCw, X, Award, GraduationCap, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export interface SubjectGrade {
   id: string;
@@ -96,6 +98,101 @@ export const SemesterGpaCalculator: React.FC<SemesterGpaCalculatorProps> = ({ on
     setSavedSemesters(updated);
     localStorage.setItem('campusbf_gpa_data', JSON.stringify(updated));
     alert(`Les notes du ${selectedSemester} ont été sauvegardées avec succès !`);
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+
+      // Header Banner
+      doc.setFillColor(13, 148, 136); // Emerald theme color
+      doc.rect(0, 0, 210, 32, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text("CampusBF - Relevé de Notes Semestriel", 14, 18);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text("Plateforme Universitaire du Burkina Faso | Système LMD", 14, 26);
+
+      // Student Info Box
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Étudiant(e) : ${user?.firstName || 'Étudiant'} ${user?.lastName || ''}`, 14, 42);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Université : ${user?.university || 'Université du Burkina Faso'}`, 14, 48);
+      doc.text(`Filière / Niveau : ${user?.major || 'Licence / Master'} (${user?.level || 'LMD'})`, 14, 54);
+      doc.text(`Document : Récapitulatif ${selectedSemester} | Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, 60);
+
+      // Summary Cards Table
+      const summaryRows = [
+        ["Moyenne Générale", `${average.toFixed(2)} / 20`],
+        ["Crédits Validés", `${validatedCredits} / ${totalCredits} ECTS`],
+        ["Décision du Jury", average >= 10 ? "SEMESTRE ADMIS" : "SESSION DE RATTRAPAGE"],
+        ["Mention Attribution", mention.label]
+      ];
+
+      autoTable(doc, {
+        startY: 66,
+        head: [["Indicateur LMD", "Résultat OBTENU"]],
+        body: summaryRows,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 118, 110], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 3 }
+      });
+
+      // Subjects Detailed Table
+      const tableData = subjects.map(s => {
+        const gr = typeof s.grade === 'string' ? parseFloat(s.grade) || 0 : s.grade;
+        const cr = typeof s.credits === 'string' ? parseFloat(s.credits) || 0 : s.credits;
+        const pts = gr * cr;
+        return [
+          s.name,
+          `${gr.toFixed(2)} / 20`,
+          cr.toString(),
+          pts.toFixed(2),
+          gr >= 10 || average >= 10 ? "Validé" : "Rattrapage"
+        ];
+      });
+
+      const finalY = (doc as any).lastAutoTable.finalY || 110;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Détail des Unités d'Enseignement (UE)", 14, finalY + 10);
+
+      autoTable(doc, {
+        startY: finalY + 14,
+        head: [["Matière / UE", "Note (/20)", "Crédits / Coeff", "Total Points", "Statut UE"]],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: {
+          1: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'center' },
+          4: { halign: 'center' }
+        }
+      });
+
+      // Footer Certificate Note
+      const endY = (doc as any).lastAutoTable.finalY || 200;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text("Note : Ce récapitulatif est généré automatiquement par le calculateur CampusBF à titre indicatif et d'archive personnelle.", 14, endY + 12);
+
+      doc.save(`Releve_Notes_CampusBF_${selectedSemester.replace(/\s+/g, '_')}_${user?.lastName || 'Etudiant'}.pdf`);
+    } catch (err) {
+      console.error("Erreur lors de l'exportation PDF :", err);
+      alert("Erreur lors de la création du fichier PDF.");
+    }
   };
 
   const handleResetData = () => {
@@ -310,21 +407,31 @@ export const SemesterGpaCalculator: React.FC<SemesterGpaCalculatorProps> = ({ on
       </div>
 
       {/* Action Footer */}
-      <div className="flex items-center justify-between gap-3 pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <button 
           onClick={handleResetData}
-          className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 flex items-center gap-1.5 transition-all"
+          className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-all"
         >
           <RefreshCw size={14} /> Réinitialiser
         </button>
 
-        <button 
-          onClick={handleSaveData}
-          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
-        >
-          <Save size={16} />
-          Sauvegarder mes notes ({selectedSemester})
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button 
+            onClick={handleExportPDF}
+            className="px-4 py-2.5 bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/80 flex items-center gap-2 transition-all shadow-sm active:scale-95"
+          >
+            <Download size={15} />
+            Exporter Relevé PDF
+          </button>
+
+          <button 
+            onClick={handleSaveData}
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+          >
+            <Save size={16} />
+            Sauvegarder notes ({selectedSemester})
+          </button>
+        </div>
       </div>
     </div>
   );

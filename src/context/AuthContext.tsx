@@ -2512,6 +2512,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await notificationService.markNotificationAsRead(notificationId);
   };
 
+  const deleteNotification = async (notificationId: string) => {
+    await notificationService.deleteNotification(notificationId);
+  };
+
   const addTeacherReview = async (teacherId: string, rating: number, comment: string) => {
     if (!user) return;
     await userService.addTeacherReview(user, teacherId, rating, comment);
@@ -2855,6 +2859,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       groups,
       addNotification,
       markNotificationAsRead,
+      deleteNotification,
       syncUserStats,
       isDocumentLocked,
       incrementActivity,

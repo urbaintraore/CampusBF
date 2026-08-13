@@ -42,6 +42,7 @@ export default function Documents() {
   const [selectedMajor, setSelectedMajor] = useState('Toutes les filières');
   const [selectedYear, setSelectedYear] = useState('Toutes les années');
   const [selectedSubject, setSelectedSubject] = useState('Toutes les matières');
+  const [selectedFileType, setSelectedFileType] = useState('Tous les types de fichiers');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -185,7 +186,12 @@ export default function Documents() {
     const matchesSubject = selectedSubject === 'Toutes les matières' || 
                           doc.subject?.trim().toLowerCase() === selectedSubject.toLowerCase();
 
-    return matchesFilter && matchesSearch && matchesUniversity && matchesMajor && matchesYear && matchesSubject;
+    const matchesFileType = selectedFileType === 'Tous les types de fichiers' || 
+                           (selectedFileType === 'PDF' && (doc.fileType?.toLowerCase().includes('pdf') || doc.downloadUrl?.toLowerCase().includes('.pdf') || doc.fileName?.toLowerCase().endsWith('.pdf') || !doc.fileType)) ||
+                           (selectedFileType === 'Word / DOCX' && (doc.fileType?.toLowerCase().includes('word') || doc.fileType?.toLowerCase().includes('doc') || doc.fileName?.toLowerCase().includes('.doc'))) ||
+                           (selectedFileType === 'Images' && (doc.fileType?.toLowerCase().includes('image') || (doc.fileName && /\.(jpg|jpeg|png|webp)$/i.test(doc.fileName))));
+
+    return matchesFilter && matchesSearch && matchesUniversity && matchesMajor && matchesYear && matchesSubject && matchesFileType;
   });
 
   const isPremium = user?.premiumSubscriptionStatus === 'active' || user?.examSubscriptionStatus === 'active' || isAdmin;
@@ -822,6 +828,19 @@ export default function Documents() {
                 ))}
               </select>
             </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Type de Fichier</label>
+              <select 
+                value={selectedFileType}
+                onChange={(e) => setSelectedFileType(e.target.value)}
+                className="w-full p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              >
+                <option>Tous les types de fichiers</option>
+                <option value="PDF">PDF (.pdf)</option>
+                <option value="Word / DOCX">Word / DOCX (.doc, .docx)</option>
+                <option value="Images">Images (.jpg, .png)</option>
+              </select>
+            </div>
             <div className="lg:col-span-4 flex justify-end pt-2">
               <button 
                 onClick={() => {
@@ -829,6 +848,7 @@ export default function Documents() {
                   setSelectedMajor('Toutes les filières');
                   setSelectedYear('Toutes les années');
                   setSelectedSubject('Toutes les matières');
+                  setSelectedFileType('Tous les types de fichiers');
                   setFilter('tout');
                   setSearchQuery('');
                 }}

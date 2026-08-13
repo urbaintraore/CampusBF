@@ -14,11 +14,12 @@ import { notificationService } from './notificationService';
 export const trainingService = {
   async addTraining(user: User, trainingData: Omit<Training, 'id' | 'createdAt' | 'status' | 'participants'>) {
     try {
-      const autoApproveRoles = ['admin', 'teacher', 'company', 'institution'];
-      const status = autoApproveRoles.includes(user.role) ? 'approved' : 'pending';
+      if (user.role !== 'admin') {
+        throw new Error("Seul l'administrateur est autorisé à proposer une formation.");
+      }
       await addDoc(collection(db, 'trainings'), {
         ...trainingData,
-        status,
+        status: 'approved',
         participants: [],
         createdAt: new Date().toISOString()
       });

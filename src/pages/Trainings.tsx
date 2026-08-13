@@ -69,6 +69,10 @@ export default function Trainings() {
   const handleAddTraining = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (user.role !== 'admin') {
+      alert("Seul l'administrateur est autorisé à proposer une formation.");
+      return;
+    }
     
     try {
       await addTraining({
@@ -97,12 +101,7 @@ export default function Trainings() {
         maxParticipants: 20,
         imageUrl: ''
       });
-      const autoApproveRoles = ['admin', 'teacher', 'company', 'institution'];
-      if (user && autoApproveRoles.includes(user.role)) {
-        alert("Votre formation a été publiée avec succès ! Elle est maintenant visible par toute la communauté.");
-      } else {
-        alert("Votre formation a été soumise pour validation par l'administration.");
-      }
+      alert("Votre formation a été publiée avec succès !");
     } catch (e: any) {
       alert("Une erreur est survenue: " + e.message);
     }
@@ -157,13 +156,15 @@ export default function Trainings() {
           <h1 className="text-3xl font-display font-bold text-slate-900">Formations</h1>
           <p className="text-slate-500 mt-1">Apprenez de nouvelles compétences ou partagez votre savoir.</p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95"
-        >
-          <Plus size={20} />
-          Proposer une formation
-        </button>
+        {user?.role === 'admin' && (
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95"
+          >
+            <Plus size={20} />
+            Proposer une formation
+          </button>
+        )}
       </div>
 
       {/* Tabs & Search */}
@@ -188,15 +189,17 @@ export default function Trainings() {
             >
               Mes inscriptions
             </button>
-            <button
-              onClick={() => setActiveTab('organized')}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                activeTab === 'organized' ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              )}
-            >
-              Mes formations
-            </button>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('organized')}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-sm font-bold transition-all",
+                  activeTab === 'organized' ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                Mes formations créées
+              </button>
+            )}
           </div>
 
           <div className="flex-1 relative">

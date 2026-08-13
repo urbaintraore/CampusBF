@@ -53,6 +53,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Trophy, label: 'Challenge & Concours', to: '/contests', roles: ['student', 'admin', 'alumni'] },
     { icon: Video, label: 'Vidéos Communautaires', to: '/videos-communautaires', roles: ['alumni', 'admin'] },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
+    { icon: Calendar, label: 'Agenda Étudiant', to: '/agenda', roles: ['student', 'admin', 'teacher', 'alumni', 'public'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'public'] },
     { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['admin', 'company', 'institution', 'parent'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'institution', 'public', 'parent'] },

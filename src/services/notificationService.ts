@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { Notification } from '@/types';
 
@@ -22,6 +22,15 @@ export const notificationService = {
       await updateDoc(doc(db, 'notifications', notificationId), { read: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `notifications/${notificationId}`);
+      throw error;
+    }
+  },
+
+  async deleteNotification(notificationId: string) {
+    try {
+      await deleteDoc(doc(db, 'notifications', notificationId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notifications/${notificationId}`);
       throw error;
     }
   }
