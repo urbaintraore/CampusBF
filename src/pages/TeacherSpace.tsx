@@ -12,12 +12,13 @@ import {
   collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, setDoc, onSnapshot 
 } from 'firebase/firestore';
 import { restructureAcademicDocument } from '@/services/geminiService';
+import TeacherClassDetail from '@/components/TeacherClassDetail';
 
 export default function TeacherSpace() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'profile' | 'videos' | 'courses' | 'td_tp' | 'classes' | 'tutoring' | 'calendar' | 'ai_assistant' | 'stats' | 'revenues' | 'trainings' | 'packs'
+    'dashboard' | 'profile' | 'videos' | 'classes' | 'tutoring' | 'calendar' | 'ai_assistant' | 'stats' | 'revenues' | 'trainings' | 'packs'
   >('dashboard');
 
   // Teacher Profile local state for editing
@@ -29,6 +30,7 @@ export default function TeacherSpace() {
 
   // Firestore Data State
   const [classes, setClasses] = useState<any[]>([]);
+  const [selectedClass, setSelectedClass] = useState<any | null>(null);
   const [tutoringRequests, setTutoringRequests] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -149,8 +151,6 @@ export default function TeacherSpace() {
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { id: 'profile', label: 'Mon Profil', icon: UserIcon },
     { id: 'videos', label: 'Mes Vidéos', icon: Video },
-    { id: 'courses', label: 'Mes Cours', icon: BookOpen },
-    { id: 'td_tp', label: 'Mes TD / TP', icon: FileText },
     { id: 'classes', label: 'Mes Classes', icon: GraduationCap },
     { id: 'tutoring', label: 'Tutorat & Accompagnements', icon: Users },
     { id: 'calendar', label: 'Mon Calendrier', icon: Calendar },
@@ -274,10 +274,10 @@ export default function TeacherSpace() {
                   <Sparkles size={20} className="text-purple-600" /> Générer Quiz / TD avec l'IA
                 </button>
                 <button 
-                  onClick={() => setActiveTab('courses')}
+                  onClick={() => setActiveTab('classes')}
                   className="p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all border border-indigo-200/60"
                 >
-                  <BookOpen size={20} className="text-indigo-600" /> Publier un Nouveau Cours
+                  <BookOpen size={20} className="text-indigo-600" /> Gérer mes Classes
                 </button>
               </div>
             </div>
@@ -358,44 +358,56 @@ export default function TeacherSpace() {
         )}
 
         {activeTab === 'classes' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">Mes Classes Interactives</h3>
-                <p className="text-xs text-slate-500">Créez et gérez vos groupes d'étudiants, devoirs et annonces.</p>
-              </div>
-              <button 
-                onClick={() => setShowClassModal(true)}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md"
-              >
-                <Plus size={16} /> Créer une classe
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {classes.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-slate-500 bg-white rounded-3xl border border-slate-100">
-                  Aucune classe créée pour l'instant. Cliquez sur "Créer une classe" pour commencer.
+          selectedClass ? (
+            <TeacherClassDetail 
+              classItem={selectedClass} 
+              onBack={() => setSelectedClass(null)} 
+            />
+          ) : (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Mes Classes Interactives</h3>
+                  <p className="text-xs text-slate-500">Créez et gérez vos groupes d'étudiants, devoirs et annonces.</p>
                 </div>
-              ) : (
-                classes.map((cls) => (
-                  <div key={cls.id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
-                    <div className="p-3 bg-indigo-50 text-indigo-700 rounded-2xl w-fit">
-                      <GraduationCap size={24} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-base">{cls.name}</h4>
-                      <p className="text-xs text-emerald-600 font-semibold">{cls.subject}</p>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-                      <span>{cls.studentsCount || 0} étudiants inscrits</span>
-                      <button className="text-indigo-600 font-bold hover:underline">Gérer</button>
-                    </div>
+                <button 
+                  onClick={() => setShowClassModal(true)}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md"
+                >
+                  <Plus size={16} /> Créer une classe
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {classes.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-slate-500 bg-white rounded-3xl border border-slate-100">
+                    Aucune classe créée pour l'instant. Cliquez sur "Créer une classe" pour commencer.
                   </div>
-                ))
-              )}
+                ) : (
+                  classes.map((cls) => (
+                    <div key={cls.id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
+                      <div className="p-3 bg-indigo-50 text-indigo-700 rounded-2xl w-fit">
+                        <GraduationCap size={24} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-base">{cls.name}</h4>
+                        <p className="text-xs text-emerald-600 font-semibold">{cls.subject}</p>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+                        <span>{cls.enrolledStudents?.length || cls.studentsCount || 0} étudiants inscrits</span>
+                        <button 
+                          onClick={() => setSelectedClass(cls)}
+                          className="text-indigo-600 font-bold hover:underline"
+                        >
+                          Gérer
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {activeTab === 'tutoring' && (
@@ -520,37 +532,28 @@ export default function TeacherSpace() {
           </div>
         )}
 
-        {(activeTab === 'videos' || activeTab === 'courses' || activeTab === 'td_tp') && (
+        {activeTab === 'videos' && (
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
-                  {activeTab === 'videos' ? 'Mes Vidéos Pédagogiques' : activeTab === 'courses' ? 'Mes Cours' : 'Mes TD / TP'}
+                  Mes Vidéos Pédagogiques
                 </h3>
                 <p className="text-xs text-slate-500">Publiez gratuitement vos ressources pour vos étudiants.</p>
               </div>
-              {activeTab === 'videos' ? (
-                <button 
-                  onClick={() => navigate('/videos-communautaires')}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-colors"
-                >
-                  <Video size={16} /> Ajouter une vidéo communautaire
-                </button>
-              ) : (
-                <button 
-                  onClick={() => navigate('/documents')}
-                  className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md"
-                >
-                  <Plus size={16} /> Ajouter une ressource
-                </button>
-              )}
+              <button 
+                onClick={() => navigate('/videos-communautaires')}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-colors"
+              >
+                <Video size={16} /> Ajouter une vidéo communautaire
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {videos.length === 0 && courses.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-slate-500">Aucune ressource publiée pour le moment.</div>
+              {videos.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-slate-500">Aucune vidéo publiée pour le moment.</div>
               ) : (
-                [...videos, ...courses].map((item) => (
+                videos.map((item) => (
                   <div key={item.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
                     <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{item.title}</h4>
                     <p className="text-xs text-slate-600 line-clamp-2">{item.description}</p>
