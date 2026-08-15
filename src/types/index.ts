@@ -273,13 +273,16 @@ export interface TeacherReview {
 }
 
 export interface TeacherProfile {
-  academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Autre';
+  academicRank: 'Assistant' | 'Maître Assistant' | 'Maître de Conférences' | 'Professeur Titulaire' | 'Vacataire' | 'Maitre de Recherche' | 'Directeur de Recherche' | 'Maitre de Conférence Agrégé' | 'Chercheurs' | 'Autre';
   biography: string;
   yearsOfExperience: number;
   languages: string[];
   specialties: string[];
   domains: string[];
-  publications: { title: string; journal: string; year: number; link?: string }[];
+  publications: { title: string; journal: string; year: string | number; link?: string }[];
+  books?: { title: string; publisher: string; year: string | number }[];
+  projects?: { title: string; status: string; period: string; description: string }[];
+  supervisions?: { studentName: string; degree: string; period: string; defenseDate: string; currentSituation: string }[];
   courses: string[];
   availability: {
     isAvailable: boolean;

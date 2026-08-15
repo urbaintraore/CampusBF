@@ -27,6 +27,11 @@ export default function TeacherSpace() {
   const [specialtiesStr, setSpecialtiesStr] = useState(user?.teacherProfile?.specialties?.join(', ') || '');
   const [domainsStr, setDomainsStr] = useState(user?.teacherProfile?.domains?.join(', ') || '');
   const [yearsExp, setYearsExp] = useState(user?.teacherProfile?.yearsOfExperience || 3);
+  
+  const [publicationsList, setPublicationsList] = useState<any[]>(user?.teacherProfile?.publications || []);
+  const [booksList, setBooksList] = useState<any[]>(user?.teacherProfile?.books || []);
+  const [projectsList, setProjectsList] = useState<any[]>(user?.teacherProfile?.projects || []);
+  const [supervisionsList, setSupervisionsList] = useState<any[]>(user?.teacherProfile?.supervisions || []);
 
   // Firestore Data State
   const [classes, setClasses] = useState<any[]>([]);
@@ -87,7 +92,10 @@ export default function TeacherSpace() {
       specialties: specialtiesStr.split(',').map(s => s.trim()).filter(Boolean),
       domains: domainsStr.split(',').map(d => d.trim()).filter(Boolean),
       yearsOfExperience: Number(yearsExp),
-      publications: user.teacherProfile?.publications || [],
+      publications: publicationsList,
+      books: booksList,
+      projects: projectsList,
+      supervisions: supervisionsList,
       courses: user.teacherProfile?.courses || [],
       availability: user.teacherProfile?.availability || { isAvailable: true, willingToTravel: false }
     };
@@ -285,13 +293,13 @@ export default function TeacherSpace() {
         )}
 
         {activeTab === 'profile' && (
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 max-w-3xl mx-auto space-y-6">
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 max-w-3xl mx-auto space-y-8">
             <div>
-              <h3 className="text-xl font-bold text-slate-900">Mon Profil Professionnel</h3>
-              <p className="text-xs text-slate-500">Ces informations apparaissent sur votre page publique de vitrine enseignant.</p>
+              <h3 className="text-xl font-bold text-slate-900">Mon Profil Professionnel & Recherche</h3>
+              <p className="text-xs text-slate-500">Mettez à jour vos grades, publications, ouvrages, projets et encadrements académiques.</p>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4">
+            <form onSubmit={handleSaveProfile} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Grade Académique</label>
@@ -304,6 +312,11 @@ export default function TeacherSpace() {
                     <option value="Maître Assistant">Maître Assistant</option>
                     <option value="Maître de Conférences">Maître de Conférences</option>
                     <option value="Professeur Titulaire">Professeur Titulaire</option>
+                    <option value="Vacataire">Vacataire</option>
+                    <option value="Maitre de Recherche">Maitre de Recherche</option>
+                    <option value="Directeur de Recherche">Directeur de Recherche</option>
+                    <option value="Maitre de Conférence Agrégé">Maitre de Conférence Agrégé</option>
+                    <option value="Chercheurs">Chercheurs</option>
                   </select>
                 </div>
                 <div>
@@ -348,6 +361,284 @@ export default function TeacherSpace() {
                   placeholder="Présentez votre parcours, vos recherches et votre approche pédagogique..."
                   className="w-full p-3 rounded-xl border border-slate-200 text-sm"
                 ></textarea>
+              </div>
+
+              {/* PUBLICATIONS SCIENTIFIQUES */}
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-slate-900 text-sm">Publications Scientifiques (Articles)</h4>
+                  <button
+                    type="button"
+                    onClick={() => setPublicationsList([...publicationsList, { title: '', journal: '', year: new Date().getFullYear().toString(), link: '' }])}
+                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                  >
+                    + Ajouter un article
+                  </button>
+                </div>
+                {publicationsList.map((pub, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 relative">
+                    <button
+                      type="button"
+                      onClick={() => setPublicationsList(publicationsList.filter((_, i) => i !== idx))}
+                      className="absolute top-3 right-3 text-red-500 font-bold text-xs"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Titre de l'article"
+                        value={pub.title}
+                        onChange={(e) => {
+                          const updated = [...publicationsList];
+                          updated[idx].title = e.target.value;
+                          setPublicationsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs sm:col-span-2 bg-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Année"
+                        value={pub.year}
+                        onChange={(e) => {
+                          const updated = [...publicationsList];
+                          updated[idx].year = e.target.value;
+                          setPublicationsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Revue / Journal scientifique"
+                      value={pub.journal}
+                      onChange={(e) => {
+                        const updated = [...publicationsList];
+                        updated[idx].journal = e.target.value;
+                        setPublicationsList(updated);
+                      }}
+                      className="w-full p-2 border rounded-xl text-xs bg-white"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* OUVRAGES */}
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-slate-900 text-sm">Ouvrages / Livres</h4>
+                  <button
+                    type="button"
+                    onClick={() => setBooksList([...booksList, { title: '', publisher: '', year: new Date().getFullYear().toString() }])}
+                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                  >
+                    + Ajouter un ouvrage
+                  </button>
+                </div>
+                {booksList.map((book, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 relative">
+                    <button
+                      type="button"
+                      onClick={() => setBooksList(booksList.filter((_, i) => i !== idx))}
+                      className="absolute top-3 right-3 text-red-500 font-bold text-xs"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Titre de l'ouvrage"
+                        value={book.title}
+                        onChange={(e) => {
+                          const updated = [...booksList];
+                          updated[idx].title = e.target.value;
+                          setBooksList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs sm:col-span-2 bg-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Année"
+                        value={book.year}
+                        onChange={(e) => {
+                          const updated = [...booksList];
+                          updated[idx].year = e.target.value;
+                          setBooksList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Maison d'édition"
+                      value={book.publisher}
+                      onChange={(e) => {
+                        const updated = [...booksList];
+                        updated[idx].publisher = e.target.value;
+                        setBooksList(updated);
+                      }}
+                      className="w-full p-2 border rounded-xl text-xs bg-white"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* PROJETS */}
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-slate-900 text-sm">Projets Exécutés ou en Cours d'Exécution</h4>
+                  <button
+                    type="button"
+                    onClick={() => setProjectsList([...projectsList, { title: '', status: 'En cours', period: '', description: '' }])}
+                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                  >
+                    + Ajouter un projet
+                  </button>
+                </div>
+                {projectsList.map((proj, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 relative">
+                    <button
+                      type="button"
+                      onClick={() => setProjectsList(projectsList.filter((_, i) => i !== idx))}
+                      className="absolute top-3 right-3 text-red-500 font-bold text-xs"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Intitulé du projet"
+                        value={proj.title}
+                        onChange={(e) => {
+                          const updated = [...projectsList];
+                          updated[idx].title = e.target.value;
+                          setProjectsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs sm:col-span-2 bg-white"
+                      />
+                      <select
+                        value={proj.status}
+                        onChange={(e) => {
+                          const updated = [...projectsList];
+                          updated[idx].status = e.target.value;
+                          setProjectsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      >
+                        <option value="En cours">En cours</option>
+                        <option value="Exécuté / Achevé">Exécuté / Achevé</option>
+                      </select>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Période (ex: 2023 - 2025)"
+                      value={proj.period}
+                      onChange={(e) => {
+                        const updated = [...projectsList];
+                        updated[idx].period = e.target.value;
+                        setProjectsList(updated);
+                      }}
+                      className="w-full p-2 border rounded-xl text-xs bg-white"
+                    />
+                    <textarea
+                      placeholder="Description du projet..."
+                      rows={2}
+                      value={proj.description}
+                      onChange={(e) => {
+                        const updated = [...projectsList];
+                        updated[idx].description = e.target.value;
+                        setProjectsList(updated);
+                      }}
+                      className="w-full p-2 border rounded-xl text-xs bg-white"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* THÈSES, MÉMOIRES, RAPPORTS */}
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-slate-900 text-sm">Thèses, Mémoires de Master & Rapports de Licence</h4>
+                  <button
+                    type="button"
+                    onClick={() => setSupervisionsList([...supervisionsList, { studentName: '', degree: 'Master', period: '', defenseDate: '', currentSituation: '' }])}
+                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                  >
+                    + Ajouter un encadrement
+                  </button>
+                </div>
+                {supervisionsList.map((sup, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 relative">
+                    <button
+                      type="button"
+                      onClick={() => setSupervisionsList(supervisionsList.filter((_, i) => i !== idx))}
+                      className="absolute top-3 right-3 text-red-500 font-bold text-xs"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nom complet de l'étudiant"
+                        value={sup.studentName}
+                        onChange={(e) => {
+                          const updated = [...supervisionsList];
+                          updated[idx].studentName = e.target.value;
+                          setSupervisionsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      />
+                      <select
+                        value={sup.degree}
+                        onChange={(e) => {
+                          const updated = [...supervisionsList];
+                          updated[idx].degree = e.target.value;
+                          setSupervisionsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      >
+                        <option value="Licence">Rapport de Licence</option>
+                        <option value="Master">Mémoire de Master</option>
+                        <option value="Thèse">Thèse de Doctorat</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Période d'encadrement (ex: 2024-2025)"
+                        value={sup.period}
+                        onChange={(e) => {
+                          const updated = [...supervisionsList];
+                          updated[idx].period = e.target.value;
+                          setSupervisionsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Date de soutenance"
+                        value={sup.defenseDate}
+                        onChange={(e) => {
+                          const updated = [...supervisionsList];
+                          updated[idx].defenseDate = e.target.value;
+                          setSupervisionsList(updated);
+                        }}
+                        className="p-2 border rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Situation actuelle de l'étudiant (ex: Doctorant à l'Université, Ingénieur chez ...)"
+                      value={sup.currentSituation}
+                      onChange={(e) => {
+                        const updated = [...supervisionsList];
+                        updated[idx].currentSituation = e.target.value;
+                        setSupervisionsList(updated);
+                      }}
+                      className="w-full p-2 border rounded-xl text-xs bg-white"
+                    />
+                  </div>
+                ))}
               </div>
 
               <button type="submit" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md">
