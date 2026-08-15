@@ -6,6 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
 
 import { NotificationsCenter } from '@/components/NotificationsCenter';
+import { useFocus } from '@/context/FocusContext';
+import { FocusModeHeaderControls } from '@/components/FocusModeHeaderControls';
+import { FocusModeBanner } from '@/components/FocusModeBanner';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -13,6 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [showShareToast, setShowShareToast] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { user, isAdmin, logout, notifications, markNotificationAsRead, logActivity } = useAuth();
+  const { isFocusMode } = useFocus();
   const location = useLocation();
   const navigate = useNavigate();
   const [isFinancingExpanded, setIsFinancingExpanded] = useState(location.pathname.startsWith('/financing'));
@@ -38,11 +42,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [location.pathname]);
 
-  const userNotifications = notifications.filter(n => n.userId === user?.id || n.userId === 'all');
+  const socialTypes = ['forums', 'events', 'deals'];
+  const userNotifications = notifications
+    .filter(n => n.userId === user?.id || n.userId === 'all')
+    .filter(n => !isFocusMode || !socialTypes.includes(n.type));
+
   const unreadNotifications = userNotifications.filter(n => !n.read).length;
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
+    { icon: GraduationCap, label: 'Espace Enseignant', to: '/teacher-space', roles: ['teacher', 'admin'] },
     { icon: Sparkles, label: 'Bourses & Opportunités IA', to: '/scholarships', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'public'] },
     { icon: GraduationCap, label: '🎓 Financement', to: '/financing', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'company', 'institution', 'public'] },
     { icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] },
@@ -51,7 +60,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
     { icon: School, label: 'Classement Universités', to: '/ranking', roles: ['alumni', 'admin'] },
     { icon: Trophy, label: 'Challenge & Concours', to: '/contests', roles: ['student', 'admin', 'alumni'] },
-    { icon: Video, label: 'Vidéos Communautaires', to: '/videos-communautaires', roles: ['alumni', 'admin'] },
+    { icon: Video, label: 'Vidéos Communautaires', to: '/videos-communautaires', roles: ['alumni', 'admin', 'teacher'] },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: Calendar, label: 'Agenda Étudiant', to: '/agenda', roles: ['student', 'admin', 'teacher', 'alumni', 'public'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'public'] },
@@ -78,6 +87,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   console.log("Layout Navigation State:", { isAdmin, userRole: user?.role, userId: user?.id });
   
   const navItems = allNavItems.filter(item => {
+    // Hide Marketplace when Focus Mode is active
+    if (isFocusMode && item.to === '/marketplace') {
+      return false;
+    }
+
     // If user is Admin, they see everything they have permission for or portals
     if (isAdmin) {
       if (!item.roles) return true;
@@ -145,11 +159,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}>
         <Logo size="md" />
         <div className="flex items-center gap-2">
+          <FocusModeHeaderControls />
           <button 
             onClick={() => navigate('/notifications')}
             className="p-2 text-slate-500 relative hover:text-emerald-600 transition-colors"
           >
-            <Bell size={24} />
+            <Bell size={22} />
             {unreadNotifications > 0 && (
               <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
             )}
@@ -403,8 +418,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {/* Focus Mode Active Top Banner */}
+        <FocusModeBanner />
+
         {user && (
-          <div className="hidden md:flex justify-end px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50 no-print">
+          <div className="hidden md:flex items-center justify-end gap-3 px-8 py-4 sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md border-b border-slate-200/50 no-print">
+            <FocusModeHeaderControls />
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}

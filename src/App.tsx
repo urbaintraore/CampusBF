@@ -25,9 +25,12 @@ import FinancingDashboard from './pages/financing/FinancingDashboard';
 import TeachersDirectory from './pages/TeachersDirectory';
 import Notifications from './pages/Notifications';
 import Portfolio from './pages/Portfolio';
+import TeacherSpace from './pages/TeacherSpace';
+import TeacherPublicProfile from './pages/TeacherPublicProfile';
 import AlumniMentorship from './pages/AlumniMentorship';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { FocusProvider } from './context/FocusContext';
 import Chatbot from './components/Chatbot';
 import { AdminRoleSwitcher } from './components/AdminRoleSwitcher';
 import AuthModal from './components/AuthModal';
@@ -130,6 +133,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/documents',
       '/trainings',
       '/portfolio',
+      '/teacher-space',
+      '/teacher-profile',
       '/mentorship',
       '/guide',
       '/profile',
@@ -288,65 +293,6 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Force profile completion ONLY for logged-in students (not guests) disabled to allow free access and downloads
-
-  if (user?.role === 'student') {
-    const allowedStudentPaths = [
-      '/',
-      '/scholarships',
-      '/financing',
-      '/university-portal',
-      '/documents',
-      '/contests',
-      '/tutors',
-      '/internships',
-      '/missions',
-      '/events',
-      '/marketplace',
-      '/trainings',
-      '/profile',
-      '/notifications',
-      '/messages',
-      '/community',
-      '/agenda'
-    ];
-    const isAllowed = allowedStudentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
-    if (!isAllowed) {
-      return (
-        <Layout>
-          <StudentRestrictedSection />
-        </Layout>
-      );
-    }
-  }
-
-  if (user?.role === 'teacher') {
-    const allowedTeacherPaths = [
-      '/',
-      '/scholarships',
-      '/financing',
-      '/university-portal',
-      '/enterprise-portal',
-      '/documents',
-      '/trainings',
-      '/portfolio',
-      '/mentorship',
-      '/guide',
-      '/profile',
-      '/notifications',
-      '/messages',
-      '/events'
-    ];
-    const isAllowed = allowedTeacherPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
-    if (!isAllowed) {
-      return (
-        <Layout>
-          <TeacherRestrictedSection />
-        </Layout>
-      );
-    }
-  }
-
   if (user?.role === 'parent') {
     const allowedParentPaths = [
       '/',
@@ -443,8 +389,9 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <NetworkStatus />
-        <Routes>
+        <FocusProvider>
+          <NetworkStatus />
+          <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
@@ -462,6 +409,16 @@ export default function App() {
           <Route path="/messages" element={
             <ProtectedRoute>
               <Messages />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher-space" element={
+            <ProtectedRoute>
+              <TeacherSpace />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher-profile/:teacherId" element={
+            <ProtectedRoute>
+              <TeacherPublicProfile />
             </ProtectedRoute>
           } />
           <Route path="/admin" element={
@@ -639,6 +596,7 @@ export default function App() {
         <AdminRoleSwitcher />
         <AuthModal />
         <SonnerToaster position="top-right" richColors closeButton />
+        </FocusProvider>
       </ThemeProvider>
     </AuthProvider>
   );

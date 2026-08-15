@@ -263,6 +263,7 @@ interface AuthContextType {
   groups: Group[];
   addNotification: (userId: string, notification: Omit<Notification, 'id' | 'createdAt' | 'read' | 'userId'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
+  deleteNotification: (notificationId: string) => void;
   addTeacherReview: (teacherId: string, rating: number, comment: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;

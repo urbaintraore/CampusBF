@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckSquare, Trash2, Filter, Loader2, Info, BookOpen, Briefcase, Trophy, MessageSquare, Calendar } from 'lucide-react';
+import { Bell, CheckSquare, Trash2, Filter, Loader2, Info, BookOpen, Briefcase, Trophy, MessageSquare, Calendar, Target } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useFocus } from '../context/FocusContext';
 import { db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Notification } from '../types';
@@ -14,9 +15,13 @@ interface NotificationsCenterProps {
 
 export const NotificationsCenter: React.FC<NotificationsCenterProps> = ({ onClose }) => {
   const { user, notifications: contextNotifications } = useAuth();
+  const { isFocusMode } = useFocus();
   const [filter, setFilter] = useState<string>('all');
 
-  const notifications = contextNotifications || [];
+  const socialTypes = ['forums', 'events', 'deals'];
+  const notifications = (contextNotifications || []).filter(
+    n => !isFocusMode || !socialTypes.includes(n.type)
+  );
   const loading = false; // Context handles loading
 
   const markAllAsRead = async () => {
@@ -85,6 +90,13 @@ export const NotificationsCenter: React.FC<NotificationsCenterProps> = ({ onClos
           )}
         </div>
       </div>
+
+      {isFocusMode && (
+        <div className="bg-purple-50 dark:bg-purple-950/40 border-b border-purple-100 dark:border-purple-900/50 px-3 py-2 text-[11px] text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+          <Target size={14} className="text-purple-600 flex-shrink-0" />
+          <span><strong>Mode Focus :</strong> Notifications sociales (forums, événements) masquées.</span>
+        </div>
+      )}
 
       <div className="p-2 border-b border-slate-100 flex gap-1 overflow-x-auto no-scrollbar">
         {[

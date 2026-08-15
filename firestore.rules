@@ -292,6 +292,10 @@ service cloud.firestore {
     match /applications/{id} { allow read: if true; allow write: if isSignedIn(); }
     match /teacherApplications/{id} { allow read: if true; allow write: if isSignedIn(); }
     match /subscriptionRequests/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /teacherClasses/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /tutoringRequests/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /videos/{id} { allow read: if true; allow write: if isSignedIn(); }
+    match /courses/{id} { allow read: if true; allow write: if isSignedIn(); }
 
     // Deals and news
     match /deals/{id} { allow read: if true; allow write: if isAdmin(); }

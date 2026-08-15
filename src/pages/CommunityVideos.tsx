@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { communityVideoService } from '@/services/communityVideoService';
 import { CommunityVideo } from '@/types';
 import { CommunityVideoUploader, VIDEO_CATEGORIES } from '@/components/CommunityVideoUploader';
 import { CommunityVideoPlayer } from '@/components/CommunityVideoPlayer';
+import { Share2, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function CommunityVideos() {
+  const [searchParams] = useSearchParams();
+  const videoIdParam = searchParams.get('v');
   const [videos, setVideos] = useState<CommunityVideo[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | 'Tous'>('Tous');
   const [activeVideo, setActiveVideo] = useState<CommunityVideo | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   useEffect(() => {
     loadVideos();
@@ -16,8 +22,40 @@ export default function CommunityVideos() {
   const loadVideos = async () => {
     const data = await communityVideoService.getCommunityVideos(selectedCategory);
     setVideos(data);
-    if (!activeVideo || data.findIndex(v => v.id === activeVideo.id) === -1) {
+    
+    // If we have a video ID in the URL, try to find and set it
+    if (videoIdParam && data.find(v => v.id === videoIdParam)) {
+      setActiveVideo(data.find(v => v.id === videoIdParam) || null);
+    } else if (!activeVideo || data.findIndex(v => v.id === activeVideo.id) === -1) {
        setActiveVideo(data[0] || null);
+    }
+  };
+
+  const handleQuickShare = async (e: React.MouseEvent, video: CommunityVideo) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/videos-communautaires?v=${video.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: video.title,
+          text: `Regarde cette vidéo : ${video.title}`,
+          url: shareUrl
+        });
+        return;
+      } catch (err) {
+        // Fallback to copy if native share fails or is cancelled
+      }
+    }
+    
+    // Fallback to copy to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedId(video.id);
+      toast.success('Lien de la vidéo copié !');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      toast.error('Impossible de copier le lien');
     }
   };
 
@@ -40,7 +78,7 @@ export default function CommunityVideos() {
              <button 
                key={video.id} 
                onClick={() => setActiveVideo(video)}
-               className={`flex gap-3 p-3 rounded-xl border text-left transition-all ${activeVideo?.id === video.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+               className={`flex gap-3 p-3 rounded-xl border text-left transition-all relative group ${activeVideo?.id === video.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
              >
                <div className="w-32 h-20 bg-slate-900 rounded-lg overflow-hidden flex-shrink-0 relative pointer-events-none flex items-center justify-center">
                   {/* Miniature */}
@@ -51,7 +89,6 @@ export default function CommunityVideos() {
                     if (!thumb && ytMatch && ytMatch[2].length === 11) {
                       thumb = `https://img.youtube.com/vi/${ytMatch[2]}/hqdefault.jpg`;
                     } else if (!thumb && vimeoMatch && vimeoMatch[1]) {
-                      // Vimeo miniatures can't be statically generated this way easily, fallback to default 
                       thumb = '';
                     }
 
@@ -69,12 +106,21 @@ export default function CommunityVideos() {
                     );
                   })()}
                </div>
-               <div className="flex flex-col flex-1 overflow-hidden">
+               <div className="flex flex-col flex-1 overflow-hidden pr-6">
                  <h4 className="font-bold text-sm text-slate-900 line-clamp-2">{video.title}</h4>
                  <p className="text-xs text-slate-500 mt-1 line-clamp-1">{video.username}</p>
                  <span className="text-[10px] font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full self-start mt-1">
                    {video.category}
                  </span>
+               </div>
+               
+               {/* Quick Share Button */}
+               <div 
+                 onClick={(e) => handleQuickShare(e, video)}
+                 className="absolute top-2 right-2 p-1.5 bg-white border border-slate-200 rounded-full shadow-sm text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                 title="Partager"
+               >
+                 {copiedId === video.id ? <Check size={14} className="text-emerald-500" /> : <Share2 size={14} />}
                </div>
              </button>
            ))}

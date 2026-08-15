@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send, Loader2, ShieldAlert, Flag, Star } from 'lucide-react';
+import { MapPin, Tag, Filter, Plus, Search, MessageCircle, X, CreditCard, Image as ImageIcon, CheckCircle, AlertCircle, Clock, Send, Loader2, ShieldAlert, Flag, Star, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useFocus } from '@/context/FocusContext';
 import { auth, db, storage, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
   collection, 
@@ -20,6 +21,7 @@ import { uploadFile } from '@/services/storageService';
 
 export default function Marketplace() {
   const { user, logAction, reportMarketplaceItem, incrementActivity } = useAuth();
+  const { isFocusMode, toggleFocusMode } = useFocus();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [marketplaceLimit, setMarketplaceLimit] = useState(15);
@@ -259,6 +261,38 @@ export default function Marketplace() {
     }
     navigate(`/messages?userId=${sellerId}`);
   };
+
+  if (isFocusMode) {
+    return (
+      <div className="max-w-2xl mx-auto py-16 px-4 text-center space-y-6 animate-in fade-in zoom-in-95">
+        <div className="w-20 h-20 bg-purple-100 dark:bg-purple-950/80 text-purple-600 rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-purple-500/10">
+          <Target size={40} className="animate-pulse text-purple-600" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            🎯 Mode Focus Actif
+          </h2>
+          <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
+            L'accès à la Marketplace étudiante est temporairement suspendu pour vous aider à rester concentré sur vos révisions académiques.
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            onClick={toggleFocusMode}
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-600/20 transition-all active:scale-95 text-sm cursor-pointer"
+          >
+            Désactiver le Mode Focus
+          </button>
+          <button
+            onClick={() => navigate('/documents')}
+            className="px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-2xl transition-all text-sm cursor-pointer"
+          >
+            Consulter les Documents & Cours
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -69,7 +69,14 @@ import './index.css';
 
 
 // Register service worker for offline support
-// registerSW({ immediate: true });
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+      // Fallback to registering firebase messaging or standard SW
+      navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(console.error);
+    });
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
