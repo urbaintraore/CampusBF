@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, User as UserIcon, Video, BookOpen, FileText, GraduationCap, 
   Package, Users, MessageSquare, Calendar, Award, TrendingUp, DollarSign, Sparkles, 
-  Bell, Settings, Plus, CheckCircle2, Clock, Star, Shield, Send, Check, X, Eye, Trash2
+  Bell, Settings, Plus, CheckCircle2, Clock, Star, Shield, Send, Check, X, Eye, Trash2, ExternalLink, Search
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { restructureAcademicDocument } from '@/services/geminiService';
 import TeacherClassDetail from '@/components/TeacherClassDetail';
+import toast from 'react-hot-toast';
 
 export default function TeacherSpace() {
   const { user, updateUser } = useAuth();
@@ -44,15 +45,64 @@ export default function TeacherSpace() {
   const [newClassSubject, setNewClassSubject] = useState('');
   const [showClassModal, setShowClassModal] = useState(false);
 
+  // Student view state
+  const [allTeachers, setAllTeachers] = useState<any[]>([]);
+  const [enrolledClasses, setEnrolledClasses] = useState<any[]>([]);
+  const [allClassesCatalog, setAllClassesCatalog] = useState<any[]>([]);
+  const [studentTab, setStudentTab] = useState<'teachers' | 'enrolled' | 'discover'>('teachers');
+  const [selectedTeacherModal, setSelectedTeacherModal] = useState<any | null>(null);
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState('');
+
   // AI Assistant state
   const [aiPromptTopic, setAiPromptTopic] = useState('');
   const [aiContentType, setAiContentType] = useState<'quiz' | 'td' | 'tp' | 'exam' | 'summary'>('quiz');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiGeneratedResult, setAiGeneratedResult] = useState('');
 
+  const handleRequestJoinClass = async (cls: any) => {
+    if (!user) return;
+    try {
+      const existingReqs = cls.joinRequests || [];
+      const newReq = {
+        studentId: user.id,
+        studentName: `${user.firstName} ${user.lastName}`,
+        studentEmail: user.email,
+        status: 'pending',
+        requestedAt: new Date().toISOString()
+      };
+      if (existingReqs.some((r: any) => r.studentId === user.id && r.status === 'pending')) {
+        toast.error("Vous avez déjà une demande en attente pour cette classe.");
+        return;
+      }
+      const updatedReqs = [...existingReqs.filter((r: any) => r.studentId !== user.id), newReq];
+      await updateDoc(doc(db, 'teacherClasses', cls.id), {
+        joinRequests: updatedReqs
+      });
+      toast.success("Demande d'inscription envoyée à l'enseignant !");
+      setAllClassesCatalog(prev => prev.map(c => c.id === cls.id ? { ...c, joinRequests: updatedReqs } : c));
+    } catch (e) {
+      toast.error("Erreur lors de la demande");
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
-    // Fetch classes
+    if (user.role === 'student') {
+      getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'))).then(snap => {
+        setAllTeachers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      getDocs(collection(db, 'teacherClasses')).then(snap => {
+        const allCls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAllClassesCatalog(allCls);
+        const list = allCls.filter((cls: any) => 
+          cls.enrolledStudents?.some((st: any) => st.id === user.id || st.email === user.email)
+        );
+        setEnrolledClasses(list);
+      });
+      return;
+    }
+
+    // Fetch classes for teachers
     const qClasses = query(collection(db, 'teacherClasses'), where('teacherId', '==', user.id));
     const unsubClasses = onSnapshot(qClasses, (snap) => {
       setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -166,6 +216,299 @@ export default function TeacherSpace() {
     { id: 'trainings', label: 'Formations & Academy', icon: Award },
     { id: 'revenues', label: 'Revenus & Transactions', icon: DollarSign },
   ];
+
+  if (user?.role === 'student') {
+    if (selectedClass) {
+      return <TeacherClassDetail classItem={selectedClass} onBack={() => setSelectedClass(null)} />;
+    }
+
+    const filteredTeachers = allTeachers.filter(t => {
+      const name = `${t.firstName} ${t.lastName}`.toLowerCase();
+      const spec = t.teacherProfile?.specialties?.join(' ').toLowerCase() || '';
+      const q = teacherSearchQuery.toLowerCase();
+      return name.includes(q) || spec.includes(q);
+    });
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-in fade-in">
+        <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-emerald-950 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="space-y-2 text-center md:text-left">
+            <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
+              Espace Enseignant & Cours Étudiant
+            </span>
+            <h1 className="text-3xl font-extrabold">
+              Bienvenue, {user.firstName} {user.lastName}
+            </h1>
+            <p className="text-slate-300 text-sm max-w-xl">
+              Consultez l'annuaire des professeurs, découvrez leurs profils de recherche et accédez directement aux ressources et activités des cours où vous êtes inscrit.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-b border-slate-200 pb-2">
+          <button
+            onClick={() => setStudentTab('teachers')}
+            className={`px-5 py-3 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer ${
+              studentTab === 'teachers' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Users size={16} /> Annuaire des Enseignants ({allTeachers.length})
+          </button>
+          <button
+            onClick={() => setStudentTab('enrolled')}
+            className={`px-5 py-3 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer ${
+              studentTab === 'enrolled' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <BookOpen size={16} /> Mes Cours Inscrits ({enrolledClasses.length})
+          </button>
+          <button
+            onClick={() => setStudentTab('discover')}
+            className={`px-5 py-3 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer ${
+              studentTab === 'discover' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <GraduationCap size={16} /> Classes Ouvertes & Inscription
+          </button>
+        </div>
+
+        {studentTab === 'discover' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Classes et Cours Ouverts</h3>
+              <p className="text-xs text-slate-500 mt-1">Demandez à rejoindre une classe ouverte. L'enseignant validera votre inscription pour vous donner accès aux ressources et activités.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allClassesCatalog.map((cls) => {
+                const isEnrolled = cls.enrolledStudents?.some((st: any) => st.id === user?.id || st.email === user?.email);
+                const req = cls.joinRequests?.find((r: any) => r.studentId === user?.id);
+                const isPending = req && req.status === 'pending';
+                const isApproved = isEnrolled || (req && req.status === 'approved');
+
+                return (
+                  <div key={cls.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-bold uppercase">
+                        {cls.subject || 'Cours Général'}
+                      </span>
+                      <h4 className="text-lg font-extrabold text-slate-900">{cls.name}</h4>
+                      <p className="text-xs text-slate-500">Enseignant : <span className="font-bold text-slate-700">{cls.teacherName || 'Professeur'}</span></p>
+                    </div>
+
+                    <div>
+                      {isApproved ? (
+                        <button
+                          onClick={() => setSelectedClass(cls)}
+                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Check size={16} /> Inscrit • Accéder au cours
+                        </button>
+                      ) : isPending ? (
+                        <div className="w-full py-3 bg-amber-50 text-amber-700 rounded-2xl text-xs font-bold text-center border border-amber-200">
+                          ⏳ Demande en attente de validation
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleRequestJoinClass(cls)}
+                          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Send size={14} /> Demander à rejoindre
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {studentTab === 'teachers' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="relative w-full sm:w-96">
+                <Search className="absolute left-4 top-3.5 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom ou spécialité..."
+                  value={teacherSearchQuery}
+                  onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTeachers.map((teacher) => {
+                const p = teacher.teacherProfile || {};
+                return (
+                  <div key={teacher.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 font-extrabold flex items-center justify-center text-lg">
+                          {teacher.firstName?.[0]}{teacher.lastName?.[0]}
+                        </div>
+                        <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-[10px] font-bold uppercase">
+                          {p.academicRank || 'Enseignant'}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-slate-900 text-lg">Pr. {teacher.firstName} {teacher.lastName}</h3>
+                        <p className="text-xs text-indigo-600 font-semibold">{teacher.university || 'Université de Ouagadougou'}</p>
+                      </div>
+                      <p className="text-xs text-slate-600 line-clamp-2">{p.biography || 'Aucune biographie renseignée.'}</p>
+                      {p.specialties && p.specialties.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {p.specialties.slice(0, 3).map((s: string, idx: number) => (
+                            <span key={idx} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-medium">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex gap-2">
+                      <button
+                        onClick={() => setSelectedTeacherModal(teacher)}
+                        className="flex-1 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Eye size={14} /> Voir Profil & Recherche
+                      </button>
+                      <button
+                        onClick={() => window.open(`/teacher-profile/${teacher.id}`, '_blank')}
+                        className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+                        title="Vitrine Publique"
+                      >
+                        <ExternalLink size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {studentTab === 'enrolled' && (
+          <div className="space-y-6">
+            {enrolledClasses.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
+                <BookOpen size={48} className="mx-auto text-emerald-300" />
+                <h3 className="text-lg font-bold text-slate-800">Aucun cours ou classe inscrit</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Vous n'avez pas encore été inscrit dans une classe interactive par un enseignant. Contactez votre professeur pour rejoindre son espace de cours.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {enrolledClasses.map((cls) => (
+                  <div key={cls.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold uppercase">
+                        {cls.subject || 'Cours Général'}
+                      </span>
+                      <h3 className="text-lg font-extrabold text-slate-900">{cls.name}</h3>
+                      <p className="text-xs text-slate-500">Enseignant : <span className="font-bold text-slate-700">{cls.teacherName || 'Professeur'}</span></p>
+                      <p className="text-xs text-slate-500">Chapitres publiés : <span className="font-bold text-indigo-600">{cls.sections?.length || 0}</span></p>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedClass(cls)}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <BookOpen size={16} /> Accéder au Cours & Activités
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {selectedTeacherModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl animate-in zoom-in-95">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-4">
+                <div>
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase">
+                    {selectedTeacherModal.teacherProfile?.academicRank || 'Enseignant'}
+                  </span>
+                  <h2 className="text-2xl font-extrabold text-slate-900 mt-1">Pr. {selectedTeacherModal.firstName} {selectedTeacherModal.lastName}</h2>
+                  <p className="text-xs text-slate-500">{selectedTeacherModal.university || 'Université de Ouagadougou'}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedTeacherModal(null)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm mb-1">Biographie & Présentation</h4>
+                  <p className="text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl leading-relaxed">{selectedTeacherModal.teacherProfile?.biography || 'Aucune biographie.'}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm mb-2">Publications Scientifiques ({selectedTeacherModal.teacherProfile?.publications?.length || 0})</h4>
+                  {selectedTeacherModal.teacherProfile?.publications?.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">Aucune publication enregistrée.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedTeacherModal.teacherProfile?.publications?.map((pub: any, i: number) => (
+                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                          <p className="font-bold text-slate-900">{pub.title}</p>
+                          <p className="text-slate-500">{pub.journal} • {pub.year}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm mb-2">Ouvrages & Manuels ({selectedTeacherModal.teacherProfile?.books?.length || 0})</h4>
+                  {selectedTeacherModal.teacherProfile?.books?.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">Aucun ouvrage enregistré.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedTeacherModal.teacherProfile?.books?.map((b: any, i: number) => (
+                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                          <p className="font-bold text-slate-900">{b.title}</p>
+                          <p className="text-slate-500">{b.publisher} • {b.year}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm mb-2">Projets de Recherche ({selectedTeacherModal.teacherProfile?.projects?.length || 0})</h4>
+                  {selectedTeacherModal.teacherProfile?.projects?.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">Aucun projet enregistré.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedTeacherModal.teacherProfile?.projects?.map((proj: any, i: number) => (
+                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span className="font-bold text-slate-900">{proj.title}</span>
+                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold">{proj.status}</span>
+                          </div>
+                          <p className="text-slate-600">{proj.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-in fade-in">

@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const allNavItems = [
     { icon: LayoutDashboard, label: 'Accueil', to: '/' },
-    { icon: GraduationCap, label: 'Espace Enseignant', to: '/teacher-space', roles: ['teacher', 'admin'] },
+    { icon: GraduationCap, label: 'Espace Enseignant', to: '/teacher-space', roles: ['teacher', 'admin', 'student'] },
     { icon: Sparkles, label: 'Bourses & Opportunités IA', to: '/scholarships', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'public'] },
     { icon: GraduationCap, label: '🎓 Financement', to: '/financing', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'company', 'institution', 'public'] },
     { icon: Shield, label: 'Administration', to: '/admin', roles: ['admin'] },
@@ -60,7 +60,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: User, label: 'Portail Parents', to: '/parent-portal', roles: ['parent', 'admin'] },
     { icon: School, label: 'Classement Universités', to: '/ranking', roles: ['alumni', 'admin'] },
     { icon: Trophy, label: 'Challenge & Concours', to: '/contests', roles: ['student', 'admin', 'alumni'] },
-    { icon: Video, label: 'Vidéos Communautaires', to: '/videos-communautaires', roles: ['alumni', 'admin', 'teacher'] },
+    { icon: Video, label: 'Vidéos Communautaires', to: '/videos-communautaires', roles: ['alumni', 'admin', 'teacher', 'student'] },
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: Calendar, label: 'Agenda Étudiant', to: '/agenda', roles: ['student', 'admin', 'teacher', 'alumni', 'public'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'public'] },
@@ -78,7 +78,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Tag, label: 'Bons Plans', to: '/deals', roles: ['admin', 'alumni', 'public'] },
     { icon: Home, label: 'Colocation', to: '/colocation', roles: ['admin', 'alumni', 'public'] },
     { icon: User, label: 'Portfolio', roles: ['teacher', 'admin', 'company', 'institution'], to: '/portfolio' },
-    { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['admin', 'alumni', 'teacher', 'parent', 'institution', 'company'] },
+    { icon: Users, label: 'Mentorat', to: '/mentorship', roles: ['admin', 'alumni', 'teacher', 'parent', 'institution', 'company', 'student'] },
     { icon: BookOpen, label: 'Formations', to: '/trainings', roles: ['student', 'admin', 'teacher', 'alumni', 'parent', 'company', 'institution', 'public'] },
     { icon: Sparkles, label: 'Fonctionnalités', to: '/features', roles: ['admin', 'alumni'] },
     { icon: BookOpen, label: 'Guide d\'utilisation', to: '/guide', roles: ['admin', 'teacher', 'alumni', 'parent', 'company', 'institution'] },

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { collection, getDocs, doc, setDoc, query, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, limit, addDoc, onSnapshot, updateDoc, where } from 'firebase/firestore';
 import { AlumniProfile } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
+import toast from 'react-hot-toast';
+import { Check, X, Clock, Send, Users } from 'lucide-react';
 
 export default function AlumniMentorship() {
   const { user } = useAuth();
@@ -15,13 +17,22 @@ export default function AlumniMentorship() {
   const [topics, setTopics] = useState('');
   const [availability, setAvailability] = useState('');
 
+  // Mentorship request modal state
+  const [selectedMentor, setSelectedMentor] = useState<AlumniProfile | null>(null);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [mentorshipRequests, setMentorshipRequests] = useState<any[]>([]);
+
   useEffect(() => {
     fetchAlumni();
-  }, []);
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, 'mentorshipRequests'), (snap) => {
+      setMentorshipRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [user]);
 
   const fetchAlumni = async () => {
     try {
-      // Limit to 50 to prevent huge document reads
       const querySnapshot = await getDocs(query(collection(db, 'alumniProfiles'), limit(50)));
       const alumniData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AlumniProfile));
       setAlumni(alumniData);
@@ -48,19 +59,58 @@ export default function AlumniMentorship() {
       setTopics('');
       setAvailability('');
       fetchAlumni();
+      toast.success("Profil de mentor enregistré avec succès !");
     } catch (error) {
       console.error("Error registering as mentor:", error);
+      toast.error("Erreur lors de l'enregistrement");
     }
   };
+
+  const handleSendRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedMentor) return;
+    try {
+      await addDoc(collection(db, 'mentorshipRequests'), {
+        studentId: user.id,
+        studentName: `${user.firstName} ${user.lastName}`,
+        studentAvatar: user.avatarUrl,
+        mentorId: selectedMentor.userId,
+        mentorName: selectedMentor.userName,
+        message: requestMessage,
+        status: 'pending', // pending, accepted, refused
+        createdAt: new Date().toISOString()
+      });
+      setSelectedMentor(null);
+      setRequestMessage('');
+      toast.success("Demande de mentorat envoyée avec succès !");
+    } catch (error) {
+      console.error("Error sending mentorship request:", error);
+      toast.error("Erreur lors de l'envoi de la demande");
+    }
+  };
+
+  const handleUpdateStatus = async (requestId: string, newStatus: 'accepted' | 'refused') => {
+    try {
+      await updateDoc(doc(db, 'mentorshipRequests', requestId), {
+        status: newStatus
+      });
+      toast.success(newStatus === 'accepted' ? "Demande acceptée !" : "Demande refusée.");
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const incomingRequests = mentorshipRequests.filter(r => r.mentorId === user?.id);
+  const myRequests = mentorshipRequests.filter(r => r.studentId === user?.id);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Mentorat & Accompagnement</h1>
-          <p className="text-slate-500 mt-1">Connectez-vous avec des mentors qualifiés (Enseignants, Parents, Établissements, Masters et Doctorants) pour guider votre parcours.</p>
+          <p className="text-slate-500 mt-1">Connectez-vous avec des mentors qualifiés pour guider votre parcours universitaire et professionnel.</p>
         </div>
-        {user && (['admin', 'teacher', 'parent', 'institution'].includes(user.role) || (user.role === 'student' && (user.level?.startsWith('M') || user.level?.startsWith('D')))) && (
+        {user && (['admin', 'teacher', 'parent', 'institution', 'alumni'].includes(user.role) || (user.role === 'student' && (user.level?.startsWith('M') || user.level?.startsWith('D')))) && (
           <button 
             onClick={() => setIsRegistering(!isRegistering)} 
             className={cn(
@@ -74,6 +124,82 @@ export default function AlumniMentorship() {
           </button>
         )}
       </div>
+
+      {/* Incoming Requests for Mentors */}
+      {incomingRequests.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 border border-emerald-200 shadow-sm space-y-4">
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+            <Users size={20} className="text-emerald-600" /> Demandes de mentorat reçues ({incomingRequests.length})
+          </h3>
+          <div className="space-y-3">
+            {incomingRequests.map(req => (
+              <div key={req.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">{req.studentName}</span>
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                      req.status === 'pending' && "bg-amber-100 text-amber-700",
+                      req.status === 'accepted' && "bg-emerald-100 text-emerald-700",
+                      req.status === 'refused' && "bg-rose-100 text-rose-700"
+                    )}>
+                      {req.status === 'pending' && 'En attente'}
+                      {req.status === 'accepted' && 'Acceptée'}
+                      {req.status === 'refused' && 'Refusée'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 italic">"{req.message}"</p>
+                </div>
+                {req.status === 'pending' && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleUpdateStatus(req.id, 'accepted')}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm hover:bg-emerald-700"
+                    >
+                      <Check size={14} /> Accepter
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(req.id, 'refused')}
+                      className="px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-rose-100"
+                    >
+                      <X size={14} /> Refuser
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* My Requests as Student */}
+      {user?.role === 'student' && myRequests.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+            <Clock size={20} className="text-indigo-600" /> Mes demandes de mentorat envoyées ({myRequests.length})
+          </h3>
+          <div className="space-y-3">
+            {myRequests.map(req => (
+              <div key={req.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-center">
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Mentor : {req.mentorName}</p>
+                  <p className="text-xs text-slate-600 mt-0.5">Message : "{req.message}"</p>
+                </div>
+                <span className={cn(
+                  "px-3 py-1 rounded-full text-xs font-bold uppercase",
+                  req.status === 'pending' && "bg-amber-100 text-amber-700",
+                  req.status === 'accepted' && "bg-emerald-100 text-emerald-700",
+                  req.status === 'refused' && "bg-rose-100 text-rose-700"
+                )}>
+                  {req.status === 'pending' && 'En attente'}
+                  {req.status === 'accepted' && 'Accepté 🎉'}
+                  {req.status === 'refused' && 'Refusé'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isRegistering && (
         <div className="glass p-8 rounded-3xl border border-emerald-200/50 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
@@ -160,16 +286,68 @@ export default function AlumniMentorship() {
                 </div>
               </div>
               
-              <button 
-                onClick={() => navigate(`/messages?userId=${alum.userId}`)}
-                className="w-full py-3 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95 flex items-center justify-center gap-2"
-              >
-                Contacter ce mentor
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={() => setSelectedMentor(alum)}
+                  className="py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Send size={14} /> Demander Mentorat
+                </button>
+                <button 
+                  onClick={() => navigate(`/messages?userId=${alum.userId}`)}
+                  className="py-3 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  Contacter
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      {selectedMentor && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-start border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Demander un mentorat</h3>
+                <p className="text-xs text-slate-500 mt-1">Envoyez une demande à Pr./Mentor {selectedMentor.userName}</p>
+              </div>
+              <button onClick={() => setSelectedMentor(null)} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSendRequest} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Votre message / motivation</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={requestMessage}
+                  onChange={e => setRequestMessage(e.target.value)}
+                  placeholder="Expliquez brièvement pourquoi vous souhaitez être mentoré par cette personne..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedMentor(null)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-md"
+                >
+                  Envoyer la demande
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {alumni.length === 0 && !isRegistering && (
         <div className="text-center py-20 glass rounded-3xl border border-dashed border-slate-300">

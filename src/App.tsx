@@ -111,7 +111,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/notifications',
       '/messages',
       '/community',
-      '/agenda'
+      '/agenda',
+      '/teacher-space',
+      '/teacher-profile',
+      '/videos-communautaires',
+      '/mentorship'
     ];
     const isAllowed = allowedStudentPaths.some(p => p === '/' ? location.pathname === '/' : location.pathname.startsWith(p));
     if (!isAllowed) {
