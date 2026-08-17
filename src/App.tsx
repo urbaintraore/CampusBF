@@ -139,6 +139,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/portfolio',
       '/teacher-space',
       '/teacher-profile',
+      '/teachers',
+      '/talents',
       '/mentorship',
       '/guide',
       '/profile',
@@ -166,6 +168,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/events',
       '/orientation',
       '/teachers',
+      '/talents',
       '/scholarships',
       '/internships',
       '/tutors',
@@ -194,6 +197,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/internships',
       '/missions',
       '/teachers',
+      '/talents',
       '/marketplace',
       '/events',
       '/mentorship',
@@ -222,6 +226,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       '/university-portal',
       '/internships',
       '/missions',
+      '/teachers',
+      '/talents',
       '/events',
       '/mentorship',
       '/portfolio',
@@ -307,6 +313,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/events',
       '/orientation',
       '/teachers',
+      '/talents',
       '/scholarships',
       '/internships',
       '/tutors',
@@ -335,6 +342,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/internships',
       '/missions',
       '/teachers',
+      '/talents',
       '/marketplace',
       '/events',
       '/mentorship',
@@ -363,6 +371,8 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
       '/university-portal',
       '/internships',
       '/missions',
+      '/teachers',
+      '/talents',
       '/events',
       '/mentorship',
       '/portfolio',
@@ -511,6 +521,11 @@ export default function App() {
             </GuestRoute>
           } />
           <Route path="/teachers" element={
+            <GuestRoute>
+              <TeachersDirectory />
+            </GuestRoute>
+          } />
+          <Route path="/talents" element={
             <GuestRoute>
               <TeachersDirectory />
             </GuestRoute>

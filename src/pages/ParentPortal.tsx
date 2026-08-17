@@ -50,17 +50,17 @@ export default function ParentPortal() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate('/teachers')}>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate('/talents')}>
           <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Library size={24} />
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Sparkles size={24} />
             </div>
-            <ArrowRight className="text-slate-300 group-hover:text-purple-500 transition-colors" />
+            <ArrowRight className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Enseignants & Experts</h3>
-          <p className="text-sm font-medium text-slate-500 mb-4">Consultez l'annuaire des professeurs universitaires pour des besoins académiques poussés.</p>
-          <div className="text-sm font-bold text-purple-600 flex items-center gap-1 group-hover:gap-2 transition-all">
-            Parcourir l'annuaire
+          <h3 className="text-lg font-bold text-slate-900 mb-2">CampusBF Talents</h3>
+          <p className="text-sm font-medium text-slate-500 mb-4">Consultez l'annuaire des compétences (Profs, Alumni, Mentors & Tuteurs) et demandez des consultations.</p>
+          <div className="text-sm font-bold text-emerald-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+            Découvrir les Talents
           </div>
         </div>
       </div>

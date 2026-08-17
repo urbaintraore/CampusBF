@@ -64,7 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: FileText, label: 'Documents', to: '/documents', roles: ['student', 'admin', 'teacher'] },
     { icon: Calendar, label: 'Agenda Étudiant', to: '/agenda', roles: ['student', 'admin', 'teacher', 'alumni', 'public'] },
     { icon: GraduationCap, label: 'Répétiteurs & Prof de maison', to: '/tutors', roles: ['student', 'admin', 'parent', 'public'] },
-    { icon: Library, label: 'Portails Enseignants', to: '/teachers', roles: ['admin', 'company', 'institution', 'parent'] },
+    { icon: Sparkles, label: 'CampusBF Talents', to: '/talents', roles: ['admin', 'company', 'institution', 'parent', 'student', 'teacher', 'alumni', 'public'] },
     { icon: Briefcase, label: 'Stages & Emplois & Bourses', to: '/internships', roles: ['student', 'admin', 'company', 'institution', 'public', 'parent'] },
     { icon: Briefcase, label: 'Missions Freelance', to: '/missions', roles: ['student', 'admin', 'company', 'institution', 'public', 'parent'] },
     { icon: ShoppingBag, label: 'Marketplace', to: '/marketplace', roles: ['student', 'admin', 'alumni', 'company', 'public'] },
@@ -107,7 +107,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         item.to === '/enterprise-portal' || 
         item.to === '/university-portal' || 
         item.to === '/parent-portal' || 
-        item.to === '/teachers' || 
         item.to === '/portfolio'
       ) {
         return false;

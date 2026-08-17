@@ -3,10 +3,11 @@ import { subscribeDashboardStatistics, DashboardStatistics } from '@/services/ad
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RotateCw, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer, Unlock, Lock, ChevronLeft } from 'lucide-react';
+import { Users, FileText, AlertTriangle, Activity, Shield, GraduationCap, Check, X, Download, Search, MoreVertical, Ban, UserCheck, Briefcase, ShoppingBag, MessageSquare, Trash2, Megaphone, Plus, ExternalLink, Eye, EyeOff, Upload, CreditCard, Library, Calendar, MapPin, Newspaper, Bike, Edit2, RotateCw, RefreshCw, BookOpen, CheckCircle2, Trophy, Tag, Home, Sparkles, Building2, School, Printer, Unlock, Lock, ChevronLeft, Database, Copy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { User, Log, Contest, Training } from '@/types';
 import { uploadFile } from '@/services/storageService';
+import { runSupabaseDiagnostics, SupabaseDiagnosticReport } from '@/utils/supabaseDebug';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp, orderBy, query, collection, limit, onSnapshot } from 'firebase/firestore';
@@ -264,6 +265,26 @@ export default function AdminDashboard() {
 
   const [printOrders, setPrintOrders] = useState<any[]>([]);
   const [loadingPrintOrders, setLoadingPrintOrders] = useState(false);
+
+  // Supabase Storage Diagnostics State
+  const [showSupabaseDiagnosticModal, setShowSupabaseDiagnosticModal] = useState(false);
+  const [isDiagnosingSupabase, setIsDiagnosingSupabase] = useState(false);
+  const [supabaseDiagnosticReport, setSupabaseDiagnosticReport] = useState<SupabaseDiagnosticReport | null>(null);
+
+  const handleRunDiagnostics = async () => {
+    setIsDiagnosingSupabase(true);
+    setShowSupabaseDiagnosticModal(true);
+    try {
+      const report = await runSupabaseDiagnostics();
+      setSupabaseDiagnosticReport(report);
+      toast.success("Diagnostic Supabase Storage terminé !");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur lors du diagnostic Supabase: " + err.message);
+    } finally {
+      setIsDiagnosingSupabase(false);
+    }
+  };
 
   const [syncStats, setSyncStats] = useState<{ authCount: number; firestoreCount: number; discrepancy: number; roles?: { student: number; tutor: number; teacher: number; admin: number; company: number; institution: number; public?: number } } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -1539,21 +1560,37 @@ export default function AdminDashboard() {
 
             {/* System Status */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-50">
+              <div className="p-6 border-b border-gray-50 flex items-center justify-between">
                 <h2 className="font-bold text-gray-900">État du Système</h2>
+                <button
+                  onClick={handleRunDiagnostics}
+                  disabled={isDiagnosingSupabase}
+                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border border-emerald-200"
+                >
+                  <Database className={cn("w-3.5 h-3.5", isDiagnosingSupabase && "animate-spin")} />
+                  <span>{isDiagnosingSupabase ? 'Test en cours...' : 'Tester Stockage Supabase'}</span>
+                </button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Supabase (Stockage)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Supabase (Stockage & RLS)</span>
+                    <button
+                      onClick={handleRunDiagnostics}
+                      className="text-[11px] text-emerald-600 underline font-semibold hover:text-emerald-700"
+                    >
+                      (Inspecter)
+                    </button>
+                  </div>
                   <span className="text-sm font-medium flex items-center gap-2 text-emerald-600">
                     <span className="w-2 h-2 rounded-full bg-current"></span>
-                    Opérationnel
+                    Actif (Fallback sécurisé)
                   </span>
                 </div>
                 {[
-                  { label: 'Base de données', status: 'Opérationnel', color: 'text-emerald-600' },
-                  { label: 'Authentification', status: 'Opérationnel', color: 'text-emerald-600' },
-                  { label: 'API Gateway', status: 'Opérationnel', color: 'text-emerald-600' },
+                  { label: 'Base de données Firestore', status: 'Opérationnel', color: 'text-emerald-600' },
+                  { label: 'Authentification Firebase', status: 'Opérationnel', color: 'text-emerald-600' },
+                  { label: 'API Gateway Gemini', status: 'Opérationnel', color: 'text-emerald-600' },
                   { label: 'Notifications Push', status: 'Maintenance', color: 'text-amber-600' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between">
@@ -4871,6 +4908,160 @@ export default function AdminDashboard() {
         deal={editingDeal || newDeal}
         setDeal={editingDeal ? setEditingDeal : setNewDeal}
       />
+
+      {/* Supabase Storage & RLS Diagnostic Modal */}
+      {showSupabaseDiagnosticModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <Database className="w-6 h-6 text-emerald-300" />
+                <div>
+                  <h3 className="font-bold text-lg">Diagnostic Supabase Storage & RLS</h3>
+                  <p className="text-xs text-emerald-100 font-medium">
+                    Inspection des buckets (uploads, documents, assignments, videos) & droits d'accès
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSupabaseDiagnosticModal(false)}
+                className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 text-xs text-slate-700">
+              {isDiagnosingSupabase && (
+                <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
+                  <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="font-bold text-slate-800 text-sm">Inspection des connexions & tests de lecture/écriture en cours...</p>
+                  <p className="text-slate-500 text-xs">Vérification de l'URL Supabase, des tokens et des permissions RLS.</p>
+                </div>
+              )}
+
+              {!isDiagnosingSupabase && supabaseDiagnosticReport && (
+                <div className="space-y-6">
+                  {/* Status Overview Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {supabaseDiagnosticReport.results.map((res) => (
+                      <div
+                        key={res.bucket}
+                        className={cn(
+                          "p-4 rounded-2xl border transition-all",
+                          res.canUpload && res.canDownload
+                            ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                            : res.exists
+                            ? "bg-amber-50/70 border-amber-200 text-amber-950"
+                            : "bg-rose-50/70 border-rose-200 text-rose-950"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-extrabold text-sm uppercase tracking-wide">
+                            {res.bucket}
+                          </span>
+                          {res.canUpload && res.canDownload ? (
+                            <span className="px-2 py-0.5 bg-emerald-600 text-white font-black text-[10px] rounded-full">
+                              100% ACTIF
+                            </span>
+                          ) : res.exists ? (
+                            <span className="px-2 py-0.5 bg-amber-600 text-white font-black text-[10px] rounded-full">
+                              RLS À CONFIGURER
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-rose-600 text-white font-black text-[10px] rounded-full">
+                              BUCKET MANQUANT
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Existe :</span>
+                            <span className="font-bold">{res.exists ? '✅ Oui' : '❌ Non'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Lecture (Read) :</span>
+                            <span className="font-bold">{res.canRead ? '✅ Autorisé' : '❌ Bloqué'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Téléversement (Upload) :</span>
+                            <span className="font-bold">{res.canUpload ? '✅ Autorisé' : '⚠️ Bloqué / RLS'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Téléchargement direct :</span>
+                            <span className="font-bold">{res.canDownload ? '✅ Actif' : '⚠️ Bloqué'}</span>
+                          </div>
+                        </div>
+
+                        {res.errorDetails && (
+                          <div className="mt-2.5 p-2 bg-white/80 rounded-lg border border-current/20 text-[10px] font-medium leading-tight">
+                            {res.errorDetails}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Architecture & Fallback Banner */}
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-emerald-900 text-sm">Système de bascule sécurisé actif</h4>
+                      <p className="text-emerald-800 text-xs mt-1 leading-relaxed">
+                        L'application intègre une détection automatique des buckets. Si un téléversement d'étudiant ou d'enseignant cible un bucket restreint par RLS, il bascule automatiquement sur le bucket Supabase ouvert (ex: <code>videos</code>) afin de garantir 100% de disponibilité sans perte de données.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* SQL Setup Script Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900 text-sm">
+                        Script SQL de configuration Supabase (Buckets + Politiques RLS)
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(supabaseDiagnosticReport.recommendedSql);
+                          toast.success("Script SQL copié dans le presse-papiers !");
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copier le SQL</span>
+                      </button>
+                    </div>
+                    <pre className="p-4 bg-slate-900 text-emerald-400 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-60 border border-slate-800">
+                      {supabaseDiagnosticReport.recommendedSql}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 border-t bg-slate-50 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleRunDiagnostics}
+                disabled={isDiagnosingSupabase}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all"
+              >
+                <RefreshCw className={cn("w-4 h-4", isDiagnosingSupabase && "animate-spin")} />
+                <span>Relancer le test</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSupabaseDiagnosticModal(false)}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl font-bold text-xs transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

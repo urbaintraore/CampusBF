@@ -11,7 +11,7 @@ export default function CompanyRestrictedSection() {
     { icon: Building2, name: 'Portail Université', desc: 'Collaborez avec les universités du Burkina.', to: '/university-portal' },
     { icon: Briefcase, name: 'Stages & Emplois', desc: 'Publiez et suivez vos opportunités.', to: '/internships' },
     { icon: Briefcase, name: 'Missions Freelance', desc: 'Publiez et gérez vos missions freelance.', to: '/missions' },
-    { icon: Library, name: 'Portails Enseignants', desc: 'Consultez l\'annuaire des enseignants.', to: '/teachers' },
+    { icon: Sparkles, name: 'CampusBF Talents', desc: 'Consultez et contactez les talents, profs et consultants.', to: '/talents' },
     { icon: ShoppingBag, name: 'Marketplace', desc: 'Achetez et vendez du matériel scolaire.', to: '/marketplace' },
     { icon: Calendar, name: 'Événements', desc: 'Participez aux événements académiques et pro.', to: '/events' },
     { icon: Users, name: 'Mentorat', desc: 'Accompagnez des étudiants burkinabè.', to: '/mentorship' },

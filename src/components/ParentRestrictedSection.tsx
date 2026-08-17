@@ -12,7 +12,7 @@ export default function ParentRestrictedSection() {
     { icon: GraduationCap, name: 'Financement (Dons)', desc: 'Soutenez les étudiants burkinabè par des dons.', to: '/financing' },
     { icon: Calendar, name: 'Événements', desc: 'Restez informé de l\'agenda culturel et académique.', to: '/events' },
     { icon: Compass, name: 'Orientation', desc: 'Consultez les guides d\'orientation post-bac.', to: '/orientation' },
-    { icon: Library, name: 'Portails Enseignants', desc: 'Répertoire et contact avec le corps enseignant.', to: '/teachers' },
+    { icon: Sparkles, name: 'CampusBF Talents', desc: 'Répertoire et contact avec les talents, profs et tuteurs.', to: '/talents' },
     { icon: Sparkles, name: 'Bourses & Opportunités', desc: 'Consultez les bourses d\'excellence disponibles.', to: '/scholarships' },
     { icon: Briefcase, name: 'Bourses et Stages', desc: 'Découvrez les offres de stage et d\'emploi.', to: '/internships' },
     { icon: GraduationCap, name: 'Répétiteurs & Profs de maison', desc: 'Trouvez un enseignant de soutien local.', to: '/tutors' },

@@ -161,12 +161,12 @@ const features = [
     roles: ['admin', 'teacher', 'alumni', 'parent']
   },
   {
-    icon: Library,
-    title: "Annuaire des Enseignants",
-    description: "Consultez les profils des enseignants et contactez-les pour des questions académiques ou du mentorat.",
-    color: "bg-cyan-50 text-cyan-600",
-    link: "/teachers",
-    roles: ['student', 'teacher', 'parent', 'admin']
+    icon: Sparkles,
+    title: "CampusBF Talents & Consultations",
+    description: "Répertoire complet des compétences : Enseignants/Profs, Alumni/Mentors, Étudiants tuteurs et Parents experts. Contactez-les pour vacations, cours, mentorat ou consultations pro.",
+    color: "bg-emerald-50 text-emerald-600",
+    link: "/talents",
+    roles: ['student', 'teacher', 'parent', 'admin', 'company', 'institution', 'alumni']
   },
   {
     icon: UserCheck,

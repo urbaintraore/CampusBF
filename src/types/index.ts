@@ -109,6 +109,7 @@ export interface User {
   };
   tutorDescription?: string;
   teacherProfile?: TeacherProfile;
+  talentProfile?: TalentProfile;
   institutionProfile?: InstitutionProfile;
   pushSubscription?: any;
   marketplaceStats?: {
@@ -292,6 +293,62 @@ export interface TeacherProfile {
     willingToTravel: boolean;
   };
   reviews?: TeacherReview[];
+}
+
+export type TalentCategory = 'teacher' | 'alumni' | 'student' | 'parent' | 'professional';
+
+export interface TalentProfile {
+  category: TalentCategory;
+  headline: string; // ex: "Enseignant-Chercheur en Mathématiques & IA", "Alumni Lead Developer & Mentor", "Étudiant Tuteur & Répétiteur", "Parent & Coach d'Orientation"
+  bio: string;
+  domains: string[]; // ex: ["Informatique", "Mathématiques", "Finance", "Droit"]
+  skills: string[]; // ex: ["Python", "Machine Learning", "Prépa Concours", "Algèbre"]
+  servicesOffered: string[]; // ex: ["Vacation d'enseignement", "Cours de soutien / Maison", "Mentorat carrière", "Consultation Entreprise", "Conférence / Panel", "Audit & Étude"]
+  hourlyRate?: number;
+  consultationRateText?: string; // ex: "15 000 FCFA / séance" ou "À négocier"
+  courses?: string[]; // Matières enseignées
+  academicRank?: string; // For teachers/alumni
+  yearsOfExperience?: number;
+  city?: string;
+  universityOrOrg?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  portfolioUrl?: string;
+  publications?: { title: string; journal: string; year: string | number; link?: string }[];
+  availability: {
+    isAvailable: boolean;
+    availableFrom?: string;
+    preferredContract?: string;
+    willingToTravel?: boolean;
+    remoteAvailable?: boolean;
+  };
+  rating?: number;
+  reviewsCount?: number;
+  isVerified?: boolean;
+  updatedAt?: any;
+}
+
+export interface TalentConsultationRequest {
+  id: string;
+  talentId: string;
+  talentName: string;
+  talentCategory?: string;
+  talentHeadline?: string;
+  requesterId: string;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone: string;
+  requesterRole: 'parent' | 'company' | 'institution' | 'student' | 'admin' | 'alumni' | 'teacher' | 'public';
+  requesterOrg?: string; // Nom de l'entreprise, université ou nom de famille
+  consultationType: 'vacation' | 'tutoring' | 'mentoring' | 'company_consultation' | 'conference' | 'audit' | 'other';
+  subject: string;
+  message: string;
+  preferredDate?: string;
+  proposedBudget?: string;
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+  createdAt: any;
+  responseNote?: string;
 }
 
 export interface InstitutionProfile {
